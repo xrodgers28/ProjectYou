@@ -179,6 +179,7 @@
   .star.on { color:#f0b429; }
   .bullet .dot { flex:0 0 auto; }   /* keep dots perfectly round even in tight space */
   .secdate { color:#b0b4bb; font-weight:400; font-size:12px; margin-left:8px; }
+  .ver { font-size:10.5px; color:#b0b4bb; margin-right:10px; font-variant-numeric:tabular-nums; }
   .appbar .who a#undo { cursor:pointer; margin-right:10px; color:#5b6270; }
   #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#2b2b2b; color:#fff; font-family:Arial; font-size:14px; padding:11px 18px; border-radius:9px; z-index:120; display:none; }
 </style>
@@ -199,7 +200,7 @@
 <div id="app">
   <div class="appbar">
     <span class="brand">CrushingIt <span class="synced">● live</span></span>
-    <span class="who"><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
+    <span class="who"><span class="ver">v3.6</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
   </div>
   <div class="wrap">
     <ul class="list" id="board"></ul>
@@ -264,6 +265,7 @@ async function showApp(email) {
   if (data.session) sb.realtime.setAuth(data.session.access_token);
   await maybeRollover();
   await load();
+  try { const V = '3.6'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
 }
 document.getElementById('signin').onclick = async () => {
@@ -295,6 +297,10 @@ function effectiveDate(offset) {
 }
 function localDate() { return effectiveDate(0).toLocaleDateString('en-CA'); } // YYYY-MM-DD, 3am-aware
 function prettyDate(d) { return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }); }
+function headerDate(d) { return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }); }
+function groupDate(d) { return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); }
+function effDateOf(iso) { const d = iso ? new Date(iso) : new Date(); if (d.getHours() < 3) d.setDate(d.getDate() - 1); return d; }
+function dayKey(d) { return d.toLocaleDateString('en-CA'); }
 async function maybeRollover() {
   const today = localDate();
   const { data } = await sb.from('app_meta').select('value').eq('key', 'last_rollover').maybeSingle();
@@ -486,7 +492,7 @@ function sectionNode(name, colorOverride) {
   }
   row.appendChild(text);
   if (name === 'Core To-Dos' || name === "Tomorrow's Core To-Dos") {
-    const d = prettyDate(effectiveDate(name === 'Core To-Dos' ? 0 : 1));
+    const d = headerDate(effectiveDate(name === 'Core To-Dos' ? 0 : 1));
     row.appendChild(el('span', 'secdate', ' (' + d + ')'));
   }
   li.appendChild(row);
@@ -525,23 +531,50 @@ function render() {
     const secLi = sectionNode(sec); secLi.dataset.section = sec;
     const secList = el('ul', 'list'); secList.dataset.section = sec; secList.dataset.sub = '';
     // items in this section, minus ones pinned to Top Priority
-    const items = todos.filter(t => t.section === sec && !t.skipped && !(t.starred && !t.done));
-    const subs = [];
-    for (const t of items) { const s = t.subsection || ''; if (!subs.includes(s)) subs.push(s); }
-    for (const sub of subs) {
-      const subItems = items.filter(t => (t.subsection || '') === sub).sort((a,b)=>(a.position||0)-(b.position||0));
-      if (sub) {
-        const subLi = subHeader(sub, subItems.length);
-        const subList = el('ul', 'list'); subList.dataset.section = sec; subList.dataset.sub = sub;
-        subItems.forEach(t => subList.appendChild(taskRow(t)));
-        subList.appendChild(addRow(sec, sub));
-        subLi.appendChild(subList);
-        secList.appendChild(subLi);
-      } else {
-        subItems.forEach(t => secList.appendChild(taskRow(t)));
+    const items = (sec === COMPLETED)
+      ? todos.filter(t => t.done && !t.is_habit && !t.skipped)
+      : todos.filter(t => t.section === sec && !t.skipped && !(t.starred && !t.done) && !(t.done && !t.is_habit));
+    if (sec === COMPLETED) {
+      const groups = {};
+      items.forEach(t => { const d = effDateOf(t.done_at || t.updated_at || t.created_at); const k = dayKey(d); (groups[k] = groups[k] || { label: groupDate(d), items: [] }).items.push(t); });
+      const todayKey = localDate();
+      Object.keys(groups).sort().reverse().forEach(k => {
+        const g = groups[k];
+        const gLi = el('li', 'node has-children date-group');
+        const ck = 'date:' + k;
+        if ((k !== todayKey && collapsed[ck] === undefined) || collapsed[ck]) gLi.classList.add('collapsed');
+        const grow = el('div', 'row');
+        const gcaret = el('span', 'caret', '▾');
+        gcaret.onclick = () => { collapsed[ck] = !gLi.classList.contains('collapsed'); render(); };
+        grow.appendChild(gcaret);
+        const gb = el('span', 'bullet'); gb.appendChild(el('span', 'dot')); grow.appendChild(gb);
+        grow.appendChild(el('span', 'text', g.label));
+        grow.appendChild(el('span', 'count', String(g.items.length)));
+        gLi.appendChild(grow);
+        const gUl = el('ul', 'list');
+        g.items.sort((a, b) => (b.done_at || '').localeCompare(a.done_at || ''));
+        g.items.forEach(t => gUl.appendChild(taskRow(t)));
+        gLi.appendChild(gUl);
+        secList.appendChild(gLi);
+      });
+    } else {
+      const subs = [];
+      for (const t of items) { const s = t.subsection || ''; if (!subs.includes(s)) subs.push(s); }
+      for (const sub of subs) {
+        const subItems = items.filter(t => (t.subsection || '') === sub).sort((a,b)=>(a.position||0)-(b.position||0));
+        if (sub) {
+          const subLi = subHeader(sub, subItems.length);
+          const subList = el('ul', 'list'); subList.dataset.section = sec; subList.dataset.sub = sub;
+          subItems.forEach(t => subList.appendChild(taskRow(t)));
+          subList.appendChild(addRow(sec, sub));
+          subLi.appendChild(subList);
+          secList.appendChild(subLi);
+        } else {
+          subItems.forEach(t => secList.appendChild(taskRow(t)));
+        }
       }
+      secList.appendChild(addRow(sec, null));
     }
-    secList.appendChild(addRow(sec, null));
     secLi.appendChild(secList);
     board.appendChild(secLi);
 
