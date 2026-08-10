@@ -223,7 +223,7 @@
 <div id="app">
   <div class="appbar">
     <span class="brand">CrushingIt <span class="synced">● live</span></span>
-    <span class="who"><a id="viewtoggle" class="vtoggle">🕐 Wheel</a><span class="ver">v4.4</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
+    <span class="who"><a id="viewtoggle" class="vtoggle">🕐 Wheel</a><span class="ver">v4.5</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
   </div>
   <div class="wrap">
     <ul class="list" id="board"></ul>
@@ -250,8 +250,8 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 const SECTIONS = [
   ['📥 Inbox · uncategorized captures', '#b7bcc4'],
   ['Core To-Dos', '#5b6270'],
-  ['⏳ Waiting Area', '#cbb0e0'],
   ["Tomorrow's Core To-Dos", '#5b6270'],
+  ['⏳ Waiting On', '#cbb0e0'],
   ['After Core', '#f0c674'],
   ['✓ Completed Tasks', '#c7ccd3'],
   ['Not Urgent', '#b7bcc4'],
@@ -297,7 +297,7 @@ async function showApp(email) {
   if (data.session) sb.realtime.setAuth(data.session.access_token);
   await maybeRollover();
   await load();
-  try { const V = '4.4'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
+  try { const V = '4.5'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
 }
 document.getElementById('signin').onclick = async () => {
@@ -566,12 +566,18 @@ function render() {
   }
 
   const INBOX = '📥 Inbox · uncategorized captures';
+  const WAITING = '⏳ Waiting On';
   const present = [...new Set(todos.map(t => t.section))];
   if (!present.includes(INBOX)) present.push(INBOX);
+  if (!present.includes(WAITING)) present.push(WAITING);   // Waiting On always shows too, even when empty
   const inSaved = sectionOrder.filter(s => present.includes(s));
   const rest = present.filter(s => !inSaved.includes(s)).sort((a, b) => orderIndex(ORDER, a) - orderIndex(ORDER, b) || a.localeCompare(b));
   let ordered = [...inSaved, ...rest];
   ordered = [INBOX, ...ordered.filter(s => s !== INBOX)];   // Inbox always shows, always first
+  // Waiting On is omnipresent, pinned just above After Core
+  ordered = ordered.filter(s => s !== WAITING);
+  const acIdx = ordered.indexOf('After Core');
+  if (acIdx >= 0) ordered.splice(acIdx, 0, WAITING); else ordered.push(WAITING);
 
   for (const sec of ordered) {
     const secLi = sectionNode(sec); secLi.dataset.section = sec;
