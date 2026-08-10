@@ -178,6 +178,8 @@
   .star { flex:0 0 auto; cursor:pointer; font-size:14px; line-height:1; color:#d3d6db; margin-left:4px; user-select:none; }
   .star.on { color:#f0b429; }
   .bullet .dot { flex:0 0 auto; }   /* keep dots perfectly round even in tight space */
+  .secdate { color:#b0b4bb; font-weight:400; font-size:12px; margin-left:8px; }
+  .appbar .who a#undo { cursor:pointer; margin-right:10px; color:#5b6270; }
   #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#2b2b2b; color:#fff; font-family:Arial; font-size:14px; padding:11px 18px; border-radius:9px; z-index:120; display:none; }
 </style>
 </head>
@@ -197,7 +199,7 @@
 <div id="app">
   <div class="appbar">
     <span class="brand">CrushingIt <span class="synced">● live</span></span>
-    <span class="who"><span id="whoami"></span><a id="signout">sign out</a></span>
+    <span class="who"><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
   </div>
   <div class="wrap">
     <ul class="list" id="board"></ul>
@@ -282,9 +284,17 @@ document.getElementById('signin').onclick = async () => {
 };
 document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('signin').click(); });
 document.getElementById('signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+document.getElementById('undo').onclick = doUndo;
 
 /* ---------- daily rollover ---------- */
-function localDate() { return new Date().toLocaleDateString('en-CA'); } // YYYY-MM-DD local
+function effectiveDate(offset) {
+  const d = new Date();
+  if (d.getHours() < 3) d.setDate(d.getDate() - 1);   // before 3am still counts as the previous day
+  if (offset) d.setDate(d.getDate() + offset);
+  return d;
+}
+function localDate() { return effectiveDate(0).toLocaleDateString('en-CA'); } // YYYY-MM-DD, 3am-aware
+function prettyDate(d) { return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }); }
 async function maybeRollover() {
   const today = localDate();
   const { data } = await sb.from('app_meta').select('value').eq('key', 'last_rollover').maybeSingle();
@@ -339,6 +349,28 @@ async function addTask(section, subsection) {
 }
 async function removeTask(id) { todos = todos.filter(x => x.id !== id); render(); await sb.from('todos').delete().eq('id', id); }
 
+const UNDO_FIELDS = ['position','section','subsection','is_habit','bucket','done','done_at','actual_minutes','starred','skipped','origin_section','origin_subsection','status'];
+let undoState = null;
+function snapshot() {
+  undoState = { todos: todos.map(t => { const o = { id: t.id }; UNDO_FIELDS.forEach(f => o[f] = t[f]); return o; }), sectionOrder: [...sectionOrder] };
+  const b = document.getElementById('undo'); if (b) b.style.display = 'inline';
+}
+async function doUndo() {
+  if (!undoState) return;
+  const snap = Object.fromEntries(undoState.todos.map(s => [s.id, s]));
+  const changed = [];
+  todos.forEach(t => { const s = snap[t.id]; if (!s) return; if (UNDO_FIELDS.some(f => t[f] !== s[f])) { UNDO_FIELDS.forEach(f => t[f] = s[f]); changed.push(t); } });
+  const secChanged = JSON.stringify(sectionOrder) !== JSON.stringify(undoState.sectionOrder);
+  sectionOrder = undoState.sectionOrder;
+  undoState = null; const b = document.getElementById('undo'); if (b) b.style.display = 'none';
+  render();
+  const now = new Date().toISOString();
+  for (const t of changed) {
+    await sb.from('todos').update({ position: t.position, section: t.section, subsection: t.subsection, is_habit: t.is_habit, bucket: t.bucket, done: t.done, done_at: t.done_at, actual_minutes: t.actual_minutes, starred: t.starred, skipped: t.skipped, origin_section: t.origin_section, origin_subsection: t.origin_subsection, status: t.status, updated_at: now }).eq('id', t.id);
+  }
+  if (secChanged) await sb.from('app_meta').upsert({ key: 'section_order', value: JSON.stringify(sectionOrder), updated_at: now });
+}
+
 /* ---------- helpers ---------- */
 function fmt(m) { if (!m) return '0m'; if (m < 60) return m + 'm'; const h = Math.floor(m/60), r = m%60; return r ? h+'h '+r+'m' : h+'h'; }
 function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
@@ -368,8 +400,18 @@ function taskRow(t) {
   const bullet = el('span', 'bullet'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
   const check = el('span', 'check');
   check.onclick = () => {
+    snapshot();
     const done = !t.done;
-    patch(t.id, { done, status: done ? 'done' : 'todo', done_at: done ? new Date().toISOString() : null, actual_minutes: done ? (t.actual_minutes ?? t.est_minutes ?? null) : t.actual_minutes });
+    if (done && !t.is_habit) {
+      // completing a normal task sends it into Completed (remembering where it came from)
+      patch(t.id, { done: true, status: 'done', done_at: new Date().toISOString(), actual_minutes: t.actual_minutes ?? t.est_minutes ?? null, origin_section: t.section, origin_subsection: t.subsection, section: COMPLETED, subsection: null });
+    } else if (!done && !t.is_habit) {
+      // un-completing sends it back to where it was
+      patch(t.id, { done: false, status: 'todo', done_at: null, section: t.origin_section || 'Core To-Dos', subsection: t.origin_subsection ?? null });
+    } else {
+      // habits stay in place (they reset daily), so the confetti check still works
+      patch(t.id, { done, status: done ? 'done' : 'todo', done_at: done ? new Date().toISOString() : null, actual_minutes: done ? (t.actual_minutes ?? t.est_minutes ?? null) : t.actual_minutes });
+    }
     render(); checkHabitConfetti();
   };
   row.appendChild(check);
@@ -380,7 +422,7 @@ function taskRow(t) {
   // star
   const star = el('span', 'star' + (t.starred ? ' on' : ''), t.starred ? '★' : '☆');
   star.title = 'Top Priority';
-  star.onclick = () => { patch(t.id, { starred: !t.starred }); render(); };
+  star.onclick = () => { snapshot(); patch(t.id, { starred: !t.starred }); render(); };
   row.appendChild(star);
   // est/actual on timed sections
   if (TIMED.has(t.section)) {
@@ -393,7 +435,7 @@ function taskRow(t) {
   // habits get a skip button; everything else gets delete
   if (t.is_habit) {
     const skip = el('span', 'skip-btn', '✕'); skip.title = 'skip today';
-    skip.onclick = () => { patch(t.id, { skipped: true, skipped_at: new Date().toISOString() }); render(); };
+    skip.onclick = () => { snapshot(); patch(t.id, { skipped: true, skipped_at: new Date().toISOString() }); render(); };
     row.appendChild(skip);
   } else {
     const del = el('span', 'skip-btn', '×'); del.title = 'delete'; del.onclick = () => removeTask(t.id);
@@ -443,6 +485,10 @@ function sectionNode(name, colorOverride) {
     text.appendChild(badge);
   }
   row.appendChild(text);
+  if (name === 'Core To-Dos' || name === "Tomorrow's Core To-Dos") {
+    const d = prettyDate(effectiveDate(name === 'Core To-Dos' ? 0 : 1));
+    row.appendChild(el('span', 'secdate', ' (' + d + ')'));
+  }
   li.appendChild(row);
   return li;
 }
@@ -538,6 +584,7 @@ function initSortables() {
   }
 }
 async function onSectionEnd() {
+  snapshot();
   const board = document.getElementById('board');
   const order = [...board.children]
     .filter(li => li.classList && li.classList.contains('domain') && !li.dataset.virtual)
@@ -547,35 +594,29 @@ async function onSectionEnd() {
   await sb.from('app_meta').upsert({ key: 'section_order', value: JSON.stringify(order), updated_at: new Date().toISOString() });
 }
 async function onDragEnd() {
-  // Normalize each subsection list's section to the section it now lives in
-  // (handles a whole list dragged into a different section).
-  document.querySelectorAll('#board ul.list[data-section]').forEach(ul => {
-    if (ul.dataset.sub) {
-      const anc = ul.parentElement && ul.parentElement.closest('ul.list[data-section]');
-      if (anc) ul.dataset.section = anc.dataset.section;
-    }
-  });
-  // Re-derive position + section + subsection for every task straight from the DOM order.
+  snapshot();
   const changes = [];
   let pos = 0;
-  document.querySelectorAll('#board ul.list[data-section]').forEach(ul => {
-    const section = ul.dataset.section;
-    const sub = ul.dataset.sub || null;
-    [...ul.children].forEach(li => {
-      if (!li.classList.contains('task')) return;
-      const t = todos.find(x => x.id === li.dataset.id);
-      if (!t) return;
-      const isHabit = (sub || '').toUpperCase().includes('HABIT BANDIT');
-      const next = {
-        position: pos, section, subsection: sub, is_habit: isHabit,
-        category: isHabit ? 'HABIT BANDIT' : (t.category || null),
-        bucket: section === "Tomorrow's Core To-Dos" ? 'tomorrow' : 'today'
-      };
-      if (t.position !== next.position || t.section !== next.section || (t.subsection || null) !== next.subsection || t.is_habit !== next.is_habit) {
-        Object.assign(t, next); changes.push(t);
+  const assign = (li, section, sub) => {
+    const t = todos.find(x => x.id === li.dataset.id); if (!t) return;
+    const isHabit = (sub || '').toUpperCase().includes('HABIT BANDIT');
+    const next = { position: pos, section, subsection: sub, is_habit: isHabit, category: isHabit ? 'HABIT BANDIT' : (t.category || null), bucket: section === "Tomorrow's Core To-Dos" ? 'tomorrow' : 'today' };
+    if (t.position !== next.position || t.section !== next.section || (t.subsection || null) !== next.subsection || t.is_habit !== next.is_habit) { Object.assign(t, next); changes.push(t); }
+    pos++;
+  };
+  // Walk each section top-down in visual order so a sub-list dragged above direct tasks sticks.
+  const walk = (ul, section) => {
+    [...ul.children].forEach(child => {
+      if (child.classList.contains('task')) assign(child, section, ul.dataset.sub || null);
+      else if (child.classList.contains('has-children')) {
+        const subUl = child.querySelector(':scope > ul.list[data-section]');
+        if (subUl) walk(subUl, section);
       }
-      pos++;
     });
+  };
+  document.querySelectorAll('#board > li.domain').forEach(secLi => {
+    const secList = secLi.querySelector(':scope > ul.list[data-section]');
+    if (secList) walk(secList, secList.dataset.section);
   });
   render();
   const now = new Date().toISOString();
