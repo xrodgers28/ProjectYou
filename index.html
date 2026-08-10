@@ -180,6 +180,9 @@
   .bullet .dot { flex:0 0 auto; }   /* keep dots perfectly round even in tight space */
   .secdate { color:#b0b4bb; font-weight:400; font-size:12px; margin-left:8px; }
   .ver { font-size:10.5px; color:#b0b4bb; margin-right:10px; font-variant-numeric:tabular-nums; }
+  #mic { position:fixed; right:20px; bottom:20px; width:58px; height:58px; border-radius:50%; background:#2b2b2b; color:#fff; border:none; font-size:24px; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.25); z-index:60; display:none; align-items:center; justify-content:center; }
+  #mic.listening { background:#c0492f; animation:micpulse 1.2s infinite; }
+  @keyframes micpulse { 0%,100%{ box-shadow:0 0 0 0 rgba(192,73,47,.5);} 50%{ box-shadow:0 0 0 14px rgba(192,73,47,0);} }
   .appbar .who a#undo { cursor:pointer; margin-right:10px; color:#5b6270; }
   #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#2b2b2b; color:#fff; font-family:Arial; font-size:14px; padding:11px 18px; border-radius:9px; z-index:120; display:none; }
 </style>
@@ -200,12 +203,13 @@
 <div id="app">
   <div class="appbar">
     <span class="brand">CrushingIt <span class="synced">● live</span></span>
-    <span class="who"><span class="ver">v3.7</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
+    <span class="who"><span class="ver">v3.8</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
   </div>
   <div class="wrap">
     <ul class="list" id="board"></ul>
   </div>
 </div>
+<button id="mic" title="Speak a to-do">🎤</button>
 <div id="toast"></div>
 
 <script type="module">
@@ -260,12 +264,13 @@ async function refreshAuth() {
 async function showApp(email) {
   loginEl.style.display = 'none';
   appEl.style.display = 'block';
+  const mb = document.getElementById('mic'); if (mb) mb.style.display = 'flex';
   document.getElementById('whoami').textContent = email || '';
   const { data } = await sb.auth.getSession();
   if (data.session) sb.realtime.setAuth(data.session.access_token);
   await maybeRollover();
   await load();
-  try { const V = '3.7'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
+  try { const V = '3.8'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
 }
 document.getElementById('signin').onclick = async () => {
@@ -533,7 +538,7 @@ function render() {
     // items in this section, minus ones pinned to Top Priority
     const items = (sec === COMPLETED)
       ? todos.filter(t => t.done && !t.is_habit && !t.skipped)
-      : todos.filter(t => t.section === sec && !t.skipped && !(t.starred && !t.done) && !(t.done && !t.is_habit));
+      : todos.filter(t => t.section === sec && !t.skipped && !(t.done && !t.is_habit));
     if (sec === COMPLETED) {
       const groups = {};
       items.forEach(t => { const d = effDateOf(t.done_at || t.updated_at || t.created_at); const k = dayKey(d); (groups[k] = groups[k] || { label: groupDate(d), items: [] }).items.push(t); });
@@ -656,6 +661,26 @@ async function onDragEnd() {
   for (const t of changes) {
     await sb.from('todos').update({ position: t.position, section: t.section, subsection: t.subsection, is_habit: t.is_habit, category: t.category, bucket: t.bucket, updated_at: now }).eq('id', t.id);
   }
+}
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const micBtn = document.getElementById('mic');
+let micRec = null, micOn = false;
+if (micBtn) micBtn.onclick = () => {
+  if (!SR) { toast('Voice input is not supported here. Tap a task and use your keyboard mic.'); return; }
+  if (micOn) { try { micRec && micRec.stop(); } catch (e) {} return; }
+  micRec = new SR(); micRec.lang = 'en-US'; micRec.interimResults = false; micRec.maxAlternatives = 1;
+  micRec.onstart = () => { micOn = true; micBtn.classList.add('listening'); };
+  micRec.onerror = (e) => { micOn = false; micBtn.classList.remove('listening'); toast('Mic: ' + (e.error || 'error')); };
+  micRec.onend = () => { micOn = false; micBtn.classList.remove('listening'); };
+  micRec.onresult = async (e) => { const text = (e.results[0][0].transcript || '').trim(); if (text) await addSpoken(text); };
+  try { micRec.start(); } catch (e) { toast('Could not start mic'); }
+};
+async function addSpoken(text) {
+  const pos = Math.max(0, ...todos.map(t => t.position || 0)) + 1;
+  const { data, error } = await sb.from('todos').insert({ section: '📥 Inbox · uncategorized captures', task: text, position: pos, bucket: 'today' }).select().single();
+  if (error) { toast('Could not add'); return; }
+  todos.push(data); render(); toast('🎤 Added to Inbox: ' + text);
 }
 
 refreshAuth();
