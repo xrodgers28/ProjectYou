@@ -185,6 +185,24 @@
   @keyframes micpulse { 0%,100%{ box-shadow:0 0 0 0 rgba(192,73,47,.5);} 50%{ box-shadow:0 0 0 14px rgba(192,73,47,0);} }
   .appbar .who a#undo { cursor:pointer; margin-right:10px; color:#5b6270; }
   #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#2b2b2b; color:#fff; font-family:Arial; font-size:14px; padding:11px 18px; border-radius:9px; z-index:120; display:none; }
+  .vtoggle { cursor:pointer; font-weight:600; margin-right:12px; color:#3f6f8f; }
+  .mantra { text-align:center; font-style:italic; color:#5b6472; font-size:14px; max-width:520px; margin:2px auto 12px; line-height:1.4; }
+  .stats { display:flex; gap:8px; max-width:520px; margin:0 auto 8px; justify-content:center; flex-wrap:wrap; }
+  .stats .tile { background:#fff; border:1px solid #e3e7ee; border-radius:10px; padding:8px 12px; text-align:center; min-width:78px; }
+  .stats .tv { font-size:18px; font-weight:700; color:#1f2a44; }
+  .stats .tl { font-size:11px; color:#5b6472; text-transform:uppercase; letter-spacing:.03em; }
+  .stats .ts { font-size:10px; color:#9aa0aa; }
+  .legend { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin:2px auto 12px; font-size:12px; color:#5b6472; }
+  .legend .lchip { display:flex; align-items:center; gap:5px; }
+  .legend .lchip i { width:11px; height:11px; border-radius:3px; display:inline-block; }
+  #wheellist { max-width:520px; margin:0 auto; list-style:none; padding:0; }
+  .wrow { display:flex; align-items:center; gap:9px; padding:8px 6px; border-bottom:1px solid #eef1f6; cursor:pointer; font-size:14px; }
+  .wrow.meal { cursor:default; }
+  .wrow.done { opacity:.5; text-decoration:line-through; }
+  .wrow .wt { width:10px; height:10px; border-radius:3px; flex:0 0 auto; }
+  .wrow .wtime { width:52px; color:#8a8f99; font-size:12px; flex:0 0 auto; }
+  .wrow .wtask { flex:1 1 auto; }
+  .wrow .wdur { color:#8a8f99; font-size:12px; }
 </style>
 </head>
 <body>
@@ -203,10 +221,17 @@
 <div id="app">
   <div class="appbar">
     <span class="brand">CrushingIt <span class="synced">● live</span></span>
-    <span class="who"><span class="ver">v4.0</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
+    <span class="who"><a id="viewtoggle" class="vtoggle">🕐 Wheel</a><span class="ver">v4.3</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
   </div>
   <div class="wrap">
     <ul class="list" id="board"></ul>
+  </div>
+  <div id="wheelview" style="display:none;padding:12px 12px 46px">
+    <div id="mantra" class="mantra"></div>
+    <div id="stats" class="stats"></div>
+    <div id="wheelwrap"><svg id="wheelsvg" viewBox="0 0 360 360" width="100%" style="max-width:380px;display:block;margin:2px auto 10px"></svg></div>
+    <div id="legend" class="legend"></div>
+    <ul class="list" id="wheellist"></ul>
   </div>
 </div>
 <button id="mic" title="Speak a to-do">🎤</button>
@@ -270,7 +295,7 @@ async function showApp(email) {
   if (data.session) sb.realtime.setAuth(data.session.access_token);
   await maybeRollover();
   await load();
-  try { const V = '4.0'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
+  try { const V = '4.3'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
 }
 document.getElementById('signin').onclick = async () => {
@@ -311,7 +336,9 @@ async function maybeRollover() {
   const { data } = await sb.from('app_meta').select('value').eq('key', 'last_rollover').maybeSingle();
   if (data && data.value === today) return;
   const now = new Date().toISOString();
-  // 1) Tomorrow's Core becomes Today
+  const TOMORROW = "Tomorrow's Core To-Dos";
+  // 1) Promote: yesterday's Tomorrow becomes Today, by SECTION and by bucket
+  await sb.from('todos').update({ section: 'Core To-Dos', bucket: 'today', updated_at: now }).eq('section', TOMORROW);
   await sb.from('todos').update({ bucket: 'today', updated_at: now }).eq('bucket', 'tomorrow');
   // 2) finished non-habit tasks move into Completed (history preserved)
   await sb.from('todos').update({ section: COMPLETED, subsection: null, updated_at: now })
@@ -319,6 +346,17 @@ async function maybeRollover() {
   // 3) habits reset fresh for the new day AND return to HABIT BANDIT (they may have moved to Completed when ticked)
   await sb.from('todos').update({ done: false, done_at: null, actual_minutes: null, skipped: false, status: 'todo', section: 'Core To-Dos', subsection: 'HABIT BANDIT', origin_section: null, origin_subsection: null, updated_at: now })
     .eq('is_habit', true);
+  // 4) Regenerate a fresh Tomorrow from the daily template (standing non-habit items), idempotently
+  try {
+    const tmpl = await sb.from('daily_template').select('*').eq('is_habit', false).order('position', { ascending: true });
+    const existing = await sb.from('todos').select('task').eq('section', TOMORROW);
+    const have = new Set((existing.data || []).map(r => r.task));
+    const toAdd = (tmpl.data || []).filter(r => !have.has(r.task)).map(r => ({
+      section: TOMORROW, subsection: r.subsection || null, task: r.task,
+      est_minutes: r.est_minutes ?? null, position: r.position ?? 999,
+      bucket: 'tomorrow', is_habit: false, category: null, status: 'todo', done: false }));
+    if (toAdd.length) await sb.from('todos').insert(toAdd);
+  } catch (e) { console.error('daily-template regen failed', e); }
   await sb.from('app_meta').upsert({ key: 'last_rollover', value: today, updated_at: now });
 }
 
@@ -591,6 +629,7 @@ function render() {
     }
   }
   initSortables();
+  { const wv = document.getElementById('wheelview'); if (wv && wv.style.display !== 'none' && typeof drawWheel === 'function') drawWheel(); }
 }
 function renderTotals() {
   document.querySelectorAll('.section-total').forEach(tot => {
@@ -681,6 +720,136 @@ async function addSpoken(text) {
   const { data, error } = await sb.from('todos').insert({ section: '📥 Inbox · uncategorized captures', task: text, position: pos, bucket: 'today' }).select().single();
   if (error) { toast('Could not add'); return; }
   todos.push(data); render(); toast('🎤 Added to Inbox: ' + text);
+}
+
+/* ---------- Time Wheel ---------- */
+const WHEEL_START = 360, WHEEL_END = 1320, WHEEL_SPAN = 960;   // 6:00am .. 10:00pm
+const PLAN_SECS = ['Core To-Dos', 'After Core'];
+const MEAL_COLOR = '#e6a15c';
+const MEALS = [ { name: '🍽️ Lunch', start: 12*60+30, end: 13*60 }, { name: '🍽️ Dinner', start: 18*60+30, end: 19*60+15 } ];
+const MANTRAS = [
+  'You do not rise to the level of your goals. You fall to the level of your systems.',
+  'Every action is a vote for the type of person you wish to become.',
+  'Habits are the compound interest of self-improvement.',
+  'You should be far more concerned with your current trajectory than your current results.',
+  'The most effective way to change your habits is to focus on who you wish to become.',
+  'Make it obvious, make it attractive, make it easy, make it satisfying.',
+  'Success is the product of daily habits, not once-in-a-lifetime transformations.',
+  'Small habits do not add up. They compound.',
+  'Reduce the friction, and good habits arise on their own.',
+  'When you cannot win by being better, win by being different.',
+  'Time magnifies the margin between success and failure.',
+  'Be the designer of your world, not merely the consumer of it.',
+];
+function effSection(t){ return (t.section === COMPLETED) ? (t.origin_section || 'Core To-Dos') : t.section; }
+function catColor(t){ if (t.is_habit) return '#8fd0c4'; return COLOR[effSection(t)] || '#b7bcc4'; }
+function nowMinutes(){ const d = new Date(); return d.getHours()*60 + d.getMinutes(); }
+function localMinutesOf(iso){ const d = new Date(iso); return d.getHours()*60 + d.getMinutes(); }
+function m2a(mins){ return -90 + ((mins - WHEEL_START) / WHEEL_SPAN) * 360; }
+function polar(cx,cy,r,deg){ const a = deg*Math.PI/180; return [cx + r*Math.cos(a), cy + r*Math.sin(a)]; }
+function sectorPath(cx,cy,ri,ro,a0,a1){
+  if (a1 - a0 >= 359.99) a1 = a0 + 359.99;
+  const large = (a1 - a0) > 180 ? 1 : 0;
+  const [xoa,yoa]=polar(cx,cy,ro,a0), [xob,yob]=polar(cx,cy,ro,a1);
+  const [xib,yib]=polar(cx,cy,ri,a1), [xia,yia]=polar(cx,cy,ri,a0);
+  return `M${xoa.toFixed(2)},${yoa.toFixed(2)} A${ro},${ro} 0 ${large} 1 ${xob.toFixed(2)},${yob.toFixed(2)} L${xib.toFixed(2)},${yib.toFixed(2)} A${ri},${ri} 0 ${large} 0 ${xia.toFixed(2)},${yia.toFixed(2)} Z`;
+}
+function esc(s){ return (s||'').replace(/[<&>]/g, c => ({'<':'&lt;','&':'&amp;','>':'&gt;'}[c])); }
+function hhmm(mins){ let h=Math.floor(mins/60), m=mins%60; const ap=h<12?'a':'p'; h=h%12||12; return h + (m?(':'+String(m).padStart(2,'0')):'') + ap; }
+function planTasks(){
+  const today = localDate();
+  return todos.filter(t => {
+    if (t.skipped) return false;
+    if (!PLAN_SECS.includes(effSection(t))) return false;
+    if (t.done) return t.done_at && dayKey(effDateOf(t.done_at)) === today;
+    return true;
+  }).sort((a,b) => (a.position||0) - (b.position||0));
+}
+function drawWheel(){
+  const svg = document.getElementById('wheelsvg'); if (!svg) return;
+  const cx=180, cy=180, RO=140, RI=100, ARO=157, ARI=145;
+  let out = `<path d="${sectorPath(cx,cy,RI,RO,-90,269.99)}" fill="#eef1f6" stroke="#e3e7ee" stroke-width="1"/>`;
+  for (let h=6; h<=22; h++){
+    const a=m2a(h*60), [x1,y1]=polar(cx,cy,RO+2,a), [x2,y2]=polar(cx,cy,RO+9,a);
+    out += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#b7bcc4" stroke-width="1"/>`;
+    if (h%2===0){ const [lx,ly]=polar(cx,cy,RO+20,a); out += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" font-size="9" fill="#8a8f99" text-anchor="middle" dominant-baseline="middle">${(h%12||12)+(h<12?'a':'p')}</text>`; }
+  }
+  const plan = planTasks();
+  let cursor = WHEEL_START; const planned = [];
+  for (const t of plan){
+    const dur = t.est_minutes || (t.is_habit ? 10 : 20);
+    const start = cursor, end = Math.min(cursor + dur, WHEEL_END);
+    if (start >= WHEEL_END) break;
+    planned.push({ t, start, end });
+    out += `<path d="${sectorPath(cx,cy,RI,RO,m2a(start),m2a(end))}" fill="${catColor(t)}" stroke="#fff" stroke-width="1" opacity="${t.done?0.5:1}"><title>${esc(t.task)} · ${fmt(dur)} plan${t.done?' · done':''}</title></path>`;
+    cursor = end;
+  }
+  for (const m of MEALS){
+    out += `<path d="${sectorPath(cx,cy,RI,RO,m2a(m.start),m2a(m.end))}" fill="${MEAL_COLOR}" stroke="#fff" stroke-width="1"><title>${m.name} · ${hhmm(m.start)}</title></path>`;
+  }
+  let onSchedule = 0;
+  for (const t of todos){
+    if (!t.done || !t.done_at) continue;
+    if (dayKey(effDateOf(t.done_at)) !== localDate()) continue;
+    if (!PLAN_SECS.includes(effSection(t))) continue;
+    const act = t.actual_minutes || t.est_minutes || 10;
+    const aEnd = Math.min(Math.max(localMinutesOf(t.done_at), WHEEL_START), WHEEL_END);
+    const aStart = Math.max(aEnd - act, WHEEL_START);
+    out += `<path d="${sectorPath(cx,cy,ARI,ARO,m2a(aStart),m2a(aEnd))}" fill="${catColor(t)}" stroke="#fff" stroke-width="0.75"><title>${esc(t.task)} · done ${new Date(t.done_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</title></path>`;
+    const p = planned.find(p => p.t.id === t.id);
+    if (p && aStart < p.end && aEnd > p.start) onSchedule++;
+  }
+  const nm = nowMinutes();
+  if (nm >= WHEEL_START && nm <= WHEEL_END){
+    const a=m2a(nm), [hx,hy]=polar(cx,cy,RO+6,a);
+    out += `<line x1="${cx}" y1="${cy}" x2="${hx.toFixed(1)}" y2="${hy.toFixed(1)}" stroke="#c0453b" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="3.5" fill="#c0453b"/>`;
+  }
+  out += `<text x="${cx}" y="${cy-4}" font-size="11" fill="#5b6472" text-anchor="middle">now</text><text x="${cx}" y="${cy+13}" font-size="15" font-weight="700" fill="#1f2a44" text-anchor="middle">${new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</text>`;
+  svg.innerHTML = out;
+
+  const notDone = plan.filter(t => !t.done);
+  const remEst = notDone.reduce((a,t)=>a+(t.est_minutes||(t.is_habit?10:20)),0);
+  const minsLeft = Math.max(0, WHEEL_END - nm), slack = minsLeft - remEst;
+  const tiles = [
+    ['Time left', fmt(minsLeft), 'until 10p'],
+    ['Still on list', String(notDone.length), notDone.length===1?'task':'tasks'],
+    [slack>=0?'Free room':'Over by', fmt(Math.abs(slack)), slack>=0?'if you start now':'past 10p'],
+    ['On schedule', String(onSchedule), 'done in-window'],
+  ];
+  const st = document.getElementById('stats');
+  if (st) st.innerHTML = tiles.map(s=>`<div class="tile"><div class="tv">${s[1]}</div><div class="tl">${s[0]}</div><div class="ts">${s[2]}</div></div>`).join('');
+  const mEl = document.getElementById('mantra');
+  if (mEl){ const d0=effectiveDate(0); const doy=Math.floor((d0 - new Date(d0.getFullYear(),0,0))/86400000); mEl.textContent = '“' + MANTRAS[doy % MANTRAS.length] + '”'; }
+  const lg = document.getElementById('legend');
+  if (lg) lg.innerHTML = [['Core To-Dos',COLOR['Core To-Dos']],['After Core',COLOR['After Core']],['Habits','#8fd0c4'],['Meals',MEAL_COLOR],['Free','#eef1f6']].map(l=>`<span class="lchip"><i style="background:${l[1]}"></i>${l[0]}</span>`).join('');
+  const ul = document.getElementById('wheellist');
+  if (ul){ ul.innerHTML='';
+    const rows = [ ...planned.map(p=>({t:p.t,start:p.start,end:p.end,meal:false})), ...MEALS.map(m=>({t:{task:m.name,is_habit:false},start:m.start,end:m.end,meal:true})) ].sort((a,b)=>a.start-b.start);
+    for (const r of rows){
+      const li=document.createElement('li'); li.className='wrow'+(r.meal?' meal':'')+(r.t.done?' done':'');
+      li.innerHTML = `<span class="wt" style="background:${r.meal?MEAL_COLOR:catColor(r.t)}"></span><span class="wtime">${hhmm(r.start)}</span><span class="wtask">${esc(r.t.task)}</span><span class="wdur">${fmt(r.end-r.start)}</span>`;
+      if (!r.meal) li.onclick = () => { snapshot(); toggleDoneWheel(r.t); };
+      ul.appendChild(li);
+    }
+  }
+}
+function toggleDoneWheel(t){
+  const done = !t.done;
+  if (done) patch(t.id, { done:true, status:'done', done_at:new Date().toISOString(), actual_minutes: t.actual_minutes ?? t.est_minutes ?? (t.is_habit?10:20), origin_section: t.section, origin_subsection: t.subsection, section: COMPLETED, subsection: null });
+  else patch(t.id, { done:false, status:'todo', done_at:null, section: t.origin_section || 'Core To-Dos', subsection: t.origin_subsection ?? (t.is_habit ? 'HABIT BANDIT' : null) });
+  drawWheel(); checkHabitConfetti();
+}
+{
+  const tgl = document.getElementById('viewtoggle');
+  if (tgl) tgl.onclick = () => {
+    const wv = document.getElementById('wheelview'), bd = document.querySelector('#app .wrap');
+    const show = wv.style.display === 'none';
+    wv.style.display = show ? 'block' : 'none';
+    if (bd) bd.style.display = show ? 'none' : 'block';
+    tgl.textContent = show ? '☰ Board' : '🕐 Wheel';
+    if (show) drawWheel();
+  };
+  setInterval(() => { const wv=document.getElementById('wheelview'); if (wv && wv.style.display!=='none') drawWheel(); }, 60000);
 }
 
 refreshAuth();
