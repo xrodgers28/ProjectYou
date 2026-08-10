@@ -177,10 +177,7 @@
   .synced { font-size:10.5px; color:#2f8f5b; }
   .star { flex:0 0 auto; cursor:pointer; font-size:14px; line-height:1; color:#d3d6db; margin-left:4px; user-select:none; }
   .star.on { color:#f0b429; }
-  .bullet { cursor:grab; padding:3px 6px; margin:-3px -6px; border-radius:6px; }
-  .bullet:hover { background:rgba(91,98,112,.12); }
-  .bullet:active, li.dragging > .row .bullet { cursor:grabbing; }
-  li.task > .row:hover { background:#f2f5fb; }
+  .bullet .dot { flex:0 0 auto; }   /* keep dots perfectly round even in tight space */
   #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#2b2b2b; color:#fff; font-family:Arial; font-size:14px; padding:11px 18px; border-radius:9px; z-index:120; display:none; }
 </style>
 </head>
@@ -243,6 +240,7 @@ const COMPLETED = '✓ Completed Tasks';
 const TOP = '⭐ Top Priority';
 
 let todos = [];
+let sectionOrder = [];
 const collapsed = {};
 let habitsWereAllDone = false;
 
@@ -308,6 +306,8 @@ async function load() {
   const { data, error } = await sb.from('todos').select('*').order('position', { ascending: true });
   if (error) { console.error(error); return; }
   todos = data || [];
+  const so = await sb.from('app_meta').select('value').eq('key', 'section_order').maybeSingle();
+  sectionOrder = (so.data && so.data.value) ? JSON.parse(so.data.value) : [];
   render();
 }
 function subscribe() {
@@ -386,7 +386,7 @@ function taskRow(t) {
   if (TIMED.has(t.section)) {
     const est = el('input', 'estbox'); est.value = t.est_minutes ?? ''; est.title = 'estimate (min)';
     est.onchange = () => { const v = est.value === '' ? null : parseInt(est.value,10); patch(t.id, { est_minutes: v }); renderTotals(); };
-    const act = el('input', 'actbox'); act.value = t.actual_minutes ?? ''; act.title = 'actual (min)';
+    const act = el('input', 'actbox'); act.value = t.actual_minutes ?? (t.est_minutes ?? ''); act.title = 'actual (min), starts from the estimate';
     act.onchange = () => { const v = act.value === '' ? null : parseInt(act.value,10); patch(t.id, { actual_minutes: v }); };
     row.appendChild(est); row.appendChild(act);
   }
@@ -432,7 +432,7 @@ function sectionNode(name, colorOverride) {
   const caret = el('span', 'caret', '▾');
   caret.onclick = () => { collapsed[key] = !li.classList.contains('collapsed') ? true : false; render(); };
   row.appendChild(caret);
-  const bullet = el('span', 'bullet'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
+  const bullet = el('span', 'bullet sec-handle'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
   const text = el('span', 'text');
   const NO_BADGE = ['Inbox', 'Core To-Dos', 'Tracking', 'Completed', 'Done'];
   const excluded = !colorOverride && NO_BADGE.some(k => name.includes(k));
@@ -463,7 +463,7 @@ function render() {
   // Top Priority (starred, active) pinned at very top
   const starred = todos.filter(t => t.starred && !t.done && !t.skipped).sort((a,b)=>(a.position||0)-(b.position||0));
   if (starred.length) {
-    const li = sectionNode(TOP, '#f0c674');
+    const li = sectionNode(TOP, '#f0c674'); li.dataset.virtual = '1';
     const list = el('ul', 'list'); list.dataset.virtual = '1';
     starred.forEach(t => list.appendChild(taskRow(t)));
     li.appendChild(list);
@@ -471,10 +471,12 @@ function render() {
   }
 
   const present = [...new Set(todos.map(t => t.section))];
-  const ordered = [...ORDER.filter(s => present.includes(s)), ...present.filter(s => !ORDER.includes(s))];
+  const inSaved = sectionOrder.filter(s => present.includes(s));
+  const rest = present.filter(s => !inSaved.includes(s)).sort((a, b) => orderIndex(ORDER, a) - orderIndex(ORDER, b) || a.localeCompare(b));
+  const ordered = [...inSaved, ...rest];
 
   for (const sec of ordered) {
-    const secLi = sectionNode(sec);
+    const secLi = sectionNode(sec); secLi.dataset.section = sec;
     const secList = el('ul', 'list'); secList.dataset.section = sec; secList.dataset.sub = '';
     // items in this section, minus ones pinned to Top Priority
     const items = todos.filter(t => t.section === sec && !t.skipped && !(t.starred && !t.done));
@@ -499,7 +501,7 @@ function render() {
 
     if (TOTAL_YELLOW.has(sec) || TOTAL_GREY.has(sec)) {
       const sum = todos.filter(t => t.section === sec && !t.done && !t.skipped).reduce((a,t)=>a+(t.est_minutes||0),0);
-      const tot = el('div', 'section-total' + (TOTAL_GREY.has(sec) ? ' section-total-grey' : ''));
+      const tot = el('div', 'section-total');
       tot.dataset.sec = sec; tot.textContent = 'Total: ' + fmt(sum);
       board.appendChild(tot);
     }
@@ -525,6 +527,24 @@ function initSortables() {
       onEnd: onDragEnd
     });
   });
+  const board = document.getElementById('board');
+  if (!board._sortable) {
+    board._sortable = new Sortable(board, {
+      group: 'sections', animation: 130, handle: '.sec-handle', draggable: 'li.domain',
+      filter: '[data-virtual]', ghostClass: 'sortable-ghost', dragClass: 'dragging',
+      delay: 150, delayOnTouchOnly: true, touchStartThreshold: 6, fallbackTolerance: 6,
+      onEnd: onSectionEnd
+    });
+  }
+}
+async function onSectionEnd() {
+  const board = document.getElementById('board');
+  const order = [...board.children]
+    .filter(li => li.classList && li.classList.contains('domain') && !li.dataset.virtual)
+    .map(li => li.dataset.section).filter(Boolean);
+  sectionOrder = order;
+  render();
+  await sb.from('app_meta').upsert({ key: 'section_order', value: JSON.stringify(order), updated_at: new Date().toISOString() });
 }
 async function onDragEnd() {
   // Normalize each subsection list's section to the section it now lives in
