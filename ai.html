@@ -22,7 +22,10 @@
   .card h2{font-size:27px;line-height:1.2;margin-top:16px}
   .card .body{font-size:17px;color:var(--muted);line-height:1.5;margin-top:14px;flex:1}
   .card .src{font-size:12.5px;color:var(--muted);margin-top:10px;font-style:italic}
-  .logo{width:64px;height:64px;border-radius:14px;border:1px solid var(--line);object-fit:contain;background:#fff;margin-bottom:6px}
+  .shot{width:100%;height:190px;border-radius:14px;border:1px solid var(--line);object-fit:cover;background:#dfe7f0;margin-bottom:14px;display:block}
+  .logorow{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .logo{width:52px;height:52px;border-radius:13px;border:1px solid var(--line);object-fit:contain;background:#fff;flex:none}
+  .pname{font-size:24px;font-weight:800;line-height:1.15}
   .visit{display:inline-block;margin-top:16px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px}
   .navbtns{display:flex;justify-content:space-between;margin-top:18px;gap:10px}
   .btn{font-family:inherit;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:12px;padding:12px 18px;cursor:pointer;font-size:15px}
@@ -57,7 +60,7 @@
     <div class="dots" id="dots"></div>
     <div id="deck"></div>
   </div>
-  <div class="badge">AI Deck v1.0</div>
+  <div class="badge">AI Deck v1.1</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -90,8 +93,11 @@ function render(){
   const c=CARDS[idx];
   let inner='<div class="kicker">'+esc(KICK[c.card_type]||c.card_type)+'</div>';
   if(c.card_type==='platform'){
+    if(c.screenshot_url) inner+='<img class="shot" src="'+esc(c.screenshot_url)+'" alt="">';
+    inner+='<div class="logorow">';
     if(c.logo_url) inner+='<img class="logo" src="'+esc(c.logo_url)+'" alt="">';
-    inner+='<h2>'+esc(c.title)+'</h2><div class="body">'+esc(c.body||'')+'</div>';
+    inner+='<div class="pname">'+esc(c.platform_name||c.title)+'</div></div>';
+    inner+='<div class="body">'+esc(c.body||'')+'</div>';
     if(c.platform_url) inner+='<div><a class="visit" href="'+esc(c.platform_url)+'" target="_blank" rel="noopener">Check it out ↗</a></div>';
   }else{
     inner+='<h2>'+esc(c.title)+'</h2><div class="body">'+esc(c.body||'')+'</div>';
@@ -122,8 +128,9 @@ async function saveDeck(){
   toast('Saved '+saved+' card'+(saved===1?'':'s')+'. Quotes routed to Clever Phrases.');
 }
 async function markDone(){
-  const {data}=await sb.from('todos').select('id').eq('is_habit',true).ilike('task','%AI%').limit(1);
-  if(data&&data.length){await sb.from('todos').update({done:true,done_at:new Date().toISOString(),status:'done'}).eq('id',data[0].id);toast('Deck done. AI habit ticked in CrushingIt. ✓');}
+  const today=new Date().toISOString().slice(0,10);
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).eq('bucket','today').ilike('task','%AI (Learning%').limit(1);
+  if(data&&data.length){await sb.from('todos').update({done:true,done_at:new Date().toISOString(),status:'done',for_date:today}).eq('id',data[0].id);toast('Deck done. AI habit ticked in CrushingIt. ✓');}
   else{toast('Deck marked done. (No AI habit row found to tick.)');}
 }
 boot();

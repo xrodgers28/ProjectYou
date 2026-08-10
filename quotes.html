@@ -6,7 +6,7 @@
 <title>Clever Phrases · ProjectYou</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--gold:#d9a400;--hot:#c0453b}
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--gold:#d9a400;--hot:#c0453b;--green:#1e8e5a}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
   .nav{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:4px;align-items:center;padding:9px 14px;flex-wrap:wrap}
@@ -64,11 +64,12 @@
     <div class="tools">
       <input id="q" placeholder="Search phrases…" oninput="draw()">
       <select id="tag" onchange="draw()"><option value="">All categories</option></select>
+      <button class="btn" style="background:var(--green)" onclick="markDone()">Done today ✓</button>
     </div>
     <div class="count" id="count"></div>
     <div class="grid" id="grid"></div>
   </div>
-  <div class="badge">Clever Phrases v1.0</div>
+  <div class="badge">Clever Phrases v1.1</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -118,6 +119,12 @@ async function addQuote(){
   if(error){toast('Error: '+error.message);return;}
   document.getElementById('nt').value='';document.getElementById('nm').value='';document.getElementById('ng').value='';
   toast('Added.');load();
+}
+async function markDone(){
+  const today=new Date().toISOString().slice(0,10);
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).eq('bucket','today').ilike('task','%Clever Phrases%').limit(1);
+  if(data&&data.length){await sb.from('todos').update({done:true,done_at:new Date().toISOString(),status:'done',for_date:today}).eq('id',data[0].id);toast('Clever Phrases habit ticked in CrushingIt. ✓');}
+  else{toast('Marked done. (No Clever Phrases habit row found.)');}
 }
 boot();
 </script>
