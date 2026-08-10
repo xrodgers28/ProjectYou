@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Deck · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  .nav{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:4px;align-items:center;padding:9px 14px;flex-wrap:wrap}
+  .nav .brand{font-weight:800;color:var(--accent);margin-right:8px;font-size:14px}
+  .nav a{font-size:12.5px;font-weight:700;color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px}
+  .nav a:hover{background:var(--chip);color:var(--accent)} .nav a.on{background:var(--accent);color:#fff}
+  .nav .who{margin-left:auto;font-size:11.5px;color:var(--muted)}
+  .stage{max-width:560px;margin:0 auto;padding:20px 16px 40px}
+  .dots{display:flex;gap:7px;justify-content:center;margin:6px 0 16px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--line)} .dot.on{background:var(--accent);width:22px;border-radius:5px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:30px 26px;min-height:400px;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(31,42,68,.10)}
+  .kicker{font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent)}
+  .card h2{font-size:27px;line-height:1.2;margin-top:16px}
+  .card .body{font-size:17px;color:var(--muted);line-height:1.5;margin-top:14px;flex:1}
+  .card .src{font-size:12.5px;color:var(--muted);margin-top:10px;font-style:italic}
+  .logo{width:64px;height:64px;border-radius:14px;border:1px solid var(--line);object-fit:contain;background:#fff;margin-bottom:6px}
+  .visit{display:inline-block;margin-top:16px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px}
+  .navbtns{display:flex;justify-content:space-between;margin-top:18px;gap:10px}
+  .btn{font-family:inherit;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:12px;padding:12px 18px;cursor:pointer;font-size:15px}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:disabled{opacity:.4;cursor:default}
+  .save .row{display:flex;align-items:flex-start;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .save .row:last-child{border-bottom:none}
+  .save input{width:20px;height:20px;margin-top:2px}
+  .save .t{font-weight:700;font-size:15px} .save .d{font-size:12.5px;color:var(--muted)}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}.toast.show{opacity:1}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>AI Deck</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn primary" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="nav"><span class="brand">SER</span>
+    <a href="index.html">CrushingIt</a><a href="ai.html" class="on">AI Deck</a>
+    <a href="quotes.html">Clever Phrases</a><a href="mission.html">Mission Control</a>
+    <span class="who" id="who"></span></div>
+  <div class="stage">
+    <div class="dots" id="dots"></div>
+    <div id="deck"></div>
+  </div>
+  <div class="badge">AI Deck v1.0</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let CARDS=[], idx=0;
+const KICK={tip:'Ways of working',insight:'Industry insight',quote:'Quote worth keeping',platform:'New platform'};
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)onLogin(session);}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}onLogin(data.session);}
+async function onLogin(session){try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');
+  document.getElementById('who').textContent=session.user.email;loadDeck();}
+async function loadDeck(){
+  const today=new Date().toISOString().slice(0,10);
+  const {data}=await sb.from('ai_cards').select('*').eq('for_date',today).order('deck_position');
+  CARDS=data||[];
+  if(!CARDS.length){document.getElementById('deck').innerHTML='<div class="card"><div class="kicker">Today</div><h2>No deck yet for today.</h2><div class="body">Claude generates a fresh 4-card deck each day. Check back, or ask Claude to build today\\'s deck.</div></div>';document.getElementById('dots').innerHTML='';return;}
+  render();
+}
+function render(){
+  const dots=CARDS.map((_,i)=>'<div class="dot '+(i===idx?'on':'')+'"></div>').join('')+'<div class="dot '+(idx===CARDS.length?'on':'')+'"></div>';
+  document.getElementById('dots').innerHTML=dots;
+  if(idx>=CARDS.length){renderSave();return;}
+  const c=CARDS[idx];
+  let inner='<div class="kicker">'+esc(KICK[c.card_type]||c.card_type)+'</div>';
+  if(c.card_type==='platform'){
+    if(c.logo_url) inner+='<img class="logo" src="'+esc(c.logo_url)+'" alt="">';
+    inner+='<h2>'+esc(c.title)+'</h2><div class="body">'+esc(c.body||'')+'</div>';
+    if(c.platform_url) inner+='<div><a class="visit" href="'+esc(c.platform_url)+'" target="_blank" rel="noopener">Check it out ↗</a></div>';
+  }else{
+    inner+='<h2>'+esc(c.title)+'</h2><div class="body">'+esc(c.body||'')+'</div>';
+    if(c.source) inner+='<div class="src">'+esc(c.source)+'</div>';
+  }
+  const prevDis=idx===0?'disabled':'';
+  inner+='<div class="navbtns"><button class="btn" '+prevDis+' onclick="go(-1)">Back</button><button class="btn primary" onclick="go(1)">'+(idx===CARDS.length-1?'Review & save':'Next')+'</button></div>';
+  document.getElementById('deck').innerHTML='<div class="card">'+inner+'</div>';
+}
+function renderSave(){
+  let rows=CARDS.map((c,i)=>'<div class="row"><input type="checkbox" id="sv'+i+'" '+(c.saved?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(KICK[c.card_type]||c.card_type)+': '+esc(c.title)+'</div><div class="d">'+esc((c.body||'').slice(0,90))+'</div></label></div>').join('');
+  document.getElementById('deck').innerHTML='<div class="card save"><div class="kicker">End of deck</div><h2>Keep what mattered.</h2><div style="margin-top:16px">'+rows+'</div>'+
+    '<div class="navbtns"><button class="btn" onclick="go(-1)">Back</button><button class="btn primary" onclick="saveDeck()">Save picks</button></div>'+
+    '<button class="btn primary" style="width:100%;margin-top:10px;background:var(--green);border-color:var(--green)" onclick="markDone()">Mark today\\'s deck done ✓</button></div>';
+}
+function go(d){idx=Math.max(0,Math.min(CARDS.length,idx+d));render();}
+async function saveDeck(){
+  let saved=0;
+  for(let i=0;i<CARDS.length;i++){
+    const checked=document.getElementById('sv'+i).checked;const c=CARDS[i];
+    await sb.from('ai_cards').update({saved:checked}).eq('id',c.id);
+    if(checked){saved++;
+      if(c.card_type==='quote'){ // cross-module write into Clever Phrases
+        await sb.from('quotes').insert({text:c.title,meaning:c.body,tags:['AI Deck'],source_module:'ai_deck'});
+      }
+    }
+  }
+  toast('Saved '+saved+' card'+(saved===1?'':'s')+'. Quotes routed to Clever Phrases.');
+}
+async function markDone(){
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).ilike('task','%AI%').limit(1);
+  if(data&&data.length){await sb.from('todos').update({done:true,done_at:new Date().toISOString(),status:'done'}).eq('id',data[0].id);toast('Deck done. AI habit ticked in CrushingIt. ✓');}
+  else{toast('Deck marked done. (No AI habit row found to tick.)');}
+}
+boot();
+</script>
+</body>
+</html>
