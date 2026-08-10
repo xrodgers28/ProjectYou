@@ -2,55 +2,205 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CrushingIt</title>
 <style>
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body { font-family: Arial, Helvetica, sans-serif; margin: 0; background: #f4f5f7; color: #1a1a1a; }
-  header { position: sticky; top: 0; z-index: 5; background: #111; color: #fff; padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; }
-  header h1 { font-size: 19px; margin: 0; letter-spacing: 0.3px; }
-  .live { font-size: 11px; background: #1e7e34; color: #fff; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; }
-  .dot { width: 7px; height: 7px; border-radius: 50%; background: #7CFFA0; display: inline-block; animation: pulse 1.8s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.35;} }
-  .wrap { max-width: 720px; margin: 0 auto; padding: 12px 12px 60px; }
-  .addbar { display: flex; gap: 6px; margin: 10px 0 16px; }
-  .addbar input { flex: 1; padding: 11px 12px; border: 1px solid #cfd3da; border-radius: 8px; font-size: 15px; font-family: inherit; }
-  .addbar select { border: 1px solid #cfd3da; border-radius: 8px; font-size: 13px; padding: 0 6px; background: #fff; font-family: inherit; max-width: 130px; }
-  .addbar button { background: #111; color: #fff; border: none; border-radius: 8px; padding: 0 16px; font-size: 20px; cursor: pointer; }
-  .section { margin-bottom: 18px; }
-  .shead { display: inline-block; font-weight: bold; font-size: 15px; padding: 3px 10px; border-radius: 5px; color: #fff; }
-  .stotal { font-size: 12px; color: #555; margin-left: 8px; background: #fff3bf; padding: 2px 7px; border-radius: 10px; }
-  .subhead { font-size: 12px; font-weight: bold; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin: 12px 0 4px 2px; }
-  .row { display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #e6e8ec; border-radius: 8px; padding: 9px 10px; margin: 5px 0; }
-  .row.done .task { text-decoration: line-through; color: #9aa0a6; }
-  .cbox { width: 20px; height: 20px; flex: 0 0 auto; cursor: pointer; accent-color: #1e7e34; }
-  .star { flex: 0 0 auto; cursor: pointer; font-size: 17px; color: #d0d3d8; background: none; border: none; padding: 0; }
-  .star.on { color: #f4b400; }
-  .task { flex: 1; font-size: 15px; border: none; background: transparent; font-family: inherit; padding: 2px; min-width: 0; }
-  .task:focus { outline: none; background: #f0f6ff; border-radius: 4px; }
-  .est { width: 52px; flex: 0 0 auto; text-align: center; font-size: 13px; border: 1px solid #e0e2e6; border-radius: 6px; padding: 5px 2px; font-family: inherit; color: #333; }
-  .est:focus { outline: none; border-color: #4a90e2; }
-  .del { flex: 0 0 auto; background: none; border: none; color: #c9ccd1; font-size: 16px; cursor: pointer; padding: 2px 4px; }
-  .completed-toggle { cursor: pointer; font-weight: bold; font-size: 14px; color: #444; margin: 18px 0 6px; user-select: none; }
-  .muted { color: #888; font-size: 13px; text-align: center; padding: 20px; }
-  .foot { text-align: center; font-size: 11px; color: #9aa0a6; margin-top: 26px; }
-  .err { background: #fdecea; color: #b3261e; border: 1px solid #f3caca; border-radius: 8px; padding: 10px; margin: 10px 0; font-size: 13px; display: none; }
+  :root{
+    --ink:#4d4d4d;          /* body text */
+    --ink-strong:#2b2b2b;   /* domain names */
+    --muted:#9a9fa8;        /* notes / dates */
+    --bullet:#b7bcc4;       /* resting bullet */
+    --bullet-hover:#6b7180; /* hovered bullet */
+    --guide:#eceef1;        /* indent guide line */
+    --halo:#dfe3e8;         /* collapsed-node halo */
+    --row:13px;             /* base font size (compact, Workflowy-like) */
+    --lh:1.34;              /* tight line height */
+    --indent:22px;          /* indent per level */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);
+    font-size:var(--row);
+    line-height:var(--lh);
+    background:#fff;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:26px 26px 120px}
+  .topbar{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .title{font-size:16px;font-weight:700;color:var(--ink-strong);letter-spacing:.2px}
+  .hint{font-size:11px;color:var(--muted)}
+
+  /* ---- outline ---- */
+  ul.list{list-style:none;margin:0;padding:0}
+  ul.list ul.list{margin-left:var(--indent);border-left:1px solid var(--guide)}
+  li.node{position:relative;padding:0}
+  .row{
+    display:flex;align-items:flex-start;gap:6px;
+    padding:1px 4px 1px 0;border-radius:4px;
+    min-height:20px;
+  }
+  .row:hover{background:#f6f7f9}
+  li.node.dragging > .row{opacity:.4}
+  .sortable-ghost > .row{background:#eef3fb;outline:1px dashed #b9cdec}
+
+  /* triangle (collapse): hidden until hover, only meaningful when node has children */
+  .caret{
+    flex:0 0 auto;width:12px;height:18px;margin-top:0;
+    display:flex;align-items:center;justify-content:center;
+    color:#c4c8ce;font-size:9px;cursor:pointer;user-select:none;
+    opacity:0;transition:opacity .12s,transform .12s;
+  }
+  .row:hover .caret{opacity:1}
+  li.has-children > .row .caret{opacity:.55}
+  li.has-children > .row:hover .caret{opacity:1}
+  li.collapsed > .row .caret{transform:rotate(-90deg)}
+  li.collapsed > ul.list{display:none}
+
+  /* bullet */
+  .bullet{
+    flex:0 0 auto;width:16px;height:18px;position:relative;cursor:grab;
+    display:flex;align-items:center;justify-content:center;margin-top:0;
+  }
+  .bullet:active{cursor:grabbing}
+  .bullet .dot{
+    width:6px;height:6px;border-radius:50%;background:var(--bullet);
+    transition:background .12s;z-index:2;
+  }
+  .bullet:hover .dot{background:var(--bullet-hover)}
+  li.has-children.collapsed > .row .bullet::before{
+    content:"";position:absolute;width:16px;height:16px;border-radius:50%;
+    background:var(--halo);z-index:1;
+  }
+  /* colored domain dots */
+  li.domain > .row .bullet .dot{width:8px;height:8px}
+
+  .text{
+    flex:1 1 auto;outline:none;padding:0 2px;
+    word-break:break-word;white-space:pre-wrap;min-width:20px;
+  }
+  li.domain > .row .text{font-weight:700;color:var(--ink-strong)}
+  .note{color:var(--muted);font-size:11px;padding:0 2px 3px 44px;margin-top:-1px}
+  .date{color:var(--muted);font-size:10.5px;flex:0 0 auto;padding-top:1px;opacity:0;transition:opacity .12s}
+  .row:hover .date{opacity:1}
+
+  /* add-line control */
+  .addrow{display:flex;align-items:center;gap:6px;padding:1px 4px 1px 22px;color:#c0c4cb;font-size:12px;cursor:pointer;border-radius:4px}
+  .addrow:hover{background:#f6f7f9;color:#8a8f98}
+  .addrow .plus{width:16px;text-align:center}
+
+  /* ---- live export panel (always visible; clipboard API is blocked in-sandbox) ---- */
+  .panel{margin-top:30px;border-top:1px solid #edeef0;padding-top:14px}
+  .panel h2{font-size:12px;font-weight:700;color:var(--ink-strong);margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px}
+  .panel p{font-size:11px;color:var(--muted);margin:0 0 8px}
+  .exportbox{
+    width:100%;height:180px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:11.5px;line-height:1.5;color:#3a3f47;background:#fbfbfc;
+    border:1px solid #e4e6ea;border-radius:6px;padding:10px;resize:vertical;
+  }
+  .btns{display:flex;gap:8px;margin-top:8px}
+  .btn{font-size:11.5px;padding:5px 11px;border:1px solid #d9dce1;background:#fff;color:#444;border-radius:6px;cursor:pointer}
+  .btn:hover{background:#f4f5f7}
+
+  /* completion checkbox */
+  .check{
+    flex:0 0 auto;width:14px;height:14px;margin-top:2px;
+    border:1.5px solid #cfd4da;border-radius:4px;background:#fff;
+    cursor:pointer;position:relative;transition:background .12s,border-color .12s;
+  }
+  .check:hover{border-color:#9aa0a8}
+  li.done > .row .check{background:#7bbf9e;border-color:#7bbf9e}
+  li.done > .row .check::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+  li.done > .row .text{text-decoration:line-through;color:#a8adb5}
+  li.done > .row .date{text-decoration:none}
+  .done-section > .row .text{color:#9a9fa8;font-weight:700}
+  /* undo toast */
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);
+    background:#2b2b2b;color:#fff;font-size:12.5px;padding:9px 14px;border-radius:8px;
+    display:flex;align-items:center;gap:14px;opacity:0;pointer-events:none;
+    transition:opacity .18s,transform .18s;box-shadow:0 6px 20px rgba(0,0,0,.18);z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);pointer-events:auto}
+  .toast button{background:none;border:none;color:#8fc9ff;font-size:12.5px;font-weight:600;cursor:pointer;padding:0}
+  li.date-group > .row .text{font-weight:600;color:#8a8f98}
+  .count{color:#b0b4bb;font-weight:400;font-size:11px}
+  .star{
+    flex:0 0 auto;width:14px;height:18px;margin-top:1px;cursor:pointer;user-select:none;
+    display:flex;align-items:center;justify-content:center;font-size:12px;color:#d3d6db;
+    transition:color .12s;
+  }
+  .star:hover{color:#e0ab2c}
+  li.starred > .row .star{color:#f0b429}
+  li.done > .row .star{display:none}
+  li.priority-group > .row .text{font-weight:700;color:#c07f10}
+  .domain-badge{padding:1px 8px;border-radius:4px;display:inline-block}
+  .section-total{display:flex;align-items:center;gap:6px;margin:3px 0 12px calc(var(--indent) + 4px);padding:3px 10px;background:#ffe95c;border:1px solid #e5cf3a;border-radius:6px;font-size:12.5px;font-weight:700;color:#4d4d4d;width:fit-content;}
+  .section-total .total-val{font-variant-numeric:tabular-nums;}
+  ul.list:empty{min-height:20px;}
+  .estbox{flex:0 0 auto;width:34px;margin-left:6px;padding:1px 4px;border:1px solid #d9dce1;border-radius:5px;font:inherit;font-size:11px;text-align:center;color:#4d4d4d;background:#fff;}
+  .estbox:focus{outline:none;border-color:#9aa0a8;background:#fffef2;}
+  .actual-badge{flex:0 0 auto;margin-left:6px;font-size:11px;font-weight:700;color:#2f8f5b;}
+  .actual-prompt{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 8px 40px;padding:5px 9px;background:#eefaf1;border:1px solid #bfe6cd;border-radius:7px;font-size:12px;color:#3a5;}
+  .actual-prompt .ap-q{color:#356;font-weight:600;}
+  .actual-prompt .ap-in{width:46px;padding:1px 4px;border:1px solid #cfd3d9;border-radius:5px;font-size:12px;text-align:center;}
+  .actual-prompt .ap-btn{cursor:pointer;border:1px solid #cfd3d9;background:#fff;border-radius:5px;padding:2px 9px;font-size:11px;}
+  .actual-prompt .ap-same{background:#2f8f5b;color:#fff;border-color:#2f8f5b;}
+  .subtotal{flex:0 0 auto;margin-left:8px;padding:1px 8px;background:#ffe95c;border:1px solid #e5cf3a;border-radius:5px;font-size:11px;font-weight:700;color:#4d4d4d;font-variant-numeric:tabular-nums;}
+  .actbox{flex:0 0 auto;width:34px;margin-left:6px;padding:1px 4px;border:1px solid #d9dce1;border-radius:5px;font:inherit;font-size:11px;text-align:center;color:#4d4d4d;background:#fff;}
+  .actbox:focus{outline:none;border-color:#7bbf9e;background:#f2fbf5;}
+  .section-total-grey{background:#e8eaed;border-color:#cfd3d9;color:#4d4d4d;}
+  .done-section{ margin-top:14px; margin-bottom:34px; }
+  .tmrw-btn{flex:0 0 auto;margin-left:6px;border:1px solid #d9dce1;background:#fff;border-radius:5px;font-size:12px;line-height:1;padding:2px 7px;cursor:pointer;color:#8a9098;}
+  .tmrw-btn:hover{border-color:#5b6270;color:#5b6270;background:#f4f5f7;}
+  .skipped > .row > .text{text-decoration:line-through;color:#a2a8b0;}
+  .skip-btn{flex:0 0 auto;margin-left:6px;border:1px solid #d9dce1;background:#fff;border-radius:5px;font-size:12px;line-height:1;padding:2px 7px;cursor:pointer;color:#b0b5bc;}
+  .skip-btn:hover{border-color:#c0492f;color:#c0492f;background:#fdf3f1;}
+
+</style>
+<style>
+  /* app shell + login (additions on top of the board styles) */
+  body { margin:0; }
+  #login { position:fixed; inset:0; background:#f4f5f7; display:flex; align-items:center; justify-content:center; z-index:50; }
+  #login .box { background:#fff; border:1px solid #e2e4e8; border-radius:12px; padding:26px 24px; width:320px; box-shadow:0 6px 24px rgba(0,0,0,.06); font-family:Arial,Helvetica,sans-serif; }
+  #login h1 { font-size:22px; margin:0 0 4px; color:#2b2b2b; }
+  #login p { font-size:12.5px; color:#77797f; margin:0 0 16px; }
+  #login input { width:100%; box-sizing:border-box; padding:10px 12px; margin:6px 0; border:1px solid #cfd4da; border-radius:7px; font-size:14px; font-family:inherit; }
+  #login button { width:100%; padding:10px; margin-top:8px; background:#2b2b2b; color:#fff; border:none; border-radius:7px; font-size:14px; cursor:pointer; }
+  #login .msg { font-size:12px; margin-top:10px; min-height:16px; }
+  #login .msg.err { color:#c0492f; }
+  #login .msg.ok { color:#2f8f5b; }
+  .appbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #eceef1; font-family:Arial,Helvetica,sans-serif; position:sticky; top:0; background:#fff; z-index:10; }
+  .appbar .brand { font-weight:700; font-size:16px; color:#2b2b2b; }
+  .appbar .who { font-size:11.5px; color:#9a9fa8; }
+  .appbar .who a { color:#5b6270; cursor:pointer; margin-left:8px; }
+  #app { display:none; }
+  .synced { font-size:10.5px; color:#2f8f5b; }
+  .estbox, .actbox { }
 </style>
 </head>
 <body>
-<header>
-  <h1>CrushingIt</h1>
-  <span class="live"><span class="dot"></span>Live, synced</span>
-</header>
-<div class="wrap">
-  <div id="err" class="err"></div>
-  <div class="addbar">
-    <input id="newtask" placeholder="Add a to-do (or tap the mic on your keyboard)" autocomplete="off">
-    <select id="newsection"></select>
-    <button id="addbtn" title="Add">+</button>
+
+<div id="login">
+  <div class="box">
+    <h1>CrushingIt</h1>
+    <p>Sign in to your private list. First time: enter your email and pick a password, it makes your account.</p>
+    <input id="email" type="email" placeholder="you@email.com" autocomplete="username">
+    <input id="password" type="password" placeholder="password" autocomplete="current-password">
+    <button id="signin">Enter</button>
+    <div id="loginmsg" class="msg"></div>
   </div>
-  <div id="board"><p class="muted">Loading your list...</p></div>
-  <div class="foot">CrushingIt, live version. Changes save instantly and sync across your devices.</div>
+</div>
+
+<div id="app">
+  <div class="appbar">
+    <span class="brand">CrushingIt <span class="synced">● live</span></span>
+    <span class="who"><span id="whoami"></span><a id="signout">sign out</a></span>
+  </div>
+  <div class="wrap">
+    <ul class="list" id="board"></ul>
+  </div>
 </div>
 
 <script type="module">
@@ -60,199 +210,246 @@ const SUPABASE_URL = 'https://arnjntspmrhigodlssbn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const SECTION_ORDER = [
-  'Core To-Dos', 'After Core',
-  'Emotional Health', 'Physical Health', 'Environmental Health',
-  'Social Well-Being', 'Recreational Health', 'Sense of Purpose', 'Mental Fitness',
-  'Tracking', 'Inbox'
+/* ---- section look: exact names, colors and order from Scott's board ---- */
+const SECTIONS = [
+  ['📥 Inbox · uncategorized captures', '#b7bcc4'],
+  ['Core To-Dos', '#5b6270'],
+  ['⏳ Waiting Area', '#cbb0e0'],
+  ["Tomorrow's Core To-Dos", '#5b6270'],
+  ['After Core', '#f0c674'],
+  ['✓ Completed Tasks', '#c7ccd3'],
+  ['Not Urgent', '#b7bcc4'],
+  ['Work/Amazon', '#b7bcc4'],
+  ['Emotional Health', '#9db4e0'],
+  ['Physical Health', '#e8a0b8'],
+  ['Environmental Health', '#8fd0c4'],
+  ['Social Well-Being', '#a9c8e8'],
+  ['Recreational Health', '#f0b58f'],
+  ['Sense of Purpose (Ikigai)', '#e0a9c0'],
+  ['Mental Fitness', '#ead98f'],
+  ['Tracking', '#7bbf9e'],
 ];
-const SECTION_COLOR = {
-  'Core To-Dos': '#111111', 'After Core': '#6b7280',
-  'Emotional Health': '#d9488a', 'Physical Health': '#e0533d',
-  'Environmental Health': '#2e9e5b', 'Social Well-Being': '#2f7ed8',
-  'Recreational Health': '#8a5cd1', 'Sense of Purpose': '#d99b17',
-  'Mental Fitness': '#189a9a', 'Tracking': '#6b7280', 'Inbox': '#6b7280'
-};
-const SUB_ORDER = ['Habit Bandit', 'Home Tasks', 'Errands'];
+const COLOR = Object.fromEntries(SECTIONS);
+const ORDER = SECTIONS.map(s => s[0]);
+const TIMED = new Set(['Core To-Dos', "Tomorrow's Core To-Dos", 'After Core']);
+const TOTAL_YELLOW = new Set(['Core To-Dos']);
+const TOTAL_GREY = new Set(['After Core']);
+const COMPLETED = '✓ Completed Tasks';
 
 let todos = [];
+const collapsed = {};   // key -> bool (client-only collapse state)
 
-function showErr(msg) {
-  const e = document.getElementById('err');
-  e.textContent = msg; e.style.display = 'block';
+/* ---------- auth ---------- */
+const loginEl = document.getElementById('login');
+const appEl = document.getElementById('app');
+const msg = (t, cls) => { const m = document.getElementById('loginmsg'); m.textContent = t; m.className = 'msg ' + (cls || ''); };
+
+async function refreshAuth() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) { showApp(data.session.user.email); }
+  else { loginEl.style.display = 'flex'; appEl.style.display = 'none'; }
 }
+function showApp(email) {
+  loginEl.style.display = 'none';
+  appEl.style.display = 'block';
+  document.getElementById('whoami').textContent = email || '';
+  load();
+  subscribe();
+}
+document.getElementById('signin').onclick = async () => {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  if (!email || !password) { msg('Enter your email and password.', 'err'); return; }
+  msg('Signing in...', '');
+  let { data, error } = await sb.auth.signInWithPassword({ email, password });
+  if (error) {
+    // first time: create the account, then sign in
+    const su = await sb.auth.signUp({ email, password });
+    if (su.error) { msg(su.error.message, 'err'); return; }
+    const si = await sb.auth.signInWithPassword({ email, password });
+    if (si.error) { msg(si.error.message, 'err'); return; }
+    data = si.data;
+  }
+  msg('', 'ok');
+  showApp(data.session.user.email);
+};
+document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('signin').click(); });
+document.getElementById('signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
 
+/* ---------- data ---------- */
 async function load() {
-  const { data, error } = await sb.from('todos').select('*');
-  if (error) { showErr('Could not load: ' + error.message); return; }
+  const { data, error } = await sb.from('todos').select('*').order('position', { ascending: true });
+  if (error) { console.error(error); return; }
   todos = data || [];
   render();
 }
-
-function orderIndex(list, val) {
-  const i = list.indexOf(val);
-  return i === -1 ? list.length + 1 : i;
+async function subscribe() {
+  const { data } = await sb.auth.getSession();
+  if (data.session) sb.realtime.setAuth(data.session.access_token);
+  sb.channel('todos-live')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, () => {
+      const a = document.activeElement;
+      if (a && (a.isContentEditable || a.tagName === 'INPUT')) return; // don't yank while editing
+      load();
+    })
+    .subscribe();
+}
+async function patch(id, fields) {
+  fields.updated_at = new Date().toISOString();
+  const t = todos.find(x => x.id === id); if (t) Object.assign(t, fields);
+  const { error } = await sb.from('todos').update(fields).eq('id', id);
+  if (error) console.error(error);
+}
+async function addTask(section, subsection) {
+  const pos = Math.max(0, ...todos.map(t => t.position || 0)) + 1;
+  const ins = { section, subsection: subsection || null, task: 'New task', position: pos,
+                bucket: section === "Tomorrow's Core To-Dos" ? 'tomorrow' : 'today',
+                is_habit: (subsection || '').toUpperCase().includes('HABIT BANDIT'),
+                category: (subsection || '').toUpperCase().includes('HABIT BANDIT') ? 'HABIT BANDIT' : null };
+  const { data, error } = await sb.from('todos').insert(ins).select().single();
+  if (error) { console.error(error); return; }
+  todos.push(data); render();
+  // focus the new row's text
+  const el = document.querySelector('[data-id="' + data.id + '"] .text');
+  if (el) { el.focus(); document.execCommand && document.getSelection().selectAllChildren(el); }
+}
+async function removeTask(id) {
+  todos = todos.filter(x => x.id !== id);
+  render();
+  await sb.from('todos').delete().eq('id', id);
 }
 
-function sectionList() {
-  const set = [...new Set(todos.map(t => t.section))];
-  set.sort((a, b) => orderIndex(SECTION_ORDER, a) - orderIndex(SECTION_ORDER, b) || a.localeCompare(b));
-  return set;
+/* ---------- helpers ---------- */
+function fmt(m) { if (!m) return '0m'; if (m < 60) return m + 'm'; const h = Math.floor(m/60), r = m%60; return r ? h+'h '+r+'m' : h+'h'; }
+function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+
+function taskRow(t) {
+  const li = el('li', 'node' + (t.done ? ' done' : '') + (t.skipped ? ' skipped' : ''));
+  li.dataset.id = t.id;
+  const row = el('div', 'row');
+  row.appendChild(el('span', 'caret', '▾'));
+  const bullet = el('span', 'bullet'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
+  // check
+  const check = el('span', 'check');
+  check.onclick = () => { const done = !t.done; patch(t.id, { done, status: done ? 'done' : 'todo', done_at: done ? new Date().toISOString() : null, actual_minutes: done ? (t.actual_minutes ?? t.est_minutes ?? null) : t.actual_minutes }); render(); };
+  row.appendChild(check);
+  // text
+  const text = el('span', 'text', t.task); text.setAttribute('contenteditable', 'true');
+  text.onblur = () => { const v = text.textContent.trim(); if (v && v !== t.task) patch(t.id, { task: v }); if (!v) removeTask(t.id); };
+  text.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); text.blur(); } };
+  row.appendChild(text);
+  // timed sections: estimate + actual boxes
+  if (TIMED.has(t.section)) {
+    const est = el('input', 'estbox'); est.value = t.est_minutes ?? ''; est.title = 'estimate (min)';
+    est.onchange = () => { const v = est.value === '' ? null : parseInt(est.value,10); patch(t.id, { est_minutes: v }); renderTotals(); };
+    const act = el('input', 'actbox'); act.value = t.actual_minutes ?? ''; act.title = 'actual (min)';
+    act.onchange = () => { const v = act.value === '' ? null : parseInt(act.value,10); patch(t.id, { actual_minutes: v }); };
+    row.appendChild(est); row.appendChild(act);
+  }
+  // delete
+  const del = el('span', 'skip-btn', '×'); del.title = 'delete'; del.onclick = () => removeTask(t.id);
+  row.appendChild(del);
+  li.appendChild(row);
+  return li;
 }
 
+function subHeader(name, count) {
+  const li = el('li', 'node has-children');
+  const key = 'sub:' + name;
+  if (collapsed[key]) li.classList.add('collapsed');
+  const row = el('div', 'row');
+  const caret = el('span', 'caret', '▾');
+  caret.onclick = () => { collapsed[key] = !collapsed[key]; render(); };
+  row.appendChild(caret);
+  const bullet = el('span', 'bullet'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
+  const text = el('span', 'text'); text.innerHTML = '<strong>' + escapeHtml(name) + '</strong>';
+  row.appendChild(text);
+  if (count) row.appendChild(el('span', 'count', String(count)));
+  li.appendChild(row);
+  return li;
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+function sectionNode(name) {
+  const color = COLOR[name] || '#b7bcc4';
+  const li = el('li', 'node domain has-children' + (name === COMPLETED ? ' done-section' : ''));
+  li.style.setProperty('--bullet', color);
+  li.style.setProperty('--bullet-hover', color);
+  li.style.setProperty('--halo', color + '55');
+  const key = 'sec:' + name;
+  if (collapsed[key] || (name === COMPLETED && collapsed[key] === undefined)) li.classList.add('collapsed');
+  const row = el('div', 'row');
+  const caret = el('span', 'caret', '▾');
+  caret.onclick = () => { collapsed[key] = !li.classList.contains('collapsed') ? true : false; render(); };
+  row.appendChild(caret);
+  const bullet = el('span', 'bullet'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
+  const text = el('span', 'text');
+  const badge = el('span', 'domain-badge', name); badge.style.background = color; badge.style.color = '#2b2b2b';
+  text.appendChild(badge);
+  row.appendChild(text);
+  li.appendChild(row);
+  return li;
+}
+
+function addRow(section, subsection) {
+  const li = el('li', 'node');
+  const row = el('div', 'addrow', '+ add');
+  row.onclick = () => addTask(section, subsection);
+  li.appendChild(row);
+  return li;
+}
+
+/* ---------- render ---------- */
 function render() {
   const board = document.getElementById('board');
   board.innerHTML = '';
-  const active = todos.filter(t => !t.done);
-  const doneList = todos.filter(t => t.done);
+  const present = [...new Set(todos.map(t => t.section))];
+  const ordered = [...ORDER.filter(s => present.includes(s)), ...present.filter(s => !ORDER.includes(s))];
 
-  fillSectionDropdown();
-
-  if (active.length === 0 && doneList.length === 0) {
-    board.innerHTML = '<p class="muted">Nothing here yet. Add one above, or tell Claude and it will appear.</p>';
-    return;
-  }
-
-  sectionList().forEach(sec => {
-    const items = active.filter(t => t.section === sec);
-    if (items.length === 0) return;
-    const secEl = document.createElement('div');
-    secEl.className = 'section';
-
-    const head = document.createElement('div');
-    const total = items.reduce((s, t) => s + (t.est_minutes || 0), 0);
-    const h = document.createElement('span');
-    h.className = 'shead';
-    h.style.background = SECTION_COLOR[sec] || '#6b7280';
-    h.textContent = sec;
-    head.appendChild(h);
-    if (total > 0) {
-      const tt = document.createElement('span');
-      tt.className = 'stotal';
-      tt.textContent = fmtMin(total);
-      head.appendChild(tt);
-    }
-    secEl.appendChild(head);
-
-    const subs = [...new Set(items.map(t => t.subsection || ''))];
-    subs.sort((a, b) => orderIndex(SUB_ORDER, a) - orderIndex(SUB_ORDER, b) || a.localeCompare(b));
-    subs.forEach(sub => {
-      const subItems = items.filter(t => (t.subsection || '') === sub)
-        .sort((a, b) => (a.position || 0) - (b.position || 0));
+  for (const sec of ordered) {
+    const secLi = sectionNode(sec);
+    const secList = el('ul', 'list');
+    const items = todos.filter(t => t.section === sec);
+    // subsections in first-seen order
+    const subs = [];
+    for (const t of items) { const s = t.subsection || ''; if (!subs.includes(s)) subs.push(s); }
+    for (const sub of subs) {
+      const subItems = items.filter(t => (t.subsection || '') === sub).sort((a,b)=>(a.position||0)-(b.position||0));
       if (sub) {
-        const sh = document.createElement('div');
-        sh.className = 'subhead';
-        sh.textContent = sub;
-        secEl.appendChild(sh);
+        const subLi = subHeader(sub, subItems.length);
+        const subList = el('ul', 'list');
+        subItems.forEach(t => subList.appendChild(taskRow(t)));
+        subList.appendChild(addRow(sec, sub));
+        subLi.appendChild(subList);
+        secList.appendChild(subLi);
+      } else {
+        subItems.forEach(t => secList.appendChild(taskRow(t)));
       }
-      subItems.forEach(t => secEl.appendChild(rowEl(t)));
-    });
-    board.appendChild(secEl);
-  });
+    }
+    // add row for direct items
+    secList.appendChild(addRow(sec, null));
+    secLi.appendChild(secList);
+    board.appendChild(secLi);
 
-  if (doneList.length) {
-    const tog = document.createElement('div');
-    tog.className = 'completed-toggle';
-    let open = false;
-    const cont = document.createElement('div');
-    cont.style.display = 'none';
-    doneList.sort((a, b) => (b.completed_at || '').localeCompare(a.completed_at || ''));
-    doneList.forEach(t => cont.appendChild(rowEl(t)));
-    tog.textContent = '✓ Completed (' + doneList.length + ')';
-    tog.onclick = () => { open = !open; cont.style.display = open ? 'block' : 'none'; tog.textContent = (open ? '▾' : '✓') + ' Completed (' + doneList.length + ')'; };
-    board.appendChild(tog);
-    board.appendChild(cont);
+    // section total (Core yellow, After Core grey)
+    if (TOTAL_YELLOW.has(sec) || TOTAL_GREY.has(sec)) {
+      const sum = items.filter(t=>!t.done && !t.skipped).reduce((a,t)=>a+(t.est_minutes||0),0);
+      const tot = el('div', 'section-total' + (TOTAL_GREY.has(sec) ? ' section-total-grey' : ''));
+      tot.dataset.sec = sec;
+      tot.textContent = 'Total: ' + fmt(sum);
+      board.appendChild(tot);
+    }
   }
 }
-
-function fmtMin(m) {
-  if (m < 60) return m + 'm';
-  const h = Math.floor(m / 60), r = m % 60;
-  return r ? h + 'h ' + r + 'm' : h + 'h';
-}
-
-function rowEl(t) {
-  const row = document.createElement('div');
-  row.className = 'row' + (t.done ? ' done' : '');
-
-  const cb = document.createElement('input');
-  cb.type = 'checkbox'; cb.className = 'cbox'; cb.checked = !!t.done;
-  cb.onchange = () => update(t.id, { done: cb.checked, completed_at: cb.checked ? new Date().toISOString() : null });
-  row.appendChild(cb);
-
-  const star = document.createElement('button');
-  star.className = 'star' + (t.starred ? ' on' : '');
-  star.textContent = t.starred ? '★' : '☆';
-  star.onclick = () => update(t.id, { starred: !t.starred });
-  row.appendChild(star);
-
-  const task = document.createElement('input');
-  task.className = 'task'; task.value = t.task;
-  task.onblur = () => { if (task.value.trim() && task.value !== t.task) update(t.id, { task: task.value.trim() }); };
-  task.onkeydown = (e) => { if (e.key === 'Enter') task.blur(); };
-  row.appendChild(task);
-
-  const est = document.createElement('input');
-  est.className = 'est'; est.type = 'number'; est.min = '0'; est.placeholder = 'min';
-  est.value = t.est_minutes == null ? '' : t.est_minutes;
-  est.onblur = () => { const v = est.value === '' ? null : parseInt(est.value, 10); if (v !== t.est_minutes) update(t.id, { est_minutes: v }); };
-  row.appendChild(est);
-
-  const del = document.createElement('button');
-  del.className = 'del'; del.textContent = '×'; del.title = 'Delete';
-  del.onclick = () => { if (confirm('Delete this task?')) remove(t.id); };
-  row.appendChild(del);
-
-  return row;
-}
-
-function fillSectionDropdown() {
-  const sel = document.getElementById('newsection');
-  if (sel.dataset.filled) return;
-  SECTION_ORDER.forEach(s => {
-    const o = document.createElement('option');
-    o.value = s; o.textContent = s;
-    sel.appendChild(o);
+function renderTotals() {
+  document.querySelectorAll('.section-total').forEach(tot => {
+    const sec = tot.dataset.sec;
+    const sum = todos.filter(t => t.section === sec && !t.done && !t.skipped).reduce((a,t)=>a+(t.est_minutes||0),0);
+    tot.textContent = 'Total: ' + fmt(sum);
   });
-  sel.value = 'Core To-Dos';
-  sel.dataset.filled = '1';
 }
 
-async function addTask() {
-  const inp = document.getElementById('newtask');
-  const sec = document.getElementById('newsection').value;
-  const text = inp.value.trim();
-  if (!text) return;
-  inp.value = '';
-  const { error } = await sb.from('todos').insert({ section: sec, task: text, position: Date.now() });
-  if (error) { showErr('Could not add: ' + error.message); return; }
-  await load();
-}
-
-async function update(id, fields) {
-  fields.updated_at = new Date().toISOString();
-  const { error } = await sb.from('todos').update(fields).eq('id', id);
-  if (error) { showErr('Could not save: ' + error.message); return; }
-  const t = todos.find(x => x.id === id);
-  if (t) Object.assign(t, fields);
-  render();
-}
-
-async function remove(id) {
-  const { error } = await sb.from('todos').delete().eq('id', id);
-  if (error) { showErr('Could not delete: ' + error.message); return; }
-  todos = todos.filter(x => x.id !== id);
-  render();
-}
-
-document.getElementById('addbtn').onclick = addTask;
-document.getElementById('newtask').addEventListener('keydown', (e) => { if (e.key === 'Enter') addTask(); });
-
-sb.channel('todos-live')
-  .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, () => load())
-  .subscribe();
-
-load();
+refreshAuth();
 </script>
 </body>
 </html>
