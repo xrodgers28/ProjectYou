@@ -203,7 +203,7 @@
 <div id="app">
   <div class="appbar">
     <span class="brand">CrushingIt <span class="synced">● live</span></span>
-    <span class="who"><span class="ver">v3.9</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
+    <span class="who"><span class="ver">v4.0</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
   </div>
   <div class="wrap">
     <ul class="list" id="board"></ul>
@@ -270,7 +270,7 @@ async function showApp(email) {
   if (data.session) sb.realtime.setAuth(data.session.access_token);
   await maybeRollover();
   await load();
-  try { const V = '3.9'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
+  try { const V = '4.0'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
 }
 document.getElementById('signin').onclick = async () => {
@@ -316,8 +316,8 @@ async function maybeRollover() {
   // 2) finished non-habit tasks move into Completed (history preserved)
   await sb.from('todos').update({ section: COMPLETED, subsection: null, updated_at: now })
     .eq('done', true).eq('is_habit', false).neq('section', COMPLETED);
-  // 3) habits reset fresh for the new day
-  await sb.from('todos').update({ done: false, done_at: null, actual_minutes: null, skipped: false, status: 'todo', updated_at: now })
+  // 3) habits reset fresh for the new day AND return to HABIT BANDIT (they may have moved to Completed when ticked)
+  await sb.from('todos').update({ done: false, done_at: null, actual_minutes: null, skipped: false, status: 'todo', section: 'Core To-Dos', subsection: 'HABIT BANDIT', origin_section: null, origin_subsection: null, updated_at: now })
     .eq('is_habit', true);
   await sb.from('app_meta').upsert({ key: 'last_rollover', value: today, updated_at: now });
 }
@@ -396,7 +396,7 @@ function confetti(){
   let t=0;(function f(){t++;x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.vy+=.4;p.x+=p.vx;p.y+=p.vy;p.r+=.2;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/2,p.s,p.s);x.restore();});if(t<130)requestAnimationFrame(f);else c.remove();})();
 }
 function checkHabitConfetti(){
-  const habits = todos.filter(t => t.is_habit && !t.skipped && t.section !== COMPLETED);
+  const habits = todos.filter(t => t.is_habit && !t.skipped);   // count habits wherever they live, incl. Completed
   const allDone = habits.length > 0 && habits.every(h => h.done);
   if (allDone && !habitsWereAllDone) { confetti(); toast('Crushed it! Habits done 🎉'); }
   habitsWereAllDone = allDone;
@@ -413,15 +413,12 @@ function taskRow(t) {
   check.onclick = () => {
     snapshot();
     const done = !t.done;
-    if (done && !t.is_habit) {
-      // completing a normal task sends it into Completed (remembering where it came from)
+    if (done) {
+      // completing anything (task OR habit) sends it into Completed, remembering where it came from
       patch(t.id, { done: true, status: 'done', done_at: new Date().toISOString(), actual_minutes: t.actual_minutes ?? t.est_minutes ?? null, origin_section: t.section, origin_subsection: t.subsection, section: COMPLETED, subsection: null });
-    } else if (!done && !t.is_habit) {
-      // un-completing sends it back to where it was
-      patch(t.id, { done: false, status: 'todo', done_at: null, section: t.origin_section || 'Core To-Dos', subsection: t.origin_subsection ?? null });
     } else {
-      // habits stay in place (they reset daily), so the confetti check still works
-      patch(t.id, { done, status: done ? 'done' : 'todo', done_at: done ? new Date().toISOString() : null, actual_minutes: done ? (t.actual_minutes ?? t.est_minutes ?? null) : t.actual_minutes });
+      // un-completing sends it back to where it came from (habits return to HABIT BANDIT)
+      patch(t.id, { done: false, status: 'todo', done_at: null, section: t.origin_section || 'Core To-Dos', subsection: t.origin_subsection ?? (t.is_habit ? 'HABIT BANDIT' : null) });
     }
     render(); checkHabitConfetti();
   };
@@ -540,8 +537,8 @@ function render() {
     const secList = el('ul', 'list'); secList.dataset.section = sec; secList.dataset.sub = '';
     // items in this section, minus ones pinned to Top Priority
     const items = (sec === COMPLETED)
-      ? todos.filter(t => t.done && !t.is_habit && !t.skipped)
-      : todos.filter(t => t.section === sec && !t.skipped && !(t.done && !t.is_habit));
+      ? todos.filter(t => t.done && !t.skipped)
+      : todos.filter(t => t.section === sec && !t.skipped && !t.done);
     if (sec === COMPLETED) {
       const groups = {};
       items.forEach(t => { const d = effDateOf(t.done_at || t.updated_at || t.created_at); const k = dayKey(d); (groups[k] = groups[k] || { label: groupDate(d), items: [] }).items.push(t); });
