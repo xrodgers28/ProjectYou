@@ -26,6 +26,9 @@
   .logorow{display:flex;align-items:center;gap:12px;margin-bottom:6px}
   .logo{width:52px;height:52px;border-radius:13px;border:1px solid var(--line);object-fit:contain;background:#fff;flex:none}
   .pname{font-size:24px;font-weight:800;line-height:1.15}
+  .ptoggle{display:flex;gap:7px;margin-bottom:14px}
+  .pt{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:9px;padding:5px 14px;font-weight:800;cursor:pointer;font-family:inherit;font-size:14px}
+  .pt.on{background:var(--accent);color:#fff;border-color:var(--accent)}
   .visit{display:inline-block;margin-top:16px;background:var(--accent);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:11px 18px;border-radius:12px}
   .navbtns{display:flex;justify-content:space-between;margin-top:18px;gap:10px}
   .btn{font-family:inherit;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:12px;padding:12px 18px;cursor:pointer;font-size:15px}
@@ -60,7 +63,7 @@
     <div class="dots" id="dots"></div>
     <div id="deck"></div>
   </div>
-  <div class="badge">AI Deck v1.1</div>
+  <div class="badge">AI Deck v1.3</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -68,7 +71,7 @@
 const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let CARDS=[], idx=0;
+let CARDS=[], SLIDES=[], idx=0, pIdx=0;
 const KICK={tip:'Ways of working',insight:'Industry insight',quote:'Quote worth keeping',platform:'New platform'};
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
@@ -81,18 +84,31 @@ async function onLogin(session){try{await sb.realtime.setAuth(session.access_tok
   document.getElementById('who').textContent=session.user.email;loadDeck();}
 async function loadDeck(){
   const today=new Date().toISOString().slice(0,10);
+  try{await sb.rpc('ensure_today_deck');}catch(e){}
   const {data}=await sb.from('ai_cards').select('*').eq('for_date',today).order('deck_position');
   CARDS=data||[];
-  if(!CARDS.length){document.getElementById('deck').innerHTML='<div class="card"><div class="kicker">Today</div><h2>No deck yet for today.</h2><div class="body">Claude generates a fresh 4-card deck each day. Check back, or ask Claude to build today\'s deck.</div></div>';document.getElementById('dots').innerHTML='';return;}
-  render();
+  if(!CARDS.length){document.getElementById('deck').innerHTML='<div class="card"><div class="kicker">Today</div><h2>No deck yet for today.</h2><div class="body">Claude generates a fresh deck each day. Check back, or ask Claude to build today\'s deck.</div></div>';document.getElementById('dots').innerHTML='';return;}
+  buildSlides();render();
+}
+function buildSlides(){
+  SLIDES=[];let plat=null;
+  CARDS.forEach(c=>{
+    if(c.card_type==='platform'){if(!plat){plat={type:'plat',cards:[]};SLIDES.push(plat);}plat.cards.push(c);}
+    else{plat=null;SLIDES.push({type:'card',card:c});}
+  });
 }
 function render(){
-  const dots=CARDS.map((_,i)=>'<div class="dot '+(i===idx?'on':'')+'"></div>').join('')+'<div class="dot '+(idx===CARDS.length?'on':'')+'"></div>';
+  const total=SLIDES.length;
+  const dots=SLIDES.map((_,i)=>'<div class="dot '+(i===idx?'on':'')+'"></div>').join('')+'<div class="dot '+(idx===total?'on':'')+'"></div>';
   document.getElementById('dots').innerHTML=dots;
-  if(idx>=CARDS.length){renderSave();return;}
-  const c=CARDS[idx];
-  let inner='<div class="kicker">'+esc(KICK[c.card_type]||c.card_type)+'</div>';
-  if(c.card_type==='platform'){
+  if(idx>=total){renderSave();return;}
+  const s=SLIDES[idx];
+  let inner='';
+  if(s.type==='plat'){
+    if(pIdx>=s.cards.length)pIdx=0;
+    const c=s.cards[pIdx];
+    inner+='<div class="kicker">'+esc(KICK.platform)+(s.cards.length>1?' · '+(pIdx+1)+' of '+s.cards.length:'')+'</div>';
+    if(s.cards.length>1) inner+='<div class="ptoggle">'+s.cards.map((pc,i)=>'<button class="pt '+(i===pIdx?'on':'')+'" onclick="setP('+i+')">'+esc(pc.platform_name||('#'+(i+1)))+'</button>').join('')+'</div>';
     if(c.screenshot_url) inner+='<img class="shot" src="'+esc(c.screenshot_url)+'" alt="">';
     inner+='<div class="logorow">';
     if(c.logo_url) inner+='<img class="logo" src="'+esc(c.logo_url)+'" alt="">';
@@ -100,20 +116,23 @@ function render(){
     inner+='<div class="body">'+esc(c.body||'')+'</div>';
     if(c.platform_url) inner+='<div><a class="visit" href="'+esc(c.platform_url)+'" target="_blank" rel="noopener">Check it out ↗</a></div>';
   }else{
+    const c=s.card;
+    inner+='<div class="kicker">'+esc(KICK[c.card_type]||c.card_type)+'</div>';
     inner+='<h2>'+esc(c.title)+'</h2><div class="body">'+esc(c.body||'')+'</div>';
     if(c.source) inner+='<div class="src">'+esc(c.source)+'</div>';
   }
   const prevDis=idx===0?'disabled':'';
-  inner+='<div class="navbtns"><button class="btn" '+prevDis+' onclick="go(-1)">Back</button><button class="btn primary" onclick="go(1)">'+(idx===CARDS.length-1?'Review & save':'Next')+'</button></div>';
+  inner+='<div class="navbtns"><button class="btn" '+prevDis+' onclick="go(-1)">Back</button><button class="btn primary" onclick="go(1)">'+(idx===total-1?'Review & save':'Next')+'</button></div>';
   document.getElementById('deck').innerHTML='<div class="card">'+inner+'</div>';
 }
+function setP(i){pIdx=i;render();}
 function renderSave(){
   let rows=CARDS.map((c,i)=>'<div class="row"><input type="checkbox" id="sv'+i+'" '+(c.saved?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(KICK[c.card_type]||c.card_type)+': '+esc(c.title)+'</div><div class="d">'+esc((c.body||'').slice(0,90))+'</div></label></div>').join('');
   document.getElementById('deck').innerHTML='<div class="card save"><div class="kicker">End of deck</div><h2>Keep what mattered.</h2><div style="margin-top:16px">'+rows+'</div>'+
     '<div class="navbtns"><button class="btn" onclick="go(-1)">Back</button><button class="btn primary" onclick="saveDeck()">Save picks</button></div>'+
     '<button class="btn primary" style="width:100%;margin-top:10px;background:var(--green);border-color:var(--green)" onclick="markDone()">Mark today\'s deck done ✓</button></div>';
 }
-function go(d){idx=Math.max(0,Math.min(CARDS.length,idx+d));render();}
+function go(d){idx=Math.max(0,Math.min(SLIDES.length,idx+d));pIdx=0;render();}
 async function saveDeck(){
   let saved=0;
   for(let i=0;i<CARDS.length;i++){

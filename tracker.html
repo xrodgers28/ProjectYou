@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project YOU OS · Session Tracker</title>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--good:#1e8e5a;--warn:#c0453b;--amber:#b8860b;--chip:#eef2f8}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.45;font-size:15px}
+  .wrap{max-width:960px;margin:0 auto;padding:20px 16px 48px}
+  h1{font-size:22px;margin:0 0 2px}
+  .sub{color:var(--muted);font-size:14px;margin:0 0 6px}
+  .sync{display:inline-block;font-size:12px;font-weight:700;border-radius:20px;padding:3px 10px;margin:0 0 14px}
+  .sync.ok{background:#e4f4ec;color:var(--good)} .sync.off{background:#fdf3e0;color:var(--amber)} .sync.busy{background:#e8eff6;color:var(--accent)}
+  h2.sec{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);margin:22px 0 8px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top;font-size:14px}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);background:#f7f8fb}
+  tr:last-child td{border-bottom:none}
+  tr.gone{display:none}
+  td.task a{color:var(--accent);text-decoration:none;font-weight:600;border-bottom:1px solid #cfe}
+  td.task .desc{display:block;color:var(--muted);font-size:12.5px;font-weight:400;margin-top:4px;border:none}
+  .st{display:inline-block;font-size:12px;font-weight:700;border-radius:20px;padding:2px 9px;white-space:nowrap}
+  .live,.done{background:#e4f4ec;color:var(--good)} .built{background:#e8eff6;color:var(--accent)} .block{background:#fbe6e3;color:var(--warn)} .wait{background:#fdf3e0;color:var(--amber)}
+  .call{display:flex;flex-direction:column;gap:6px;min-width:150px}
+  .btns{display:flex;gap:6px}
+  .btns button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 12px;font-size:13px;font-weight:700;cursor:pointer;color:var(--muted)}
+  .btns button.yes.sel{background:var(--good);color:#fff;border-color:var(--good)}
+  .btns button.no.sel{background:var(--warn);color:#fff;border-color:var(--warn)}
+  .call input{border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:13px;width:100%}
+  td.seen{text-align:center}
+  .xbtn{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#fff;color:#9aa0aa;font-size:14px;font-weight:800;cursor:pointer;line-height:1}
+  .xbtn:hover{border-color:var(--good);color:var(--good)}
+  .cleared{font-size:12.5px;color:var(--muted);margin:8px 2px 0}
+  .cleared a{color:var(--accent);cursor:pointer;text-decoration:underline}
+  .summary{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .summary h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 8px}
+  textarea{width:100%;min-height:100px;border:1px solid var(--line);border-radius:8px;padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--ink);background:#fbfcfe;resize:vertical}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Project YOU OS · Session Tracker</h1>
+  <p class="sub">Every task, its status, and your call. Tap Yes/No or add a note. Click the X once you have seen an item and I clear it from the list. Your answers save to the database automatically, so I see them with no copy-paste.</p>
+  <span id="sync" class="sync busy">connecting…</span>
+
+  <h2 class="sec">Work this session</h2>
+  <table id="tmain"><thead><tr><th>Input / Task</th><th>Status</th><th>Your call</th><th>Seen</th></tr></thead><tbody></tbody></table>
+  <div class="cleared" id="clmain"></div>
+
+  <h2 class="sec">Run through when you have time</h2>
+  <table id="trev"><thead><tr><th>Item</th><th>Status</th><th>Your call</th><th>Seen</th></tr></thead><tbody></tbody></table>
+  <div class="cleared" id="clrev"></div>
+
+  <div class="summary">
+    <h2>Your answers (live copy)</h2>
+    <textarea id="out" readonly>Nothing yet. Tap Yes/No or type a note above.</textarea>
+    <div class="hint">This also saves to the database automatically. The box is just a readable copy.</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const APP='https://xrodgers28.github.io/ProjectYou/';
+const REPO='https://github.com/xrodgers28/ProjectYou';
+const MAIN=[
+ {id:'ai_imprint', task:'AI Deck upgraded to Imprint style', url:APP+'ai.html', st:['live','Live'], ask:false,
+  desc:'Rebuilt the daily AI Deck platform cards into the image-led Imprint style you liked. They now show a logo, a screenshot of the tool, the name, and a fuller 2 to 3 sentence description instead of plain text.'},
+ {id:'keyshot', task:'KeyShot card, real product render', url:APP+'ai.html', st:['done','Done'], ask:false,
+  desc:'Captured a real KeyShot product render (the studio car shot) from their site and stored it on today\'s card, so it reads as the tool in use rather than a placeholder.'},
+ {id:'generator', task:'Daily AI Deck generator (pool + 5am cron)', url:APP+'ai.html', st:['live','Live'], ask:false,
+  desc:'Built the engine that composes a fresh deck every morning: a tip, an insight, a Clever Phrases quote, and platforms, rotating from a content pool so nothing repeats. A 5am job builds it automatically.'},
+ {id:'done_sync', task:'Done-sync (deck + phrases tick habits)', url:APP+'index.html', st:['done','Done'], ask:false,
+  desc:'Finishing the AI Deck now ticks your AI habit on the CrushingIt board, and Clever Phrases got a Done button that ticks its habit. Your daily doing flows back to the board with no re-entry.'},
+ {id:'phrase_attn', task:'Added "Attention economy" to Clever Phrases', url:APP+'quotes.html', st:['done','Done'], ask:false,
+  desc:'Captured the phrase you flagged, auto-sorted it into Work & Business, and marked it NEW until you have seen it once. "Enjoy the discourse" was already there, so I flagged it instead of duplicating.'},
+ {id:'lunch', task:'Logged lunch 10 min to the QS master log', url:APP, st:['done','Done'], ask:false,
+  desc:'You told the OS lunch was 10 minutes, so I created the Quantified Self master log and wrote that as its first real row. Talking to the tracker to log something now works end to end.'},
+ {id:'qs_log', task:'Quantified Self master log (qs_log) created', url:REPO, st:['built','Built'], ask:false,
+  desc:'Stood up qs_log, the single table every QS dashboard will read from. One row per tracker per day, scoped to you, ready for your habits and apps to feed it automatically.'},
+ {id:'tracker', task:'Session Tracker: auto-sync + X-to-clear', url:APP, st:['built','Built'], ask:false,
+  desc:'This Session Tracker: three columns, colored status pills, your Yes/No and notes saving to the database, an X to clear items you have seen, and a live answer box as the fallback.'},
+ {id:'arch_doc', task:'Project YOU OS Architecture doc (the brains)', url:REPO, st:['done','Done'], ask:false,
+  desc:'Wrote the Architecture doc, the brains of the whole system, with your walk as the worked inputs-to-outputs example. Everything we learn accumulates here. Pinned in your sidebar.'},
+ {id:'systems_map', task:'Systems map, visual', url:REPO, st:['done','Done'], ask:false,
+  desc:'Built the visual systems map: Claude as the air traffic controller in the center with 13 components around it, showing how an input flows through the operating system. Pinned.'},
+ {id:'qs_plan', task:'QS next-build plan (Supabase-first)', url:REPO, st:['done','Done'], ask:false,
+  desc:'Drafted the Quantified Self next build: the Supabase-first decision, the master-log schema, habit auto-logging, Strava sync, and the dashboard sequence, ready to build on your go. Pinned.'},
+ {id:'daily_template', task:'Daily template + data-health page', url:REPO, st:['built','Built, to host on Mission Control'], ask:false,
+  desc:'Your daily-template and data-health reference page, staged to host on the site and link from Mission Control so it is one click away.'},
+ {id:'deploy_v12', task:'Deploy AI Deck v1.3 (toggle 3 platforms, self-generate)', url:REPO+'/upload/main', st:['block','Blocked: Chrome'], ask:true, note:'retry when Chrome is back?',
+  desc:'Push the AI Deck update so the New Platform card toggles through 3 platforms and the deck self-generates the moment you open it. Deploying now that Chrome is back.'},
+ {id:'deploy_tracker', task:'Host tracker.html on the site (reliable sync)', url:REPO, st:['block','Blocked: Chrome'], ask:false,
+  desc:'Host this tracker as a real page so its auto-save works reliably. The pinned artifact cannot reach the network, which is why notes only copy from the box. This is the fix for submitting notes.'},
+ {id:'platform_vis', task:'Platform visuals: Kiro, Synthesia, Quick Suite', url:APP+'ai.html', st:['block','Blocked: Chrome'], ask:false,
+  desc:'Fetch logos and screenshots for Kiro, Synthesia, and Amazon Quick Suite so their platform cards are fully image-led like KeyShot. In today\'s deck they show name and text until then.'},
+];
+const REVIEW=[
+ {id:'dec_carson', task:'Keep Carson Orthodontics in Core To-Dos?', url:APP+'index.html', st:['wait','Awaiting you'], ask:true, note:'yes / no',
+  desc:'I placed it there as a guess. Yes keeps it, No and I move it to a better section.'},
+ {id:'dec_discourse', task:'Leave "Enjoy the discourse" skipped as a duplicate?', url:APP+'quotes.html', st:['wait','Awaiting you'], ask:true, note:'keep / add',
+  desc:'It is already in Clever Phrases. Yes keeps it as is, No adds it again.'},
+ {id:'dec_qs_build', task:'Build QS Phase 1 to 3 now (auto-log + Strava)?', url:REPO, st:['wait','Awaiting you'], ask:true, note:'go / hold',
+  desc:'The master log exists. This wires the Habit Bandit and Strava into it so tracking fills itself.'},
+ {id:'dec_wheel', task:'Build the QS habit wheel?', url:REPO, st:['wait','Awaiting you'], ask:true, note:'yes / no',
+  desc:'The visual wheel showing which daily habits map to each Clarity Compass segment.'},
+ {id:'dec_strava', task:'Strava as the first integration (Cardio in miles)?', url:REPO, st:['wait','Awaiting you'], ask:true, note:'yes / other',
+  desc:'Cardio can fill itself from your connected Strava. Or name a different first app.'},
+ {id:'dec_atomic', task:'Run the full Atomic Habits system review now?', url:REPO, st:['wait','Awaiting you'], ask:true, note:'yes / later',
+  desc:'A complete pass on where the OS delivers and where to plus it.'},
+];
+const state={};
+let sb=null;
+try { sb = window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co','sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v'); } catch(e){}
+function setSync(cls,txt){ const s=document.getElementById('sync'); s.className='sync '+cls; s.textContent=txt; }
+
+function rowNode(r){
+  const tr=document.createElement('tr'); r._tr=tr;
+  const td1=document.createElement('td'); td1.className='task';
+  td1.innerHTML=`<a href="${r.url}" target="_blank" rel="noopener">${r.task}</a>`+(r.desc?`<span class="desc">${r.desc}</span>`:'');
+  const td2=document.createElement('td'); td2.innerHTML=`<span class="st ${r.st[0]}">${r.st[1]}</span>`;
+  const td3=document.createElement('td');
+  const wrap=document.createElement('div'); wrap.className='call';
+  if(r.ask){
+    const btns=document.createElement('div'); btns.className='btns';
+    const y=document.createElement('button'); y.className='yes'; y.textContent='Yes';
+    const n=document.createElement('button'); n.className='no'; n.textContent='No';
+    y.onclick=()=>{ state[r.id].choice = state[r.id].choice==='Yes'?'':'Yes'; paint(); save(r); };
+    n.onclick=()=>{ state[r.id].choice = state[r.id].choice==='No'?'':'No'; paint(); save(r); };
+    btns.append(y,n); wrap.appendChild(btns); r._y=y; r._n=n;
+  }
+  const inp=document.createElement('input'); inp.placeholder=r.note||'note (optional)';
+  let t=null; inp.oninput=e=>{ state[r.id].note=e.target.value; compile(); clearTimeout(t); t=setTimeout(()=>save(r),500); };
+  wrap.appendChild(inp); r._inp=inp; td3.appendChild(wrap);
+  const td4=document.createElement('td'); td4.className='seen';
+  const x=document.createElement('button'); x.className='xbtn'; x.title='Seen, clear it'; x.textContent='✕';
+  x.onclick=()=>{ state[r.id].seen=true; tr.classList.add('gone'); renderCleared(); save(r); };
+  td4.appendChild(x);
+  tr.append(td1,td2,td3,td4); return tr;
+}
+const ALL=[...MAIN,...REVIEW];
+ALL.forEach(r=>{ state[r.id]={choice:'',note:'',seen:false}; });
+const mb=document.querySelector('#tmain tbody'); MAIN.forEach(r=>mb.appendChild(rowNode(r)));
+const rb=document.querySelector('#trev tbody'); REVIEW.forEach(r=>rb.appendChild(rowNode(r)));
+
+function paint(){ ALL.forEach(r=>{ if(r.ask){ r._y.classList.toggle('sel',state[r.id].choice==='Yes'); r._n.classList.toggle('sel',state[r.id].choice==='No'); } }); compile(); }
+function renderCleared(){
+  [['clmain',MAIN],['clrev',REVIEW]].forEach(([id,list])=>{
+    const n=list.filter(r=>state[r.id].seen).length;
+    document.getElementById(id).innerHTML = n ? (n+' cleared. <a data-undo="'+id+'">undo last</a>') : '';
+  });
+}
+document.addEventListener('click',e=>{
+  const u=e.target.closest('[data-undo]'); if(!u)return;
+  const list=(u.dataset.undo==='clmain')?MAIN:REVIEW;
+  for(let i=list.length-1;i>=0;i--){ const r=list[i]; if(state[r.id].seen){ state[r.id].seen=false; r._tr.classList.remove('gone'); renderCleared(); save(r); break; } }
+});
+function compile(){
+  const lines=[]; ALL.forEach(r=>{ const s=state[r.id]; if(s.choice||s.note||s.seen){ let l='• '+r.task+':'; if(s.seen){ l+=' SEEN/CLEAR'; } else if(s.choice){ l+=' '+s.choice.toUpperCase(); } if(s.note) l+=(s.choice||s.seen?' — ':' ')+s.note; lines.push(l); } });
+  document.getElementById('out').value = lines.length ? lines.join('\n') : 'Nothing yet. Tap Yes/No or type a note above.';
+}
+async function save(r){
+  compile();
+  if(!sb) { setSync('off','offline: copy the box below'); return; }
+  setSync('busy','saving…');
+  try{
+    const { error } = await sb.from('tracker').upsert({ item:r.id, label:r.task, choice:state[r.id].choice||null, note:state[r.id].note||null, seen:!!state[r.id].seen, updated_at:new Date().toISOString() }, { onConflict:'item' });
+    if(error) throw error;
+    setSync('ok','saved ✓ Claude can see it');
+  }catch(e){ setSync('off','offline: copy the box below'); }
+}
+async function boot(){
+  if(!sb){ setSync('off','offline: copy the box below'); return; }
+  try{
+    const { data, error } = await sb.from('tracker').select('*');
+    if(error) throw error;
+    (data||[]).forEach(row=>{ const r=ALL.find(x=>x.id===row.item); if(r){ state[r.id].choice=row.choice||''; state[r.id].note=row.note||''; state[r.id].seen=!!row.seen; if(r._inp) r._inp.value=row.note||''; if(row.seen) r._tr.classList.add('gone'); } });
+    setSync('ok','synced ✓ Claude can see your answers'); renderCleared(); paint();
+  }catch(e){ setSync('off','offline: copy the box below'); }
+}
+boot();
+</script>
+</body>
+</html>
