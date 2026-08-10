@@ -519,37 +519,47 @@ function initSortables() {
   document.querySelectorAll('ul.list[data-section]').forEach(ul => {
     if (ul._sortable) return;
     ul._sortable = new Sortable(ul, {
-      group: 'todos', animation: 130, handle: '.bullet', draggable: 'li.task',
+      group: 'todos', animation: 130, handle: '.bullet', draggable: 'li.task, li.has-children',
       ghostClass: 'sortable-ghost', dragClass: 'dragging', filter: '.addli',
       delay: 150, delayOnTouchOnly: true, touchStartThreshold: 6, fallbackTolerance: 6,
       onEnd: onDragEnd
     });
   });
 }
-async function onDragEnd(evt) {
-  const id = evt.item.dataset.id;
-  const toUl = evt.to, fromUl = evt.from;
-  const section = toUl.dataset.section;
-  const sub = toUl.dataset.sub || null;
-  const moved = todos.find(t => t.id === id);
-  if (moved && section !== undefined) {
-    moved.section = section;
-    moved.subsection = sub;
-    moved.is_habit = (sub || '').toUpperCase().includes('HABIT BANDIT');
-    moved.category = moved.is_habit ? 'HABIT BANDIT' : moved.category;
-    moved.bucket = section === "Tomorrow's Core To-Dos" ? 'tomorrow' : 'today';
-  }
-  const uls = fromUl === toUl ? [toUl] : [toUl, fromUl];
-  const updates = [];
-  uls.forEach(ul => {
-    [...ul.querySelectorAll(':scope > li.task')].forEach((li, idx) => {
+async function onDragEnd() {
+  // Normalize each subsection list's section to the section it now lives in
+  // (handles a whole list dragged into a different section).
+  document.querySelectorAll('#board ul.list[data-section]').forEach(ul => {
+    if (ul.dataset.sub) {
+      const anc = ul.parentElement && ul.parentElement.closest('ul.list[data-section]');
+      if (anc) ul.dataset.section = anc.dataset.section;
+    }
+  });
+  // Re-derive position + section + subsection for every task straight from the DOM order.
+  const changes = [];
+  let pos = 0;
+  document.querySelectorAll('#board ul.list[data-section]').forEach(ul => {
+    const section = ul.dataset.section;
+    const sub = ul.dataset.sub || null;
+    [...ul.children].forEach(li => {
+      if (!li.classList.contains('task')) return;
       const t = todos.find(x => x.id === li.dataset.id);
-      if (t) { t.position = idx; updates.push(t); }
+      if (!t) return;
+      const isHabit = (sub || '').toUpperCase().includes('HABIT BANDIT');
+      const next = {
+        position: pos, section, subsection: sub, is_habit: isHabit,
+        category: isHabit ? 'HABIT BANDIT' : (t.category || null),
+        bucket: section === "Tomorrow's Core To-Dos" ? 'tomorrow' : 'today'
+      };
+      if (t.position !== next.position || t.section !== next.section || (t.subsection || null) !== next.subsection || t.is_habit !== next.is_habit) {
+        Object.assign(t, next); changes.push(t);
+      }
+      pos++;
     });
   });
   render();
   const now = new Date().toISOString();
-  for (const t of updates) {
+  for (const t of changes) {
     await sb.from('todos').update({ position: t.position, section: t.section, subsection: t.subsection, is_habit: t.is_habit, category: t.category, bucket: t.bucket, updated_at: now }).eq('id', t.id);
   }
 }
