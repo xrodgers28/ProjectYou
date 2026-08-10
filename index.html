@@ -160,7 +160,6 @@
 
 </style>
 <style>
-  /* app shell + login (additions on top of the board styles) */
   body { margin:0; }
   #login { position:fixed; inset:0; background:#f4f5f7; display:flex; align-items:center; justify-content:center; z-index:50; }
   #login .box { background:#fff; border:1px solid #e2e4e8; border-radius:12px; padding:26px 24px; width:320px; box-shadow:0 6px 24px rgba(0,0,0,.06); font-family:Arial,Helvetica,sans-serif; }
@@ -170,14 +169,15 @@
   #login button { width:100%; padding:10px; margin-top:8px; background:#2b2b2b; color:#fff; border:none; border-radius:7px; font-size:14px; cursor:pointer; }
   #login .msg { font-size:12px; margin-top:10px; min-height:16px; }
   #login .msg.err { color:#c0492f; }
-  #login .msg.ok { color:#2f8f5b; }
   .appbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #eceef1; font-family:Arial,Helvetica,sans-serif; position:sticky; top:0; background:#fff; z-index:10; }
   .appbar .brand { font-weight:700; font-size:16px; color:#2b2b2b; }
   .appbar .who { font-size:11.5px; color:#9a9fa8; }
   .appbar .who a { color:#5b6270; cursor:pointer; margin-left:8px; }
   #app { display:none; }
   .synced { font-size:10.5px; color:#2f8f5b; }
-  .estbox, .actbox { }
+  .star { flex:0 0 auto; cursor:pointer; font-size:14px; line-height:1; color:#d3d6db; margin-left:4px; user-select:none; }
+  .star.on { color:#f0b429; }
+  #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#2b2b2b; color:#fff; font-family:Arial; font-size:14px; padding:11px 18px; border-radius:9px; z-index:120; display:none; }
 </style>
 </head>
 <body>
@@ -202,15 +202,16 @@
     <ul class="list" id="board"></ul>
   </div>
 </div>
+<div id="toast"></div>
 
 <script type="module">
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import Sortable from 'https://esm.sh/sortablejs@1.15.2';
 
 const SUPABASE_URL = 'https://arnjntspmrhigodlssbn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-/* ---- section look: exact names, colors and order from Scott's board ---- */
 const SECTIONS = [
   ['📥 Inbox · uncategorized captures', '#b7bcc4'],
   ['Core To-Dos', '#5b6270'],
@@ -235,9 +236,11 @@ const TIMED = new Set(['Core To-Dos', "Tomorrow's Core To-Dos", 'After Core']);
 const TOTAL_YELLOW = new Set(['Core To-Dos']);
 const TOTAL_GREY = new Set(['After Core']);
 const COMPLETED = '✓ Completed Tasks';
+const TOP = '⭐ Top Priority';
 
 let todos = [];
-const collapsed = {};   // key -> bool (client-only collapse state)
+const collapsed = {};
+let habitsWereAllDone = false;
 
 /* ---------- auth ---------- */
 const loginEl = document.getElementById('login');
@@ -249,11 +252,14 @@ async function refreshAuth() {
   if (data.session) { showApp(data.session.user.email); }
   else { loginEl.style.display = 'flex'; appEl.style.display = 'none'; }
 }
-function showApp(email) {
+async function showApp(email) {
   loginEl.style.display = 'none';
   appEl.style.display = 'block';
   document.getElementById('whoami').textContent = email || '';
-  load();
+  const { data } = await sb.auth.getSession();
+  if (data.session) sb.realtime.setAuth(data.session.access_token);
+  await maybeRollover();
+  await load();
   subscribe();
 }
 document.getElementById('signin').onclick = async () => {
@@ -263,18 +269,35 @@ document.getElementById('signin').onclick = async () => {
   msg('Signing in...', '');
   let { data, error } = await sb.auth.signInWithPassword({ email, password });
   if (error) {
-    // first time: create the account, then sign in
     const su = await sb.auth.signUp({ email, password });
     if (su.error) { msg(su.error.message, 'err'); return; }
     const si = await sb.auth.signInWithPassword({ email, password });
     if (si.error) { msg(si.error.message, 'err'); return; }
     data = si.data;
   }
-  msg('', 'ok');
+  msg('', '');
   showApp(data.session.user.email);
 };
 document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('signin').click(); });
 document.getElementById('signout').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+
+/* ---------- daily rollover ---------- */
+function localDate() { return new Date().toLocaleDateString('en-CA'); } // YYYY-MM-DD local
+async function maybeRollover() {
+  const today = localDate();
+  const { data } = await sb.from('app_meta').select('value').eq('key', 'last_rollover').maybeSingle();
+  if (data && data.value === today) return;
+  const now = new Date().toISOString();
+  // 1) Tomorrow's Core becomes Today
+  await sb.from('todos').update({ bucket: 'today', updated_at: now }).eq('bucket', 'tomorrow');
+  // 2) finished non-habit tasks move into Completed (history preserved)
+  await sb.from('todos').update({ section: COMPLETED, subsection: null, updated_at: now })
+    .eq('done', true).eq('is_habit', false).neq('section', COMPLETED);
+  // 3) habits reset fresh for the new day
+  await sb.from('todos').update({ done: false, done_at: null, actual_minutes: null, skipped: false, status: 'todo', updated_at: now })
+    .eq('is_habit', true);
+  await sb.from('app_meta').upsert({ key: 'last_rollover', value: today, updated_at: now });
+}
 
 /* ---------- data ---------- */
 async function load() {
@@ -283,13 +306,11 @@ async function load() {
   todos = data || [];
   render();
 }
-async function subscribe() {
-  const { data } = await sb.auth.getSession();
-  if (data.session) sb.realtime.setAuth(data.session.access_token);
+function subscribe() {
   sb.channel('todos-live')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'todos' }, () => {
       const a = document.activeElement;
-      if (a && (a.isContentEditable || a.tagName === 'INPUT')) return; // don't yank while editing
+      if (a && (a.isContentEditable || a.tagName === 'INPUT')) return;
       load();
     })
     .subscribe();
@@ -302,43 +323,62 @@ async function patch(id, fields) {
 }
 async function addTask(section, subsection) {
   const pos = Math.max(0, ...todos.map(t => t.position || 0)) + 1;
+  const isHabit = (subsection || '').toUpperCase().includes('HABIT BANDIT');
   const ins = { section, subsection: subsection || null, task: 'New task', position: pos,
                 bucket: section === "Tomorrow's Core To-Dos" ? 'tomorrow' : 'today',
-                is_habit: (subsection || '').toUpperCase().includes('HABIT BANDIT'),
-                category: (subsection || '').toUpperCase().includes('HABIT BANDIT') ? 'HABIT BANDIT' : null };
+                is_habit: isHabit, category: isHabit ? 'HABIT BANDIT' : null };
   const { data, error } = await sb.from('todos').insert(ins).select().single();
   if (error) { console.error(error); return; }
   todos.push(data); render();
-  // focus the new row's text
-  const el = document.querySelector('[data-id="' + data.id + '"] .text');
-  if (el) { el.focus(); document.execCommand && document.getSelection().selectAllChildren(el); }
+  const elx = document.querySelector('[data-id="' + data.id + '"] .text');
+  if (elx) { elx.focus(); const r = document.createRange(); r.selectNodeContents(elx); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
 }
-async function removeTask(id) {
-  todos = todos.filter(x => x.id !== id);
-  render();
-  await sb.from('todos').delete().eq('id', id);
-}
+async function removeTask(id) { todos = todos.filter(x => x.id !== id); render(); await sb.from('todos').delete().eq('id', id); }
 
 /* ---------- helpers ---------- */
 function fmt(m) { if (!m) return '0m'; if (m < 60) return m + 'm'; const h = Math.floor(m/60), r = m%60; return r ? h+'h '+r+'m' : h+'h'; }
 function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+function escapeHtml(s){ return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function toast(t){ const e=document.getElementById('toast'); e.textContent=t; e.style.display='block'; setTimeout(()=>e.style.display='none',2600); }
 
+function confetti(){
+  const c=document.createElement('canvas'); c.style.cssText='position:fixed;inset:0;pointer-events:none;z-index:110'; document.body.appendChild(c);
+  const x=c.getContext('2d'); c.width=innerWidth; c.height=innerHeight;
+  const cols=['#f0c674','#e8a0b8','#8fd0c4','#a9c8e8','#cbb0e0','#7bbf9e','#f0b58f'];
+  const P=Array.from({length:140},()=>({x:innerWidth/2,y:innerHeight/3,vx:(Math.random()-.5)*13,vy:Math.random()*-13-4,c:cols[~~(Math.random()*cols.length)],s:6+Math.random()*6,r:Math.random()*6}));
+  let t=0;(function f(){t++;x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.vy+=.4;p.x+=p.vx;p.y+=p.vy;p.r+=.2;x.save();x.translate(p.x,p.y);x.rotate(p.r);x.fillStyle=p.c;x.fillRect(-p.s/2,-p.s/2,p.s,p.s);x.restore();});if(t<130)requestAnimationFrame(f);else c.remove();})();
+}
+function checkHabitConfetti(){
+  const habits = todos.filter(t => t.is_habit && !t.skipped && t.section !== COMPLETED);
+  const allDone = habits.length > 0 && habits.every(h => h.done);
+  if (allDone && !habitsWereAllDone) { confetti(); toast('Crushed it! Habits done 🎉'); }
+  habitsWereAllDone = allDone;
+}
+
+/* ---------- row builders ---------- */
 function taskRow(t) {
-  const li = el('li', 'node' + (t.done ? ' done' : '') + (t.skipped ? ' skipped' : ''));
+  const li = el('li', 'node task' + (t.done ? ' done' : '') + (t.skipped ? ' skipped' : ''));
   li.dataset.id = t.id;
   const row = el('div', 'row');
   row.appendChild(el('span', 'caret', '▾'));
   const bullet = el('span', 'bullet'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
-  // check
   const check = el('span', 'check');
-  check.onclick = () => { const done = !t.done; patch(t.id, { done, status: done ? 'done' : 'todo', done_at: done ? new Date().toISOString() : null, actual_minutes: done ? (t.actual_minutes ?? t.est_minutes ?? null) : t.actual_minutes }); render(); };
+  check.onclick = () => {
+    const done = !t.done;
+    patch(t.id, { done, status: done ? 'done' : 'todo', done_at: done ? new Date().toISOString() : null, actual_minutes: done ? (t.actual_minutes ?? t.est_minutes ?? null) : t.actual_minutes });
+    render(); checkHabitConfetti();
+  };
   row.appendChild(check);
-  // text
   const text = el('span', 'text', t.task); text.setAttribute('contenteditable', 'true');
   text.onblur = () => { const v = text.textContent.trim(); if (v && v !== t.task) patch(t.id, { task: v }); if (!v) removeTask(t.id); };
   text.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); text.blur(); } };
   row.appendChild(text);
-  // timed sections: estimate + actual boxes
+  // star
+  const star = el('span', 'star' + (t.starred ? ' on' : ''), t.starred ? '★' : '☆');
+  star.title = 'Top Priority';
+  star.onclick = () => { patch(t.id, { starred: !t.starred }); render(); };
+  row.appendChild(star);
+  // est/actual on timed sections
   if (TIMED.has(t.section)) {
     const est = el('input', 'estbox'); est.value = t.est_minutes ?? ''; est.title = 'estimate (min)';
     est.onchange = () => { const v = est.value === '' ? null : parseInt(est.value,10); patch(t.id, { est_minutes: v }); renderTotals(); };
@@ -346,9 +386,15 @@ function taskRow(t) {
     act.onchange = () => { const v = act.value === '' ? null : parseInt(act.value,10); patch(t.id, { actual_minutes: v }); };
     row.appendChild(est); row.appendChild(act);
   }
-  // delete
-  const del = el('span', 'skip-btn', '×'); del.title = 'delete'; del.onclick = () => removeTask(t.id);
-  row.appendChild(del);
+  // habits get a skip button; everything else gets delete
+  if (t.is_habit) {
+    const skip = el('span', 'skip-btn', '✕'); skip.title = 'skip today';
+    skip.onclick = () => { patch(t.id, { skipped: true, skipped_at: new Date().toISOString() }); render(); };
+    row.appendChild(skip);
+  } else {
+    const del = el('span', 'skip-btn', '×'); del.title = 'delete'; del.onclick = () => removeTask(t.id);
+    row.appendChild(del);
+  }
   li.appendChild(row);
   return li;
 }
@@ -368,31 +414,37 @@ function subHeader(name, count) {
   li.appendChild(row);
   return li;
 }
-function escapeHtml(s){ return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 
-function sectionNode(name) {
-  const color = COLOR[name] || '#b7bcc4';
+function sectionNode(name, colorOverride) {
+  const color = colorOverride || COLOR[name] || '#b7bcc4';
   const li = el('li', 'node domain has-children' + (name === COMPLETED ? ' done-section' : ''));
   li.style.setProperty('--bullet', color);
   li.style.setProperty('--bullet-hover', color);
   li.style.setProperty('--halo', color + '55');
   const key = 'sec:' + name;
-  if (collapsed[key] || (name === COMPLETED && collapsed[key] === undefined)) li.classList.add('collapsed');
+  const startCollapsed = (name === COMPLETED && collapsed[key] === undefined) || collapsed[key];
+  if (startCollapsed) li.classList.add('collapsed');
   const row = el('div', 'row');
   const caret = el('span', 'caret', '▾');
   caret.onclick = () => { collapsed[key] = !li.classList.contains('collapsed') ? true : false; render(); };
   row.appendChild(caret);
   const bullet = el('span', 'bullet'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
   const text = el('span', 'text');
-  const badge = el('span', 'domain-badge', name); badge.style.background = color; badge.style.color = '#2b2b2b';
-  text.appendChild(badge);
+  const NO_BADGE = ['Inbox', 'Core To-Dos', 'Tracking', 'Completed', 'Done'];
+  const excluded = !colorOverride && NO_BADGE.some(k => name.includes(k));
+  if (excluded) {
+    text.textContent = name;
+  } else {
+    const badge = el('span', 'domain-badge', name); badge.style.background = color; badge.style.color = '#2b2b2b';
+    text.appendChild(badge);
+  }
   row.appendChild(text);
   li.appendChild(row);
   return li;
 }
 
 function addRow(section, subsection) {
-  const li = el('li', 'node');
+  const li = el('li', 'node addli');
   const row = el('div', 'addrow', '+ add');
   row.onclick = () => addTask(section, subsection);
   li.appendChild(row);
@@ -403,21 +455,32 @@ function addRow(section, subsection) {
 function render() {
   const board = document.getElementById('board');
   board.innerHTML = '';
+
+  // Top Priority (starred, active) pinned at very top
+  const starred = todos.filter(t => t.starred && !t.done && !t.skipped).sort((a,b)=>(a.position||0)-(b.position||0));
+  if (starred.length) {
+    const li = sectionNode(TOP, '#f0c674');
+    const list = el('ul', 'list'); list.dataset.virtual = '1';
+    starred.forEach(t => list.appendChild(taskRow(t)));
+    li.appendChild(list);
+    board.appendChild(li);
+  }
+
   const present = [...new Set(todos.map(t => t.section))];
   const ordered = [...ORDER.filter(s => present.includes(s)), ...present.filter(s => !ORDER.includes(s))];
 
   for (const sec of ordered) {
     const secLi = sectionNode(sec);
-    const secList = el('ul', 'list');
-    const items = todos.filter(t => t.section === sec);
-    // subsections in first-seen order
+    const secList = el('ul', 'list'); secList.dataset.section = sec; secList.dataset.sub = '';
+    // items in this section, minus ones pinned to Top Priority
+    const items = todos.filter(t => t.section === sec && !t.skipped && !(t.starred && !t.done));
     const subs = [];
     for (const t of items) { const s = t.subsection || ''; if (!subs.includes(s)) subs.push(s); }
     for (const sub of subs) {
       const subItems = items.filter(t => (t.subsection || '') === sub).sort((a,b)=>(a.position||0)-(b.position||0));
       if (sub) {
         const subLi = subHeader(sub, subItems.length);
-        const subList = el('ul', 'list');
+        const subList = el('ul', 'list'); subList.dataset.section = sec; subList.dataset.sub = sub;
         subItems.forEach(t => subList.appendChild(taskRow(t)));
         subList.appendChild(addRow(sec, sub));
         subLi.appendChild(subList);
@@ -426,20 +489,18 @@ function render() {
         subItems.forEach(t => secList.appendChild(taskRow(t)));
       }
     }
-    // add row for direct items
     secList.appendChild(addRow(sec, null));
     secLi.appendChild(secList);
     board.appendChild(secLi);
 
-    // section total (Core yellow, After Core grey)
     if (TOTAL_YELLOW.has(sec) || TOTAL_GREY.has(sec)) {
-      const sum = items.filter(t=>!t.done && !t.skipped).reduce((a,t)=>a+(t.est_minutes||0),0);
+      const sum = todos.filter(t => t.section === sec && !t.done && !t.skipped).reduce((a,t)=>a+(t.est_minutes||0),0);
       const tot = el('div', 'section-total' + (TOTAL_GREY.has(sec) ? ' section-total-grey' : ''));
-      tot.dataset.sec = sec;
-      tot.textContent = 'Total: ' + fmt(sum);
+      tot.dataset.sec = sec; tot.textContent = 'Total: ' + fmt(sum);
       board.appendChild(tot);
     }
   }
+  initSortables();
 }
 function renderTotals() {
   document.querySelectorAll('.section-total').forEach(tot => {
@@ -447,6 +508,45 @@ function renderTotals() {
     const sum = todos.filter(t => t.section === sec && !t.done && !t.skipped).reduce((a,t)=>a+(t.est_minutes||0),0);
     tot.textContent = 'Total: ' + fmt(sum);
   });
+}
+
+/* ---------- drag to reorder ---------- */
+function initSortables() {
+  document.querySelectorAll('ul.list[data-section]').forEach(ul => {
+    if (ul._sortable) return;
+    ul._sortable = new Sortable(ul, {
+      group: 'todos', animation: 130, handle: '.bullet', draggable: 'li.task',
+      ghostClass: 'sortable-ghost', dragClass: 'dragging', filter: '.addli',
+      onEnd: onDragEnd
+    });
+  });
+}
+async function onDragEnd(evt) {
+  const id = evt.item.dataset.id;
+  const toUl = evt.to, fromUl = evt.from;
+  const section = toUl.dataset.section;
+  const sub = toUl.dataset.sub || null;
+  const moved = todos.find(t => t.id === id);
+  if (moved && section !== undefined) {
+    moved.section = section;
+    moved.subsection = sub;
+    moved.is_habit = (sub || '').toUpperCase().includes('HABIT BANDIT');
+    moved.category = moved.is_habit ? 'HABIT BANDIT' : moved.category;
+    moved.bucket = section === "Tomorrow's Core To-Dos" ? 'tomorrow' : 'today';
+  }
+  const uls = fromUl === toUl ? [toUl] : [toUl, fromUl];
+  const updates = [];
+  uls.forEach(ul => {
+    [...ul.querySelectorAll(':scope > li.task')].forEach((li, idx) => {
+      const t = todos.find(x => x.id === li.dataset.id);
+      if (t) { t.position = idx; updates.push(t); }
+    });
+  });
+  render();
+  const now = new Date().toISOString();
+  for (const t of updates) {
+    await sb.from('todos').update({ position: t.position, section: t.section, subsection: t.subsection, is_habit: t.is_habit, category: t.category, bucket: t.bucket, updated_at: now }).eq('id', t.id);
+  }
 }
 
 refreshAuth();
