@@ -186,6 +186,7 @@
   .appbar .who a#undo { cursor:pointer; margin-right:10px; color:#5b6270; }
   #toast { position:fixed; left:50%; bottom:26px; transform:translateX(-50%); background:#2b2b2b; color:#fff; font-family:Arial; font-size:14px; padding:11px 18px; border-radius:9px; z-index:120; display:none; }
   .helpbar { max-width:900px; margin:0 auto; padding:9px 16px 0; font-size:11.5px; color:#9aa0aa; line-height:1.65; }
+  .wtip { position:fixed; z-index:130; display:none; background:#1f2a44; color:#fff; font-size:12px; padding:6px 9px; border-radius:7px; pointer-events:none; max-width:210px; box-shadow:0 3px 10px rgba(0,0,0,.2); }
   .tasklink { margin-left:8px; color:#3f6f8f; text-decoration:none; font-size:14px; opacity:.75; cursor:pointer; }
   .tasklink:hover { opacity:1; }
   .vtoggle { cursor:pointer; font-weight:600; margin-right:12px; color:#3f6f8f; }
@@ -224,7 +225,7 @@
 <div id="app">
   <div class="appbar">
     <span class="brand">CrushingIt <span class="synced">● live</span></span>
-    <span class="who"><a id="viewtoggle" class="vtoggle">🕐 Wheel</a><span class="ver">v4.6</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
+    <span class="who"><a id="viewtoggle" class="vtoggle">🕐 Wheel</a><span class="ver">v4.7</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
   </div>
   <div class="helpbar">Guide: tap the ✓ box to complete (it drops into Completed, untick to bring it back) · grab the ● dot to drag and reorder · ★ pins a copy to Top Priority · ↗ opens that habit's app · the two little boxes are estimate + actual minutes · ✕ skips a habit for today, × deletes a task · tap 🕐 Wheel to see your day as a clock · 🎤 adds by voice</div>
   <div class="wrap">
@@ -234,6 +235,7 @@
     <div id="mantra" class="mantra"></div>
     <div id="stats" class="stats"></div>
     <div id="wheelwrap"><svg id="wheelsvg" viewBox="0 0 360 360" width="100%" style="max-width:380px;display:block;margin:2px auto 10px"></svg></div>
+    <div id="wtip" class="wtip"></div>
     <div id="legend" class="legend"></div>
     <ul class="list" id="wheellist"></ul>
   </div>
@@ -255,6 +257,7 @@ const SECTIONS = [
   ["Tomorrow's Core To-Dos", '#5b6270'],
   ['⏳ Waiting On', '#cbb0e0'],
   ['💬 Asa topics', '#8fb8d8'],
+  ['🎓 Carson College', '#8ec5a0'],
   ['After Core', '#f0c674'],
   ['✓ Completed Tasks', '#c7ccd3'],
   ['Not Urgent', '#b7bcc4'],
@@ -300,7 +303,7 @@ async function showApp(email) {
   if (data.session) sb.realtime.setAuth(data.session.access_token);
   await maybeRollover();
   await load();
-  try { const V = '4.6'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
+  try { const V = '4.7'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
 }
 document.getElementById('signin').onclick = async () => {
@@ -569,20 +572,18 @@ function render() {
   }
 
   const INBOX = '📥 Inbox · uncategorized captures';
-  const WAITING = '⏳ Waiting On';
-  const ASA = '💬 Asa topics';
+  const PINNED = ['⏳ Waiting On', '💬 Asa topics', '🎓 Carson College'];   // omnipresent, kept just above After Core in this order
   const present = [...new Set(todos.map(t => t.section))];
   if (!present.includes(INBOX)) present.push(INBOX);
-  if (!present.includes(WAITING)) present.push(WAITING);   // Waiting On always shows too, even when empty
-  if (!present.includes(ASA)) present.push(ASA);           // Asa topics always shows too
+  for (const p of PINNED) if (!present.includes(p)) present.push(p);
   const inSaved = sectionOrder.filter(s => present.includes(s));
   const rest = present.filter(s => !inSaved.includes(s)).sort((a, b) => orderIndex(ORDER, a) - orderIndex(ORDER, b) || a.localeCompare(b));
   let ordered = [...inSaved, ...rest];
   ordered = [INBOX, ...ordered.filter(s => s !== INBOX)];   // Inbox always shows, always first
-  // Waiting On + Asa topics are omnipresent, pinned just above After Core (in that order)
-  ordered = ordered.filter(s => s !== WAITING && s !== ASA);
+  // Pinned sections are omnipresent, kept just above After Core in order
+  ordered = ordered.filter(s => !PINNED.includes(s));
   const acIdx = ordered.indexOf('After Core');
-  if (acIdx >= 0) ordered.splice(acIdx, 0, WAITING, ASA); else ordered.push(WAITING, ASA);
+  if (acIdx >= 0) ordered.splice(acIdx, 0, ...PINNED); else ordered.push(...PINNED);
 
   for (const sec of ordered) {
     const secLi = sectionNode(sec); secLi.dataset.section = sec;
@@ -769,6 +770,7 @@ function sectorPath(cx,cy,ri,ro,a0,a1){
   return `M${xoa.toFixed(2)},${yoa.toFixed(2)} A${ro},${ro} 0 ${large} 1 ${xob.toFixed(2)},${yob.toFixed(2)} L${xib.toFixed(2)},${yib.toFixed(2)} A${ri},${ri} 0 ${large} 0 ${xia.toFixed(2)},${yia.toFixed(2)} Z`;
 }
 function esc(s){ return (s||'').replace(/[<&>]/g, c => ({'<':'&lt;','&':'&amp;','>':'&gt;'}[c])); }
+function escA(s){ return esc(s).replace(/"/g,'&quot;'); }
 function hhmm(mins){ let h=Math.floor(mins/60), m=mins%60; const ap=h<12?'a':'p'; h=h%12||12; return h + (m?(':'+String(m).padStart(2,'0')):'') + ap; }
 function planTasks(){
   const today = localDate();
@@ -795,11 +797,11 @@ function drawWheel(){
     const start = cursor, end = Math.min(cursor + dur, WHEEL_END);
     if (start >= WHEEL_END) break;
     planned.push({ t, start, end });
-    out += `<path d="${sectorPath(cx,cy,RI,RO,m2a(start),m2a(end))}" fill="${catColor(t)}" stroke="#fff" stroke-width="1" opacity="${t.done?0.5:1}"><title>${esc(t.task)} · ${fmt(dur)} plan${t.done?' · done':''}</title></path>`;
+    out += `<path d="${sectorPath(cx,cy,RI,RO,m2a(start),m2a(end))}" fill="${catColor(t)}" stroke="#fff" stroke-width="1" opacity="${t.done?0.5:1}" data-tip="${escA(t.task)} · ${hhmm(start)}–${hhmm(end)} plan${t.done?' · done':''}"><title>${esc(t.task)} · ${fmt(dur)} plan${t.done?' · done':''}</title></path>`;
     cursor = end;
   }
   for (const m of MEALS){
-    out += `<path d="${sectorPath(cx,cy,RI,RO,m2a(m.start),m2a(m.end))}" fill="${MEAL_COLOR}" stroke="#fff" stroke-width="1"><title>${m.name} · ${hhmm(m.start)}</title></path>`;
+    out += `<path d="${sectorPath(cx,cy,RI,RO,m2a(m.start),m2a(m.end))}" fill="${MEAL_COLOR}" stroke="#fff" stroke-width="1" data-tip="${m.name} · ${hhmm(m.start)}–${hhmm(m.end)}"><title>${m.name} · ${hhmm(m.start)}</title></path>`;
   }
   let onSchedule = 0;
   for (const t of todos){
@@ -809,7 +811,7 @@ function drawWheel(){
     const act = t.actual_minutes || t.est_minutes || 10;
     const aEnd = Math.min(Math.max(localMinutesOf(t.done_at), WHEEL_START), WHEEL_END);
     const aStart = Math.max(aEnd - act, WHEEL_START);
-    out += `<path d="${sectorPath(cx,cy,ARI,ARO,m2a(aStart),m2a(aEnd))}" fill="${catColor(t)}" stroke="#fff" stroke-width="0.75"><title>${esc(t.task)} · done ${new Date(t.done_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</title></path>`;
+    out += `<path d="${sectorPath(cx,cy,ARI,ARO,m2a(aStart),m2a(aEnd))}" fill="${catColor(t)}" stroke="#fff" stroke-width="0.75" data-tip="${escA(t.task)} · done ${new Date(t.done_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})} (actual)"><title>${esc(t.task)} · done ${new Date(t.done_at).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</title></path>`;
     const p = planned.find(p => p.t.id === t.id);
     if (p && aStart < p.end && aEnd > p.start) onSchedule++;
   }
@@ -820,6 +822,13 @@ function drawWheel(){
   }
   out += `<text x="${cx}" y="${cy-4}" font-size="11" fill="#5b6472" text-anchor="middle">now</text><text x="${cx}" y="${cy+13}" font-size="15" font-weight="700" fill="#1f2a44" text-anchor="middle">${new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</text>`;
   svg.innerHTML = out;
+  const tip = document.getElementById('wtip');
+  if (tip) {
+    const place = (e, above) => { tip.style.display='block'; tip.style.left = Math.max(8, Math.min(e.clientX + 12, innerWidth - 220)) + 'px'; tip.style.top = (above ? Math.max(e.clientY - 34, 8) : e.clientY + 14) + 'px'; };
+    svg.onpointermove = (e) => { const p = e.target.closest('path[data-tip]'); if (p) { tip.textContent = p.getAttribute('data-tip'); place(e, false); } else { tip.style.display='none'; } };
+    svg.onpointerleave = () => { tip.style.display='none'; };
+    svg.onpointerdown = (e) => { const p = e.target.closest('path[data-tip]'); if (p) { tip.textContent = p.getAttribute('data-tip'); place(e, true); clearTimeout(tip._t); tip._t = setTimeout(() => tip.style.display='none', 2200); } };
+  }
 
   const notDone = plan.filter(t => !t.done);
   const remEst = notDone.reduce((a,t)=>a+(t.est_minutes||(t.is_habit?10:20)),0);
