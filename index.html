@@ -150,6 +150,9 @@
   .subtotal{flex:0 0 auto;margin-left:8px;padding:1px 8px;background:#ffe95c;border:1px solid #e5cf3a;border-radius:5px;font-size:11px;font-weight:700;color:#4d4d4d;font-variant-numeric:tabular-nums;}
   .actbox{flex:0 0 auto;width:34px;margin-left:6px;padding:1px 4px;border:1px solid #d9dce1;border-radius:5px;font:inherit;font-size:11px;text-align:center;color:#4d4d4d;background:#fff;}
   .actbox:focus{outline:none;border-color:#7bbf9e;background:#f2fbf5;}
+  .valbox{flex:0 0 auto;width:40px;margin-left:6px;padding:1px 4px;border:1px dashed #cdd3da;border-radius:5px;font:inherit;font-size:11px;font-weight:400;text-align:center;color:#6b7280;background:#fafbfc;}
+  .valbox:focus{outline:none;border-color:#9aa0a8;background:#fff;}
+  .valbox::placeholder{color:#b6bcc4;}
   .section-total-grey{background:#e8eaed;border-color:#cfd3d9;color:#4d4d4d;}
   .done-section{ margin-top:14px; margin-bottom:34px; }
   .tmrw-btn{flex:0 0 auto;margin-left:6px;border:1px solid #d9dce1;background:#fff;border-radius:5px;font-size:12px;line-height:1;padding:2px 7px;cursor:pointer;color:#8a9098;}
@@ -225,7 +228,7 @@
 <div id="app">
   <div class="appbar">
     <span class="brand">CrushingIt <span class="synced">● live</span></span>
-    <span class="who"><a id="viewtoggle" class="vtoggle">🕐 Wheel</a><span class="ver">v4.8</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
+    <span class="who"><a id="viewtoggle" class="vtoggle">🕐 Wheel</a><span class="ver">v4.9</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
   </div>
   <div class="helpbar">Guide: tap the ✓ box to complete (it drops into Completed, untick to bring it back) · grab the ● dot to drag and reorder · ★ pins a copy to Top Priority · ↗ opens that habit's app · the two little boxes are estimate + actual minutes · ✕ skips a habit for today, × deletes a task · tap 🕐 Wheel to see your day as a clock · 🎤 adds by voice</div>
   <div class="wrap">
@@ -303,7 +306,7 @@ async function showApp(email) {
   if (data.session) sb.realtime.setAuth(data.session.access_token);
   await maybeRollover();
   await load();
-  try { const V = '4.8'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
+  try { const V = '4.9'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
 }
 document.getElementById('signin').onclick = async () => {
@@ -486,6 +489,15 @@ function taskRow(t) {
     const act = el('input', 'actbox'); act.value = t.actual_minutes ?? (t.est_minutes ?? ''); act.title = 'actual (min), starts from the estimate';
     act.onchange = () => { const v = act.value === '' ? null : parseInt(act.value,10); patch(t.id, { actual_minutes: v }); };
     row.appendChild(est); row.appendChild(act);
+  }
+  // Quantified Self: a small non-bold value box on each habit (feeds the QS master log)
+  if (t.is_habit) {
+    const u = t.unit || 'min';
+    const qv = el('input', 'valbox'); qv.value = t.value ?? '';
+    qv.placeholder = (u === 'count' ? '#' : (u === 'bool' || u === 'boolean' ? '✓' : 'min'));
+    qv.title = 'Quantified Self value (' + u + ')';
+    qv.onchange = () => { const v = qv.value === '' ? null : parseFloat(qv.value); patch(t.id, { value: v }); };
+    row.appendChild(qv);
   }
   // habits get a skip button; everything else gets delete
   if (t.is_habit) {
