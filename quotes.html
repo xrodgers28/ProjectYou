@@ -99,6 +99,7 @@
       <div class="tools">
         <input id="q" placeholder="Search phrases…" oninput="draw()">
         <select id="tag" onchange="draw()"><option value="">All categories</option></select>
+        <button class="btn" id="favBtn" style="background:#fff;color:var(--gold);border:1px solid var(--line)" onclick="toggleFav()">★ Favorites</button>
         <button class="btn" style="background:var(--green)" onclick="markDone()">Done today ✓</button>
       </div>
       <div class="count" id="count"></div>
@@ -113,7 +114,7 @@
 const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-let ALL=[], DAILY=[], dIdx=0;
+let ALL=[], DAILY=[], dIdx=0, favOnly=false;
 const GRAPHIC={'Work & Business':'💼','About Me':'🙂','Self-Deprecating Jokes':'😅','About Others':'👥','Situations':'🎬','Places & Culture':'🗺️','Vocabulary':'📖','Untranslatable Words':'🌍','Actions':'⚡','Facts':'📊'};
 function gfx(cat){return GRAPHIC[cat]||'✨';}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -178,7 +179,8 @@ function draw(){
   const list=ALL.filter(q=>{
     const hit=(q.text||'').toLowerCase().includes(term)||(q.meaning||'').toLowerCase().includes(term);
     const tg=!tag||(q.tags||[]).includes(tag);
-    return hit&&tg;
+    const fv=!favOnly||q.favorite;
+    return hit&&tg&&fv;
   });
   document.getElementById('count').textContent=list.length+' of '+ALL.length+' phrases';
   document.getElementById('grid').innerHTML=list.map(q=>{
@@ -189,6 +191,13 @@ function draw(){
 }
 async function fav(id,val){await sb.from('quotes').update({favorite:val}).eq('id',id);
   const q=ALL.find(x=>x.id===id);if(q)q.favorite=val;draw();renderDaily();}
+function toggleFav(){
+  favOnly=!favOnly;
+  const b=document.getElementById('favBtn');
+  b.style.background=favOnly?'var(--gold)':'#fff';
+  b.style.color=favOnly?'#fff':'var(--gold)';
+  draw();
+}
 async function addQuote(){
   const t=document.getElementById('nt').value.trim();if(!t)return;
   const m=document.getElementById('nm').value.trim();const g=document.getElementById('ng').value.trim();

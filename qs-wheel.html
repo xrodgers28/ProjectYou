@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QS Habit Wheel · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--chip:#eef2f8;--hot:#c0453b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  .nav{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:4px;align-items:center;padding:9px 14px;flex-wrap:wrap}
+  .nav .brand{font-weight:800;color:var(--accent);margin-right:8px;font-size:14px}
+  .nav a{font-size:12.5px;font-weight:700;color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px}
+  .nav a:hover{background:var(--chip);color:var(--accent)} .nav a.on{background:var(--accent);color:#fff}
+  .nav .who{margin-left:auto;font-size:11.5px;color:var(--muted)}
+  .wrap{max-width:900px;margin:0 auto;padding:20px 16px 50px}
+  h1{font-size:22px;color:var(--accent)}
+  .sub{color:var(--muted);font-size:13px;margin:4px 0 10px;max-width:640px;line-height:1.5}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:center}
+  @media(max-width:720px){.cols{grid-template-columns:1fr}}
+  .wheelbox{display:flex;justify-content:center}
+  .legend{display:flex;flex-direction:column;gap:8px}
+  .seg{display:flex;align-items:flex-start;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+  .swatch{width:14px;height:14px;border-radius:4px;flex:none;margin-top:2px}
+  .seg .nm{font-weight:800;font-size:14px}
+  .seg .hb{font-size:12.5px;color:var(--muted);margin-top:2px;line-height:1.4}
+  .seg.empty .hb{color:var(--hot)}
+  wedge{cursor:pointer}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>QS Habit Wheel</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+<div id="app" class="hidden">
+  <div class="nav"><span class="brand">SER</span>
+    <a href="index.html">CrushingIt</a><a href="ai.html">AI Deck ML Module</a>
+    <a href="quotes.html">Clever Phrases ML Module</a><a href="compass.html">Compass ML Module</a>
+    <a href="ai-tools.html">AI Tools</a><a href="mission.html">Mission Control</a>
+    <span class="who" id="who"></span></div>
+  <div class="wrap">
+    <h1>Quantified Self, Habit Wheel</h1>
+    <p class="sub">Your Clarity Compass, seven life segments, with each daily habit mapped to where it belongs. Bigger wedges hold more habits. Red segments have no habit yet, a gap to fill.</p>
+    <div class="cols">
+      <div class="wheelbox"><svg id="wheel" viewBox="0 0 320 320" width="320" height="320"></svg></div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </div>
+  <div class="badge">QS Habit Wheel v1.0</div>
+</div>
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const SEGS=[
+  {name:'Physical Health',color:'#1e8e5a'},
+  {name:'Mental Fitness',color:'#3f6f8f'},
+  {name:'Emotional Health',color:'#c0453b'},
+  {name:'Social Well-Being',color:'#c68a2e'},
+  {name:'Sense of Purpose',color:'#8a5a9c'},
+  {name:'Recreational Health',color:'#2fa3a3'},
+  {name:'Environmental Health',color:'#6b7a52'}
+];
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)onLogin(session);}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}onLogin(data.session);}
+async function onLogin(session){try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');
+  document.getElementById('who').textContent=session.user.email;load();}
+function cleanName(t){return t.replace(/\s*\([^)]*\)\s*/g,'').replace(/^[^\w]+/,'').trim();}
+async function load(){
+  const {data}=await sb.from('todos').select('task,qs_group').eq('is_habit',true);
+  const map={}; SEGS.forEach(s=>map[s.name]=[]);
+  (data||[]).forEach(h=>{ if(h.qs_group&&map[h.qs_group]) map[h.qs_group].push(cleanName(h.task)); });
+  draw(map);
+}
+function wedgePath(cx,cy,rO,rI,a0,a1){
+  const P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];
+  const large=(a1-a0)>Math.PI?1:0;
+  const [x0,y0]=P(rO,a0),[x1,y1]=P(rO,a1),[x2,y2]=P(rI,a1),[x3,y3]=P(rI,a0);
+  return `M${x0} ${y0} A${rO} ${rO} 0 ${large} 1 ${x1} ${y1} L${x2} ${y2} A${rI} ${rI} 0 ${large} 0 ${x3} ${y3} Z`;
+}
+function draw(map){
+  const cx=160,cy=160,rI=58,rMin=86,rMax=138,n=SEGS.length,step=2*Math.PI/n;
+  const maxCount=Math.max(1,...SEGS.map(s=>map[s.name].length));
+  let svg='';
+  SEGS.forEach((s,i)=>{
+    const a0=-Math.PI/2+i*step, a1=a0+step-0.02;
+    const cnt=map[s.name].length;
+    const rO=rMin+(rMax-rMin)*(cnt/maxCount);
+    svg+='<path d="'+wedgePath(cx,cy,rO,rI,a0,a1)+'" fill="'+s.color+'" opacity="'+(cnt?0.92:0.28)+'" stroke="#fff" stroke-width="2"></path>';
+    const am=(a0+a1)/2, lr=rO+0; const lx=cx+(rI+ (rO-rI)/2)*Math.cos(am), ly=cy+(rI+(rO-rI)/2)*Math.sin(am);
+    if(cnt) svg+='<text x="'+lx+'" y="'+ly+'" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-size="15" font-weight="800">'+cnt+'</text>';
+  });
+  svg+='<circle cx="160" cy="160" r="56" fill="#fff" stroke="'+'#e3e7ee'+'" stroke-width="2"></circle>';
+  svg+='<text x="160" y="153" text-anchor="middle" fill="#3f6f8f" font-size="12" font-weight="800">CLARITY</text>';
+  svg+='<text x="160" y="169" text-anchor="middle" fill="#3f6f8f" font-size="12" font-weight="800">COMPASS</text>';
+  document.getElementById('wheel').innerHTML=svg;
+  document.getElementById('legend').innerHTML=SEGS.map(s=>{
+    const hs=map[s.name]; const empty=hs.length===0;
+    return '<div class="seg'+(empty?' empty':'')+'"><span class="swatch" style="background:'+s.color+'"></span>'+
+      '<div><div class="nm">'+esc(s.name)+' ('+hs.length+')</div><div class="hb">'+(empty?'No habit yet, add one.':esc(hs.join(', ')))+'</div></div></div>';
+  }).join('');
+}
+boot();
+</script>
+</body>
+</html>
