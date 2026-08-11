@@ -51,7 +51,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="nav"><span class="brand">SER</span>
+  <div class="nav"><span class="brand"><span style="display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:6px;background:linear-gradient(135deg,#3f6f8f,#2f5a74);color:#fff;font-size:10px;font-weight:800;margin-right:6px;vertical-align:middle">PY</span>Project YOU</span>
     <a href="index.html">CrushingIt</a><a href="ai.html">AI Deck ML Module</a>
     <a href="quotes.html">Clever Phrases ML Module</a><a href="compass.html" class="on">Compass ML Module</a><a href="mission.html">Mission Control</a>
     <span class="who" id="who"></span></div>
@@ -60,7 +60,7 @@
     <div class="bar"><span id="barfill"></span></div>
     <div id="deck"></div>
   </div>
-  <div class="badge">Compass ML Module v1.0</div>
+  <div class="badge">Compass ML Module v1.1</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -114,8 +114,8 @@ function render(){
   inner+='<div class="kicker">'+esc(q.category)+'<span class="time">'+q.time_min+' min</span></div>';
   inner+='<div class="q">'+esc(q.question)+'</div>';
   inner+='<div class="ladder">'+steps+'</div>';
-  inner+='<textarea class="ans" id="ans" placeholder="Your reflection..."></textarea>';
-  inner+='<div class="navbtns"><button class="btn primary" style="flex:1" onclick="saveAns()">Save reflection</button></div>';
+  inner+='<textarea class="ans" id="ans" placeholder="🎤 Tap Speak and just talk, or type here. Voice is the easiest way in."></textarea>';
+  inner+='<div class="navbtns"><button class="btn" id="cmic" type="button" style="background:#fff;border:1px solid var(--line);color:var(--accent);display:flex;gap:6px;align-items:center" onclick="toggleCmic()">🎤 <span id="cmicLbl">Speak</span></button><button class="btn primary" style="flex:1" onclick="saveAns()">Save reflection</button></div>';
   inner+='<button class="skip" onclick="skip()">Only have 5 minutes? Skip this, get it back later</button>';
   document.getElementById('deck').innerHTML='<div class="card">'+inner+'</div>';
   const r=LOG[q.id]; if(r&&r.answer)document.getElementById('ans').value=r.answer;
@@ -127,6 +127,21 @@ async function saveAns(){
   LOG[cur.id]={question_id:cur.id,status:'answered',answer:a};
   toast('Saved. Nice work.');
   render();
+}
+let cmicRec=null, cmicOn=false;
+function toggleCmic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const ta=document.getElementById('ans');
+  const lbl=document.getElementById('cmicLbl'); const btn=document.getElementById('cmic');
+  if(!SR){toast('Voice not supported in this browser. Type instead.');return;}
+  if(cmicOn){try{cmicRec&&cmicRec.stop();}catch(e){}return;}
+  cmicRec=new SR(); cmicRec.lang='en-US'; cmicRec.interimResults=true; cmicRec.continuous=true;
+  let base=ta.value?ta.value.trim()+' ':'';
+  cmicRec.onstart=()=>{cmicOn=true;if(lbl)lbl.textContent='Listening…';btn.style.background='#c0453b';btn.style.color='#fff';btn.style.borderColor='#c0453b';};
+  cmicRec.onend=()=>{cmicOn=false;if(lbl)lbl.textContent='Speak';btn.style.background='#fff';btn.style.color='var(--accent)';btn.style.borderColor='var(--line)';};
+  cmicRec.onerror=(e)=>{toast('Mic: '+(e.error||'error'));};
+  cmicRec.onresult=(e)=>{let fin='',intr='';for(let i=e.resultIndex;i<e.results.length;i++){const tr=e.results[i][0].transcript;if(e.results[i].isFinal)fin+=tr+' ';else intr+=tr;}if(fin)base+=fin;ta.value=(base+intr).trim();};
+  try{cmicRec.start();}catch(e){toast('Could not start mic');}
 }
 async function skip(){
   const d=new Date(); d.setDate(d.getDate()+3);

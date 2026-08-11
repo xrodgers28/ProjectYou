@@ -153,9 +153,6 @@
   .valbox{flex:0 0 auto;width:40px;margin-left:6px;padding:1px 4px;border:1px dashed #cdd3da;border-radius:5px;font:inherit;font-size:11px;font-weight:400;text-align:center;color:#6b7280;background:#fafbfc;}
   .valbox:focus{outline:none;border-color:#9aa0a8;background:#fff;}
   .valbox::placeholder{color:#b6bcc4;}
-  .boxwrap{display:inline-flex;flex-direction:column;align-items:center;margin-left:6px;}
-  .boxwrap .estbox,.boxwrap .actbox,.boxwrap .valbox{margin-left:0;}
-  .boxlbl{font-size:8px;line-height:1;color:#bcc2ca;margin-bottom:1px;letter-spacing:.03em;}
   .section-total-grey{background:#e8eaed;border-color:#cfd3d9;color:#4d4d4d;}
   .done-section{ margin-top:14px; margin-bottom:34px; }
   .tmrw-btn{flex:0 0 auto;margin-left:6px;border:1px solid #d9dce1;background:#fff;border-radius:5px;font-size:12px;line-height:1;padding:2px 7px;cursor:pointer;color:#8a9098;}
@@ -179,6 +176,13 @@
   .appbar .brand { font-weight:700; font-size:16px; color:#2b2b2b; }
   .appbar .who { font-size:11.5px; color:#9a9fa8; }
   .appbar .who a { color:#5b6270; cursor:pointer; margin-left:8px; }
+  .appbar .sitenav { display:flex; align-items:center; gap:2px; flex-wrap:wrap; }
+  .appbar .sitenav .brand { display:flex; align-items:center; font-weight:800; font-size:15px; color:#2b2b2b; margin-right:10px; }
+  .appbar .sitenav .brand .pylogo { display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:6px; background:linear-gradient(135deg,#3f6f8f,#2f5a74); color:#fff; font-size:10.5px; font-weight:800; margin-right:7px; }
+  .appbar .sitenav a { font-size:12.5px; font-weight:700; color:#5b6472; text-decoration:none; padding:6px 9px; border-radius:8px; }
+  .appbar .sitenav a:hover { background:#eef2f8; color:#3f6f8f; }
+  .appbar .sitenav a.on { background:#3f6f8f; color:#fff; }
+  @media(max-width:760px){ .appbar{flex-wrap:wrap;gap:6px} .appbar .sitenav{gap:0} .appbar .sitenav a{padding:5px 7px;font-size:12px} }
   #app { display:none; }
   .synced { font-size:10.5px; color:#2f8f5b; }
   .star { flex:0 0 auto; cursor:pointer; font-size:14px; line-height:1; color:#d3d6db; margin-left:4px; user-select:none; }
@@ -230,10 +234,18 @@
 
 <div id="app">
   <div class="appbar">
-    <span class="brand">CrushingIt <span class="synced">● live</span></span>
-    <span class="who"><a id="viewtoggle" class="vtoggle">🕐 Wheel</a><span class="ver">v5.1</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
+    <span class="sitenav">
+      <span class="brand"><span class="pylogo">PY</span>Project YOU</span>
+      <a href="index.html" class="on">CrushingIt</a>
+      <a href="ai.html">AI Deck ML Module</a>
+      <a href="quotes.html">Clever Phrases ML Module</a>
+      <a href="compass.html">Compass ML Module</a>
+      <a href="ai-tools.html">AI Tools</a>
+      <a href="mission.html">Mission Control</a>
+    </span>
+    <span class="who"><span class="synced">● live</span><a id="viewtoggle" class="vtoggle">🕐 Wheel</a><span class="ver">v4.9</span><a id="undo" style="display:none">↶ undo</a><span id="whoami"></span><a id="signout">sign out</a></span>
   </div>
-  <div class="helpbar">Guide: tap the ✓ box to complete (it drops into Completed, untick to bring it back) · grab the ● dot to drag and reorder · ★ pins a copy to Top Priority · ↗ opens that habit's app · the little boxes are est (estimate min) · act (actual min) · log (the value you did, feeds Quantified Self) · hit return in an item to drop a new blank line below it · ✕ skips a habit for today, × deletes a task · tap 🕐 Wheel to see your day as a clock · 🎤 adds by voice</div>
+  <div class="helpbar">Guide: tap the ✓ box to complete (it drops into Completed, untick to bring it back) · grab the ● dot to drag and reorder · ★ pins a copy to Top Priority · ↗ opens that habit's app · the two little boxes are estimate + actual minutes · ✕ skips a habit for today, × deletes a task · tap 🕐 Wheel to see your day as a clock · 🎤 adds by voice</div>
   <div class="wrap">
     <ul class="list" id="board"></ul>
   </div>
@@ -309,7 +321,7 @@ async function showApp(email) {
   if (data.session) sb.realtime.setAuth(data.session.access_token);
   await maybeRollover();
   await load();
-  try { const V = '5.1'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
+  try { const V = '4.9'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
 }
 document.getElementById('signin').onclick = async () => {
@@ -410,30 +422,6 @@ async function addTask(section, subsection) {
   const elx = document.querySelector('[data-id="' + data.id + '"] .text');
   if (elx) { elx.focus(); const r = document.createRange(); r.selectNodeContents(elx); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
 }
-async function addTaskAfter(t) {
-  // insert a blank line immediately below item t, in the same section/subsection
-  const group = todos.filter(x => x.section === t.section && (x.subsection || '') === (t.subsection || ''))
-                     .sort((a, b) => (a.position || 0) - (b.position || 0));
-  const idx = group.findIndex(x => x.id === t.id);
-  const next = group[idx + 1];
-  let newPos;
-  if (!next) { newPos = (t.position || 0) + 1; }
-  else if ((next.position || 0) - (t.position || 0) > 1e-6) { newPos = ((t.position || 0) + next.position) / 2; }
-  else {
-    // positions collide: renumber this group densely so there is room to slot between rows
-    for (let i = 0; i < group.length; i++) { const np = (i + 1) * 100; if (group[i].position !== np) { group[i].position = np; await patch(group[i].id, { position: np }); } }
-    newPos = (t.position || 0) + 50;
-  }
-  const isHabit = (t.subsection || '').toUpperCase().includes('HABIT BANDIT');
-  const ins = { section: t.section, subsection: t.subsection || null, task: '', position: newPos,
-                bucket: t.bucket || (t.section === "Tomorrow's Core To-Dos" ? 'tomorrow' : 'today'),
-                is_habit: isHabit, category: isHabit ? 'HABIT BANDIT' : null };
-  const { data, error } = await sb.from('todos').insert(ins).select().single();
-  if (error) { console.error(error); return; }
-  todos.push(data); render();
-  const elx = document.querySelector('[data-id="' + data.id + '"] .text');
-  if (elx) { elx.focus(); const r = document.createRange(); r.selectNodeContents(elx); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
-}
 async function removeTask(id) { todos = todos.filter(x => x.id !== id); render(); await sb.from('todos').delete().eq('id', id); }
 
 const UNDO_FIELDS = ['position','section','subsection','is_habit','bucket','done','done_at','actual_minutes','starred','skipped','origin_section','origin_subsection','status'];
@@ -461,7 +449,6 @@ async function doUndo() {
 /* ---------- helpers ---------- */
 function fmt(m) { if (!m) return '0m'; if (m < 60) return m + 'm'; const h = Math.floor(m/60), r = m%60; return r ? h+'h '+r+'m' : h+'h'; }
 function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
-function wrapBox(input, label) { const w = el('div', 'boxwrap'); w.appendChild(el('span', 'boxlbl', label)); w.appendChild(input); return w; }
 function escapeHtml(s){ return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
 function toast(t){ const e=document.getElementById('toast'); e.textContent=t; e.style.display='block'; setTimeout(()=>e.style.display='none',2600); }
 
@@ -502,15 +489,7 @@ function taskRow(t) {
   row.appendChild(check);
   const text = el('span', 'text', t.task); text.setAttribute('contenteditable', 'true');
   text.onblur = () => { const v = text.textContent.trim(); if (v && v !== t.task) patch(t.id, { task: v }); if (!v) removeTask(t.id); };
-  text.onkeydown = e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const v = text.textContent.trim();
-      if (!v) { removeTask(t.id); return; }
-      if (v !== t.task) { t.task = v; patch(t.id, { task: v }); }
-      addTaskAfter(t);
-    }
-  };
+  text.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); text.blur(); } };
   row.appendChild(text);
   if (t.link) { const lk = el('a', 'tasklink', '↗'); lk.href = t.link; lk.target = '_blank'; lk.rel = 'noopener'; lk.title = 'Open to do it'; lk.onmousedown = e => e.stopPropagation(); lk.onclick = e => e.stopPropagation(); row.appendChild(lk); }
   // star
@@ -524,7 +503,7 @@ function taskRow(t) {
     est.onchange = () => { const v = est.value === '' ? null : parseInt(est.value,10); patch(t.id, { est_minutes: v }); renderTotals(); };
     const act = el('input', 'actbox'); act.value = t.actual_minutes ?? (t.est_minutes ?? ''); act.title = 'actual (min), starts from the estimate';
     act.onchange = () => { const v = act.value === '' ? null : parseInt(act.value,10); patch(t.id, { actual_minutes: v }); };
-    row.appendChild(wrapBox(est, 'est')); row.appendChild(wrapBox(act, 'act'));
+    row.appendChild(est); row.appendChild(act);
   }
   // Quantified Self: a small non-bold value box on each habit (feeds the QS master log)
   if (t.is_habit) {
@@ -533,7 +512,7 @@ function taskRow(t) {
     qv.placeholder = (u === 'count' ? '#' : (u === 'bool' || u === 'boolean' ? '✓' : 'min'));
     qv.title = 'Quantified Self value (' + u + ')';
     qv.onchange = () => { const v = qv.value === '' ? null : parseFloat(qv.value); patch(t.id, { value: v }); };
-    row.appendChild(wrapBox(qv, 'log'));
+    row.appendChild(qv);
   }
   // habits get a skip button; everything else gets delete
   if (t.is_habit) {
