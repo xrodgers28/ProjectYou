@@ -87,11 +87,25 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">Dashboards</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">ProjectYOU<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link on">Daily<br>Habits</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a></span></span><a href="ai-tools.html" class="pn-solo">Parking<br>Lot</a><a href="mission.html" class="pn-solo">Mission<br>Control</a><span class="pn-ver">v2.0</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">Dashboards</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">ProjectYOU<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link on">Daily<br>Habits</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><a href="ai-tools.html" class="pn-solo">Parking<br>Lot</a><span class="pn-ver">v2.1</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
 
   <div class="wrap">
     <h1>Daily Habits</h1>
     <p class="sub">Your standing daily set, and your staging area. Drag the dots to reorder, tap any line to rename, change the minutes, add or remove items. This shapes what CrushingIt builds each day. For bigger changes, leave me a note or just talk in the box at the bottom and I will apply them to your board.</p>
+
+    <div class="pubbar">
+      <button class="pubbtn" onclick="publishToday()">⟳ Publish to Todays Tasks</button>
+      <span class="syncpill checking" id="syncpill">checking sync…</span>
+    </div>
+    <style>
+    .pubbar{display:flex;align-items:center;gap:12px;margin:2px 0 16px;flex-wrap:wrap}
+    .pubbtn{font-family:inherit;font-weight:800;font-size:13px;border:none;border-radius:9px;padding:9px 15px;cursor:pointer;background:#3f6f8f;color:#fff}
+    .pubbtn:hover{background:#345d78}
+    .syncpill{font-size:12px;font-weight:800;border-radius:999px;padding:5px 12px}
+    .syncpill.ok{background:#e4f5ea;color:#1e8e5a}
+    .syncpill.off{background:#fdeede;color:#b9752a}
+    .syncpill.checking{background:#eef2f8;color:#7a8291}
+    </style>
 
     <div class="board" id="board"></div>
     <button class="addsec" onclick="addSection()">+ add a section</button>
@@ -106,7 +120,7 @@
       <div class="crow"><button class="send" onclick="sendNote()">Send to Claude</button><span class="chint" id="chint">Lands in your inbox for Claude to action.</span></div>
     </div>
   </div>
-  <div class="badge">Daily Habits v2.0</div>
+  <div class="badge">Daily Habits v2.1</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -127,7 +141,39 @@ async function onLogin(session){try{await sb.realtime.setAuth(session.access_tok
 async function load(){
   const {data,error}=await sb.from('daily_template').select('*').order('position',{ascending:true});
   if(error){toast('Load error: '+error.message);return;}
-  ROWS=data||[];render();
+  ROWS=data||[];render();checkDrift();
+}
+/* ---- keep Todays Tasks in sync with this template ---- */
+function tmplHabits(){return ROWS.filter(r=>r.is_habit);}
+async function checkDrift(){
+  const pill=document.getElementById('syncpill');if(!pill)return;
+  try{
+    const t=tmplHabits().map(r=>r.task), tset=new Set(t);
+    const {data}=await sb.from('todos').select('task').eq('is_habit',true);
+    const names=(data||[]).map(x=>x.task), cset=new Set(names);
+    const missing=t.filter(n=>!cset.has(n)), extra=names.filter(n=>!tset.has(n)), dups=names.length-cset.size;
+    if(!missing.length&&!extra.length&&!dups){pill.className='syncpill ok';pill.textContent='✓ In sync with Todays Tasks';}
+    else{const b=[];if(missing.length)b.push(missing.length+' to add');if(extra.length)b.push(extra.length+' to remove');if(dups)b.push(dups+' duplicate'+(dups>1?'s':''));
+      pill.className='syncpill off';pill.textContent='Out of sync ('+b.join(', ')+') — Publish to fix';}
+  }catch(e){pill.className='syncpill off';pill.textContent='sync check failed';}
+}
+async function publishToday(){
+  const pill=document.getElementById('syncpill');pill.className='syncpill checking';pill.textContent='publishing…';
+  try{
+    const th=tmplHabits(), tset=new Set(th.map(r=>r.task));
+    const {data:cur}=await sb.from('todos').select('id,task').eq('is_habit',true);
+    const byTask={};(cur||[]).forEach(t=>{(byTask[t.task]=byTask[t.task]||[]).push(t);});
+    let added=0,removed=0,deduped=0;
+    for(const task in byTask){const rows=byTask[task];
+      if(!tset.has(task)){for(const r of rows){await sb.from('todos').delete().eq('id',r.id);removed++;}}
+      else{for(let i=1;i<rows.length;i++){await sb.from('todos').delete().eq('id',rows[i].id);deduped++;}}}
+    const have=new Set(Object.keys(byTask).filter(k=>tset.has(k)));
+    const toAdd=th.filter(r=>!have.has(r.task)).map(r=>({section:'Core To-Dos',subsection:'HABIT BANDIT',task:r.task,est_minutes:r.est_minutes??null,is_habit:true,bucket:'today',category:'HABIT BANDIT',position:r.position??999,status:'todo',done:false,link:r.link??null,for_date:new Date().toISOString().slice(0,10)}));
+    if(toAdd.length){const {error}=await sb.from('todos').insert(toAdd);if(error){toast('Publish error: '+error.message);checkDrift();return;}added=toAdd.length;}
+    for(const r of th){await sb.from('todos').update({position:r.position??999,link:r.link??null,est_minutes:r.est_minutes??null,updated_at:new Date().toISOString()}).eq('is_habit',true).eq('task',r.task);}
+    toast('Published to Todays Tasks: +'+added+' added, '+removed+' removed, '+deduped+' de-duped');
+  }catch(e){toast('Publish failed: '+e.message);}
+  checkDrift();
 }
 function isHabitSec(s){return (s||'').toUpperCase().includes('HABIT BANDIT');}
 function sections(){
