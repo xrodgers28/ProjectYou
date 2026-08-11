@@ -508,6 +508,16 @@ function checkHabitConfetti(){
   if (allDone && !habitsWereAllDone) { confetti(); toast('Crushed it! Habits done 🎉'); }
   habitsWereAllDone = allDone;
 }
+// Habit Bandit: ticked habits stay visible (struck) in the list; only once ALL are done do they clear into Completed.
+async function maybeClearHabits(){
+  const habits = todos.filter(t => t.is_habit && !t.skipped);
+  if (habits.length && habits.every(h => h.done)) {
+    for (const h of habits) {
+      if (h.section !== COMPLETED) patch(h.id, { origin_section: 'Core To-Dos', origin_subsection: 'HABIT BANDIT', section: COMPLETED, subsection: null });
+    }
+    render();
+  }
+}
 
 /* ---------- row builders ---------- */
 function taskRow(t) {
@@ -521,13 +531,20 @@ function taskRow(t) {
     snapshot();
     const done = !t.done;
     if (done) {
-      // completing anything (task OR habit) sends it into Completed, remembering where it came from
-      patch(t.id, { done: true, status: 'done', done_at: new Date().toISOString(), actual_minutes: t.actual_minutes ?? t.est_minutes ?? null, origin_section: t.section, origin_subsection: t.subsection, section: COMPLETED, subsection: null });
+      if (t.is_habit) {
+        // habit: tick in place, stays visible (struck) in HABIT BANDIT until ALL habits are done
+        patch(t.id, { done: true, status: 'done', done_at: new Date().toISOString(), actual_minutes: t.actual_minutes ?? t.est_minutes ?? null });
+      } else {
+        patch(t.id, { done: true, status: 'done', done_at: new Date().toISOString(), actual_minutes: t.actual_minutes ?? t.est_minutes ?? null, origin_section: t.section, origin_subsection: t.subsection, section: COMPLETED, subsection: null });
+      }
     } else {
-      // un-completing sends it back to where it came from (habits return to HABIT BANDIT)
-      patch(t.id, { done: false, status: 'todo', done_at: null, section: t.origin_section || 'Core To-Dos', subsection: t.origin_subsection ?? (t.is_habit ? 'HABIT BANDIT' : null) });
+      if (t.is_habit) {
+        patch(t.id, { done: false, status: 'todo', done_at: null, section: 'Core To-Dos', subsection: 'HABIT BANDIT', origin_section: null, origin_subsection: null });
+      } else {
+        patch(t.id, { done: false, status: 'todo', done_at: null, section: t.origin_section || 'Core To-Dos', subsection: t.origin_subsection ?? null });
+      }
     }
-    render(); checkHabitConfetti();
+    render(); maybeClearHabits(); checkHabitConfetti();
   };
   row.appendChild(check);
   const text = el('span', 'text', t.task); text.setAttribute('contenteditable', 'true');
@@ -671,7 +688,7 @@ function render() {
     // items in this section, minus ones pinned to Top Priority
     const items = (sec === COMPLETED)
       ? todos.filter(t => t.done && !t.skipped)
-      : todos.filter(t => t.section === sec && !t.skipped && !t.done);
+      : todos.filter(t => t.section === sec && !t.skipped && (!t.done || (t.is_habit && (t.subsection||'').toUpperCase().includes('HABIT BANDIT'))));
     if (sec === COMPLETED) {
       const groups = {};
       items.forEach(t => { const d = effDateOf(t.done_at || t.updated_at || t.created_at); const k = dayKey(d); (groups[k] = groups[k] || { label: groupDate(d), items: [] }).items.push(t); });
@@ -938,9 +955,14 @@ function drawWheel(){
 }
 function toggleDoneWheel(t){
   const done = !t.done;
-  if (done) patch(t.id, { done:true, status:'done', done_at:new Date().toISOString(), actual_minutes: t.actual_minutes ?? t.est_minutes ?? (t.is_habit?10:20), origin_section: t.section, origin_subsection: t.subsection, section: COMPLETED, subsection: null });
-  else patch(t.id, { done:false, status:'todo', done_at:null, section: t.origin_section || 'Core To-Dos', subsection: t.origin_subsection ?? (t.is_habit ? 'HABIT BANDIT' : null) });
-  drawWheel(); checkHabitConfetti();
+  if (done) {
+    if (t.is_habit) patch(t.id, { done:true, status:'done', done_at:new Date().toISOString(), actual_minutes: t.actual_minutes ?? t.est_minutes ?? 10 });
+    else patch(t.id, { done:true, status:'done', done_at:new Date().toISOString(), actual_minutes: t.actual_minutes ?? t.est_minutes ?? 20, origin_section: t.section, origin_subsection: t.subsection, section: COMPLETED, subsection: null });
+  } else {
+    if (t.is_habit) patch(t.id, { done:false, status:'todo', done_at:null, section:'Core To-Dos', subsection:'HABIT BANDIT', origin_section:null, origin_subsection:null });
+    else patch(t.id, { done:false, status:'todo', done_at:null, section: t.origin_section || 'Core To-Dos', subsection: t.origin_subsection ?? null });
+  }
+  drawWheel(); maybeClearHabits(); checkHabitConfetti();
 }
 {
   const tgl = document.getElementById('viewtoggle');

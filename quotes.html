@@ -172,7 +172,7 @@ function renderDaily(){
   document.getElementById('dots').innerHTML=DAILY.map((_,i)=>'<div class="dot '+(i===dIdx?'on':'')+'"></div>').join('')+'<div class="dot '+(dIdx===total?'on':'')+'"></div>';
   const ds=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
   if(dIdx>=total){
-    document.getElementById('deck').innerHTML='<div class="card"><div class="datestamp">'+ds+'</div><div class="kicker">That is today\'s set</div><div class="graphic">🎉</div><h2>Three phrases, three categories.</h2><div class="mean">A fresh trio lands every day.</div><div class="navbtns"><button class="nbtn" onclick="dgo(-1)">Back</button><button class="nbtn primary" onclick="showView(\'browse\')">Browse all phrases</button></div><button class="nbtn" style="width:100%;margin-top:10px;border-color:var(--green);color:var(--green)" onclick="markDone()">Mark today done ✓</button></div>';
+    document.getElementById('deck').innerHTML='<div class="card"><div class="datestamp">'+ds+'</div><div class="kicker">That is today\'s set</div><div class="graphic">🎉</div><h2>Three phrases, three categories.</h2><div class="mean">A fresh trio lands every day.</div><div class="navbtns"><button class="nbtn" onclick="dgo(-1)">Back</button><button class="nbtn primary" onclick="showView(\'browse\')">Browse all phrases</button></div><button class="nbtn" style="width:100%;margin-top:10px;border-color:var(--green);color:var(--green)" onclick="markDone()">Mark today done ✓</button><div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);flex-wrap:wrap"><span style="font-size:13px;color:var(--muted);font-weight:700">How long did that take?</span><input id="tmin" type="number" min="1" placeholder="min" style="width:66px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;text-align:center;font-family:inherit"><button class="nbtn" style="padding:8px 12px;font-size:13px;width:auto" onclick="logTimeCP()">Log to CrushingIt</button></div></div>';
     return;
   }
   const d=DAILY[dIdx], q=d.q;
@@ -232,6 +232,14 @@ async function markDone(){
   const {data}=await sb.from('todos').select('id').eq('is_habit',true).eq('bucket','today').ilike('task','%Clever Phrases%').limit(1);
   if(data&&data.length){await sb.from('todos').update({done:true,done_at:new Date().toISOString(),status:'done',for_date:today}).eq('id',data[0].id);toast('Clever Phrases habit ticked in CrushingIt. ✓');}
   else{toast('Marked done. (No Clever Phrases habit row found.)');}
+}
+async function logTimeCP(){
+  const el=document.getElementById('tmin');const v=parseInt(el&&el.value,10);
+  if(!v||v<=0){toast('Enter minutes first.');return;}
+  const today=new Date().toISOString().slice(0,10);const now=new Date().toISOString();
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).ilike('task','%Clever Phrases%').limit(1);
+  if(data&&data.length){await sb.from('todos').update({actual_minutes:v,done:true,status:'done',done_at:now,for_date:today}).eq('id',data[0].id);el.disabled=true;toast('Logged '+v+' min to CrushingIt ✓');}
+  else toast('No Clever Phrases habit row found to log against.');
 }
 boot();
 </script>

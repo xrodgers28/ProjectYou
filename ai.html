@@ -153,7 +153,16 @@ function renderSave(){
   let rows=CARDS.map((c,i)=>'<div class="row"><input type="checkbox" id="sv'+i+'" '+(c.saved?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(KICK[c.card_type]||c.card_type)+': '+esc(c.title)+'</div><div class="d">'+esc((c.body||'').slice(0,90))+'</div></label></div>').join('');
   document.getElementById('deck').innerHTML='<div class="card save"><div class="kicker">End of deck</div><h2>Keep what mattered.</h2><div style="margin-top:16px">'+rows+'</div>'+
     '<div class="navbtns"><button class="btn" onclick="go(-1)">Back</button><button class="btn primary" onclick="saveDeck()">Save picks</button></div>'+
-    '<button class="btn primary" style="width:100%;margin-top:10px;background:var(--green);border-color:var(--green)" onclick="markDone()">Mark today\'s deck done ✓</button></div>';
+    '<button class="btn primary" style="width:100%;margin-top:10px;background:var(--green);border-color:var(--green)" onclick="markDone()">Mark today\'s deck done ✓</button>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);flex-wrap:wrap"><span style="font-size:13px;color:var(--muted);font-weight:700">How long did that take?</span><input id="tmin" type="number" min="1" placeholder="min" style="width:66px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;text-align:center;font-family:inherit"><button class="btn" style="padding:8px 12px;font-size:13px" onclick="logTimeAI()">Log to CrushingIt</button></div></div>';
+}
+async function logTimeAI(){
+  const el=document.getElementById('tmin');const v=parseInt(el&&el.value,10);
+  if(!v||v<=0){toast('Enter minutes first.');return;}
+  const today=new Date().toISOString().slice(0,10);const now=new Date().toISOString();
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).ilike('task','%AI (Learning%').limit(1);
+  if(data&&data.length){await sb.from('todos').update({actual_minutes:v,done:true,status:'done',done_at:now,for_date:today}).eq('id',data[0].id);el.disabled=true;toast('Logged '+v+' min to CrushingIt ✓');}
+  else toast('No AI habit row found to log against.');
 }
 function go(d){idx=Math.max(0,Math.min(SLIDES.length,idx+d));pIdx=0;render();}
 async function saveDeck(){
