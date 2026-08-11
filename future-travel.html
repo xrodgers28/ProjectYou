@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Future Travel · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;--sand:#f4ead6;--sea:#8fd0c4}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:1080px;margin:0 auto;padding:14px 16px 60px}
+  .intro{font-size:13px;color:var(--muted);margin:2px 0 14px;line-height:1.5}
+  .intro b{color:var(--ink)}
+  .addbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px;box-shadow:0 4px 12px rgba(31,42,68,.05)}
+  .addbar input{font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+  .addbar #p{flex:2;min-width:150px}.addbar #co{flex:1;min-width:110px}.addbar #ci{flex:1;min-width:120px}.addbar #re{flex:1;min-width:120px}
+  .addbar button{font-family:inherit;font-size:13px;font-weight:700;padding:9px 15px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap}
+  .addbar button:disabled{opacity:.5;cursor:default}
+  #map{height:440px;border-radius:14px;border:1px solid var(--line);box-shadow:0 8px 22px rgba(31,42,68,.08);margin-bottom:8px;background:#dfe7f0}
+  .leaflet-popup-content{font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.4}
+  .leaflet-popup-content .pp-place{font-weight:800;font-size:14px;color:var(--ink)}
+  .leaflet-popup-content .pp-meta{color:var(--muted);font-size:12px;margin-top:2px}
+  .maphint{font-size:11px;color:#9aa6b4;margin:0 0 18px 2px}
+  .count{font-size:12px;color:var(--muted);margin:8px 0 10px;font-weight:700}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px}
+  .tcard{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px 13px;box-shadow:0 6px 16px rgba(31,42,68,.06);overflow:hidden}
+  .tcard:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--sea)}
+  .tcard .flag{font-size:30px;line-height:1}
+  .tcard .place{font-weight:800;font-size:15.5px;margin-top:6px;line-height:1.2;padding-right:16px}
+  .tcard .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .tcard .pill{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--chip);color:var(--accent2)}
+  .tcard .pill.rec{background:#eef7f0;color:var(--green)}
+  .tcard .pill.nogeo{background:#fdf3e6;color:#b5762a}
+  .tcard .del{position:absolute;top:9px;right:10px;font-size:15px;color:#c9cfd6;cursor:pointer;line-height:1}
+  .tcard .del:hover{color:var(--hot)}
+  .empty{color:var(--muted);font-size:14px;padding:16px 2px}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px 14px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}.toast.show{opacity:1}
+  .hidden{display:none}
+</style>
+<style id="pynav-css">
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-solo{font-weight:800;color:#3f6f8f;text-decoration:none;font-size:12px;padding:4px 8px;border-radius:8px;margin-left:5px;border-left:1px solid #edf0f4;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-solo:hover{background:#eef2f8}
+.pn-solo.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+</style>
+<style>.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:2px 0 2px}.secbar h1{font-size:23px;color:var(--accent,#3f6f8f)}.secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line,#e3e7ee);border-radius:999px;padding:2px 8px}.secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}.secbar-wrap{max-width:1080px;margin:0 auto;padding:10px 16px 0}</style>
+</head>
+<body>
+<div id="login">
+  <h1>Future Travel</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link on">Mission<br>Control</a></span></span><a href="future-travel.html" class="pn-solo on">Future<br>Travel</a><a href="ai-tools.html" class="pn-solo">Parking<br>Lot</a><span class="pn-ver">v1.0</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>🏝️ Future Travel</h1><span class="ver">v1.0</span><span class="date"></span></div></div>
+  <div class="wrap">
+    <div class="intro">Your someday map. Every dream destination tagged by country, nearest city, and who put you onto it. Tip: say <b>"add [place] to Future Travel"</b> in any Claude chat and it lands right here.</div>
+    <div class="addbar">
+      <input id="p" placeholder="Place (e.g. Positano)">
+      <input id="co" placeholder="Country">
+      <input id="ci" placeholder="Nearest city">
+      <input id="re" placeholder="Recommended by">
+      <button id="addbtn" onclick="addPlace()">Add to map</button>
+    </div>
+    <div id="map"></div>
+    <div class="maphint">Tap a pin for details. Drag to explore.</div>
+    <div class="count" id="count"></div>
+    <div class="grid" id="cards"></div>
+  </div>
+  <div class="badge">Future Travel v1.0</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');_a.style.display='none';}if(_l){_l.classList.remove('hidden');_l.style.display='';var _e=document.getElementById('loginErr');if(_e)_e.textContent='Your session expired. Please sign in again.';}}});
+let PLACES=[], map=null, markers=null;
+const FLAGS={'italy':'🇮🇹','canada':'🇨🇦','united states':'🇺🇸','usa':'🇺🇸','us':'🇺🇸','united kingdom':'🇬🇧','uk':'🇬🇧','england':'🇬🇧','france':'🇫🇷','spain':'🇪🇸','portugal':'🇵🇹','switzerland':'🇨🇭','germany':'🇩🇪','netherlands':'🇳🇱','greece':'🇬🇷','iceland':'🇮🇸','norway':'🇳🇴','sweden':'🇸🇪','denmark':'🇩🇰','ireland':'🇮🇪','austria':'🇦🇹','croatia':'🇭🇷','japan':'🇯🇵','china':'🇨🇳','taiwan':'🇹🇼','thailand':'🇹🇭','vietnam':'🇻🇳','india':'🇮🇳','indonesia':'🇮🇩','philippines':'🇵🇭','south korea':'🇰🇷','korea':'🇰🇷','jordan':'🇯🇴','israel':'🇮🇱','morocco':'🇲🇦','egypt':'🇪🇬','namibia':'🇳🇦','botswana':'🇧🇼','south africa':'🇿🇦','kenya':'🇰🇪','tanzania':'🇹🇿','mexico':'🇲🇽','colombia':'🇨🇴','brazil':'🇧🇷','argentina':'🇦🇷','chile':'🇨🇱','peru':'🇵🇪','costa rica':'🇨🇷','australia':'🇦🇺','new zealand':'🇳🇿','turkey':'🇹🇷','georgia':'🇬🇪'};
+function flagFor(country){ if(!country) return '📍'; return FLAGS[country.trim().toLowerCase()] || '📍'; }
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)onLogin(session);}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}onLogin(data.session);}
+async function onLogin(session){try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');
+  load();}
+async function load(){
+  const {data}=await sb.from('future_travel').select('*').order('created_at',{ascending:true});
+  PLACES=data||[];
+  renderMap(); renderCards();
+}
+function renderMap(){
+  if(!map){
+    map=L.map('map',{scrollWheelZoom:false}).setView([25,5],2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(map);
+    markers=L.layerGroup().addTo(map);
+  }
+  markers.clearLayers();
+  const pts=[];
+  PLACES.forEach(p=>{
+    if(p.lat==null||p.lng==null) return;
+    const html='<div class="pp-place">'+(p.flag||flagFor(p.country))+' '+esc(p.place)+'</div>'+
+      '<div class="pp-meta">'+esc([p.country,p.city].filter(Boolean).join(' · '))+'</div>'+
+      (p.recommender?'<div class="pp-meta">🗣️ '+esc(p.recommender)+'</div>':'');
+    L.marker([p.lat,p.lng]).addTo(markers).bindPopup(html);
+    pts.push([p.lat,p.lng]);
+  });
+  if(pts.length){ try{ map.fitBounds(pts,{padding:[40,40],maxZoom:6}); }catch(e){} }
+  setTimeout(()=>{ if(map) map.invalidateSize(); }, 200);
+}
+function renderCards(){
+  const el=document.getElementById('cards');
+  document.getElementById('count').textContent=PLACES.length+' destination'+(PLACES.length===1?'':'s')+' on the list';
+  if(!PLACES.length){ el.innerHTML='<div class="empty">No destinations yet. Add one above, or say "add [place] to Future Travel" in any Claude chat.</div>'; return; }
+  el.innerHTML=PLACES.map(p=>{
+    const flag=p.flag||flagFor(p.country);
+    let pills='';
+    if(p.country) pills+='<span class="pill">'+esc(p.country)+'</span>';
+    if(p.city) pills+='<span class="pill">📍 '+esc(p.city)+'</span>';
+    if(p.recommender) pills+='<span class="pill rec">🗣️ '+esc(p.recommender)+'</span>';
+    if(p.lat==null||p.lng==null) pills+='<span class="pill nogeo">no map pin yet</span>';
+    return '<div class="tcard"><span class="del" title="Remove" onclick="delPlace(\''+p.id+'\')">✕</span>'+
+      '<div class="flag">'+flag+'</div><div class="place">'+esc(p.place)+'</div>'+
+      '<div class="row">'+pills+'</div></div>';
+  }).join('');
+}
+async function geocode(q){
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+    const j=await r.json();
+    if(j&&j.length) return {lat:parseFloat(j[0].lat), lng:parseFloat(j[0].lon)};
+  }catch(e){}
+  return null;
+}
+async function addPlace(){
+  const place=document.getElementById('p').value.trim(); if(!place){toast('Add a place name first.');return;}
+  const country=document.getElementById('co').value.trim();
+  const city=document.getElementById('ci').value.trim();
+  const rec=document.getElementById('re').value.trim();
+  const btn=document.getElementById('addbtn'); btn.disabled=true; btn.textContent='Finding...';
+  const geo=await geocode([place,country].filter(Boolean).join(', '));
+  const row={place, country:country||null, city:city||null, recommender:rec||null, flag:flagFor(country), lat:geo?geo.lat:null, lng:geo?geo.lng:null};
+  const {error}=await sb.from('future_travel').insert(row);
+  btn.disabled=false; btn.textContent='Add to map';
+  if(error){toast('Could not add: '+error.message);return;}
+  document.getElementById('p').value='';document.getElementById('co').value='';document.getElementById('ci').value='';document.getElementById('re').value='';
+  toast(geo?'Added '+place+' 🌍':'Added '+place+' (no pin found, still on your list)');
+  load();
+}
+async function delPlace(id){
+  const {error}=await sb.from('future_travel').delete().eq('id',id);
+  if(error){toast('Could not remove: '+error.message);return;}
+  toast('Removed.'); load();
+}
+boot();
+</script>
+<script>(function(){var e=document.querySelector('.secbar .date');if(e){var d=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];e.textContent=M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();}})();</script>
+</body>
+</html>
