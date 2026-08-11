@@ -54,6 +54,7 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);margin-top:18px}
   .card h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px}
   .card .hint{font-size:12px;color:#9aa6b4;margin-bottom:14px}
+  .tierlab{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#c0453b;margin:0 0 9px}
   /* token swatches */
   .swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:12px}
   .sw{border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#fff}
@@ -106,9 +107,12 @@
     <p class="sub">The single source of truth for how Project YOU looks. Edit a color, and every specimen below updates live. Save it, and this becomes the canonical set I roll across every module so the whole system stays consistent.</p>
 
     <div class="card">
-      <h2>Clarity Compass palette</h2>
-      <div class="hint">The seven wellbeing sections, plus Outlier. These drive the Clarity Compass wheel and the Knowledge Graph.</div>
-      <div class="swatches" id="palette"></div>
+      <h2>Core Colors</h2>
+      <div class="hint">The seven wellbeing sections, plus Outlier. Dark is the canonical section color (drives the Clarity Compass wheel and Knowledge Graph); light is the tint used for backgrounds and fills. Both are editable.</div>
+      <div class="tierlab">Core Colors — Dark</div>
+      <div class="swatches" id="paletteDark"></div>
+      <div class="tierlab" style="margin-top:18px">Core Colors — Light</div>
+      <div class="swatches" id="paletteLight"></div>
     </div>
 
     <div class="card">
@@ -171,6 +175,12 @@ const DEFAULTS={
 };
 const VARMAP={accent:'--accent',ink:'--ink',muted:'--muted',good:'--good',hot:'--hot',bg:'--bg',line:'--line'};
 const SECVAR={"Physical Health":"--sec-physical","Environmental Health":"--sec-environmental","Social Well Being":"--sec-social","Recreational Health":"--sec-recreational","Sense of Purpose":"--sec-purpose","Mental Fitness":"--sec-mental","Emotional Health":"--sec-emotional","Outlier":"--sec-outlier"};
+const SECVARL={"Physical Health":"--sec-physical-l","Environmental Health":"--sec-environmental-l","Social Well Being":"--sec-social-l","Recreational Health":"--sec-recreational-l","Sense of Purpose":"--sec-purpose-l","Mental Fitness":"--sec-mental-l","Emotional Health":"--sec-emotional-l","Outlier":"--sec-outlier-l"};
+function tint(hex,amt){const h=hex.replace('#','');const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+  const mix=(c)=>Math.round(c+(255-c)*amt);const to=(c)=>c.toString(16).padStart(2,'0');
+  return '#'+to(mix(r))+to(mix(g))+to(mix(b));}
+// default light tier = tint of each dark section color
+DEFAULTS.paletteLight={};Object.keys(DEFAULTS.palette).forEach(k=>{DEFAULTS.paletteLight[k]=tint(DEFAULTS.palette[k],0.80);});
 let TOK=JSON.parse(JSON.stringify(DEFAULTS));
 
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
@@ -185,7 +195,9 @@ async function onLogin(session){document.getElementById('login').classList.add('
   await loadTokens();}
 async function loadTokens(){
   try{const {data}=await sb.from('app_meta').select('value').eq('key','design_tokens').maybeSingle();
-    if(data&&data.value){const v=JSON.parse(data.value);TOK={palette:Object.assign({},DEFAULTS.palette,v.palette||{}),brand:Object.assign({},DEFAULTS.brand,v.brand||{}),radius:v.radius||DEFAULTS.radius};}
+    if(data&&data.value){const v=JSON.parse(data.value);const pal=Object.assign({},DEFAULTS.palette,v.palette||{});
+      const palL={};Object.keys(pal).forEach(k=>{palL[k]=(v.paletteLight&&v.paletteLight[k])||tint(pal[k],0.80);});
+      TOK={palette:pal,paletteLight:palL,brand:Object.assign({},DEFAULTS.brand,v.brand||{}),radius:v.radius||DEFAULTS.radius};}
   }catch(e){}
   applyVars();renderAll();
 }
@@ -193,6 +205,7 @@ function applyVars(){
   const r=document.documentElement.style;
   for(const k in TOK.brand){if(VARMAP[k])r.setProperty(VARMAP[k],TOK.brand[k]);}
   for(const s in TOK.palette){r.setProperty(SECVAR[s],TOK.palette[s]);}
+  for(const s in TOK.paletteLight){r.setProperty(SECVARL[s],TOK.paletteLight[s]);}
   r.setProperty('--radius',TOK.radius);
   const rv=document.getElementById('radv');if(rv)rv.textContent=TOK.radius;
 }
@@ -205,8 +218,10 @@ function swatchNode(name,hex,onChange){
   return d;
 }
 function renderAll(){
-  const pal=document.getElementById('palette');pal.innerHTML='';
-  Object.keys(TOK.palette).forEach(name=>{pal.appendChild(swatchNode(name,TOK.palette[name],v=>{TOK.palette[name]=v;document.documentElement.style.setProperty(SECVAR[name],v);setSave('');}));});
+  const pd=document.getElementById('paletteDark');pd.innerHTML='';
+  Object.keys(TOK.palette).forEach(name=>{pd.appendChild(swatchNode(name,TOK.palette[name],v=>{TOK.palette[name]=v;document.documentElement.style.setProperty(SECVAR[name],v);setSave('');}));});
+  const pl=document.getElementById('paletteLight');pl.innerHTML='';
+  Object.keys(TOK.paletteLight).forEach(name=>{pl.appendChild(swatchNode(name,TOK.paletteLight[name],v=>{TOK.paletteLight[name]=v;document.documentElement.style.setProperty(SECVARL[name],v);setSave('');}));});
   const br=document.getElementById('brand');br.innerHTML='';
   Object.keys(TOK.brand).forEach(name=>{br.appendChild(swatchNode(name,TOK.brand[name],v=>{TOK.brand[name]=v;if(VARMAP[name])document.documentElement.style.setProperty(VARMAP[name],v);setSave('');}));});
   const sp=document.getElementById('secpills');sp.innerHTML='';
