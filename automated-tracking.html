@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Automated Tracking &middot; SER</title>
+<style>
+  :root{
+    --ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
+    --accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.4}
+
+  /* ---- SER shared nav ---- */
+  .nav{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:4px;align-items:center;padding:9px 14px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(31,42,68,.05)}
+  .nav .brand{font-weight:800;color:var(--accent);margin-right:8px;font-size:14px}
+  .nav a{font-size:12.5px;font-weight:700;color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px}
+  .nav a:hover{background:var(--chip);color:var(--accent)}
+  .nav a.on{background:var(--accent);color:#fff}
+  .nav a.soon{opacity:.5}
+  .nav .grp{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#aab2bf;margin:0 2px 0 8px}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 20px}
+
+  /* ---- minimal page header ---- */
+  .pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+  .pagehead h1{font-size:19px;color:var(--ink)}
+  .pagehead p{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .mini{display:flex;gap:8px;flex-wrap:wrap}
+  .mini .m{background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--muted)}
+  .mini .m b{color:var(--ink);font-size:13px}
+  .mini .m.live b{color:var(--green)}
+
+  .board{margin-top:18px}
+  .board-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+  .board-head h2{font-size:15px}
+  .board-head .lede{font-size:12px;color:var(--muted)}
+  .pill{font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 9px;letter-spacing:.3px}
+  .pill.live{background:#e5f4ec;color:var(--green);border:1px solid #b7e0c8}
+  .pill.plan{background:#eef2f8;color:var(--accent);border:1px solid #d6e0ec}
+
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:11px}
+  @media(max-width:900px){.grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:600px){.grid{grid-template-columns:1fr}}
+
+  .sec{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:visible;box-shadow:0 6px 16px rgba(31,42,68,.06);display:flex;flex-direction:column}
+  .sec.wide{grid-column:1 / -1}
+  .sec .band{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--c);border-bottom:3px solid var(--cd);border-radius:13px 13px 0 0}
+  .sec .band .ic{width:24px;height:24px;border-radius:50%;background:#fff;border:2px solid var(--cd);display:flex;align-items:center;justify-content:center;font-size:12px;flex:0 0 auto}
+  .sec .band h3{font-size:14px;color:#33240f;letter-spacing:.2px}
+  .sec .band .nick{font-size:10px;color:rgba(0,0,0,.42);font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  .sec .body{padding:12px 14px 14px}
+  .subhead{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#9aa3af;margin:6px 0 8px}
+  .subhead:first-child{margin-top:0}
+
+  .apps{display:flex;flex-wrap:wrap;gap:12px}
+  .app{width:74px;text-align:center;position:relative;cursor:default}
+  .app .logo{width:52px;height:52px;border-radius:14px;margin:0 auto;display:flex;align-items:center;justify-content:center;background:#fff;box-shadow:0 3px 8px rgba(31,42,68,.14);border:1px solid #e6e9ef;overflow:hidden}
+  .app .logo img{width:100%;height:100%;object-fit:contain;padding:7px}
+  .app .logo .mono{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;background:var(--chip);color:var(--accent)}
+  .app .nm{font-size:11px;color:var(--ink);margin-top:5px;line-height:1.15;font-weight:600}
+  .app.plan .logo{opacity:.96}
+  .app .status{position:absolute;top:-4px;right:9px;width:14px;height:14px;border-radius:50%;background:var(--green);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25);z-index:3}
+  .app .status.sys{background:var(--accent)}
+
+  /* tooltip */
+  .app .tip{position:absolute;z-index:30;left:50%;top:60px;transform:translateX(-50%) translateY(6px);width:210px;background:var(--ink);color:#fff;border-radius:10px;padding:9px 11px;font-size:11.5px;line-height:1.4;text-align:left;opacity:0;pointer-events:none;transition:opacity .14s ease,transform .14s ease;box-shadow:0 10px 26px rgba(31,42,68,.28)}
+  .app .tip b{display:block;font-size:12px;margin-bottom:2px}
+  .app .tip .meta{display:block;margin-top:5px;color:#9fd3b7;font-size:10.5px;font-weight:700}
+  .app .tip:after{content:"";position:absolute;left:50%;top:-5px;transform:translateX(-50%) rotate(45deg);width:10px;height:10px;background:var(--ink)}
+  .app:hover .tip{opacity:1;transform:translateX(-50%) translateY(0)}
+  .app:hover{z-index:5}
+
+  .empty{font-size:12px;color:#aab2bf;font-style:italic;padding:6px 0}
+  .note-src{font-size:11.5px;color:var(--muted);margin-top:8px}
+  .foot{font-size:12px;color:var(--muted);margin-top:22px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+  .stamp{text-align:right;font-style:italic;color:#808080;font-size:10px;margin-top:12px}
+</style>
+<style id="pynav-css">
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-solo{font-weight:800;color:#3f6f8f;text-decoration:none;font-size:12px;padding:4px 8px;border-radius:8px;margin-left:5px;border-left:1px solid #edf0f4;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-solo:hover{background:#eef2f8}
+.pn-solo.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+</style>
+</head>
+<body>
+
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link on">Automated<br>Tracking</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><a href="ai-tools.html" class="pn-solo">Parking<br>Lot</a><span class="pn-ver">v1.0</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+
+<div class="wrap">
+  <div class="pagehead">
+    <div>
+      <h1>Automated Tracking</h1>
+      <p>The outside apps feeding Project YOU. Top row is live now; below is the roadmap. Hover any app.</p>
+    </div>
+    <div class="mini">
+      <span class="m live"><b id="tLive">1</b> live</span>
+      <span class="m"><b id="tSys">6</b> connectors</span>
+      <span class="m"><b id="tPlan">27</b> on roadmap</span>
+    </div>
+  </div>
+
+  <!-- CONNECTED BOARD -->
+  <div class="board">
+    <div class="board-head">
+      <h2>Connected now</h2>
+      <span class="pill live">&#9679; Live</span>
+      <span class="lede">Real sources sending data into the system today.</span>
+    </div>
+    <div class="grid" id="connectedGrid"></div>
+    <div class="note-src">Strava is connected through its official data link and refreshes automatically. The system connectors (Google, Supabase, 1Password, browser) are authenticated at the account level and feed the wider operating system.</div>
+  </div>
+
+  <!-- ROADMAP BOARD -->
+  <div class="board">
+    <div class="board-head">
+      <h2>The full picture</h2>
+      <span class="pill plan">Roadmap</span>
+      <span class="lede">Every app that could feed the system, grouped by section. Wired up over time.</span>
+    </div>
+    <div class="grid" id="roadmapGrid"></div>
+  </div>
+
+  <div class="foot">
+    <b>Note:</b> logos are pulled live from each service, so they render best in a browser or on the deployed site. Where a small app has no public logo, a neutral initial stands in until the hi-res set is dropped in. Sections and colors follow the Clarity Compass system.
+  </div>
+  <div class="stamp">As of August 11th</div>
+</div>
+
+<script>
+/* ---- The seven Clarity Compass sections + the Operating System layer ---- */
+const SECTIONS = {
+  physical:      {name:"Physical Health",      nick:"Physical Gym",      glyph:"&#128170;", c:"#e7abbb", cd:"#c77e93"},
+  recreational:  {name:"Recreational Health",  nick:"Creative Studio",   glyph:"&#127912;", c:"#f3c6a1", cd:"#d99560"},
+  emotional:     {name:"Emotional Health",     nick:"Emotional Health",  glyph:"&#128150;", c:"#c6b9e8", cd:"#9483cf"},
+  environmental: {name:"Environmental Health", nick:"Environmental",     glyph:"&#127757;", c:"#a4d6ca", cd:"#5fa895"},
+  purpose:       {name:"Sense of Purpose",     nick:"a.k.a. Ikigai",     glyph:"&#129517;", c:"#e6d3a2", cd:"#c1a24f"},
+  social:        {name:"Social Well-Being",    nick:"Social Well-Being", glyph:"&#129309;", c:"#a6c4e8", cd:"#6f9bd0"},
+  mental:        {name:"Mental Fitness",       nick:"Mind Gym",          glyph:"&#129504;", c:"#f0dd93", cd:"#cbb43f"},
+  os:            {name:"Operating System",     nick:"Capture &amp; automation", glyph:"&#9881;&#65039;", c:"#cfd6e0", cd:"#5b6472"}
+};
+const ORDER = ["physical","recreational","emotional","environmental","purpose","social","mental","os"];
+
+/* app: domain drives the real logo; mono is the neutral fallback initial */
+const APPS = [
+  // Physical Health
+  {sec:"physical", name:"Strava", domain:"strava.com", mono:"S", connected:true, live:"Last: New York walk, Aug 10",
+    desc:"GPS tracking for runs, rucks, walks and rides, with segments, pace and training load."},
+  {sec:"physical", name:"Apple Fitness", domain:"apple.com", mono:"F", desc:"Move, Exercise and Stand rings and workouts captured from Apple Watch."},
+  {sec:"physical", name:"Sun Ally", label:"Sun Ally\nVitamin D", domain:"sunally.com", mono:"&#9728;", desc:"Tracks safe sun exposure and vitamin D synthesis time based on UV and skin type."},
+  {sec:"physical", name:"Upright Posture", label:"Upright\nPosture", domain:"uprightpose.com", mono:"U", desc:"Wearable that gently buzzes when you slouch, training better posture over time."},
+  {sec:"physical", name:"Apple Health", label:"Apple\nHealth", domain:"apple.com", mono:"&#10084;", desc:"The hub on iPhone that gathers health and activity data from all your apps and devices."},
+  {sec:"physical", name:"Labcorp", domain:"labcorp.com", mono:"L", desc:"Bloodwork and lab results, viewable online as they are processed."},
+  {sec:"physical", name:"FITINDEX", label:"FITINDEX\nWeight", domain:"fitindex.com", mono:"&#9878;", desc:"Smart scale that logs weight, body fat and other body-composition metrics."},
+
+  // Emotional Health
+  {sec:"emotional", name:"Monarch", label:"Monarch\nFinance", domain:"monarchmoney.com", mono:"M", desc:"Personal finance app tracking spending, budgets and net worth in one place."},
+
+  // Environmental Health
+  {sec:"environmental", name:"TripIt", domain:"tripit.com", mono:"T", desc:"Turns travel confirmation emails into one organized master itinerary."},
+  {sec:"environmental", name:"Swarm", domain:"swarmapp.com", mono:"&#128205;", desc:"Check-in app that logs the places you go and builds a history of your visits."},
+  {sec:"environmental", name:"Flighty", domain:"flightyapp.com", mono:"&#9992;", desc:"Live flight tracker with delay predictions and a log of every flight you take."},
+  {sec:"environmental", name:"Gondola", domain:"gondola.travel", mono:"G", desc:"Tracks hotel and airline loyalty points and elite status across programs."},
+  {sec:"environmental", name:"JetLovers", domain:"jetlovers.com", mono:"&#9992;", desc:"Aviation app for logging and sharing the flights you take."},
+  {sec:"environmental", name:"Spotify", domain:"spotify.com", mono:"&#9834;", desc:"Music streaming; your listening history reflects mood and environment."},
+
+  // Sense of Purpose (Volunteer)
+  {sec:"purpose", group:"Volunteer", name:"Be My Eyes", label:"Be My\nEyes", domain:"bemyeyes.com", mono:"&#128064;", desc:"Connects blind and low-vision people with sighted volunteers for live visual help."},
+  {sec:"purpose", group:"Volunteer", name:"Missing Maps", label:"Missing\nMaps", domain:"missingmaps.org", mono:"&#128506;", desc:"Volunteers map vulnerable places in OpenStreetMap so aid groups can respond to disasters."},
+
+  // Mental Fitness
+  {sec:"mental", group:"Meditation", name:"Waking Up", label:"Waking\nUp", domain:"wakingup.com", mono:"&#127748;", desc:"Meditation and philosophy app by Sam Harris for daily mindfulness practice."},
+  {sec:"mental", group:"Learning", name:"Elevate", domain:"elevateapp.com", mono:"E", desc:"Brain-training games for focus, math, reading and writing skills."},
+  {sec:"mental", group:"Learning", name:"Imprint", domain:"imprintapp.com", mono:"I", desc:"Visual learning app that teaches big ideas from books and topics in short lessons."},
+
+  // Operating System
+  {sec:"os", name:"Hello Habit", label:"Hello\nHabit", domain:"hellohabit.app", mono:"&#10003;", desc:"Habit tracker for building and keeping daily routines."},
+  {sec:"os", name:"Drafts", domain:"getdrafts.com", mono:"&#9998;", desc:"Quick-capture text app; where a note starts before it goes anywhere else."},
+  {sec:"os", name:"Apple Shortcuts", label:"Apple\nShortcuts", domain:"apple.com", mono:"&#9881;", desc:"Automations on iPhone that chain actions together to run tasks for you."},
+  {sec:"os", name:"Camera", domain:"apple.com", mono:"&#128247;", desc:"iPhone camera; every photo is a timestamped, geotagged data point."},
+  {sec:"os", name:"Apple Watch", label:"Apple\nWatch", domain:"apple.com", mono:"&#8986;", desc:"Wrist wearable capturing activity, heart rate and workouts continuously."},
+  {sec:"os", name:"Photos", label:"Photos\n(iPhoto)", domain:"apple.com", mono:"&#127752;", desc:"Apple's photo library: a visual, dated, located record of your life."},
+  {sec:"os", name:"Dawarich", label:"Dawarich\n(GPS)", domain:"dawarich.app", mono:"&#128506;", desc:"Self-hosted location tracker that turns your GPS history into private maps, trips and stats, with no data shared with anyone."}
+];
+
+/* System-level connectors that are authenticated and live */
+const SYS = [
+  {sec:"os", name:"Google Calendar", label:"Google\nCalendar", domain:"calendar.google.com", mono:"&#128197;", sys:true, desc:"Connected calendar feeding the morning brief and schedule."},
+  {sec:"os", name:"Gmail", domain:"gmail.com", mono:"&#9993;", sys:true, desc:"Connected inbox scanned for the morning brief (with your permission)."},
+  {sec:"os", name:"Google Drive", label:"Google\nDrive", domain:"drive.google.com", mono:"&#9651;", sys:true, desc:"Connected file storage for pulling and saving documents."},
+  {sec:"os", name:"Supabase", domain:"supabase.com", mono:"&#9889;", sys:true, desc:"The live database behind the CrushingIt web apps and dashboards."},
+  {sec:"os", name:"1Password", label:"1Password", domain:"1password.com", mono:"&#128273;", sys:true, desc:"Connected vault for secure sign-ins during automated tasks."},
+  {sec:"os", name:"Claude in Chrome", label:"Claude\nin Chrome", domain:"claude.ai", mono:"&#127760;", sys:true, desc:"Browser automation used to pull web-app data and post updates."}
+];
+
+/* logo fallback chain: Clearbit -> Google favicon -> neutral initial */
+function logoErr(img){
+  const step = +(img.dataset.step||0);
+  if(step===0){ img.dataset.step=1; img.src='https://www.google.com/s2/favicons?domain='+img.dataset.domain+'&sz=128'; return; }
+  const span=document.createElement('span');
+  span.className='mono'; span.innerHTML=img.dataset.mono;
+  img.replaceWith(span);
+}
+
+function appHTML(a){
+  const label = (a.label || a.name).replace(/\n/g,"<br>");
+  let statusDot = "";
+  if(a.connected) statusDot = '<span class="status" title="Connected"></span>';
+  else if(a.sys) statusDot = '<span class="status sys" title="System connector"></span>';
+  const meta = a.live ? '<span class="meta">&#9679; '+a.live+'</span>'
+             : a.sys ? '<span class="meta">&#9679; Connected (system)</span>'
+             : '';
+  const img = '<img src="https://logo.clearbit.com/'+a.domain+'" alt="'+a.name+' logo" '
+            + 'data-domain="'+a.domain+'" data-mono="'+a.mono+'" data-step="0" '
+            + 'onerror="logoErr(this)" loading="lazy">';
+  return '<div class="app '+(a.connected||a.sys?'':'plan')+'">'
+       + statusDot
+       + '<div class="logo">'+img+'</div>'
+       + '<div class="nm">'+label+'</div>'
+       + '<div class="tip"><b>'+a.name+'</b>'+a.desc+meta+'</div>'
+       + '</div>';
+}
+
+function renderBoard(el, items, opts){
+  opts = opts || {};
+  const html = ORDER.map(key=>{
+    const s = SECTIONS[key];
+    const list = items.filter(a=>a.sec===key);
+    if(opts.hideEmpty && !list.length) return "";
+    const wide = key==="os" ? " wide" : "";
+    let body;
+    if(!list.length){
+      body = '<div class="empty">'+(opts.emptyText||"No sources mapped yet.")+'</div>';
+    } else {
+      const groups = {}; const plain = [];
+      list.forEach(a=> a.group ? (groups[a.group]=groups[a.group]||[]).push(a) : plain.push(a));
+      body = "";
+      if(plain.length) body += '<div class="apps">'+plain.map(appHTML).join("")+'</div>';
+      Object.keys(groups).forEach(g=>{
+        body += '<div class="subhead">'+g+'</div><div class="apps">'+groups[g].map(appHTML).join("")+'</div>';
+      });
+    }
+    return '<div class="sec'+wide+'" style="--c:'+s.c+';--cd:'+s.cd+'">'
+         + '<div class="band"><span class="ic">'+s.glyph+'</span>'
+         + '<div><h3>'+s.name+'</h3><div class="nick">'+s.nick+'</div></div></div>'
+         + '<div class="body">'+body+'</div></div>';
+  }).join("");
+  el.innerHTML = html;
+}
+
+const connected = APPS.filter(a=>a.connected).concat(SYS);
+renderBoard(document.getElementById("connectedGrid"), connected, {hideEmpty:true});
+renderBoard(document.getElementById("roadmapGrid"), APPS, {emptyText:"No sources mapped yet, ready to fill in."});
+
+document.getElementById("tLive").textContent = APPS.filter(a=>a.connected).length;
+document.getElementById("tSys").textContent  = SYS.length;
+document.getElementById("tPlan").textContent = APPS.filter(a=>!a.connected).length;
+</script>
+</body>
+</html>

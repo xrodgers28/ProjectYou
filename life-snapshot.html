@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Life Snapshot &middot; SER</title>
+<style>
+  :root{
+    --ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
+    --accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;
+    --lived:#2b3550;--now:#d0342c;
+    --s50:#bfe3c4;--s60:#a9d3ef;--s70:#f2dfa4;--s80:#d9c7ec;--s90:#dfe3ea;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.4}
+
+  /* ---- SER shared nav ---- */
+  .nav{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:4px;align-items:center;padding:9px 14px;flex-wrap:wrap;box-shadow:0 2px 10px rgba(31,42,68,.05)}
+  .nav .brand{font-weight:800;color:var(--accent);margin-right:8px;font-size:14px}
+  .nav a{font-size:12.5px;font-weight:700;color:var(--muted);text-decoration:none;padding:6px 10px;border-radius:8px}
+  .nav a:hover{background:var(--chip);color:var(--accent)}
+  .nav a.on{background:var(--accent);color:#fff}
+  .nav a.soon{opacity:.5}
+  .nav .grp{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#aab2bf;margin:0 2px 0 8px}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 20px}
+
+  /* ---- minimal page header ---- */
+  .pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+  .pagehead h1{font-size:19px;color:var(--ink)}
+  .pagehead p{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .mini{display:flex;gap:8px;flex-wrap:wrap}
+  .mini .m{background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:12px;color:var(--muted)}
+  .mini .m b{color:var(--ink);font-size:13px}
+  .mini .m.now b{color:var(--hot)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 16px 18px;box-shadow:0 8px 22px rgba(31,42,68,.07);margin-top:16px;overflow-x:auto}
+
+  /* grid */
+  .chart{display:inline-block;min-width:640px}
+  .weekaxis{font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muted);margin-bottom:2px;margin-left:var(--rowlabel)}
+  .colhead{display:flex;margin-left:var(--rowlabel);gap:0;margin-bottom:4px}
+  .row{display:flex;align-items:center;height:calc(var(--cell) + var(--vgap))}
+  .row .ylab{width:var(--rowlabel);flex:0 0 var(--rowlabel);text-align:right;padding-right:8px;font-size:10px;color:#9aa3af;font-weight:700;line-height:1}
+  .weeks{display:flex}
+  .cell{width:var(--cell);height:var(--cell);margin-right:var(--hgap);border-radius:2.5px;background:#eef1f6;border:1px solid #dbe0e8}
+  .cell.gapq{margin-right:calc(var(--hgap) + 4px)}
+  .cell.lived{background:var(--lived);border-color:var(--lived)}
+  .cell.s50{background:var(--s50);border-color:#9ecfa6}
+  .cell.s60{background:var(--s60);border-color:#88bde3}
+  .cell.s70{background:var(--s70);border-color:#dcc57f}
+  .cell.s80{background:var(--s80);border-color:#c3addf}
+  .cell.s90{background:var(--s90);border-color:#c6ccd6}
+  .cell.now{background:var(--now);border-color:#a52820;position:relative;box-shadow:0 0 0 2px #fff,0 0 0 4px var(--now);z-index:2}
+  .cell.now:after{content:"";position:absolute;inset:0;margin:auto;width:4px;height:4px;border-radius:50%;background:#fff}
+
+  .coltick{width:calc((var(--cell) + var(--hgap)) * 4 + 4px);flex:0 0 auto;font-size:10px;color:#9aa3af;font-weight:700;text-align:right;padding-right:2px}
+
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:16px;align-items:center}
+  .legend .item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+  .legend .sw{width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.12)}
+  .youare{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--hot);background:#fbeceb;border:1px solid #f2c9c5;border-radius:999px;padding:5px 12px;margin-top:2px}
+  .youare .d{width:11px;height:11px;border-radius:50%;background:var(--now);box-shadow:0 0 0 2px #fff,0 0 0 3px var(--now)}
+
+  /* birth-date bar, sits at the bottom */
+  .controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 14px;box-shadow:0 4px 12px rgba(31,42,68,.05)}
+  .controls label{font-size:12.5px;font-weight:700;color:var(--muted)}
+  .controls input[type=date],.controls input[type=number]{font-family:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:7px 9px;color:var(--ink)}
+  .controls input[type=number]{width:64px}
+  .controls .today{margin-left:auto;font-size:12.5px;color:var(--ink)}
+  .controls .today b{color:var(--hot)}
+
+  .stamp{text-align:right;font-style:italic;color:#808080;font-size:10px;margin-top:12px}
+  @media(max-width:600px){.pagehead{align-items:flex-start;flex-direction:column}}
+</style>
+<style id="pynav-css">
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-solo{font-weight:800;color:#3f6f8f;text-decoration:none;font-size:12px;padding:4px 8px;border-radius:8px;margin-left:5px;border-left:1px solid #edf0f4;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-solo:hover{background:#eef2f8}
+.pn-solo.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+</style>
+</head>
+<body>
+
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="life-snapshot.html" class="pn-link on">Life<br>Snapshot</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><a href="ai-tools.html" class="pn-solo">Parking<br>Lot</a><span class="pn-ver">v1.0</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+
+<div class="wrap">
+  <div class="pagehead">
+    <div>
+      <h1>Life Snapshot</h1>
+      <p>Your life in weeks. Each box is one week; each row is one year. The red box is the week you are in now.</p>
+    </div>
+    <div class="mini">
+      <span class="m"><b id="tAge">-</b> yrs</span>
+      <span class="m"><b id="tLived">-</b> lived</span>
+      <span class="m"><b id="tLeft">-</b> left</span>
+      <span class="m now"><b id="tPct">-</b> filled</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="weekaxis">WEEKS &rarr;</div>
+    <div class="colhead" id="colhead"></div>
+    <div id="chart" class="chart"></div>
+    <div class="legend" id="legend"></div>
+    <div style="margin-top:12px"><span class="youare"><span class="d"></span><span id="youareTxt">You are here</span></span></div>
+  </div>
+
+  <!-- birth-date bar at the bottom -->
+  <div class="controls">
+    <label for="bd">Birth date</label>
+    <input type="date" id="bd" value="1970-09-28">
+    <label for="span">Life span (years)</label>
+    <input type="number" id="span" value="90" min="40" max="120">
+    <span class="today" id="todayLine"></span>
+  </div>
+
+  <div class="stamp">As of August 11th</div>
+</div>
+
+<script>
+const WEEKS_PER_YEAR = 52;
+function decadeClass(age){
+  if(age < 60) return "s50";
+  if(age < 70) return "s60";
+  if(age < 80) return "s70";
+  if(age < 90) return "s80";
+  return "s90";
+}
+const LEGEND = [
+  {cls:"lived", label:"Weeks lived"},
+  {cls:"now",   label:"This week (you are here)"},
+  {cls:"s50",   label:"Your 50s"},
+  {cls:"s60",   label:"Your 60s"},
+  {cls:"s70",   label:"Your 70s"},
+  {cls:"s80",   label:"Your 80s"},
+  {cls:"s90",   label:"90 and beyond"}
+];
+function fmtDate(d){ return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+
+function build(){
+  const bd = document.getElementById('bd').value;
+  const span = Math.max(40, Math.min(120, parseInt(document.getElementById('span').value||90,10)));
+  if(!bd){ return; }
+  const birth = new Date(bd + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const msWeek = 7*24*60*60*1000;
+  // true calendar age, so 52-week rows do not drift ahead of real birthdays
+  let ageYears = today.getFullYear() - birth.getFullYear();
+  const hadBirthday = (today.getMonth() > birth.getMonth()) ||
+                      (today.getMonth() === birth.getMonth() && today.getDate() >= birth.getDate());
+  if(!hadBirthday) ageYears--;
+  const lastBd = new Date(birth); lastBd.setFullYear(birth.getFullYear() + ageYears);
+  let ageWeeks = Math.floor((today - lastBd) / msWeek);
+  if(ageWeeks > WEEKS_PER_YEAR-1) ageWeeks = WEEKS_PER_YEAR-1;
+  if(ageWeeks < 0) ageWeeks = 0;
+  const livedWeeks = ageYears*WEEKS_PER_YEAR + ageWeeks;   // index of the current week box
+  const totalWeeks = span * WEEKS_PER_YEAR;
+  const pct = Math.min(100, (livedWeeks/totalWeeks)*100);
+
+  document.getElementById('tAge').textContent = ageYears;
+  document.getElementById('tLived').textContent = livedWeeks.toLocaleString();
+  document.getElementById('tLeft').textContent = Math.max(0, totalWeeks - livedWeeks).toLocaleString();
+  document.getElementById('tPct').textContent = pct.toFixed(1) + '%';
+  document.getElementById('todayLine').innerHTML = 'Today, ' + fmtDate(today) + ' &middot; you are <b>' + ageYears + ' years, ' + ageWeeks + ' weeks</b> old';
+  document.getElementById('youareTxt').textContent = 'You are here: week ' + (livedWeeks+1) + ' of your life, age ' + ageYears;
+
+  const ch = document.getElementById('colhead'); ch.innerHTML = '';
+  for(let g=1; g*4<=WEEKS_PER_YEAR; g++){
+    const t = document.createElement('div'); t.className='coltick'; t.textContent = g*4; ch.appendChild(t);
+  }
+  const chart = document.getElementById('chart'); chart.innerHTML = '';
+  for(let y=0; y<span; y++){
+    const row = document.createElement('div'); row.className='row';
+    const yl = document.createElement('div'); yl.className='ylab';
+    yl.textContent = (y%5===0 || y===span-1) ? y : '';
+    row.appendChild(yl);
+    const weeks = document.createElement('div'); weeks.className='weeks';
+    for(let w=0; w<WEEKS_PER_YEAR; w++){
+      const idx = y*WEEKS_PER_YEAR + w;
+      const c = document.createElement('div');
+      let cls = 'cell';
+      if((w+1)%4===0 && w!==WEEKS_PER_YEAR-1) cls += ' gapq';
+      if(idx < livedWeeks) cls += ' lived';
+      else if(idx === livedWeeks) cls += ' now';
+      else cls += ' ' + decadeClass(y);
+      c.className = cls;
+      c.title = 'Age ' + y + ', week ' + (w+1) + (idx===livedWeeks?'  (this week)':'');
+      weeks.appendChild(c);
+    }
+    row.appendChild(weeks); chart.appendChild(row);
+  }
+  const lg = document.getElementById('legend');
+  lg.innerHTML = LEGEND.map(l=>'<span class="item"><span class="sw" style="'+swStyle(l.cls)+'"></span>'+l.label+'</span>').join('');
+}
+function swStyle(cls){
+  const map={lived:'#2b3550',now:'#d0342c',s50:'#bfe3c4',s60:'#a9d3ef',s70:'#f2dfa4',s80:'#d9c7ec',s90:'#dfe3ea'};
+  return 'background:'+map[cls];
+}
+document.documentElement.style.setProperty('--cell','12px');
+document.documentElement.style.setProperty('--hgap','2px');
+document.documentElement.style.setProperty('--vgap','2px');
+document.documentElement.style.setProperty('--rowlabel','26px');
+document.getElementById('bd').addEventListener('change', build);
+document.getElementById('span').addEventListener('input', build);
+build();
+</script>
+</body>
+</html>
