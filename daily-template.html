@@ -3,33 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Daily Template + Data Health</title>
-<style>
-  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--good:#1e8e5a;--warn:#c0453b;--amber:#b8860b;--chip:#eef2f8}
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.5}
-  .wrap{max-width:800px;margin:0 auto;padding:26px 18px 60px}
-  .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);margin-bottom:8px}
-  h1{font-size:25px;margin:0 0 6px;line-height:1.2}
-  .sub{color:var(--muted);margin:0 0 20px;font-size:15px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin:14px 0;box-shadow:0 1px 2px rgba(31,42,68,.04)}
-  h2{font-size:14px;letter-spacing:.04em;margin:2px 0 12px;text-transform:uppercase;color:var(--muted)}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
-  th{font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
-  .st{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
-  .st:last-child{border-bottom:none}
-  .dot{width:18px;height:18px;border-radius:50%;flex:0 0 auto;color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px}
-  .ok{background:var(--good)} .fix{background:var(--accent)} .fl{background:var(--amber)} .bn{background:#9aa0aa}
-  .st .txt{font-size:14px}
-  .st .txt b{font-weight:700}
-  .sec-h{font-weight:700;color:var(--ink);background:var(--chip)}
-  .pill{display:inline-block;font-size:11px;font-weight:700;border-radius:20px;padding:2px 8px}
-  .hb{background:#e4f4ec;color:var(--good)} .tk{background:#e8eff6;color:var(--accent)} .new{background:#fbe6e3;color:var(--warn)}
-  .muted{color:var(--muted);font-size:13.5px}
-  code{background:var(--chip);padding:1px 6px;border-radius:5px;font-size:12.5px}
-  .foot{margin-top:22px;font-size:14px;color:var(--muted);text-align:center}
-</style>
+<title>Daily Habits Editor · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <style id="pynav-css">
 .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:wrap;padding:7px 14px;font-family:Arial,Helvetica,sans-serif}
 .pn-logo{display:flex;align-items:center;margin-right:8px}
@@ -43,46 +19,203 @@
 .pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px}
 .pn-who{font-size:11.5px;color:#5b6472}
 </style>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--good:#1e8e5a;--hot:#c0453b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.4}
+  .wrap{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+  h1{font-size:23px;color:var(--accent)}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:6px;line-height:1.5;max-width:640px}
+  .board{margin-top:18px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:8px 8px 14px;box-shadow:0 8px 22px rgba(31,42,68,.06)}
+  .sec{margin-top:8px}
+  .sech{display:flex;align-items:center;gap:8px;background:var(--chip);border-radius:9px;padding:8px 12px;font-weight:800;font-size:13px;color:var(--ink);margin:8px 4px 4px}
+  ul.rows{list-style:none;min-height:8px}
+  li.row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:9px}
+  li.row:hover{background:#f6f8fb}
+  li.row.sortable-ghost{background:#eef3fb;outline:1px dashed #b9cdec}
+  li.row.dragging{opacity:.4}
+  .h{flex:0 0 auto;width:20px;height:22px;display:flex;align-items:center;justify-content:center;color:#c4c8ce;cursor:grab;font-size:14px}
+  .h:active{cursor:grabbing}
+  .txt{flex:1 1 auto;font-size:14.5px;outline:none;padding:3px 4px;border-radius:6px;min-width:20px}
+  .txt:focus{background:#fffef2;box-shadow:inset 0 0 0 1px #e3d9a6}
+  .pill{flex:0 0 auto;font-size:10.5px;font-weight:800;border-radius:20px;padding:2px 9px;text-transform:uppercase;letter-spacing:.03em}
+  .pill.habit{background:#e4f4ec;color:var(--good)} .pill.task{background:#e8eff6;color:var(--accent)}
+  .est{flex:0 0 auto;width:52px;padding:4px 6px;border:1px solid var(--line);border-radius:7px;font-size:12px;text-align:center;font-family:inherit;color:var(--ink)}
+  .est:focus{outline:none;border-color:#9aa0a8;background:#fffef2}
+  .del{flex:0 0 auto;width:22px;height:22px;border:none;background:none;color:#c4c8ce;cursor:pointer;font-size:16px;line-height:1;border-radius:6px}
+  .del:hover{color:var(--hot);background:#fdf3f1}
+  .addrow{display:flex;align-items:center;gap:6px;padding:6px 12px;color:#aab2bd;font-size:13px;cursor:pointer;border-radius:8px;margin:2px 4px}
+  .addrow:hover{background:#f6f8fb;color:var(--accent)}
+  .addsec{margin:14px 4px 0;font-size:12.5px;color:var(--accent);font-weight:700;cursor:pointer;background:none;border:1px dashed #cddae5;border-radius:9px;padding:8px 12px;font-family:inherit}
+  .addsec:hover{background:#eef4fa}
+  .comments{margin-top:22px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px 18px;box-shadow:0 8px 22px rgba(31,42,68,.06)}
+  .comments h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
+  .comments p{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+  .cwrap{position:relative}
+  .cbox{width:100%;min-height:92px;font-family:inherit;font-size:15px;border:1px solid var(--line);border-radius:12px;padding:12px 60px 12px 12px;resize:vertical;color:var(--ink)}
+  .mic{position:absolute;right:10px;bottom:10px;width:44px;height:44px;border-radius:50%;border:none;background:var(--accent);color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(63,111,143,.35)}
+  .mic.rec{background:var(--hot);animation:mp 1.2s infinite}
+  @keyframes mp{0%,100%{box-shadow:0 0 0 0 rgba(192,69,47,.5)}50%{box-shadow:0 0 0 12px rgba(192,69,47,0)}}
+  .crow{display:flex;align-items:center;gap:10px;margin-top:10px}
+  .send{font-family:inherit;font-weight:700;border:none;border-radius:11px;padding:11px 18px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff}
+  .chint{font-size:12px;color:var(--muted)}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}.toast.show{opacity:1}
+  .hidden{display:none}
+</style>
 </head>
 <body>
-<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">Daily</span><a href="mission.html" class="pn-link">Mission Control</a><a href="index.html" class="pn-link">CrushingIt</a><a href="daily-template.html" class="pn-link on">Daily Template</a></span><span class="pn-group"><span class="pn-label">Modules</span><a href="ai.html" class="pn-link">AI Deck</a><a href="quotes.html" class="pn-link">Clever Phrases</a><a href="compass.html" class="pn-link">Compass</a></span><span class="pn-group"><span class="pn-label">Quantified Self</span><a href="qs-log.html" class="pn-link">Dashboard</a><a href="qs-wheel.html" class="pn-link">Habit Wheel</a></span><span class="pn-group"><span class="pn-label">System</span><a href="build.html" class="pn-link">Build Board</a><a href="dfd.html" class="pn-link">Data Flow</a></span><span class="pn-group"><span class="pn-label">Tools</span><a href="ai-tools.html" class="pn-link">AI Tools</a><a href="tracker.html" class="pn-link">Session Tracker</a></span><span class="pn-ver">v1.0</span></div>
-<div class="wrap">
-  <div class="tag">CrushingIt · Data health + Daily template</div>
-  <h1>Board health check &amp; your daily template</h1>
-  <p class="sub">I scanned all 85 rows in the database and drafted the standing daily set. Nothing here touched your tasks except the one safe fix noted below.</p>
-
-  <div class="card">
-    <h2>Data health — 85 rows scanned</h2>
-    <div class="st"><span class="dot ok">✓</span><span class="txt"><b>Clean:</b> no blank tasks, no finished items stuck in a live section, every habit correctly under HABIT BANDIT, no orphaned done/undone states.</span></div>
-    <div class="st"><span class="dot fix">✎</span><span class="txt"><b>Fixed:</b> 23 completed rows (from the original import) said <code>done</code> but still carried <code>status='todo'</code> — synced them to <code>done</code>. Cosmetic, safe, done.</span></div>
-    <div class="st"><span class="dot bn">i</span><span class="txt"><b>Not a problem:</b> four habit names appear twice in Completed (Take Medicine, AI, Imprint, Impulse) — that's the same habit finished on two different days (Aug 9 + today). Correct history, left as-is.</span></div>
-    <div class="st"><span class="dot fl">!</span><span class="txt"><b>Your call:</b> 26 rows share the same <code>position</code> number (an import artifact). Harmless, but it can make drag-order jitter slightly between loads. I can re-sequence positions (keeping your current visual order) whenever you want — not urgent.</span></div>
-  </div>
-
-  <div class="card">
-    <h2>Your daily template (draft)</h2>
-    <p class="muted" style="margin-top:0">This is what each morning's fresh list is built from. At 3&nbsp;AM the rollover regenerates the <b>non-habit</b> items (Home Tasks, Errands) into a fresh Tomorrow; the <b>habits</b> reset in place. Edit it any time by just telling me — add, remove, rename, or reorder.</p>
-    <table>
-      <tr><th>Item</th><th>Type</th><th>Est.</th></tr>
-      <tr><td class="sec-h" colspan="3">HABIT BANDIT</td></tr>
-      <tr><td>💊 Take Medicine</td><td><span class="pill hb">habit</span></td><td>—</td></tr>
-      <tr><td>Imprint (Mental Fitness)</td><td><span class="pill hb">habit</span></td><td>10m</td></tr>
-      <tr><td>Impulse (Mental Fitness)</td><td><span class="pill hb">habit</span></td><td>10m</td></tr>
-      <tr><td>Meditation</td><td><span class="pill hb">habit</span></td><td>10m</td></tr>
-      <tr><td>Compass (Project You)</td><td><span class="pill hb">habit</span></td><td>10m</td></tr>
-      <tr><td>AI (Learning/Mental Fitness)</td><td><span class="pill hb">habit</span></td><td>10m</td></tr>
-      <tr><td>Habit Building Cue Cards</td><td><span class="pill hb">habit</span></td><td>10m</td></tr>
-      <tr><td>Clever Phrases <span class="pill new">added</span></td><td><span class="pill hb">habit</span></td><td>10m</td></tr>
-      <tr><td class="sec-h" colspan="3">🏠 Home Tasks</td></tr>
-      <tr><td>Walk Zingo AM <span class="pill new">added</span></td><td><span class="pill tk">task</span></td><td>10m</td></tr>
-      <tr><td>Walk Zingo PM <span class="pill new">added</span></td><td><span class="pill tk">task</span></td><td>10m</td></tr>
-      <tr><td class="sec-h" colspan="3">🚗 Errands</td></tr>
-      <tr><td>(add today's errands)</td><td><span class="pill tk">task</span></td><td>—</td></tr>
-    </table>
-    <p class="muted" style="margin-top:12px"><b>Worth considering to add:</b> a Meals row (Lunch / Dinner) so the Time Wheel shows your day fully, a weekly trash/recycling reminder, or any other fixed part of your morning. Tell me and I'll fold them in.</p>
-  </div>
-
-  <p class="foot">Two quick decisions when you surface: (1) want me to <b>re-sequence positions</b> to kill the drag jitter? (2) any <b>edits to the template</b> above?</p>
+<div id="login">
+  <h1>Daily Habits Editor</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
 </div>
+
+<div id="app" class="hidden">
+  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">Daily</span><a href="mission.html" class="pn-link">Mission Control</a><a href="index.html" class="pn-link">CrushingIt</a><a href="daily-template.html" class="pn-link on">Habits Editor</a></span><span class="pn-group"><span class="pn-label">Modules</span><a href="ai.html" class="pn-link">AI Deck</a><a href="quotes.html" class="pn-link">Clever Phrases</a><a href="compass.html" class="pn-link">Compass</a></span><span class="pn-group"><span class="pn-label">Quantified Self</span><a href="qs-log.html" class="pn-link">Dashboard</a><a href="qs-wheel.html" class="pn-link">Habit Wheel</a></span><span class="pn-group"><span class="pn-label">System</span><a href="build.html" class="pn-link">Build Board</a><a href="dfd.html" class="pn-link">Data Flow</a></span><span class="pn-group"><span class="pn-label">Tools</span><a href="ai-tools.html" class="pn-link">AI Tools</a><a href="tracker.html" class="pn-link">Session Tracker</a></span><span class="pn-ver">v2.0</span><span class="pn-who" id="who"></span></div>
+
+  <div class="wrap">
+    <h1>Daily Habits Editor</h1>
+    <p class="sub">Your standing daily set, and your staging area. Drag the dots to reorder, tap any line to rename, change the minutes, add or remove items. This shapes what CrushingIt builds each day. For bigger changes, leave me a note or just talk in the box at the bottom and I will apply them to your board.</p>
+
+    <div class="board" id="board"></div>
+    <button class="addsec" onclick="addSection()">+ add a section</button>
+
+    <div class="comments">
+      <h2>Notes &amp; directions for Claude</h2>
+      <p>Tell me what to change, in your words. Tap the mic and just talk, or type. I read these and apply them to your master board.</p>
+      <div class="cwrap">
+        <textarea class="cbox" id="cbox" placeholder="e.g. Move Meditation to the evening, drop Impulse for now, add a weekly bins reminder on Tuesdays..."></textarea>
+        <button class="mic" id="mic" onclick="toggleMic()" title="Speak">🎤</button>
+      </div>
+      <div class="crow"><button class="send" onclick="sendNote()">Send to Claude</button><span class="chint" id="chint">Lands in your inbox for Claude to action.</span></div>
+    </div>
+  </div>
+  <div class="badge">Daily Habits Editor v2.0</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+let ROWS=[];
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)onLogin(session);}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}onLogin(data.session);}
+async function onLogin(session){try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');
+  document.getElementById('who').textContent=session.user.email;load();}
+async function load(){
+  const {data,error}=await sb.from('daily_template').select('*').order('position',{ascending:true});
+  if(error){toast('Load error: '+error.message);return;}
+  ROWS=data||[];render();
+}
+function isHabitSec(s){return (s||'').toUpperCase().includes('HABIT BANDIT');}
+function sections(){
+  const secs=[];
+  ROWS.slice().sort((a,b)=>(a.position||0)-(b.position||0)).forEach(r=>{if(!secs.includes(r.subsection))secs.push(r.subsection);});
+  secs.sort((a,b)=>(isHabitSec(a)?-1:isHabitSec(b)?1:0));
+  return secs;
+}
+function render(){
+  const board=document.getElementById('board');board.innerHTML='';
+  sections().forEach(sec=>{
+    const wrap=document.createElement('div');wrap.className='sec';
+    const head=document.createElement('div');head.className='sech';head.textContent=sec;wrap.appendChild(head);
+    const ul=document.createElement('ul');ul.className='rows';ul.dataset.sec=sec;
+    ROWS.filter(r=>r.subsection===sec).sort((a,b)=>(a.position||0)-(b.position||0)).forEach(r=>ul.appendChild(rowNode(r)));
+    wrap.appendChild(ul);
+    const add=document.createElement('div');add.className='addrow';add.textContent='+ add item';add.onclick=()=>addRow(sec);
+    wrap.appendChild(add);
+    board.appendChild(wrap);
+  });
+  initSort();
+}
+function rowNode(r){
+  const li=document.createElement('li');li.className='row';li.dataset.id=r.id;
+  const h=document.createElement('span');h.className='h';h.textContent='⣿';li.appendChild(h);
+  const txt=document.createElement('span');txt.className='txt';txt.contentEditable='true';txt.textContent=r.task;
+  txt.onblur=()=>{const v=txt.textContent.trim();if(v&&v!==r.task){patch(r.id,{task:v});r.task=v;}else if(!v){del(r.id);}};
+  txt.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();txt.blur();}};
+  li.appendChild(txt);
+  const pill=document.createElement('span');const hab=isHabitSec(r.subsection);pill.className='pill '+(hab?'habit':'task');pill.textContent=hab?'habit':'task';li.appendChild(pill);
+  const est=document.createElement('input');est.className='est';est.type='number';est.min='0';est.placeholder='min';est.value=(r.est_minutes==null?'':r.est_minutes);
+  est.onchange=()=>{const v=est.value===''?null:parseInt(est.value,10);patch(r.id,{est_minutes:v});r.est_minutes=v;};
+  li.appendChild(est);
+  const del=document.createElement('button');del.className='del';del.textContent='×';del.title='delete';del.onclick=()=>del2(r.id);li.appendChild(del);
+  return li;
+}
+let sorts=[];
+function initSort(){
+  sorts.forEach(s=>{try{s.destroy();}catch(e){}});sorts=[];
+  document.querySelectorAll('#board ul.rows').forEach(ul=>{
+    sorts.push(new Sortable(ul,{group:'dt',handle:'.h',animation:130,ghostClass:'sortable-ghost',dragClass:'dragging',onEnd:reseq}));
+  });
+}
+async function reseq(){
+  const changes=[];let pos=0;
+  document.querySelectorAll('#board ul.rows').forEach(ul=>{
+    const sec=ul.dataset.sec;const hab=isHabitSec(sec);
+    [...ul.children].forEach(li=>{
+      const r=ROWS.find(x=>String(x.id)===li.dataset.id);if(!r)return;pos++;
+      if(r.position!==pos||r.subsection!==sec||r.is_habit!==hab){r.position=pos;r.subsection=sec;r.is_habit=hab;changes.push(r);}
+    });
+  });
+  render();
+  for(const r of changes){await sb.from('daily_template').update({position:r.position,subsection:r.subsection,is_habit:r.is_habit}).eq('id',r.id);}
+  if(changes.length)toast('Reordered ✓');
+}
+async function patch(id,fields){const {error}=await sb.from('daily_template').update(fields).eq('id',id);if(error)toast('Save error: '+error.message);}
+async function addRow(sec){
+  const maxPos=Math.max(0,...ROWS.map(r=>r.position||0));
+  const hab=isHabitSec(sec);
+  const row={task:'New item',subsection:sec,is_habit:hab,est_minutes:hab?10:null,position:maxPos+1};
+  const {data,error}=await sb.from('daily_template').insert(row).select().single();
+  if(error){toast('Add error: '+error.message);return;}
+  ROWS.push(data);render();
+  const el=document.querySelector('li.row[data-id="'+data.id+'"] .txt');
+  if(el){el.focus();const rg=document.createRange();rg.selectNodeContents(el);const s=getSelection();s.removeAllRanges();s.addRange(rg);}
+}
+async function del2(id){
+  ROWS=ROWS.filter(r=>String(r.id)!==String(id));render();
+  const {error}=await sb.from('daily_template').delete().eq('id',id);if(error)toast('Delete error: '+error.message);else toast('Removed');
+}
+function del(id){del2(id);}
+async function addSection(){
+  const name=prompt('Name the new section (an emoji at the start looks nice):','🆕 New section');
+  if(!name)return;const sec=name.trim();if(!sec)return;
+  await addRow(sec);
+}
+/* voice */
+let rec=null,on=false;
+function toggleMic(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;const ta=document.getElementById('cbox');const btn=document.getElementById('mic');
+  if(!SR){toast('Voice not supported here. Type instead.');return;}
+  if(on){try{rec&&rec.stop();}catch(e){}return;}
+  rec=new SR();rec.lang='en-US';rec.interimResults=true;rec.continuous=true;let base=ta.value?ta.value.trim()+' ':'';
+  rec.onstart=()=>{on=true;btn.classList.add('rec');};
+  rec.onend=()=>{on=false;btn.classList.remove('rec');};
+  rec.onerror=e=>{toast('Mic: '+(e.error||'error'));};
+  rec.onresult=e=>{let fin='',intr='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)fin+=t+' ';else intr+=t;}if(fin)base+=fin;ta.value=(base+intr).trim();};
+  try{rec.start();}catch(e){toast('Could not start mic');}
+}
+async function sendNote(){
+  const ta=document.getElementById('cbox');const v=ta.value.trim();
+  if(!v){toast('Write or say something first.');return;}
+  const {error}=await sb.from('inbox').insert({text:'[Daily Habits Editor] '+v,source:'daily-habits-editor'});
+  if(error){toast('Send error: '+error.message);return;}
+  ta.value='';document.getElementById('chint').textContent='Sent. Claude will action it. ✓';toast('Sent to Claude ✓');
+}
+boot();
+</script>
 </body>
 </html>
