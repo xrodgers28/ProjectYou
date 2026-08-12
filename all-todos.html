@@ -120,13 +120,22 @@
 .recent{margin:12px 0 2px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:9px 12px;box-shadow:0 5px 14px rgba(31,42,68,.05)}
 .recent .rc-h{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#9aa6b4;margin-bottom:5px}
 .recent .rc-h span{color:#c4c8ce;font-weight:700}
-.rc-row{display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:#6b7280;padding:2px 0;border-top:1px dashed #eef1f5}
+.rc-row{display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:#6b7280;padding:3px 0;border-top:1px dashed #eef1f5}
 .rc-row:first-of-type{border-top:none}
-.rc-note{color:#3a3f47;font-weight:600;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55%}
-.rc-arrow{color:#b7bcc4}
-.rc-to{color:#2f8f5b;font-weight:700;white-space:nowrap}
-.rc-pending{color:#c4a94b;font-style:italic}
+.rc-caret{flex:0 0 auto;width:10px;color:#c4c8ce;font-size:9px;line-height:1.5;cursor:pointer;user-select:none;transition:transform .15s;transform:rotate(0deg)}
+.rc-caret:hover{color:#8a929e}
+.rc-row.open>.rc-caret{transform:rotate(90deg)}
+.rc-note{color:#3a3f47;font-weight:600;flex:0 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52%;cursor:pointer}
+.rc-note:hover{color:#1f2a44}
+.rc-arrow{color:#b7bcc4;flex:0 0 auto}
+.rc-to{color:#2f8f5b;font-weight:700;white-space:nowrap;flex:0 0 auto}
+a.rc-to{text-decoration:none;cursor:pointer}
+a.rc-to:hover{text-decoration:underline;color:#26794c}
+.rc-pending{color:#c4a94b;font-style:italic;flex:0 0 auto}
 .rc-time{margin-left:auto;color:#aab2bd;font-variant-numeric:tabular-nums;flex:0 0 auto}
+/* window-shade: full note drops to its own line, selectable/copyable */
+.rc-row.open{flex-wrap:wrap;align-items:baseline}
+.rc-row.open>.rc-note{order:5;flex:1 1 100%;white-space:normal;overflow:visible;text-overflow:clip;max-width:100%;cursor:text;user-select:text;margin:3px 0 1px 17px;font-weight:600;color:#2a2f37;background:#f8fafc;border-left:2px solid #e3e7ee;border-radius:0 6px 6px 0;padding:4px 8px;line-height:1.45}
 </style>
 </head>
 <body>
@@ -247,17 +256,48 @@ function subscribe(){
   }).subscribe();
 }
 sb.channel('inbox-live').on('postgres_changes',{event:'*',schema:'public',table:'inbox'},()=>loadRecent()).subscribe();
+// Map a routed_to label ("Todays Tasks · Inbox", "Clever Phrases", …) to its module page.
+const RC_MODULE_HREF={
+  'todays tasks':'index.html','today’s tasks':'index.html','all todos':'all-todos.html',
+  'time bandit wheel':'index.html#wheel','ai insights':'ai.html','clever phrases':'quotes.html',
+  'compass':'compass.html','habits tracker':'qs-log.html','clarity compass':'qs-wheel.html',
+  'life snapshot':'life-snapshot.html','daily habits':'daily-template.html','style guide':'style-guide.html',
+  'components':'build.html','automated tracking':'automated-tracking.html','data flow diagram':'dfd.html',
+  'knowledge graph':'blueprint.html','mission control':'mission.html','future travel':'future-travel.html',
+  'social':'connections.html','movies':'movies.html','cheat sheet':'cheat-sheet.html','ai tools':'ai-tools.html'
+};
+function rcHref(routed){
+  if(!routed) return null;
+  const mod=String(routed).split(/·|\|/)[0].trim().toLowerCase();
+  return RC_MODULE_HREF[mod]||null;
+}
 async function loadRecent(){
   const box=document.getElementById('recent'); if(!box) return;
-  const escR=s=>(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const escR=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   const {data,error}=await sb.from('inbox').select('*').order('created_at',{ascending:false}).limit(8);
   if(error||!(data&&data.length)){ box.style.display='none'; return; }
   const fmt=t=>{try{return new Date(t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});}catch(e){return '';}};
   box.style.display='block';
   box.innerHTML='<div class="rc-h">Recent captures <span>from Drafts</span></div>'+data.map(r=>{
-    const to=r.routed_to?('<span class="rc-arrow">→</span><span class="rc-to">'+escR(r.routed_to)+'</span>'):'<span class="rc-pending">routing…</span>';
-    return '<div class="rc-row"><span class="rc-note">'+escR(r.text)+'</span>'+to+'<span class="rc-time">'+fmt(r.created_at)+'</span></div>';
+    let to;
+    if(r.routed_to){
+      const href=rcHref(r.routed_to);
+      const dest=href
+        ? '<a class="rc-to" href="'+href+'" title="Open '+escR(r.routed_to)+'">'+escR(r.routed_to)+'</a>'
+        : '<span class="rc-to">'+escR(r.routed_to)+'</span>';
+      to='<span class="rc-arrow">→</span>'+dest;
+    } else {
+      to='<span class="rc-pending">routing…</span>';
+    }
+    return '<div class="rc-row"><span class="rc-caret">▶</span><span class="rc-note" title="'+escR(r.text)+'">'+escR(r.text)+'</span>'+to+'<span class="rc-time">'+fmt(r.created_at)+'</span></div>';
   }).join('');
+  // window-shade toggle: caret or a collapsed note opens; once open, note stays selectable for copy
+  box.onclick=e=>{
+    if(e.target.closest('a.rc-to')) return;            // let destination links navigate
+    const row=e.target.closest('.rc-row'); if(!row) return;
+    if(e.target.closest('.rc-caret')){ row.classList.toggle('open'); return; }
+    if(e.target.closest('.rc-note') && !row.classList.contains('open')){ row.classList.add('open'); }
+  };
 }
 function wireFilters(){
   document.querySelectorAll('.chip[data-own]').forEach(c=>c.onclick=()=>{fOwn=c.dataset.own;localStorage.setItem('atd_own',fOwn);render();});
