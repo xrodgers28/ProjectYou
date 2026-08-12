@@ -1,0 +1,52 @@
+name: Publish pages from Supabase
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # every 5 minutes (GitHub's minimum)
+  workflow_dispatch:          # lets you run it on demand from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull changed pages from Supabase and write files
+        env:
+          SB_URL: https://arnjntspmrhigodlssbn.supabase.co
+          SB_ANON: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM
+        run: |
+          set -e
+          curl -s "$SB_URL/rest/v1/pages?select=path,gzb64" \
+            -H "apikey: $SB_ANON" -H "Authorization: Bearer $SB_ANON" > pages.json
+          node -e '
+            const fs=require("fs"), zlib=require("zlib");
+            const rows=JSON.parse(fs.readFileSync("pages.json","utf8"));
+            let n=0;
+            for (const r of rows){
+              if(!r || !r.path || !r.gzb64) continue;
+              if(r.path.includes("/") || r.path.includes("..") || r.path.startsWith("__")) continue;
+              if(!/^[A-Za-z0-9._-]+$/.test(r.path)) continue;
+              const html=zlib.gunzipSync(Buffer.from(r.gzb64,"base64")).toString("utf8");
+              fs.writeFileSync(r.path, html);
+              console.log("wrote", r.path, html.length);
+              n++;
+            }
+            console.log("total files written:", n);
+          '
+          rm -f pages.json
+
+      - name: Commit and push if anything changed
+        run: |
+          git config user.name "supabase-publish-bot"
+          git config user.email "supabase-publish-bot@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "Publish pages from Supabase [skip ci]"
+            git push
+          fi
