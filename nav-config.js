@@ -10,6 +10,12 @@ window.NAV_CONFIG = {
     { "label": "All<br>ToDos", "href": "all-todos.html" },
     { "label": "Staging<br>Area", "href": "staging-area.html" }
   ],
+  "Habit Modules": [
+    { "label": "AI<br>Insights", "href": "ai.html" },
+    { "label": "Clever<br>Phrases", "href": "quotes.html" },
+    { "label": "Compass", "href": "compass.html" },
+    { "label": "James<br>Clear", "href": "james-clear.html" }
+  ],
   "Quantified Self": [
     { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
     { "label": "Habits<br>Tracker", "href": "qs-log.html" },
