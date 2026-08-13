@@ -36,3 +36,10 @@ window.NAV_CONFIG = {
     { "label": "Docs<br>Library", "href": "library.html" }
   ]
 };
+
+/* Group labels that link to an index/landing page.
+   When a group name here has a URL, navpatch.js renders its grey label as a
+   clickable link (and marks it active on that page). */
+window.NAV_GROUP_LINKS = {
+  "Habit Modules": "habit-modules.html"
+};
