@@ -5,6 +5,17 @@
      or a dropdown {label, children:[{label, href}, ...]}.
    - Any item can be given a "children" list to turn it into a sub-nav. */
 window.NAV_CONFIG = {
+  "To Do List": [
+    { "label": "Todays<br>Tasks", "href": "index.html" },
+    { "label": "All<br>ToDos", "href": "all-todos.html" },
+    { "label": "Staging<br>Area", "href": "staging-area.html" }
+  ],
+  "Quantified Self": [
+    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
+    { "label": "Habits<br>Tracker", "href": "qs-log.html" },
+    { "label": "Clarity<br>Compass", "href": "qs-wheel.html" },
+    { "label": "Life<br>Snapshot", "href": "life-snapshot.html" }
+  ],
   "Operating System": [
     { "label": "Components", "href": "build.html" },
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
