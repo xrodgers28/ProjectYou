@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>James Clear 3-2-1 · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  .nav{position:sticky;top:0;z-index:5;background:#fff;border-bottom:1px solid var(--line);display:flex;gap:4px;align-items:center;padding:9px 14px;flex-wrap:wrap}
+  .toggle{display:flex;gap:6px;justify-content:center;margin:14px auto 2px}
+  .toggle button{font-family:inherit;font-weight:800;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:7px 16px;cursor:pointer}
+  .toggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .stage{max-width:560px;margin:0 auto;padding:12px 16px 40px}
+  .dots{display:flex;gap:7px;justify-content:center;margin:6px 0 16px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--line)} .dot.on{background:var(--accent);width:22px;border-radius:5px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:30px 26px;min-height:400px;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(31,42,68,.10);position:relative}
+  .fstar{position:absolute;top:18px;right:20px;font-size:25px;line-height:1;cursor:pointer;color:var(--line);z-index:3;user-select:none} .fstar.on{color:#d9a400}
+  .sendcp{align-self:flex-start;margin-top:14px;background:#fff;border:1px solid var(--accent);color:var(--accent);font-weight:700;font-size:13.5px;padding:9px 14px;border-radius:11px;cursor:pointer;font-family:inherit}
+  .sendcp.done{background:#eef7f0;border-color:var(--green);color:var(--green)}
+  .kicker{font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent)}
+  .datestamp{font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;margin-bottom:8px}
+  .card h2{font-size:27px;line-height:1.2;margin-top:16px}
+  .card h2.sm{font-size:21px;line-height:1.34}
+  .card h2.xs{font-size:18px;line-height:1.4}
+  .card .body{font-size:17px;color:var(--muted);line-height:1.5;margin-top:14px;flex:1}
+  .card .src{font-size:12.5px;color:var(--muted);margin-top:10px;font-style:italic}
+  .card .spacer{flex:1}
+  .navbtns{display:flex;justify-content:space-between;margin-top:18px;gap:10px}
+  .btn{font-family:inherit;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:12px;padding:12px 18px;cursor:pointer;font-size:15px}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:disabled{opacity:.4;cursor:default}
+  .save .row{display:flex;align-items:flex-start;gap:11px;padding:12px 0;border-bottom:1px solid var(--line)}
+  .save .row:last-child{border-bottom:none}
+  .save input{width:20px;height:20px;margin-top:2px}
+  .save .t{font-weight:700;font-size:15px} .save .d{font-size:12.5px;color:var(--muted)}
+  /* browse pools */
+  .wrap{max-width:900px;margin:0 auto;padding:8px 16px 50px}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .tools input{font-family:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;flex:1;min-width:180px}
+  .chip{font-family:inherit;font-weight:800;font-size:12.5px;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:7px 14px;cursor:pointer}
+  .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .count{font-size:12px;color:var(--muted);margin:2px 0 12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;position:relative;box-shadow:0 6px 16px rgba(31,42,68,.06)}
+  .pcard .ptag{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent)}
+  .pcard .txt{font-size:15px;font-weight:600;line-height:1.35;margin-top:7px;padding-right:20px}
+  .pcard .meta{font-size:11.5px;color:var(--muted);margin-top:8px;font-style:italic}
+  .star{position:absolute;top:12px;right:13px;font-size:17px;cursor:pointer;color:var(--line)} .star.on{color:#d9a400}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}.toast.show{opacity:1}
+  .hidden{display:none}
+</style>
+<style id="pynav-css">
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+</style>
+<style>.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:2px 0 2px}.secbar h1{font-size:23px;color:var(--accent,#3f6f8f)}.secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line,#e3e7ee);border-radius:999px;padding:2px 8px}.secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}.secbar-wrap{max-width:900px;margin:0 auto;padding:10px 16px 0}</style>
+</head>
+<body>
+<div id="login">
+  <h1>James Clear · 3-2-1</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn primary" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link on">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.5</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>James Clear · 3-2-1</h1><span class="ver">v1.0</span><span class="date"></span></div></div>
+
+  <div class="toggle">
+    <button id="tgToday" class="on" onclick="showView('deck')">Today's mix</button>
+    <button id="tgBrowse" onclick="showView('browse')">Browse pools</button>
+  </div>
+
+  <div id="deckView">
+    <div class="stage">
+      <div class="dots" id="dots"></div>
+      <div id="deck"></div>
+    </div>
+  </div>
+
+  <div id="browse" class="hidden">
+    <div class="wrap">
+      <div class="tools"><input id="q" placeholder="Search all ideas, quotes & questions…" oninput="drawBrowse()"></div>
+      <div class="tools" style="margin-bottom:8px">
+        <button class="chip on" data-f="all" onclick="setFilter('all')">All</button>
+        <button class="chip" data-f="idea" onclick="setFilter('idea')">Ideas</button>
+        <button class="chip" data-f="quote" onclick="setFilter('quote')">Quotes</button>
+        <button class="chip" data-f="question" onclick="setFilter('question')">Questions</button>
+        <button class="chip" data-f="fav" onclick="setFilter('fav')">★ Favorites</button>
+      </div>
+      <div class="count" id="bcount"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+
+  <div class="badge">James Clear 3-2-1 v1.0</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');_a.style.display='none';}if(_l){_l.classList.remove('hidden');_l.style.display='';var _e=document.getElementById('loginErr');if(_e)_e.textContent='Your session expired — please sign in again.';}}});
+
+let CARDS=[], MIX=[], idx=0, filter='all';
+const KICK={idea:'Idea From James Clear',quote:'Quote Worth Keeping',question:'A Question To Consider'};
+
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function hstr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}return h>>>0;}
+function dstamp(){return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
+function fmtDate(d){const p=d.split('-');const dt=new Date(+p[0],+p[1]-1,+p[2]);return dt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});}
+function h2class(t){t=t||'';return t.length>260?' xs':t.length>150?' sm':'';}
+
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)onLogin(session);}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}onLogin(data.session);}
+async function onLogin(session){try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');
+  document.getElementById('who').textContent=session.user.email;load();}
+
+async function load(){
+  const {data}=await sb.from('jc_321').select('*').order('issue_date',{ascending:false}).order('position');
+  CARDS=data||[];
+  if(!CARDS.length){document.getElementById('deck').innerHTML='<div class="card"><div class="datestamp">'+dstamp()+'</div><div class="kicker">James Clear</div><h2>No content yet.</h2><div class="body">Import your 3-2-1 issues to build the daily mix.</div></div>';return;}
+  buildMix(); idx=0; render(); drawBrowse();
+}
+function buildMix(){
+  const seed=new Date().toISOString().slice(0,10);
+  const pick=(type,n)=>CARDS.filter(c=>c.card_type===type).slice().sort((a,b)=>hstr(seed+a.id)-hstr(seed+b.id)).slice(0,n);
+  const ideas=pick('idea',2), quotes=pick('quote',1), questions=pick('question',1);
+  MIX=[ideas[0],quotes[0],ideas[1],questions[0]].filter(Boolean);
+}
+function render(){
+  const total=MIX.length;
+  document.getElementById('dots').innerHTML=MIX.map((_,i)=>'<div class="dot '+(i===idx?'on':'')+'"></div>').join('')+'<div class="dot '+(idx===total?'on':'')+'"></div>';
+  if(idx>=total){renderSave();return;}
+  const c=MIX[idx];
+  let inner='<span class="fstar '+(c.saved?'on':'')+'" title="Save to favorites" onclick="toggleFav(\''+c.id+'\')">&#9733;</span>';
+  inner+='<div class="datestamp">'+dstamp()+'</div>';
+  inner+='<div class="kicker">'+esc(KICK[c.card_type]||c.card_type)+'</div>';
+  if(c.card_type==='quote'){
+    inner+='<h2 class="'+h2class(c.title).trim()+'">&ldquo;'+esc(c.title)+'&rdquo;</h2>';
+    inner+='<div class="body">'+esc(c.body||'')+'</div>';
+    let s=[]; if(c.source_book)s.push(c.source_book); s.push('from the '+fmtDate(c.issue_date)+' issue');
+    inner+='<div class="src">'+esc(s.join(' · '))+'</div>';
+    inner+='<button class="sendcp" id="sendcp" onclick="sendGreatQuote(\''+c.id+'\')">Send to Clever Phrases</button>';
+  } else {
+    inner+='<h2 class="'+h2class(c.title).trim()+'">'+esc(c.title)+'</h2>';
+    inner+='<div class="spacer"></div>';
+    inner+='<div class="src">From the '+esc(fmtDate(c.issue_date))+' issue — '+esc(c.issue_theme||'')+'</div>';
+  }
+  const prevDis=idx===0?'disabled':'';
+  inner+='<div class="navbtns"><button class="btn" '+prevDis+' onclick="go(-1)">Back</button><button class="btn primary" onclick="go(1)">'+(idx===total-1?'Review & save':'Next')+'</button></div>';
+  document.getElementById('deck').innerHTML='<div class="card">'+inner+'</div>';
+}
+function renderSave(){
+  let rows=MIX.map((c,i)=>{
+    const lbl=c.card_type.charAt(0).toUpperCase()+c.card_type.slice(1)+' · '+fmtDate(c.issue_date);
+    return '<div class="row"><input type="checkbox" id="sv'+i+'" '+(c.saved?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(lbl)+'</div><div class="d">'+esc((c.title||'').slice(0,95))+'</div></label></div>';
+  }).join('');
+  document.getElementById('deck').innerHTML='<div class="card save"><div class="datestamp">'+dstamp()+'</div><div class="kicker">End of mix</div><h2>Keep what mattered.</h2><div style="margin-top:16px">'+rows+'</div>'+
+    '<div class="navbtns"><button class="btn" onclick="go(-1)">Back</button><button class="btn primary" onclick="saveDeck()">Save picks</button></div>'+
+    '<button class="btn primary" style="width:100%;margin-top:10px;background:var(--green);border-color:var(--green)" onclick="markDone()">Mark today done &#10003;</button>'+
+    '<div style="display:flex;align-items:center;gap:10px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);flex-wrap:wrap"><span style="font-size:13px;color:var(--muted);font-weight:700">How long did that take?</span><input id="tmin" type="number" min="1" placeholder="min" style="width:66px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px;text-align:center;font-family:inherit"><button class="btn" style="padding:8px 12px;font-size:13px" onclick="logTime()">Log to CrushingIt</button></div></div>';
+}
+function go(d){idx=Math.max(0,Math.min(MIX.length,idx+d));render();}
+
+function showView(v){
+  document.getElementById('deckView').classList.toggle('hidden',v!=='deck');
+  document.getElementById('browse').classList.toggle('hidden',v!=='browse');
+  document.getElementById('tgToday').classList.toggle('on',v==='deck');
+  document.getElementById('tgBrowse').classList.toggle('on',v==='browse');
+}
+function setFilter(f){filter=f;document.querySelectorAll('.chip').forEach(b=>b.classList.toggle('on',b.getAttribute('data-f')===f));drawBrowse();}
+function drawBrowse(){
+  const term=(document.getElementById('q').value||'').toLowerCase();
+  let list=CARDS.filter(c=>{
+    const typeOk = filter==='all' ? true : filter==='fav' ? c.saved : c.card_type===filter;
+    const hit=(c.title||'').toLowerCase().includes(term)||(c.body||'').toLowerCase().includes(term)||(c.source_book||'').toLowerCase().includes(term)||(c.issue_theme||'').toLowerCase().includes(term);
+    return typeOk&&hit;
+  });
+  document.getElementById('bcount').textContent=list.length+' of '+CARDS.length+' pieces';
+  document.getElementById('grid').innerHTML=list.map(c=>{
+    const tag=c.card_type==='idea'?'Idea':c.card_type==='quote'?'Quote':'Question';
+    const txt=c.card_type==='quote'?('&ldquo;'+esc(c.title)+'&rdquo;'):esc(c.title);
+    const meta=c.card_type==='quote'&&c.source_book?('— '+esc(c.source_book)+' · '+esc(fmtDate(c.issue_date))):('From '+esc(fmtDate(c.issue_date)));
+    return '<div class="pcard"><span class="star '+(c.saved?'on':'')+'" onclick="toggleFav(\''+c.id+'\')">&#9733;</span>'+
+      '<div class="ptag">'+tag+'</div><div class="txt">'+txt+'</div><div class="meta">'+meta+'</div></div>';
+  }).join('') || '<div style="color:var(--muted);font-size:14px;padding:10px">Nothing matches.</div>';
+}
+
+function favPayload(c){return {content_type:c.card_type,title:c.title,body:c.body||null,author:c.card_type==='quote'?(c.body||null):null,url:c.issue_url||null,source:'James Clear 3-2-1 · '+c.issue_date,source_module:'james-clear',ref_table:'jc_321',ref_id:c.id,tags:[c.card_type,'james-clear']};}
+async function toggleFav(id){
+  const c=CARDS.find(x=>x.id===id); if(!c)return;
+  if(c.saved){
+    await sb.from('favorites').delete().eq('ref_table','jc_321').eq('ref_id',id);
+    await sb.from('jc_321').update({saved:false}).eq('id',id);
+    c.saved=false; toast('Removed from favorites.');
+  } else {
+    const {error}=await sb.from('favorites').upsert(favPayload(c),{onConflict:'ref_table,ref_id'});
+    if(error){toast('Save failed: '+error.message);return;}
+    await sb.from('jc_321').update({saved:true}).eq('id',id);
+    c.saved=true; toast('Saved to favorites ★');
+  }
+  render();
+  if(!document.getElementById('browse').classList.contains('hidden'))drawBrowse();
+}
+async function sendGreatQuote(id){
+  const c=CARDS.find(x=>x.id===id); if(!c)return;
+  const author=c.body||null;
+  const {data:ex}=await sb.from('quotes').select('id,tags').eq('text',c.title).limit(1);
+  if(ex&&ex.length){
+    const q=ex[0]; const tags=q.tags||[];
+    if(tags.includes('great-quote')){toast('Already in Great Quotes.');markSendDone();return;}
+    const {error}=await sb.from('quotes').update({tags:tags.concat('great-quote'),is_new:true}).eq('id',q.id);
+    if(error){toast('Error: '+error.message);return;}
+  } else {
+    const {error}=await sb.from('quotes').insert({text:c.title,meaning:c.source_book||null,author:author,tags:['great-quote','james-clear'],source_module:'james-clear',is_new:true});
+    if(error){toast('Error: '+error.message);return;}
+  }
+  toast('Added to Great Quotes ✓'); markSendDone();
+}
+function markSendDone(){const b=document.getElementById('sendcp');if(b){b.textContent='In Great Quotes ✓';b.classList.add('done');b.disabled=true;}}
+
+async function saveDeck(){
+  let saved=0;
+  for(let i=0;i<MIX.length;i++){
+    const checked=document.getElementById('sv'+i).checked;const c=MIX[i];
+    if(checked){
+      await sb.from('favorites').upsert(favPayload(c),{onConflict:'ref_table,ref_id'});
+      await sb.from('jc_321').update({saved:true}).eq('id',c.id);c.saved=true;saved++;
+    } else {
+      await sb.from('favorites').delete().eq('ref_table','jc_321').eq('ref_id',c.id);
+      await sb.from('jc_321').update({saved:false}).eq('id',c.id);c.saved=false;
+    }
+  }
+  toast('Saved '+saved+' to favorites.');
+}
+async function markDone(){
+  const today=new Date().toISOString().slice(0,10);
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).eq('bucket','today').or('task.ilike.%James Clear%,task.ilike.%3-2-1%').limit(1);
+  if(data&&data.length){await sb.from('todos').update({done:true,done_at:new Date().toISOString(),status:'done',for_date:today}).eq('id',data[0].id);toast('Mix done. Habit ticked in CrushingIt. ✓');}
+  else{toast('Marked done. (No James Clear habit row found to tick.)');}
+}
+async function logTime(){
+  const el=document.getElementById('tmin');const v=parseInt(el&&el.value,10);
+  if(!v||v<=0){toast('Enter minutes first.');return;}
+  const today=new Date().toISOString().slice(0,10);const now=new Date().toISOString();
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).or('task.ilike.%James Clear%,task.ilike.%3-2-1%').limit(1);
+  if(data&&data.length){await sb.from('todos').update({actual_minutes:v,done:true,status:'done',done_at:now,for_date:today}).eq('id',data[0].id);el.disabled=true;toast('Logged '+v+' min to CrushingIt ✓');}
+  else toast('No James Clear habit row found to log against.');
+}
+boot();
+</script>
+<script>(function(){var e=document.querySelector('.secbar .date');if(e){var d=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];e.textContent=M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();}})();</script>
+<script id="pn-maps-js">document.addEventListener("click",function(e){var b=e.target.closest(".pn-dropbtn");var cur=b?b.parentNode.querySelector(".pn-menu"):null;document.querySelectorAll(".pn-menu.open").forEach(function(m){if(m!==cur)m.classList.remove("open");});if(b){var r=b.getBoundingClientRect();cur.style.left=Math.max(6,Math.min(r.left,window.innerWidth-210))+"px";cur.style.top=(r.bottom+2)+"px";cur.classList.toggle("open");e.stopPropagation();e.preventDefault();}});</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>
