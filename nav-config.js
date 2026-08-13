@@ -11,6 +11,7 @@ window.NAV_CONFIG = {
     { "label": "Staging<br>Area", "href": "staging-area.html" }
   ],
   "Habit Modules": [
+    { "label": "Overview", "href": "habit-modules.html" },
     { "label": "AI<br>Insights", "href": "ai.html" },
     { "label": "Clever<br>Phrases", "href": "quotes.html" },
     { "label": "Compass", "href": "compass.html" },
