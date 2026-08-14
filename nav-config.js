@@ -11,11 +11,7 @@ window.NAV_CONFIG = {
     { "label": "Staging<br>Area", "href": "staging-area.html" }
   ],
   "Habit Modules": [
-    { "label": "Overview", "href": "habit-modules.html" },
-    { "label": "AI<br>Insights", "href": "ai.html" },
-    { "label": "Clever<br>Phrases", "href": "quotes.html" },
-    { "label": "Compass", "href": "compass.html" },
-    { "label": "James<br>Clear", "href": "james-clear.html" }
+    { "label": "Cue Cards", "href": "habit-modules.html" }
   ],
   "Quantified Self": [
     { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
@@ -41,6 +37,4 @@ window.NAV_CONFIG = {
 /* Group labels that link to an index/landing page.
    When a group name here has a URL, navpatch.js renders its grey label as a
    clickable link (and marks it active on that page). */
-window.NAV_GROUP_LINKS = {
-  "Habit Modules": "habit-modules.html"
-};
+window.NAV_GROUP_LINKS = {};
