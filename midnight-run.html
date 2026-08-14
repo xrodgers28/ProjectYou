@@ -36,7 +36,17 @@
   .titlerow{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
   .txt{font-size:15px;font-weight:800}
   .pill{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-radius:999px;padding:2px 8px;color:#fff}
-  .pill.queued{background:var(--claude)}.pill.running{background:var(--warn)}.pill.needs_input{background:var(--accent)}.pill.done{background:var(--good)}
+  .pill.queued{background:var(--claude)}.pill.running{background:var(--warn)}.pill.needs_input{background:var(--accent)}.pill.done{background:var(--good)}.pill.parked{background:var(--warn)}
+  .park{margin-top:30px}
+  .park h2{font-size:16px;color:var(--night);display:flex;align-items:center;gap:8px;margin:0 2px 4px}
+  .park .sub{font-size:12px;color:#9aa6b4;margin:0 2px 12px;line-height:1.5;max-width:640px}
+  .card.parked{border-left:4px solid var(--warn);background:#fffdf5}
+  .reason{font-size:13px;color:#6a5a1e;background:#fbf4dc;border:1px solid #ecdfa8;border-radius:9px;padding:9px 11px;margin-top:10px;white-space:pre-wrap;line-height:1.5}
+  .pk-actions{display:flex;gap:8px;margin-top:11px;flex-wrap:wrap}
+  .pk-actions button{font-family:inherit;font-size:12.5px;font-weight:800;border-radius:8px;padding:8px 13px;cursor:pointer;border:1px solid}
+  .backq{color:var(--accent);background:#fff;border-color:var(--accent)}
+  .resolve{color:#fff;background:var(--good);border-color:var(--good)}
+  .park .empty{font-size:12.5px;color:#9aa6b4;background:#f6f8fb;border:1px dashed var(--line);border-radius:10px;padding:16px;text-align:center}
   .live{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-radius:999px;padding:2px 8px;border:1px solid}
   .live.on{color:var(--good);border-color:#bfe6cf;background:#eef7f1}
   .live.off{color:var(--hot);border-color:#f0cfca;background:#fdf2f0}
@@ -85,6 +95,12 @@
     <div class="hint">Drag the ⠿ handle to reorder (saves instantly). Comments auto-save when you click out. Deploy = ship it.</div>
     <div class="env" id="env"></div>
     <div id="list"></div>
+
+    <div class="park" id="park">
+      <h2>🅿️ Parking Lot</h2>
+      <div class="sub">Items the overnight run flagged instead of building: it double checks first, and if something looks already done, or it finds a discrepancy it can't resolve, it stops and parks it here rather than redoing the work. Send it back to the queue to build it, or resolve it if it's truly done.</div>
+      <div id="parklist"></div>
+    </div>
   </div>
 </div>
 
@@ -163,11 +179,39 @@ function envLine(){
     ? 'Heads up: opened as a local file, so the live crawl is off (browsers block cross-site fetches). Everything else works. Host this at _review/ on the site to turn the crawl on.'
     : 'Live crawl on. Reading real deployed status from the site root.';
 }
+function parkReason(r){
+  const n=r.note||'';
+  const idx=n.lastIndexOf('🌙');
+  if(idx>=0) return n.slice(idx).trim();
+  const t=n.trim();
+  if(t){const l=t.split(/\n/).map(s=>s.trim()).filter(Boolean);return l[l.length-1];}
+  return r.review_comment||'Flagged for review (no reason recorded).';
+}
+async function backToQueue(id){setSave('Saving…');const {error}=await sb.from('session_todos').update({run_status:'queued',parked_until:null,updated_at:new Date().toISOString()}).eq('id',id);if(error){setSave('Error');return;}setSave('Saved');refresh();}
+async function resolveParked(id){setSave('Saving…');const {error}=await sb.from('session_todos').update({run_status:'done',done:true,done_at:new Date().toISOString(),deploy_requested:false,updated_at:new Date().toISOString()}).eq('id',id);if(error){setSave('Error');return;}setSave('Saved');refresh();}
+function renderParked(parked){
+  const pl=document.getElementById('parklist');pl.innerHTML='';
+  if(!parked.length){pl.innerHTML='<div class="empty">Nothing parked. The overnight run has not flagged any already-done items or discrepancies.</div>';return;}
+  for(const r of parked){
+    const card=document.createElement('div');card.className='card parked';card.dataset.id=r.id;
+    card.innerHTML='<div class="head"><div class="mid" style="width:100%">'+
+      '<div class="titlerow"><span class="txt">'+esc(r.txt)+'</span><span class="pill parked">parked</span></div>'+
+      '<div class="reason">'+esc(parkReason(r))+'</div>'+
+      '<div class="pk-actions"><button class="backq">↩ Send back to queue</button><button class="resolve">✓ Resolve (already done)</button></div>'+
+      '</div></div>';
+    card.querySelector('.backq').onclick=()=>backToQueue(r.id);
+    card.querySelector('.resolve').onclick=()=>resolveParked(r.id);
+    pl.appendChild(card);
+  }
+}
 async function refresh(){
   setSave('loading…');envLine();
   const {data,error}=await sb.from('session_todos').select('*').eq('lane','queue_run').is('deleted_at',null);
   if(error){setSave('Error');return;}
-  const rows=(data||[]).sort((a,b)=>(((a.run_status==='done')?1:0)-((b.run_status==='done')?1:0))||((a.run_order??999)-(b.run_order??999))||((a.position||0)-(b.position||0)));
+  const all=(data||[]).sort((a,b)=>(((a.run_status==='done')?1:0)-((b.run_status==='done')?1:0))||((a.run_order??999)-(b.run_order??999))||((a.position||0)-(b.position||0)));
+  const parked=all.filter(r=>r.run_status==='parked');
+  const rows=all.filter(r=>r.run_status!=='parked');
+  renderParked(parked);
   const list=document.getElementById('list');list.innerHTML='';
   for(let i=0;i<rows.length;i++){
     const r=rows[i], cfg=MAP[r.id]||{}, st=r.run_status||'queued';
@@ -207,5 +251,5 @@ async function refresh(){
 }
 boot();
 </script>
-<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</body>
 </html>
