@@ -2,11 +2,17 @@ name: Publish pages from Supabase
 
 on:
   schedule:
-    - cron: '*/5 * * * *'   # every 5 minutes (GitHub's minimum)
-  workflow_dispatch:          # lets you run it on demand from the Actions tab
+    - cron: '*/5 * * * *'   # GitHub throttles this to roughly hourly. The repository_dispatch below is what makes a publish land immediately.
+  workflow_dispatch:         # lets you run it on demand from the Actions tab
+  repository_dispatch:
+    types: [publish-pages]   # fired the moment a page is written to the Supabase pages table
 
 permissions:
   contents: write
+
+concurrency:
+  group: publish-pages
+  cancel-in-progress: false
 
 jobs:
   publish:
@@ -25,17 +31,56 @@ jobs:
           node -e '
             const fs=require("fs"), zlib=require("zlib");
             const rows=JSON.parse(fs.readFileSync("pages.json","utf8"));
-            let n=0;
+
+            // ---- version guard -------------------------------------------------
+            // Reads the visible version marker out of a page. Checks the three
+            // places these pages carry it, in the order they are most reliable.
+            function verOf(html){
+              if(!html) return null;
+              const pats=[/<div class="badge">[^<]*?v(\d+)\.(\d+)/,
+                          /class="ver">\s*v(\d+)\.(\d+)/,
+                          /class="pn-ver">\s*v(\d+)\.(\d+)/];
+              for(const p of pats){ const m=html.match(p); if(m) return [ +m[1], +m[2] ]; }
+              return null;
+            }
+            const older=(a,b)=> a[0]<b[0] || (a[0]===b[0] && a[1]<b[1]);   // a is older than b
+            // --------------------------------------------------------------------
+
+            let n=0; const blocked=[];
             for (const r of rows){
               if(!r || !r.path || !r.gzb64) continue;
               if(r.path.includes("/") || r.path.includes("..") || r.path.startsWith("__")) continue;
               if(!/^[A-Za-z0-9._-]+$/.test(r.path)) continue;
               let html; try { html=zlib.gunzipSync(Buffer.from(r.gzb64,"base64")).toString("utf8"); } catch (e) { console.log("SKIP corrupt", r.path, e.code||e.message); continue; }
+
+              // Refuse to overwrite a newer published page with an older one.
+              const incoming=verOf(html);
+              const current= fs.existsSync(r.path) ? verOf(fs.readFileSync(r.path,"utf8")) : null;
+              if(incoming && current && older(incoming,current)){
+                const msg=`${r.path}: incoming v${incoming.join(".")} is OLDER than published v${current.join(".")}`;
+                console.log("BLOCKED", msg);
+                blocked.push(msg);
+                continue;
+              }
+
               fs.writeFileSync(r.path, html);
-              console.log("wrote", r.path, html.length);
+              console.log("wrote", r.path, html.length, incoming?("v"+incoming.join(".")):"(no version marker)");
               n++;
             }
             console.log("total files written:", n);
+
+            // Leave a visible, self-clearing record of anything the guard stopped.
+            if(blocked.length){
+              fs.writeFileSync("PUBLISH-BLOCKED.md",
+                "# Publish blocked\n\nThe version guard refused to overwrite newer published pages with older ones.\n\n"+
+                blocked.map(b=>"- "+b).join("\n")+
+                "\n\nThis usually means something published from a stale copy. Republish from the current version to clear this file.\n");
+              console.log("::warning::Version guard blocked "+blocked.length+" page(s). See PUBLISH-BLOCKED.md");
+            } else if (fs.existsSync("PUBLISH-BLOCKED.md")) {
+              fs.unlinkSync("PUBLISH-BLOCKED.md");
+              console.log("cleared PUBLISH-BLOCKED.md");
+            }
+
             for(const fp of fs.readdirSync(".")){if(!fp.endsWith(".html"))continue;let h=fs.readFileSync(fp,"utf8");if(h.indexOf("navpatch.js")===-1&&h.indexOf("</body>")!==-1){fs.writeFileSync(fp,h.replace("</body>","<script src=\"nav-config.js\"></script><script src=\"navpatch.js\"></script></body>"));console.log("navpatch+",fp);}}
           '
           rm -f pages.json
