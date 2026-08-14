@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QS Data Health · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;
+        --fresh:#1e8e5a;--warn:#c99a1e;--stale:#c0453b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+  .wrap{max-width:900px;margin:0 auto;padding:34px 22px 80px}
+  h1{font-size:26px}
+  .sub{color:var(--muted);font-size:14px;margin-top:6px;max-width:640px}
+  .summary{display:flex;gap:12px;flex-wrap:wrap;margin:20px 0 6px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:13px 16px;min-width:130px}
+  .stat .n{font-size:24px;font-weight:800}
+  .stat .l{font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin-top:2px}
+  .stat.ok .n{color:var(--fresh)} .stat.warn .n{color:var(--warn)} .stat.bad .n{color:var(--stale)}
+  .asof{font-size:12px;color:#9aa6b4;margin:2px 0 16px}
+  .grp{margin-top:18px}
+  .grph{font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);border-bottom:2px solid #e7ecf3;padding-bottom:4px;margin-bottom:8px}
+  .row{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:10px 13px;margin-bottom:7px}
+  .dot{width:11px;height:11px;border-radius:50%;flex:none}
+  .dot.fresh{background:var(--fresh)} .dot.warn{background:var(--warn)} .dot.stale{background:var(--stale)}
+  .rname{font-weight:800;font-size:14px;flex:1 1 auto}
+  .rsrc{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--muted);background:#eef2f8;border-radius:999px;padding:2px 8px}
+  .rwhen{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;min-width:120px;text-align:right}
+  .rwhen b.stale{color:var(--stale)} .rwhen b.warn{color:var(--warn)} .rwhen b.fresh{color:var(--fresh)}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff;width:100%}
+  #login .err{color:var(--stale);font-size:12.5px;min-height:16px}
+  .note{font-size:12px;color:#9aa6b4;margin-top:22px;line-height:1.6}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>QS Data Health</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="wrap">
+    <h1>QS Data Health</h1>
+    <p class="sub">Is the Quantified Self layer actually being fed? Each tracker below shows when it last logged and whether it is keeping cadence. Green = logged today or yesterday, amber = 2 to 3 days, red = 4+ days or never.</p>
+    <div class="summary" id="summary"></div>
+    <div class="asof" id="asof"></div>
+    <div id="board"></div>
+    <div class="note" id="note"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)show();}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}show();}
+async function show(){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');load();}
+function tier(d){return d<=1?'fresh':d<=3?'warn':'stale';}
+function daysBetween(a,b){return Math.round((a-b)/86400000);}
+async function load(){
+  const {data,error}=await sb.from('qs_log').select('date,"group",tracker,source');
+  const board=document.getElementById('board');
+  if(error){board.textContent='Load error: '+error.message;return;}
+  const rows=data||[];
+  const today=new Date();today.setHours(0,0,0,0);
+  const map={};
+  rows.forEach(r=>{
+    const k=r.group+'||'+r.tracker;
+    const d=new Date(r.date+'T00:00:00');
+    if(!map[k]||d>map[k].last){map[k]={group:r.group,tracker:r.tracker,last:d,source:r.source};}
+    if(map[k]) map[k].count=(map[k].count||0)+1;
+  });
+  const items=Object.values(map).map(m=>({...m,stale:daysBetween(today,m.last),t:tier(daysBetween(today,m.last))}));
+  const fresh=items.filter(i=>i.t==='fresh').length, warn=items.filter(i=>i.t==='warn').length, stale=items.filter(i=>i.t==='stale').length;
+  document.getElementById('summary').innerHTML=
+    '<div class="stat ok"><div class="n">'+fresh+'</div><div class="l">Fresh (0-1d)</div></div>'+
+    '<div class="stat warn"><div class="n">'+warn+'</div><div class="l">Slipping (2-3d)</div></div>'+
+    '<div class="stat bad"><div class="n">'+stale+'</div><div class="l">Stale (4+d)</div></div>'+
+    '<div class="stat"><div class="n">'+items.length+'</div><div class="l">Trackers</div></div>';
+  const lastAny=items.reduce((a,i)=>i.last>a?i.last:a,new Date(0));
+  const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const fmt=d=>M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+  document.getElementById('asof').textContent='Most recent log across all trackers: '+fmt(lastAny)+'. Checked '+fmt(today)+'.';
+  const groups={};
+  items.sort((a,b)=>b.stale-a.stale).forEach(i=>{(groups[i.group]=groups[i.group]||[]).push(i);});
+  board.innerHTML=Object.keys(groups).sort().map(g=>
+    '<div class="grp"><div class="grph">'+esc(g)+'</div>'+
+    groups[g].map(i=>{
+      const lbl=i.stale<=0?'today':i.stale===1?'yesterday':i.stale+' days ago';
+      return '<div class="row"><span class="dot '+i.t+'"></span><span class="rname">'+esc(i.tracker)+'</span>'+
+        '<span class="rsrc">'+esc(i.source||'?')+'</span>'+
+        '<span class="rwhen"><b class="'+i.t+'">'+lbl+'</b> · '+fmt(i.last)+'</span></div>';
+    }).join('')+'</div>').join('');
+  document.getElementById('note').innerHTML='Draft v0.1 for review. Next step options: (a) surface this as a strip on the QS pages, (b) a daily scheduled check that pushes you an alert when a tracker goes stale, or (c) both. Also needs per-tracker expected cadence (daily vs weekly) so "stale" is judged correctly.';
+}
+boot();
+</script>
+</body>
+</html>

@@ -11,13 +11,21 @@ window.NAV_CONFIG = {
     { "label": "Staging<br>Area", "href": "staging-area.html" }
   ],
   "Habit Modules": [
-    { "label": "Cue Cards", "href": "habit-modules.html" }
+    { "label": "AI<br>Insights", "href": "ai.html" },
+    { "label": "Clever<br>Phrases", "href": "quotes.html" },
+    { "label": "Compass", "href": "compass.html" },
+    { "label": "James<br>Clear", "href": "james-clear.html" }
   ],
   "Quantified Self": [
     { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
     { "label": "Habits<br>Tracker", "href": "qs-log.html" },
     { "label": "Clarity<br>Compass", "href": "qs-wheel.html" },
     { "label": "Life<br>Snapshot", "href": "life-snapshot.html" }
+  ],
+  "Editors": [
+    { "label": "Daily<br>Habits", "href": "daily-template.html" },
+    { "label": "Midnight<br>Run", "href": "midnight-run.html" },
+    { "label": "Style<br>Guide", "href": "style-guide.html" }
   ],
   "Operating System": [
     { "label": "Components", "href": "build.html" },
@@ -33,8 +41,3 @@ window.NAV_CONFIG = {
     { "label": "Docs<br>Library", "href": "library.html" }
   ]
 };
-
-/* Group labels that link to an index/landing page.
-   When a group name here has a URL, navpatch.js renders its grey label as a
-   clickable link (and marks it active on that page). */
-window.NAV_GROUP_LINKS = {};

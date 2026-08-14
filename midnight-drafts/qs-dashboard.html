@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quantified Self · Dashboard · ProjectYou</title>
+<style>
+  :root{
+    --ink:#1f2a44; --muted:#5b6472; --line:#e3e7ee; --bg:#eef1f6; --card:#fff;
+    --accent:#3f6f8f; --green:#1e8e5a; --gold:#c68a2e; --hot:#c0453b;
+    --shadow:0 14px 40px rgba(31,42,68,.10);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--ink);
+        -webkit-font-smoothing:antialiased; line-height:1.5}
+
+  .stage{max-width:900px; margin:0 auto; padding:26px 18px 90px}
+
+  /* ---------- Header ---------- */
+  .pagehead{text-align:center; margin-bottom:22px}
+  .pagehead .greet{font-size:11.5px; letter-spacing:2px; text-transform:uppercase; color:var(--muted); font-weight:800}
+  .pagehead h1{font-size:31px; margin:6px 0 2px; letter-spacing:.2px}
+  .pagehead h1 .em{color:var(--accent)}
+  .inspire{max-width:620px; margin:12px auto 0; font-size:14.5px; color:#46516a; line-height:1.62}
+  .inspire .k{font-weight:800; color:var(--accent)}
+  .kpis{display:flex; justify-content:center; gap:12px; margin:20px auto 0; flex-wrap:wrap}
+  .kpi{background:#fff; border:1px solid var(--line); border-radius:14px; padding:12px 18px; min-width:130px;
+        box-shadow:0 4px 12px rgba(31,42,68,.06); text-align:center}
+  .kpi .v{font-size:22px; font-weight:800; color:var(--ink); font-variant-numeric:tabular-nums}
+  .kpi .l{font-size:11px; font-weight:700; letter-spacing:.4px; text-transform:uppercase; color:var(--muted); margin-top:2px}
+  .kpi .v .u{font-size:13px; color:var(--muted); font-weight:700}
+
+  /* ---------- View-card grid - SPLIT layout (Option C) ---------- */
+  .grid{display:grid; grid-template-columns:repeat(2,1fr); gap:16px; margin-top:26px}
+  .vcard{background:var(--card); border:1px solid var(--line); border-radius:20px; position:relative; overflow:hidden;
+        display:flex; flex-direction:row; align-items:stretch; min-height:160px; cursor:pointer;
+        box-shadow:var(--shadow); transition:transform .18s, box-shadow .18s, filter .4s, opacity .4s}
+  .vcard:hover{transform:translateY(-3px); box-shadow:0 20px 48px rgba(31,42,68,.16)}
+  .vcard .thumb{width:134px; flex:none; background:var(--hcb); position:relative}
+  .vcard .thumb svg{display:block; width:100%; height:100%}
+  .vcard .live{position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:6px; font-size:10px;
+        font-weight:800; letter-spacing:.4px; text-transform:uppercase; color:#fff; background:rgba(15,22,38,.42);
+        backdrop-filter:blur(2px); padding:4px 9px; border-radius:999px}
+  .vcard .live .dot{width:7px; height:7px; border-radius:50%; background:#4fe0a6; animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,224,166,.6)} 70%{box-shadow:0 0 0 6px rgba(79,224,166,0)} 100%{box-shadow:0 0 0 0 rgba(79,224,166,0)}}
+  .vcard .body{padding:16px 18px; flex:1; display:flex; flex-direction:column}
+  .vcard .kick{font-size:10.5px; font-weight:800; letter-spacing:1.1px; text-transform:uppercase; color:var(--hc)}
+  .vcard .nm{font-size:17px; font-weight:800; color:var(--ink); margin-top:2px}
+  .vcard .tg{font-size:12.5px; color:var(--muted); margin-top:6px; line-height:1.45}
+  .vcard .stat{align-self:flex-start; margin-top:auto; background:var(--hcb); color:var(--hc); font-size:12.5px;
+        font-weight:800; border-radius:999px; padding:6px 13px}
+  .vcard .cta{font-size:12px; font-weight:800; color:var(--hc); letter-spacing:.3px; margin-top:10px}
+  /* stale / needs-sync - dimmed */
+  .vcard.stale{filter:grayscale(1); opacity:.52; box-shadow:none}
+  .vcard.stale .live{color:#e7ecf3}
+  .vcard.stale .live .dot{background:#b3bccb; animation:none}
+  .vcard.stale .cta{color:var(--muted)}
+
+  .addcard{border:2px dashed #cdd5e2; background:transparent; border-radius:20px; min-height:160px;
+        display:flex; flex-direction:column; align-items:center; justify-content:center; color:#9aa6b4; gap:8px; cursor:default}
+  .addcard .plus{font-size:32px; font-weight:300; line-height:1}
+  .addcard .t{font-size:12.5px; font-weight:700; text-align:center; padding:0 16px; line-height:1.4}
+
+  /* ---------- Overlay preview ---------- */
+  .overlay{position:fixed; inset:0; background:rgba(15,22,38,.5); backdrop-filter:blur(3px);
+        display:none; align-items:center; justify-content:center; z-index:80; padding:20px}
+  .overlay.on{display:flex}
+  .sheet{background:#fff; border-radius:24px; max-width:460px; width:100%; padding:0 0 26px; position:relative;
+        overflow:hidden; text-align:center; box-shadow:0 30px 80px rgba(0,0,0,.4); animation:pop .28s ease}
+  @keyframes pop{from{transform:scale(.9) translateY(14px); opacity:0} to{transform:none; opacity:1}}
+  .sheet .hero{height:150px; width:100%; position:relative; background:var(--hcb)}
+  .sheet .hero svg{display:block; width:100%; height:100%}
+  .sheet .x{position:absolute; top:14px; right:16px; font-size:20px; color:#fff; cursor:pointer; line-height:1;
+        background:rgba(15,22,38,.4); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center}
+  .sheet .pad{padding:22px 28px 0}
+  .sheet .kick{font-size:11px; font-weight:800; letter-spacing:1.4px; text-transform:uppercase}
+  .sheet h2{font-size:23px; margin:4px 0 10px}
+  .sheet p{font-size:14.5px; color:var(--muted); line-height:1.6}
+  .sheet .demo{background:#f5f7fb; border:1px solid var(--line); border-radius:14px; padding:14px; margin:16px 0;
+        font-size:13.5px; color:#3a4653; line-height:1.55; text-align:left}
+  .sheet .demo b{color:var(--ink)}
+  .sheet .open{width:100%; color:#fff; font-family:inherit; font-size:15px; font-weight:800;
+        border:none; border-radius:14px; padding:14px; cursor:pointer}
+  .sheet .backnote{font-size:12px; color:#9aa6b4; margin-top:12px}
+
+  /* ---------- Page version badge ---------- */
+  .badge{position:fixed; right:12px; bottom:12px; background:#fff; border:1px solid var(--line);
+        border-radius:999px; padding:5px 11px; font-size:11px; color:var(--muted); z-index:40}
+
+  @media(max-width:640px){ .grid{grid-template-columns:1fr} .pagehead h1{font-size:26px} }
+</style>
+<style id="pynav-css">
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-solo{font-weight:800;color:#3f6f8f;text-decoration:none;font-size:12px;padding:4px 8px;border-radius:8px;margin-left:5px;border-left:1px solid #edf0f4;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-solo:hover{background:#eef2f8}
+.pn-solo.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+</style>
+</head>
+<body>
+
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link on">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.5</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+
+<div class="stage" id="stage"></div>
+<div class="overlay" id="overlay"><div class="sheet" id="sheet"></div></div>
+<div class="badge">Quantified Self Dashboard v1.0</div>
+
+<script>
+/* Supabase (read layer over qs_log): config only for now; glance-stats stay as
+   the approved example values below. Wire the statQuery on each VIEW later. */
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+
+/* ---------- live mini-visual thumbnails ---------- */
+function tWheel(){
+  const segs=[['#B5651D',55],['#3f6f8f',46],['#4E6E2E',50],['#c68a2e',37.5]]; let off=0, ring='';
+  segs.forEach(([c,len])=>{ ring+=`<circle r="30" fill="none" stroke="${c}" stroke-width="15" stroke-dasharray="${len} ${188.5-len}" stroke-dashoffset="${-off}" transform="rotate(-90)"/>`; off+=len; });
+  return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><rect width="100" height="100" fill="#f6ede2"/><g transform="translate(50,50)">${ring}<circle r="14" fill="#fff"/><circle r="14" fill="none" stroke="#e3d6c4" stroke-width="1"/><text x="0" y="4" text-anchor="middle" font-size="11" font-weight="800" fill="#B5651D" font-family="Arial">41</text></g></svg>`;
+}
+function tHabits(){
+  const cols=8, rows=5, cell=8, gap=3, w=cols*cell+(cols-1)*gap, h=rows*cell+(rows-1)*gap, x0=(100-w)/2, y0=(100-h)/2; let cells='';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ const i=r*cols+c; const filled=((i*7+3)%10)>2; const op=(0.4+((i*5)%5)*0.12).toFixed(2);
+    const x=x0+c*(cell+gap), y=y0+r*(cell+gap);
+    cells+= filled ? `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="#4E6E2E" opacity="${op}"/>`
+      : `<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="none" stroke="#cfd8c6" stroke-width="1"/>`; }
+  return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><rect width="100" height="100" fill="#eef3e6"/>${cells}</svg>`;
+}
+function tCompass(){
+  return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><rect width="100" height="100" fill="#faf3e4"/><g transform="translate(50,50)">
+    <circle r="33" fill="#fff" stroke="#c68a2e" stroke-width="3"/><circle r="27" fill="none" stroke="#e7d3ab" stroke-width="1"/>
+    <g stroke="#c68a2e" stroke-width="2"><path d="M0,-33 V-27"/><path d="M0,33 V27"/><path d="M-33,0 H-27"/><path d="M33,0 H27"/></g>
+    <g transform="rotate(38)"><polygon points="0,-26 5.5,0 0,4" fill="#C0392B"/><polygon points="0,26 -5.5,0 0,-4" fill="#9aa6b4"/></g>
+    <circle r="3.2" fill="#c68a2e"/></g></svg>`;
+}
+function tWeeks(){
+  const cols=16, rows=10, cell=4.2, gap=1.4, w=cols*cell+(cols-1)*gap, h=rows*cell+(rows-1)*gap, x0=(100-w)/2, y0=(100-h)/2, cur=Math.floor(cols*rows*0.54); let cells='';
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ const i=r*cols+c; const x=x0+c*(cell+gap), y=y0+r*(cell+gap);
+    if(i===cur) cells+=`<rect x="${x-0.6}" y="${y-0.6}" width="${cell+1.2}" height="${cell+1.2}" rx="1" fill="#C0392B"/>`;
+    else if(i<cur) cells+=`<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="1" fill="#C0392B" opacity="0.22"/>`;
+    else cells+=`<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="1" fill="none" stroke="#e2c9c5" stroke-width="0.8"/>`; }
+  return `<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice"><rect width="100" height="100" fill="#f8ebe9"/>${cells}</svg>`;
+}
+
+const VIEWS = [
+  {id:'wheel', name:'Time Bandit Wheel', kick:'Your day', color:'#B5651D', bg:'#f6ede2', thumb:tWheel(),
+   opensUrl:'habit-bandit-time-wheel.html', statQuery:null,
+   tag:'Where the day actually went, in 10-minute blocks.', stat:'41 / 96 blocks', synced:true,
+   desc:'A weekly wheel that splits your active day into 10-minute blocks across Physical, Mental, Dad and Daily. "All it takes is 10 minutes to do something for you." Below the wheel: today\'s list, tap to inspect, check to complete.',
+   metric:'Today: <b>41 / 96 blocks</b> spent on you · <b>6h 50m</b> active'},
+  {id:'habits', name:'Habits Tracker', kick:'The year in habits', color:'#4E6E2E', bg:'#eef3e6', thumb:tHabits(),
+   opensUrl:'qs-log.html', statQuery:null,
+   tag:'The master daily habit grid, one dot a day.', stat:'142-day streak', synced:true,
+   desc:'The annual habit grid: a month-by-day matrix you fill in daily across the year. The satisfaction of filling it in is the reinforcement. Feeds the qs_log from the Habit Bandit pipeline.',
+   metric:'Current streak: <b>142 days</b> · This month: <b>18 / 31</b> filled'},
+  {id:'compass', name:'Clarity Compass', kick:'Reflection', color:'#c68a2e', bg:'#faf3e4', thumb:tCompass(),
+   opensUrl:'qs-wheel.html', statQuery:null,
+   tag:'Your daily question and captured energy.', stat:'Answered today ✓', synced:true,
+   desc:'The daily reflection prompt. Your captured "what gave me energy" data seeds the questions, so answering is reviewing your own evidence, not guessing. Tracking feeds reflection; reflection feeds Project YOU.',
+   metric:'Today: <b>answered</b> · This week: <b>6 / 7</b> days'},
+  {id:'snapshot', name:'Life Snapshot', kick:'The big picture', color:'#C0392B', bg:'#f8ebe9', thumb:tWeeks(),
+   opensUrl:'life-snapshot.html', statQuery:null,
+   tag:'Your life in weeks, 52 across, one year per row.', stat:'Week 2,187', synced:true,
+   desc:'Life in weeks: 52 weeks across, one age-year per row, a red box on the current week. Birth date baked in; the current week advances automatically. The zoom-all-the-way-out view that puts every other tracker in perspective.',
+   metric:'You are in <b>week 2,187</b> of a ~4,000-week life · <b>54%</b> lived'}
+];
+
+const KPIS = [
+  {v:'4,318', l:'rows in qs_log'},
+  {v:'6<span class="u"> live</span>', l:'connected sources'},
+  {v:'7<span class="u"> / 10</span>', l:"today's day score"}
+];
+
+const INSPIRE = `The moment you measure something, it starts to change. That's the <span class="k">Hawthorne effect</span>, and it's the whole engine here. Every tracker is a nudge; every logged day is a small n=1 experiment. One master log feeds every view below, so your scattered tracking becomes one coherent picture. <span class="k">Measure it, and it changes. Your data becomes your coach.</span>`;
+
+let forceStale = false;
+
+function render(){
+  const cards = VIEWS.map(v=>{
+    const stale = forceStale && !v.synced;
+    return `<div class="vcard ${stale?'stale':''}" data-view="${v.id}" style="--hc:${v.color}; --hcb:${v.bg}">
+      <div class="thumb">${v.thumb}<span class="live"><span class="dot"></span>${stale?'needs sync':'live'}</span></div>
+      <div class="body">
+        <div class="kick">${v.kick}</div>
+        <div class="nm">${v.name}</div>
+        <div class="tg">${v.tag}</div>
+        <span class="stat">${v.stat}</span>
+        <span class="cta">${stale?'sync now →':'open →'}</span>
+      </div></div>`;
+  }).join('');
+  const add = `<div class="addcard"><span class="plus">+</span><span class="t">More views land here: Monthly Grid, Annual Dot-Grids, Living Ecosystem map</span></div>`;
+  document.getElementById('stage').innerHTML = `
+    <div class="pagehead">
+      <div class="greet">Quantified Self</div>
+      <h1><span class="em">Measure It</span>, and It Changes</h1>
+      <p class="inspire">${INSPIRE}</p>
+    </div>
+    <div class="grid">${cards}${add}</div>`;
+  document.querySelectorAll('[data-view]').forEach(el=>{
+    el.addEventListener('click', ()=>openSheet(el.getAttribute('data-view')));
+  });
+}
+
+function openSheet(id){
+  const v = VIEWS.find(x=>x.id===id);
+  document.getElementById('sheet').innerHTML = `
+    <div class="hero" style="--hcb:${v.bg}">${v.thumb}<span class="x" id="closeX">✕</span></div>
+    <div class="pad">
+      <div class="kick" style="color:${v.color}">${v.kick}</div>
+      <h2>${v.name}</h2>
+      <p>${v.desc}</p>
+      <div class="demo">${v.metric}</div>
+      <button class="open" style="background:${v.color}" id="openBtn">Open ${v.name} →</button>
+      <div class="backnote">Launches the full page, which carries its own nav back.</div>
+    </div>`;
+  document.getElementById('overlay').classList.add('on');
+  document.getElementById('closeX').onclick = closeSheet;
+  document.getElementById('openBtn').onclick = ()=>{ window.location.href = v.opensUrl; };
+}
+function closeSheet(){ document.getElementById('overlay').classList.remove('on'); }
+document.getElementById('overlay').addEventListener('click', e=>{ if(e.target.id==='overlay') closeSheet(); });
+
+render();
+</script>
+<script src="nav-config.js"></script>
+<script src="navpatch.js"></script>
+</body>
+</html>

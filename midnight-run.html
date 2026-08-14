@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Midnight Run — Control Center</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--good:#1e8e5a;--night:#2b3a52;--hot:#c0453b;--warn:#c99a1e;--claude:#8a5a9c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+  .wrap{max-width:900px;margin:0 auto;padding:0 16px 90px}
+  header.top{background:linear-gradient(135deg,#2b3a52,#3f6f8f);color:#fff;border-radius:0 0 16px 16px;padding:22px;margin:0 -16px 16px}
+  header.top h1{font-size:23px;display:flex;align-items:center;gap:9px}
+  header.top p{opacity:.9;font-size:13px;margin-top:6px;max-width:640px;line-height:1.5}
+  .schedrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;background:rgba(255,255,255,.13);border:1px solid rgba(255,255,255,.28);border-radius:12px;padding:9px 12px}
+  .schedrow label{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;opacity:.85}
+  .schedrow input[type=time]{font-family:inherit;font-size:15px;font-weight:800;padding:6px 9px;border:none;border-radius:9px;color:var(--ink)}
+  .schedrow button{font-family:inherit;font-weight:800;font-size:12px;border:none;border-radius:9px;padding:7px 12px;cursor:pointer;background:#fff;color:var(--accent)}
+  .schedrow .now{font-size:12px;opacity:.9}
+  .bar{display:flex;align-items:center;gap:10px;margin:4px 0 8px}
+  .btn{font-family:inherit;font-weight:800;border:none;border-radius:10px;padding:9px 15px;cursor:pointer;font-size:13.5px;background:var(--accent);color:#fff}
+  .savestate{font-size:12px;color:#9aa6b4;margin-left:auto}
+  .savestate.saving{color:var(--accent)}.savestate.saved{color:var(--good)}.savestate.err{color:var(--hot)}
+  .env{font-size:11.5px;color:#9aa6b4;margin:0 2px 12px}
+  .hint{font-size:12px;color:#9aa6b4;margin:0 2px 12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:11px;box-shadow:0 5px 14px rgba(31,42,68,.05)}
+  .card.sortable-ghost{opacity:.45;outline:2px dashed #b9cdec}
+  .card.sortable-chosen{box-shadow:0 12px 26px rgba(31,42,68,.16)}
+  .head{display:flex;align-items:flex-start;gap:10px}
+  .grip{flex:0 0 auto;cursor:grab;color:#c4c8ce;font-size:17px;line-height:1;padding-top:7px;user-select:none}
+  .grip:active{cursor:grabbing}
+  .ord{flex:0 0 auto;min-width:30px;height:30px;padding:0 7px;border-radius:9px;background:var(--night);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .mid{flex:1 1 auto;min-width:0}
+  .titlerow{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .txt{font-size:15px;font-weight:800}
+  .pill{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-radius:999px;padding:2px 8px;color:#fff}
+  .pill.queued{background:var(--claude)}.pill.running{background:var(--warn)}.pill.needs_input{background:var(--accent)}.pill.done{background:var(--good)}
+  .live{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-radius:999px;padding:2px 8px;border:1px solid}
+  .live.on{color:var(--good);border-color:#bfe6cf;background:#eef7f1}
+  .live.off{color:var(--hot);border-color:#f0cfca;background:#fdf2f0}
+  .live.na{color:#9aa6b4;border-color:var(--line);background:#f6f8fb}
+  .live.chk{color:var(--muted);border-color:var(--line);background:#f6f8fb}
+  .drift{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:#fff;background:var(--warn);border-radius:999px;padding:2px 8px}
+  .actions{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap}
+  .prev{font-size:12.5px;font-weight:800;color:var(--accent);background:#eef2f8;border:1px solid #dbe4f0;border-radius:8px;padding:7px 12px;text-decoration:none}
+  .prev.golive{color:#fff;background:var(--good);border-color:var(--good)}
+  .deploy{font-size:12.5px;font-weight:800;color:#fff;background:var(--good);border:none;border-radius:8px;padding:8px 15px;cursor:pointer;margin-left:auto}
+  .deploy.on{background:#0f6b41}
+  .mark{font-size:12.5px;font-weight:800;color:var(--accent);background:#fff;border:1px solid var(--accent);border-radius:8px;padding:8px 13px;cursor:pointer}
+  .mark.on{background:var(--good);border-color:var(--good);color:#fff}
+  .card.shipped{opacity:.62;background:#f7faf8}
+  .card.shipped .grip{visibility:hidden}
+  .cmt{width:100%;margin-top:10px;font-family:inherit;font-size:13px;padding:9px 11px;border:1px solid var(--line);border-radius:9px;resize:vertical;min-height:42px;color:var(--ink)}
+  .cmt:focus{outline:none;background:#fffef2;box-shadow:inset 0 0 0 1px #e3d9a6}
+  .cmtlab{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#aab2bd;margin-top:9px}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>Midnight Run</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="wrap">
+    <header class="top">
+      <h1>🌙 Midnight Run — Control Center</h1>
+      <p>One place: drag to set the order I work things in, preview each build, leave comments, and hit Deploy on the keepers. Live status is crawled straight from the site, so it always shows the real deployed state, not a saved guess.</p>
+      <div class="schedrow">
+        <label for="rt">Runs at</label>
+        <input id="rt" type="time" value="02:00">
+        <button onclick="saveTime()">Set time</button>
+        <span class="now" id="nowtime"></span>
+      </div>
+    </header>
+    <div class="bar"><button class="btn" onclick="refresh()">Refresh + re-crawl</button><span class="savestate" id="save">loading…</span></div>
+    <div class="hint">Drag the ⠿ handle to reorder (saves instantly). Comments auto-save when you click out. Deploy = ship it.</div>
+    <div class="env" id="env"></div>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const MAP={
+ 52:{livefile:'habit-modules.html', draft:'midnight-drafts/habit-modules.html'},
+ 3:{draft:'midnight-drafts/qs-health.html', kind:'tool'},
+ 13:{livefile:'blueprint.html', draft:'midnight-drafts/blueprint.html'},
+ 38:{livefile:'all-todos.html', kind:'feature'},
+ 42:{kind:'backend'},
+ 49:{livefile:'qs-dashboard.html', draft:'midnight-drafts/qs-dashboard.html'},
+ 50:{livefile:'how-we-work.html', draft:'midnight-drafts/how-we-work.html'},
+ 51:{livefile:'maps.html', draft:'midnight-drafts/maps.html'},
+ 1:{livefile:'james-clear.html', kind:'liveonly'}
+};
+let sortable=null;
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function setSave(s){const e=document.getElementById('save');e.className='savestate '+(s==='Saving…'?'saving':s==='Saved'?'saved':s==='Error'?'err':'');e.textContent=s;}
+function to12(hhmm){if(!hhmm)return'';const[h,m]=hhmm.split(':').map(Number);const ap=h<12?'AM':'PM';return ((h%12)||12)+':'+String(m).padStart(2,'0')+' '+ap;}
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)show();}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}show();}
+async function show(){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');loadTime();refresh();}
+async function loadTime(){
+  const {data}=await sb.from('board_meta').select('val').eq('key','midnight_run_time').maybeSingle();
+  const t=(data&&data.val)||'2:00 AM';document.getElementById('nowtime').textContent='currently '+t+' ET';
+  try{const mm=t.match(/(\d+):(\d+)\s*(AM|PM)/i);if(mm){let h=+mm[1]%12;if(/PM/i.test(mm[3]))h+=12;document.getElementById('rt').value=String(h).padStart(2,'0')+':'+mm[2];}}catch(e){}
+}
+async function saveTime(){
+  const v=document.getElementById('rt').value;if(!v)return;
+  const [h,m]=v.split(':').map(Number);const d=new Date();d.setHours(h,m,0,0);
+  const cron=d.getUTCMinutes()+' '+d.getUTCHours()+' * * *';const disp=to12(v);const now=new Date().toISOString();
+  setSave('Saving…');
+  await sb.from('board_meta').upsert({key:'midnight_run_time',val:disp,updated_at:now},{onConflict:'key'});
+  await sb.from('board_meta').upsert({key:'midnight_run_cron',val:cron,updated_at:now},{onConflict:'key'});
+  setSave('Saved');document.getElementById('nowtime').textContent='currently '+disp+' ET (takes effect next run)';
+}
+async function saveComment(id,val){setSave('Saving…');const {error}=await sb.from('session_todos').update({review_comment:val,updated_at:new Date().toISOString()}).eq('id',id);setSave(error?'Error':'Saved');}
+async function toggleDeploy(id,btn){
+  const want=!(btn.dataset.on==='1');setSave('Saving…');
+  const {error}=await sb.from('session_todos').update({deploy_requested:want,deploy_requested_at:want?new Date().toISOString():null,updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){setSave('Error');return;}
+  setSave('Saved');btn.dataset.on=want?'1':'';btn.classList.toggle('on',want);btn.textContent=want?'✓ Deploy requested':'Deploy';
+}
+async function markDeployed(id,card,btn){
+  const on=!(btn.classList.contains('on'));setSave('Saving…');
+  const patch=on?{run_status:'done',done:true,done_at:new Date().toISOString(),deploy_requested:false}
+               :{run_status:'needs_input',done:false,done_at:null};
+  const {error}=await sb.from('session_todos').update(Object.assign(patch,{updated_at:new Date().toISOString()})).eq('id',id);
+  if(error){setSave('Error');return;}
+  setSave('Saved');refresh();
+}
+async function saveOrder(){
+  const ids=[...document.querySelectorAll('#list .card')].map(c=>c.dataset.id);
+  document.querySelectorAll('#list .card .ord').forEach((el,i)=>el.textContent=i+1);
+  const now=new Date().toISOString();setSave('Saving…');let err=false;
+  for(let i=0;i<ids.length;i++){const {error}=await sb.from('session_todos').update({run_order:i+1,updated_at:now}).eq('id',ids[i]);if(error)err=true;}
+  setSave(err?'Error':'Saved');
+}
+async function crawl(file){
+  try{
+    const r=await fetch(file+'?cb='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return {found:false};
+    const t=await r.text();
+    let m=t.match(/class="(?:verbadge|ver|pn-ver)"[^>]*>\s*v?([0-9]+(?:\.[0-9]+)?)/i)||t.match(/3-2-1 v([0-9]+(?:\.[0-9]+)?)/i)||t.match(/\bv([0-9]+\.[0-9]+)\b/);
+    return {found:true, version:m?('v'+m[1]):null};
+  }catch(e){ return {found:false, err:true}; }
+}
+function envLine(){
+  const isFile=location.protocol==='file:';
+  document.getElementById('env').textContent=isFile
+    ? 'Heads up: opened as a local file, so the live crawl is off (browsers block cross-site fetches). Everything else works. Host this at _review/ on the site to turn the crawl on.'
+    : 'Live crawl on. Reading real deployed status from the site root.';
+}
+async function refresh(){
+  setSave('loading…');envLine();
+  const {data,error}=await sb.from('session_todos').select('*').eq('lane','queue_run').is('deleted_at',null);
+  if(error){setSave('Error');return;}
+  const rows=(data||[]).sort((a,b)=>(((a.run_status==='done')?1:0)-((b.run_status==='done')?1:0))||((a.run_order??999)-(b.run_order??999))||((a.position||0)-(b.position||0)));
+  const list=document.getElementById('list');list.innerHTML='';
+  for(let i=0;i<rows.length;i++){
+    const r=rows[i], cfg=MAP[r.id]||{}, st=r.run_status||'queued';
+    const card=document.createElement('div');card.className='card'+(st==='done'?' shipped':'');card.dataset.id=r.id;
+    const draftLink=cfg.draft?'<a class="prev" href="'+cfg.draft+'" target="_blank" rel="noopener">▶ Preview draft</a>':'';
+    card.innerHTML='<div class="head"><div class="grip" title="drag to reorder">⠿</div><div class="ord">'+(r.run_order||i+1)+'</div><div class="mid">'+
+      '<div class="titlerow"><span class="txt">'+esc(r.txt)+'</span>'+
+        '<span class="pill '+st+'">'+(st==='done'?'\u2713 shipped':'board: '+esc(st.replace("_"," ")))+'</span>'+
+        '<span class="live chk" data-live>live: checking…</span></div>'+
+      '<div class="actions">'+draftLink+
+        (cfg.livefile?'<a class="prev golive" data-livelink href="'+cfg.livefile+'" target="_blank" rel="noopener" style="display:none">Open live ↗</a>':'')+
+        '<button class="deploy'+(r.deploy_requested?' on':'')+'" data-on="'+(r.deploy_requested?'1':'')+'">'+(r.deploy_requested?'✓ Deploy requested':'Deploy')+'</button>'+
+        '<button class="mark'+(st==='done'?' on':'')+'" data-mark>'+(st==='done'?'✓ Deployed':'Mark deployed')+'</button>'+
+      '</div>'+
+      '<div class="cmtlab">Your comments / feedback</div>'+
+      '<textarea class="cmt" placeholder="Notes, changes, or a go-ahead…"></textarea>'+
+      '</div></div>';
+    const ta=card.querySelector('.cmt');ta.value=r.review_comment||'';
+    ta.onblur=()=>{if((ta.value||'')!==(r.review_comment||''))saveComment(r.id,ta.value);};
+    card.querySelector('.deploy').onclick=function(){toggleDeploy(r.id,this);};
+    card.querySelector('[data-mark]').onclick=function(){markDeployed(r.id,card,this);};
+    list.appendChild(card);
+    const liveEl=card.querySelector('[data-live]'),liveLink=card.querySelector('[data-livelink]');
+    if(cfg.kind==='backend'){liveEl.className='live na';liveEl.textContent='live: backend (n/a)';}
+    else if(cfg.kind==='tool'||cfg.kind==='feature'){liveEl.className='live na';liveEl.textContent='live: '+cfg.kind;}
+    else if(cfg.livefile){
+      crawl(cfg.livefile).then(res=>{
+        if(res.found){liveEl.className='live on';liveEl.textContent='live: deployed'+(res.version?' '+res.version:'');if(liveLink)liveLink.style.display='';
+          if(cfg.draft){const d=document.createElement('span');d.className='drift';d.textContent='draft pending';liveEl.after(d);}}
+        else{liveEl.className='live off';liveEl.textContent='live: not deployed';}
+      });
+    } else {liveEl.className='live na';liveEl.textContent='live: n/a';}
+  }
+  if(sortable){try{sortable.destroy();}catch(e){}}
+  sortable=new Sortable(list,{handle:'.grip',animation:140,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:saveOrder});
+  setSave('Saved');
+}
+boot();
+</script>
+</body>
+</html>
