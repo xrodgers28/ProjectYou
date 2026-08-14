@@ -14,10 +14,7 @@ window.NAV_CONFIG = {
     { "label": "Cue Cards", "href": "habit-modules.html" }
   ],
   "Quantified Self": [
-    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
-    { "label": "Habits<br>Tracker", "href": "qs-log.html" },
-    { "label": "Clarity<br>Compass", "href": "qs-wheel.html" },
-    { "label": "Life<br>Snapshot", "href": "life-snapshot.html" }
+    { "label": "QS Dashboard", "href": "qs-dashboard.html" }
   ],
   "Operating System": [
     { "label": "Components", "href": "build.html" },
