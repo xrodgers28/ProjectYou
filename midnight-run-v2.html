@@ -70,6 +70,44 @@
   #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
   #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
   .hidden{display:none}
+  header.top h1 .ver{font-size:10.5px;font-weight:800;letter-spacing:0;border:1px solid rgba(255,255,255,.45);border-radius:999px;padding:2px 8px;opacity:.9}
+  /* ---- Ready to Code ---- */
+  .rtc{margin:0 0 26px}
+  .rtc h2{font-size:16px;color:var(--night);display:flex;align-items:center;gap:8px;margin:0 2px 4px}
+  .rtc .sub{font-size:12px;color:#9aa6b4;margin:0 2px 12px;line-height:1.5;max-width:660px}
+  .card.rtcitem{border-left:4px solid var(--claude)}
+  .card.rtcitem.coding{border-left-color:var(--warn);background:#fffdf5}
+  .card.rtcitem.complete{border-left-color:var(--good);background:#f5faf7}
+  .card.rtcitem.failed{border-left-color:var(--hot);background:#fdf5f4}
+  .pill.ready{background:var(--claude)}
+  .pill.requested{background:var(--accent)}
+  .pill.coding{background:var(--warn)}
+  .pill.complete{background:var(--good)}
+  .pill.failed{background:var(--hot)}
+  .spin{display:inline-block;width:11px;height:11px;border:2px solid #e6d9a8;border-top-color:var(--warn);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .rtc .empty{font-size:12.5px;color:#9aa6b4;background:#f6f8fb;border:1px dashed var(--line);border-radius:10px;padding:16px;text-align:center}
+  .resbox{margin-top:10px}
+  .resbox summary{font-size:12.5px;font-weight:800;color:var(--accent);cursor:pointer;list-style:none}
+  .resbox summary::-webkit-details-marker{display:none}
+  .resbox summary:before{content:'▸ ';}
+  .resbox[open] summary:before{content:'▾ ';}
+  .resbox pre{margin-top:8px;background:#f7f9fc;border:1px solid var(--line);border-radius:9px;padding:11px;font-size:12px;line-height:1.5;white-space:pre-wrap;word-break:break-word;max-height:340px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .errbox{font-size:12.5px;color:#8c2f27;background:#fdf0ee;border:1px solid #f0cfca;border-radius:9px;padding:9px 11px;margin-top:10px;white-space:pre-wrap;line-height:1.5}
+  .runbar{display:flex;align-items:center;gap:11px;flex-wrap:wrap;margin-top:14px;padding-top:13px;border-top:1px dashed var(--line)}
+  .codenow{font-family:inherit;font-weight:800;font-size:14px;border:none;border-radius:11px;padding:12px 20px;cursor:pointer;background:var(--night);color:#fff;display:flex;align-items:center;gap:8px}
+  .codenow:hover{background:#22304a}
+  .codenow:disabled{opacity:.5;cursor:default}
+  .runstat{font-size:12.5px;color:var(--muted)}
+  .runstat.done{color:var(--good);font-weight:800}
+  .runstat.bad{color:var(--hot);font-weight:800}
+  /* Drag handle plus arrow fallback, for when dragging will not cooperate */
+  .mv{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:1px;padding-top:3px}
+  .mvb{font-family:inherit;font-size:10px;line-height:1;color:#8b93a0;background:#f2f5f9;border:1px solid var(--line);border-radius:5px;width:20px;height:15px;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+  .mvb:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:#fff}
+  .mvb:disabled{opacity:.28;cursor:default}
+  .mv .grip{padding-top:0;font-size:15px}
+  .card.shipped .mv{visibility:hidden}
 </style>
 </head>
 <body>
@@ -82,7 +120,7 @@
 <div id="app" class="hidden">
   <div class="wrap">
     <header class="top">
-      <h1>🌙 Midnight Run — Control Center</h1>
+      <h1>🌙 Midnight Run — Control Center <span class="ver">v2.2</span></h1>
       <p>One place: drag to set the order I work things in, preview each build, leave comments, and hit Deploy on the keepers. Live status is crawled straight from the site, so it always shows the real deployed state, not a saved guess.</p>
       <div class="schedrow">
         <label for="rt">Runs at</label>
@@ -92,7 +130,18 @@
       </div>
     </header>
     <div class="bar"><button class="btn" onclick="refresh()">Refresh + re-crawl</button><span class="savestate" id="save">loading…</span></div>
-    <div class="hint">Drag the ⠿ handle to reorder (saves instantly). Comments auto-save when you click out. Deploy = ship it.</div>
+
+    <div class="rtc" id="rtc">
+      <h2>⚡ Ready to Code</h2>
+      <div class="sub">Everything sent here with <b>Send to Midnight Run</b> from the All ToDos board. Drag the ⠿ handle to set the order they get built in, or use the ▲ ▼ buttons if dragging is being awkward. Hit <b>Code now</b> and they all go off and get coded in the background. You can close this page, the work carries on server side, and each one flips to Task complete when it lands.</div>
+      <div id="rtclist"></div>
+      <div class="runbar">
+        <button class="codenow" id="codenow" onclick="codeNow()">⚡ Code now</button>
+        <span class="runstat" id="runstat"></span>
+      </div>
+    </div>
+
+    <div class="hint">Below: everything already picked up. Drag or use ▲ ▼ here too, the numbering runs straight on from Ready to Code. Comments auto-save when you click out. Deploy = ship it.</div>
     <div class="env" id="env"></div>
     <div id="list"></div>
 
@@ -119,8 +168,29 @@ const MAP={
  51:{livefile:'maps.html', draft:'midnight-drafts/maps.html'},
  1:{livefile:'james-clear.html', kind:'liveonly'}
 };
-let sortable=null;
+let sortable=null, sortable2=null;
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+/* The drag handle, with up and down buttons underneath it as a fallback for
+   when dragging does not work (touch screens, trackpad trouble, long lists). */
+function handleHTML(n){
+  return '<div class="mv">'+
+    '<div class="grip" title="drag to reorder">⠿</div>'+
+    '<button class="mvb up" title="move up" aria-label="move up">▲</button>'+
+    '<button class="mvb dn" title="move down" aria-label="move down">▼</button>'+
+  '</div><div class="ord">'+n+'</div>';
+}
+/* Grey out the arrows that cannot go anywhere, in both lists. */
+function refreshArrows(){
+  ['rtclist','list'].forEach(id=>{
+    const host=document.getElementById(id); if(!host)return;
+    const cards=[...host.querySelectorAll('.card')];
+    cards.forEach((c,i)=>{
+      const u=c.querySelector('.mvb.up'), d=c.querySelector('.mvb.dn');
+      if(u)u.disabled=(i===0);
+      if(d)d.disabled=(i===cards.length-1);
+    });
+  });
+}
 function setSave(s){const e=document.getElementById('save');e.className='savestate '+(s==='Saving…'?'saving':s==='Saved'?'saved':s==='Error'?'err':'');e.textContent=s;}
 function to12(hhmm){if(!hhmm)return'';const[h,m]=hhmm.split(':').map(Number);const ap=h<12?'AM':'PM';return ((h%12)||12)+':'+String(m).padStart(2,'0')+' '+ap;}
 async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)show();}
@@ -157,13 +227,32 @@ async function markDeployed(id,card,btn){
   if(error){setSave('Error');return;}
   setSave('Saved');refresh();
 }
+/* One continuous run order across BOTH lists: Ready to Code first, then
+   everything already picked up. Otherwise the two lists would both start
+   numbering at 1 and fight over run_order. */
 async function saveOrder(){
-  const ids=[...document.querySelectorAll('#list .card')].map(c=>c.dataset.id);
-  document.querySelectorAll('#list .card .ord').forEach((el,i)=>el.textContent=i+1);
+  const cards=[...document.querySelectorAll('#rtclist .card'),...document.querySelectorAll('#list .card')];
+  const ids=cards.map(c=>c.dataset.id);
+  cards.forEach((c,i)=>{const o=c.querySelector('.ord');if(o)o.textContent=i+1;});
+  refreshArrows();
   const now=new Date().toISOString();setSave('Saving…');let err=false;
   for(let i=0;i<ids.length;i++){const {error}=await sb.from('session_todos').update({run_order:i+1,updated_at:now}).eq('id',ids[i]);if(error)err=true;}
   setSave(err?'Error':'Saved');
 }
+/* Arrow clicks: move the card one slot inside its own list, then save. */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('.mvb'); if(!b||b.disabled)return;
+  const card=b.closest('.card'); if(!card)return;
+  const host=card.parentElement;
+  if(b.classList.contains('up')){
+    const prev=card.previousElementSibling;
+    if(prev&&prev.classList.contains('card')) host.insertBefore(card,prev);
+  } else {
+    const next=card.nextElementSibling;
+    if(next&&next.classList.contains('card')) host.insertBefore(next,card);
+  }
+  saveOrder();
+});
 async function crawl(file){
   try{
     const r=await fetch(file+'?cb='+Date.now(),{cache:'no-store'});
@@ -204,20 +293,149 @@ function renderParked(parked){
     pl.appendChild(card);
   }
 }
+/* ============================ Ready to Code ============================ */
+/* Items sent over with "Send to Midnight Run" land here (lane=queue_run,
+   run_status=queued). "Code now" hands the whole list to the code-run edge
+   function, which works them server side and writes the result back to the
+   row, so each card can flip to "Task complete" on its own. */
+
+let poller=null;
+const READY_IDS=[];
+
+function codeState(r){
+  const c=r.code_status;
+  if(c==='complete') return {k:'complete', cls:'complete', label:'✅ Task complete'};
+  if(c==='error')    return {k:'failed',   cls:'failed',   label:'⚠ Failed'};
+  if(c==='running')  return {k:'coding',   cls:'coding',   label:'coding…'};
+  if(c==='requested')return {k:'coding',   cls:'requested',label:'queued to code'};
+  return {k:'ready', cls:'ready', label:'ready to code'};
+}
+
+function paintReadyCard(card,r){
+  const s=codeState(r);
+  card.className='card rtcitem'+(s.k==='coding'?' coding':s.k==='complete'?' complete':s.k==='failed'?' failed':'');
+  const pill=card.querySelector('[data-cstate]');
+  pill.className='pill '+s.cls;
+  pill.innerHTML=(s.k==='coding'?'<span class="spin"></span> ':'')+esc(s.label);
+  const extra=card.querySelector('[data-extra]');
+  extra.innerHTML='';
+  if(r.code_status==='complete'&&r.code_result){
+    const d=document.createElement('details');d.className='resbox';
+    d.innerHTML='<summary>View what was built</summary><pre>'+esc(r.code_result)+'</pre>';
+    extra.appendChild(d);
+  } else if(r.code_status==='error'&&r.code_error){
+    const e=document.createElement('div');e.className='errbox';e.textContent=r.code_error;
+    extra.appendChild(e);
+  }
+}
+
+function renderReady(ready){
+  const rl=document.getElementById('rtclist');rl.innerHTML='';
+  READY_IDS.length=0;
+  const btn=document.getElementById('codenow');
+  if(!ready.length){
+    rl.innerHTML='<div class="empty">Nothing waiting. Send a task over from the All ToDos board with ⚙️ Send to Midnight Run and it shows up here.</div>';
+    btn.disabled=true;setRunStat('');return;
+  }
+  for(let i=0;i<ready.length;i++){
+    const r=ready[i];READY_IDS.push(r.id);
+    const card=document.createElement('div');card.dataset.id=r.id;
+    card.innerHTML='<div class="head">'+handleHTML(r.run_order||i+1)+'<div class="mid">'+
+      '<div class="titlerow"><span class="txt">'+esc(r.txt)+'</span><span data-cstate></span></div>'+
+      '<div data-extra></div>'+
+      '</div></div>';
+    paintReadyCard(card,r);
+    rl.appendChild(card);
+  }
+  refreshArrows();
+  const pending=ready.filter(r=>r.code_status==='requested'||r.code_status==='running').length;
+  btn.disabled=pending>0;
+  if(pending>0){setRunStat('Coding '+pending+' task'+(pending===1?'':'s')+' in the background…');startPoll();}
+  else{
+    const done=ready.filter(r=>r.code_status==='complete').length;
+    const bad=ready.filter(r=>r.code_status==='error').length;
+    if(bad) setRunStat(done+' complete, '+bad+' failed','bad');
+    else if(done&&done===ready.length) setRunStat('All '+done+' task'+(done===1?'':'s')+' complete','done');
+    else if(done) setRunStat(done+' of '+ready.length+' complete','done');
+    else setRunStat('');
+  }
+}
+
+function setRunStat(msg,cls){
+  const e=document.getElementById('runstat');
+  e.className='runstat'+(cls?' '+cls:'');e.textContent=msg||'';
+}
+
+async function codeNow(){
+  // Read straight off the page so they go over in the order shown, and leave
+  // anything already built alone.
+  const ids=[...document.querySelectorAll('#rtclist .card')]
+    .filter(c=>!c.classList.contains('complete'))
+    .map(c=>Number(c.dataset.id));
+  const btn=document.getElementById('codenow');
+  if(!ids.length){setRunStat('Everything here is already built. Send over a new task to code.');return;}
+  btn.disabled=true;setRunStat('Sending '+ids.length+' task'+(ids.length===1?'':'s')+' off to be coded…');
+  try{
+    const {data,error}=await sb.functions.invoke('code-run',{body:{ids}});
+    if(error) throw error;
+    // Flip the cards straight away so there is no dead gap before the first poll.
+    ids.forEach(id=>{
+      const card=document.querySelector('#rtclist .card[data-id="'+id+'"]');
+      if(card)paintReadyCard(card,{code_status:'requested'});
+    });
+    setRunStat('Coding '+((data&&data.accepted)||ids.length)+' task'+(ids.length===1?'':'s')+' in the background…');
+    startPoll();
+  }catch(e){
+    btn.disabled=false;
+    setRunStat('Could not start: '+(e&&e.message?e.message:String(e)),'bad');
+  }
+}
+
+function startPoll(){
+  if(poller)return;
+  poller=setInterval(pollOnce,4000);
+  setTimeout(pollOnce,1200);
+}
+function stopPoll(){if(poller){clearInterval(poller);poller=null;}}
+
+async function pollOnce(){
+  if(!READY_IDS.length){stopPoll();return;}
+  const {data,error}=await sb.from('session_todos')
+    .select('id,txt,run_order,code_status,code_result,code_error')
+    .in('id',READY_IDS);
+  if(error)return;
+  let pending=0,done=0,bad=0;
+  for(const r of (data||[])){
+    const card=document.querySelector('#rtclist .card[data-id="'+r.id+'"]');
+    if(card)paintReadyCard(card,r);
+    if(r.code_status==='requested'||r.code_status==='running')pending++;
+    else if(r.code_status==='complete')done++;
+    else if(r.code_status==='error')bad++;
+  }
+  if(pending>0){setRunStat('Coding '+pending+' task'+(pending===1?'':'s')+' in the background…');return;}
+  stopPoll();
+  document.getElementById('codenow').disabled=false;
+  if(bad)setRunStat(done+' complete, '+bad+' failed','bad');
+  else if(done)setRunStat('All '+done+' task'+(done===1?'':'s')+' complete','done');
+  else setRunStat('');
+}
+
 async function refresh(){
   setSave('loading…');envLine();
   const {data,error}=await sb.from('session_todos').select('*').eq('lane','queue_run').is('deleted_at',null);
   if(error){setSave('Error');return;}
   const all=(data||[]).sort((a,b)=>(((a.run_status==='done')?1:0)-((b.run_status==='done')?1:0))||((a.run_order??999)-(b.run_order??999))||((a.position||0)-(b.position||0)));
   const parked=all.filter(r=>r.run_status==='parked');
-  const rows=all.filter(r=>r.run_status!=='parked');
+  const ready=all.filter(r=>r.run_status==='queued');
+  const rows=all.filter(r=>r.run_status!=='parked'&&r.run_status!=='queued');
   renderParked(parked);
+  renderReady(ready);
   const list=document.getElementById('list');list.innerHTML='';
   for(let i=0;i<rows.length;i++){
     const r=rows[i], cfg=MAP[r.id]||{}, st=r.run_status||'queued';
     const card=document.createElement('div');card.className='card'+(st==='done'?' shipped':'');card.dataset.id=r.id;
     const draftLink=cfg.draft?'<a class="prev" href="'+cfg.draft+'" target="_blank" rel="noopener">▶ Preview draft</a>':'';
-    card.innerHTML='<div class="head"><div class="grip" title="drag to reorder">⠿</div><div class="ord">'+(r.run_order||i+1)+'</div><div class="mid">'+
+    card.innerHTML='<div class="head">'+handleHTML(r.run_order||i+1)+'<div class="mid">'+
       '<div class="titlerow"><span class="txt">'+esc(r.txt)+'</span>'+
         '<span class="pill '+st+'">'+(st==='done'?'\u2713 shipped':'board: '+esc(st.replace("_"," ")))+'</span>'+
         '<span class="live chk" data-live>live: checking…</span></div>'+
@@ -245,8 +463,20 @@ async function refresh(){
       });
     } else {liveEl.className='live na';liveEl.textContent='live: n/a';}
   }
-  if(sortable){try{sortable.destroy();}catch(e){}}
-  sortable=new Sortable(list,{handle:'.grip',animation:140,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:saveOrder});
+  refreshArrows();
+  // Both lists drag, and both write into the same continuous run order.
+  // Wrapped: if the drag library fails to load, the page still works and the
+  // ▲ ▼ buttons carry the reordering on their own.
+  try{
+    const OPTS={handle:'.grip',animation:140,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:saveOrder};
+    if(sortable){try{sortable.destroy();}catch(e){}}
+    if(sortable2){try{sortable2.destroy();}catch(e){}}
+    sortable=new Sortable(document.getElementById('rtclist'),OPTS);
+    sortable2=new Sortable(list,OPTS);
+  }catch(e){
+    document.querySelectorAll('.grip').forEach(g=>{g.style.cursor='default';g.title='drag unavailable, use the arrows';});
+    if(window.console)console.log('drag library unavailable, arrows still work',e);
+  }
   setSave('Saved');
 }
 boot();
