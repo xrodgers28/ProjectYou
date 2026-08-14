@@ -16,6 +16,11 @@ window.NAV_CONFIG = {
   "Quantified Self": [
     { "label": "QS Dashboard", "href": "qs-dashboard.html" }
   ],
+  "Editors": [
+    { "label": "Daily<br>Habits", "href": "daily-template.html" },
+    { "label": "Midnight<br>Run", "href": "midnight-run-v2.html" },
+    { "label": "Style<br>Guide", "href": "style-guide.html" }
+  ],
   "Operating System": [
     { "label": "Components", "href": "build.html" },
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
