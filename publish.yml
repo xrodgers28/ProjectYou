@@ -26,14 +26,14 @@ jobs:
               if(!r || !r.path || !r.gzb64) continue;
               if(r.path.includes("/") || r.path.includes("..") || r.path.startsWith("__")) continue;
               if(!/^[A-Za-z0-9._-]+$/.test(r.path)) continue;
-              // --- byte-integrity check: the page must decompress cleanly and look like HTML ---
-              let html;
-              try { html = zlib.gunzipSync(Buffer.from(r.gzb64,"base64")).toString("utf8"); }
+              // --- byte-integrity check: every page must decompress cleanly and be non-empty ---
+              let content;
+              try { content = zlib.gunzipSync(Buffer.from(r.gzb64,"base64")).toString("utf8"); }
               catch(e){ bad.push(r.path+" (gunzip failed: "+e.message+")"); continue; }
-              if(!html || html.length < 20 || html.indexOf("<") === -1){
-                bad.push(r.path+" (decoded content is empty or not HTML)"); continue;
-              }
-              good.push({path:r.path, html});
+              if(!content || content.length < 20){ bad.push(r.path+" (empty or too short after decompress)"); continue; }
+              // HTML files must actually contain tags; .js/.css/other files are exempt
+              if(r.path.endsWith(".html") && content.indexOf("<") === -1){ bad.push(r.path+" (html file has no tags)"); continue; }
+              good.push({path:r.path, content});
             }
             if(bad.length){
               console.error("INTEGRITY CHECK FAILED - nothing was published. Bad pages:");
@@ -42,8 +42,8 @@ jobs:
             }
             let n=0;
             for(const g of good){
-              fs.writeFileSync(g.path, g.html);
-              console.log("wrote", g.path, g.html.length);
+              fs.writeFileSync(g.path, g.content);
+              console.log("wrote", g.path, g.content.length);
               n++;
             }
             console.log("total files written:", n);
