@@ -7,8 +7,8 @@
 window.NAV_CONFIG = {
   "To Do List": [
     { "label": "Todays<br>Tasks", "href": "index.html" },
-    { "label": "All<br>ToDos", "href": "all-todos.html" },
-    { "label": "Staging<br>Area", "href": "staging-area.html" }
+    { "label": "Staging<br>Area", "href": "staging-area.html" },
+    { "label": "All<br>ToDos", "href": "all-todos.html" }
   ],
   "Habit Modules": [
     { "label": "Cue Cards", "href": "habit-modules.html" }
