@@ -29,7 +29,8 @@ window.NAV_CONFIG = {
       { "label": "Data Flow Diagram", "href": "dfd.html" },
       { "label": "Knowledge Graph", "href": "blueprint.html" },
       { "label": "Interactive Knowledge Graph", "href": "knowledge-graph.html" },
-      { "label": "Architecture Map", "href": "architecture-map.html" }
+      { "label": "Architecture Map", "href": "architecture-map.html" },
+      { "label": "Data Flow Map", "href": "data-flow-map.html" }
     ] },
     { "label": "Mission<br>Control", "href": "mission.html" },
     { "label": "Docs<br>Library", "href": "library.html" }
