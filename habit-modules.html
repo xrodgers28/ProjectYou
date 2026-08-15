@@ -65,7 +65,27 @@
   .add{border:2px dashed #cdd5e2;border-radius:16px;min-height:206px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9aa6b4;gap:8px}
   .add .plus{font-size:30px;font-weight:300}.add .t{font-size:12px;font-weight:700;text-align:center;padding:0 14px}
   @media(max-width:640px){.board{grid-template-columns:1fr}.pagehead h1{font-size:26px}}
+
+  /* v3.1 — wheel wiring */
+  .chk{cursor:pointer;transition:transform .12s,border-color .12s;z-index:2}
+  .chk:hover{transform:scale(1.15);border-color:var(--acc)}
+  .chk.busy{opacity:.45}
+  .mins{position:absolute;top:16px;left:14px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#9aa6b4;text-transform:uppercase}
+  .card.done .mins{color:#8a9aa4}
+  .wheelnote{margin:14px auto 0;font-size:12px;color:#8a93a0;text-align:center}
+  .wheelnote a{color:var(--accent);font-weight:800;text-decoration:none}
+  .wheelnote a:hover{text-decoration:underline}
+  .gate{max-width:340px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(31,42,68,.07)}
+  .gate h2{font-size:17px;margin-bottom:4px}
+  .gate p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .gate input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:9px;font-family:inherit}
+  .gate button{width:100%;padding:10px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer}
+  .gate .err{color:#c0453b;font-size:12px;margin-top:8px;min-height:16px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:#1f2a44;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(31,42,68,.28);opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
+  .toast.on{opacity:1}
+  .hidden{display:none!important}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
   <div class="pynav">
@@ -74,7 +94,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v3.0</span>
+    <span class="pn-ver">v3.1</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -87,50 +107,168 @@
         <span class="streak">&#128293; <span class="n" id="streakn">0 day streak</span> <span class="sub">&middot; in a row</span></span></div>
     </div>
     <div class="board" id="board"></div>
+    <div class="wheelnote">Ticking a card logs it to the <a href="index.html#wheel">Time Bandit Wheel</a> &mdash; 10 min unless you logged a different time inside the card.</div>
   </div>
 
+  <div class="gate hidden" id="gate">
+    <h2>Sign in</h2>
+    <p>Your cue card ticks write straight to the wheel, so this page needs your account.</p>
+    <input id="email" type="email" placeholder="Email" autocomplete="username">
+    <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button onclick="signIn()">Sign in</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
 <script>
+/* ===== Cue Cards board v3.1 — every card wired to the Time Bandit Wheel =====
+   Tick a card  ->  today's habit row in `todos` is created-or-updated with
+   done / done_at / actual_minutes, which is exactly what the wheel's outer
+   ring draws. Default 10 min unless the card's own last page logged a time. */
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const DEFAULT_MIN=10;
+
 const IC={
  ai:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M27 5 L13 27 h9 l-2 16 16-24 h-10 z"/></svg>',
  atom:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.6"><circle cx="24" cy="24" r="3.4" fill="currentColor" stroke="none"/><ellipse cx="24" cy="24" rx="21" ry="8"/><ellipse cx="24" cy="24" rx="21" ry="8" transform="rotate(60 24 24)"/><ellipse cx="24" cy="24" rx="21" ry="8" transform="rotate(120 24 24)"/></svg>',
  speech:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M9 10 h30 a3 3 0 0 1 3 3 v15 a3 3 0 0 1 -3 3 H23 l-8 6 v-6 H9 a3 3 0 0 1 -3 -3 V13 a3 3 0 0 1 3 -3 z"/></svg>',
  compass:'<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><circle cx="24" cy="24" r="18"/><path d="M32 16 L27 27 L16 32 L21 21 Z" fill="currentColor" stroke="none"/><circle cx="24" cy="24" r="2.4" fill="#fff" stroke="none"/></svg>'
 };
+/* habit = the exact task name in `todos`. These are the names the wheel,
+   the CrushingIt board and each module page all match on. Do not rename
+   one without renaming it in the module page too. */
 const MODS=[
- {id:'ai',      name:"AI Insights",          href:"ai.html",          acc:"#3f6f8f", icon:'ai',      kick:"Today's AI insight",   ds:"A fresh daily blend of AI insights to learn from."},
- {id:'atomic',  name:"Atomic Habits",        href:"james-clear.html", acc:"#3f8f7a", icon:'atom',    kick:"Today's 3-2-1",        ds:"Two ideas, a quote, and a question."},
- {id:'twk',     name:"Things Worth Knowing", href:"quotes.html",      acc:"#7a4f9c", icon:'speech',  kick:"Today's three",        ds:"Things worth knowing, worth keeping."},
- {id:'compass', name:"Compass",              href:"compass.html",     acc:"#b8962f", icon:'compass', kick:"One question, answered", ds:"A guided daily reflection to point your day."}
+ {id:'ai',      name:"AI Insights",          href:"ai.html",          acc:"#3f6f8f", icon:'ai',      kick:"Today's AI insight",     ds:"A fresh daily blend of AI insights to learn from.", habit:"AI (Learning/Mental Fitness)", est:10, pos:7},
+ {id:'atomic',  name:"Atomic Habits",        href:"james-clear.html", acc:"#3f8f7a", icon:'atom',    kick:"Today's 3-2-1",          ds:"Two ideas, a quote, and a question.",              habit:"Atomic Habits (3-2-1)",       est:10, pos:11},
+ {id:'twk',     name:"Things Worth Knowing", href:"quotes.html",      acc:"#7a4f9c", icon:'speech',  kick:"Today's three",          ds:"Things worth knowing, worth keeping.",             habit:"Clever Phrases",              est:3,  pos:8},
+ {id:'compass', name:"Compass",              href:"compass.html",     acc:"#b8962f", icon:'compass', kick:"One question, answered", ds:"A guided daily reflection to point your day.",     habit:"Compass",                     est:10, pos:10}
 ];
+const BY_HABIT={}; MODS.forEach(function(m){BY_HABIT[m.habit]=m;});
+
+let ROWS={};            /* habit name -> todos row */
+let signedIn=false;
+
 function todayKey(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2400);}
+
+/* localStorage stays on as the streak ledger + offline mirror */
 function getHist(){try{return JSON.parse(localStorage.getItem('pb_hist')||'{}');}catch(e){return {};}}
 function saveHist(h){try{localStorage.setItem('pb_hist',JSON.stringify(h));}catch(e){}}
-function doneSet(){var h=getHist();return new Set(h[todayKey()]||[]);}
-function markDone(id){var h=getHist(),k=todayKey();var s=new Set(h[k]||[]);s.add(id);h[k]=Array.from(s);saveHist(h);}
+function setHist(id,on){var h=getHist(),k=todayKey();var s=new Set(h[k]||[]);if(on)s.add(id);else s.delete(id);h[k]=Array.from(s);saveHist(h);}
 function streakDays(){var h=getHist();var d=new Date();var n=0;for(var i=0;i<400;i++){var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');var c=(h[key]||[]).length;if(i===0){if(c>0)n++;}else{if(c>0)n++;else break;}d.setDate(d.getDate()-1);}return n;}
-// mark completion arriving from a module (?done=<id>)
-var qp=new URLSearchParams(location.search);if(qp.get('done')){markDone(qp.get('done'));history.replaceState(null,'',location.pathname);}
-// greeting
-(function(){var h=new Date().getHours();var g=h<12?'Good morning':h<18?'Good afternoon':'Good evening';var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];document.getElementById('greet').textContent=days[new Date().getDay()]+' · '+g+', Scott';})();
+
+/* a card counts as done when today's habit row says so */
+function isDone(m){var r=ROWS[m.habit];return !!(r&&r.done&&r.for_date===todayKey());}
+function minsOf(m){var r=ROWS[m.habit];return (r&&r.for_date===todayKey()&&r.actual_minutes)?r.actual_minutes:null;}
+
+async function loadRows(){
+  var names=MODS.map(function(m){return m.habit;});
+  var res=await sb.from('todos').select('id,task,done,done_at,actual_minutes,for_date,est_minutes').eq('is_habit',true).in('task',names);
+  ROWS={};
+  (res.data||[]).forEach(function(r){
+    var prev=ROWS[r.task];
+    /* if the same habit somehow has more than one row, keep the freshest */
+    if(!prev||String(r.for_date||'')>String(prev.for_date||''))ROWS[r.task]=r;
+  });
+  /* keep the streak ledger in step with the database */
+  MODS.forEach(function(m){setHist(m.id,isDone(m));});
+  render();
+}
+
+/* create today's row if the habit has none — this is the bug that used to
+   swallow completions silently (the module pages only ever UPDATE) */
+async function ensureRow(m){
+  if(ROWS[m.habit])return ROWS[m.habit];
+  var ins=await sb.from('todos').insert({
+    task:m.habit, section:'Core To-Dos', subsection:'HABIT BANDIT', category:'HABIT BANDIT',
+    is_habit:true, bucket:'today', est_minutes:m.est, position:m.pos,
+    for_date:todayKey(), done:false, status:'todo'
+  }).select().single();
+  if(ins.error){toast('Could not create the habit row: '+ins.error.message);return null;}
+  ROWS[m.habit]=ins.data;
+  return ins.data;
+}
+
+async function toggle(m,el){
+  if(!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
+  if(el)el.classList.add('busy');
+  var want=!isDone(m);
+  var row=await ensureRow(m);
+  if(!row){if(el)el.classList.remove('busy');return;}
+  var now=new Date().toISOString(), today=todayKey();
+  var upd;
+  if(want){
+    /* 10 min default — unless the card's own last page already logged a time today */
+    var mins=(row.for_date===today&&row.actual_minutes)?row.actual_minutes:DEFAULT_MIN;
+    upd={done:true,status:'done',done_at:now,actual_minutes:mins,for_date:today,updated_at:now};
+  } else {
+    upd={done:false,status:'todo',done_at:null,actual_minutes:null,updated_at:now};
+  }
+  var res=await sb.from('todos').update(upd).eq('id',row.id);
+  if(el)el.classList.remove('busy');
+  if(res.error){toast('Did not save: '+res.error.message);return;}
+  Object.keys(upd).forEach(function(k){row[k]=upd[k];});
+  setHist(m.id,want);
+  render();
+  toast(want?(m.name+' \u2192 wheel, '+upd.actual_minutes+' min \u2713'):(m.name+' cleared from the wheel'));
+}
+
 function render(){
-  var done=doneSet();
   document.getElementById('board').innerHTML = MODS.map(function(m){
-    var isDone=done.has(m.id);
-    return '<a class="card'+(isDone?' done':'')+'" style="--acc:'+m.acc+'" href="'+m.href+'">'+
-      '<span class="chk'+(isDone?' done':'')+'"></span>'+
+    var done=isDone(m), mins=minsOf(m);
+    return '<a class="card'+(done?' done':'')+'" style="--acc:'+m.acc+'" href="'+m.href+'">'+
+      '<span class="chk'+(done?' done':'')+'" data-id="'+m.id+'" role="button" tabindex="0" title="'+(done?'Untick — removes it from the wheel':'Tick — sends it to the wheel')+'"></span>'+
+      (done&&mins?'<span class="mins">'+mins+' min</span>':'')+
       '<span class="badge">'+IC[m.icon]+'</span>'+
       '<div class="kick">'+m.kick+'</div><div class="nm">'+m.name+'</div>'+
       '<div class="ds">'+m.ds+'</div>'+
-      '<div class="play">'+(isDone?'Done ✓':'tap to play →')+'</div></a>';
+      '<div class="play">'+(done?'On the wheel \u2713':'tap to play \u2192')+'</div></a>';
   }).join('') +
   '<div class="add"><span class="plus">+</span><span class="t">More habit modules land here</span></div>';
-  var n=done.size;
+
+  document.querySelectorAll('.chk').forEach(function(el){
+    var m=MODS.find(function(x){return x.id===el.dataset.id;});
+    el.onclick=function(e){e.preventDefault();e.stopPropagation();toggle(m,el);};
+    el.onkeydown=function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();e.stopPropagation();toggle(m,el);}};
+  });
+
+  var n=MODS.filter(isDone).length;
   document.getElementById('progbar').style.width=(n/MODS.length*100)+'%';
   document.getElementById('progtxt').textContent=n+'/'+MODS.length+' today';
-  var st=streakDays();
-  document.getElementById('streakn').textContent=st+(st===1?' day streak':' day streak');
+  document.getElementById('streakn').textContent=streakDays()+' day streak';
 }
-render();
+
+/* a module page can still bounce back with ?done=<id> */
+async function handleReturn(){
+  var qp=new URLSearchParams(location.search);
+  var id=qp.get('done');
+  if(!id)return;
+  history.replaceState(null,'',location.pathname);
+  var m=MODS.find(function(x){return x.id===id;});
+  if(m&&!isDone(m))await toggle(m,null);
+}
+
+(function(){var h=new Date().getHours();var g=h<12?'Good morning':h<18?'Good afternoon':'Good evening';var days=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];document.getElementById('greet').textContent=days[new Date().getDay()]+' \u00b7 '+g+', Scott';})();
+
+async function signIn(){
+  var email=document.getElementById('email').value.trim(), pass=document.getElementById('pass').value;
+  var r=await sb.auth.signInWithPassword({email:email,password:pass});
+  if(r.error){document.getElementById('gateErr').textContent=r.error.message;return;}
+  document.getElementById('gate').classList.add('hidden');
+  signedIn=true; await loadRows(); await handleReturn();
+}
+
+async function boot(){
+  render();  /* paint immediately, then reconcile with the database */
+  var s=await sb.auth.getSession();
+  if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadRows();await handleReturn();}
+  else{document.getElementById('gate').classList.remove('hidden');}
+}
+boot();
+/* re-sync when you come back from a module page */
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&signedIn)loadRows();});
 </script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script>
 </body>
