@@ -1,0 +1,481 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Data Flow Map · Project YOU OS</title>
+<style>
+*{box-sizing:border-box}
+
+.mapsub{display:flex;flex-wrap:wrap;align-items:center;gap:6px;max-width:1180px;margin:12px auto 2px;padding:8px 12px;background:#fff;border:1px solid #e3e7ee;border-radius:12px;box-shadow:0 4px 14px rgba(31,42,68,.05);font-family:Arial,Helvetica,sans-serif}
+.mapsub-lbl{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#3f6f8f;margin-right:2px;display:inline-flex;align-items:center;gap:5px}
+.mapsub a{font-size:12.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:5px 10px;border-radius:8px;white-space:nowrap}
+.mapsub a:hover{background:#eef2f8;color:#3f6f8f}
+.mapsub a.on{background:#3f6f8f;color:#fff}
+.mapsub .mapsub-ver{margin-left:auto;font-size:10.5px;font-weight:800;color:#9aa6b4;font-variant-numeric:tabular-nums;padding-left:6px}
+.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:2px;margin-bottom:2px}
+.secbar h1{font-size:23px;color:var(--accent,#3f6f8f);margin:0}
+.secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line,#e3e7ee);border-radius:999px;padding:2px 8px}
+.secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}
+body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45;margin:0}
+.wrap{max-width:1440px;margin:0 auto;padding:14px 26px 70px}
+p.sub{color:var(--muted);font-size:15px;margin:8px 0 18px;max-width:760px}
+
+
+:root{
+  --ink:#1f2a44; --muted:#5b6472; --faint:#9aa6b4;
+  --line:#e3e7ee; --bg:#eef1f6; --card:#ffffff;
+  --blue:#3f6f8f; --blue-lite:#e8f0f6;
+  --green:#1e8e5a; --green-lite:#e6f4ee;
+  --amber:#c68a2e; --amber-lite:#fbf1de;
+  --purple:#6b5b95; --purple-lite:#efecf6;
+  --red:#b4452f; --red-lite:#fbeae6;
+}
+*{box-sizing:border-box}
+
+.lede{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:16px 18px;margin:0 0 18px;font-size:14.5px;color:#33414f}
+.lede b{color:var(--ink)}
+.lede p{margin:0 0 9px} .lede p:last-child{margin:0}
+
+/* flow chips */
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 14px}
+.chips .lbl{font-size:12px;color:var(--faint);text-transform:uppercase;letter-spacing:.6px;margin-right:4px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--muted);
+  border-radius:999px;padding:6px 13px;font-size:13px;cursor:pointer;transition:.15s}
+.chip:hover{border-color:#b9c6d3;color:var(--ink)}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip[data-flow="cap"].on{background:var(--blue);border-color:var(--blue)}
+.chip[data-flow="str"].on{background:var(--green);border-color:var(--green)}
+.chip[data-flow="brd"].on{background:var(--purple);border-color:var(--purple)}
+.chip[data-flow="pub"].on{background:var(--amber);border-color:var(--amber)}
+
+/* canvas */
+.scroller{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  overflow-x:auto;overflow-y:hidden;padding:0}
+.canvas{position:relative;width:1420px;height:1000px}
+svg.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+svg.labels{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
+.col-band{position:absolute;top:8px;font-size:11px;letter-spacing:1.2px;
+  text-transform:uppercase;color:#b3bfcb;font-weight:600}
+
+.node{position:absolute;width:196px;background:var(--card);border:1px solid var(--line);
+  border-left:4px solid var(--faint);border-radius:9px;padding:9px 11px;cursor:pointer;
+  box-shadow:0 1px 2px rgba(31,43,54,.05);transition:.15s}
+.node:hover{box-shadow:0 4px 14px rgba(31,43,54,.13);transform:translateY(-1px)}
+.node .nt{font-size:13.5px;font-weight:600;line-height:1.25}
+.node .ns{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.35}
+.node .tag{display:inline-block;font-size:10px;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--faint);margin-top:5px}
+.node.sel{border-color:var(--ink);box-shadow:0 0 0 3px rgba(31,43,54,.10)}
+.node.dim,.edge.dim,.elabel.dim{opacity:.13}
+.node.wide{width:236px}
+
+.k-ext{border-left-color:#8a97a4}
+.k-fn{border-left-color:var(--blue)}
+.k-task{border-left-color:var(--green)}
+.k-tbl{border-left-color:var(--purple)}
+.k-page{border-left-color:#3f8f7a}
+.k-gh{border-left-color:var(--amber)}
+.k-warn{border-left-color:var(--red);background:var(--red-lite)}
+
+.edge{fill:none;stroke:#c3cedb;stroke-width:1.6}
+.edge.f-cap{stroke:#7ba4be} .edge.f-str{stroke:#5fae8a}
+.edge.f-brd{stroke:#9d92bd} .edge.f-pub{stroke:#d9b26a}
+.edge.dash{stroke-dasharray:5 4}
+.elabel{font-size:10.5px;fill:#7b8794;paint-order:stroke;stroke:#fff;stroke-width:3.5px;
+  stroke-linejoin:round;font-family:inherit}
+
+/* detail */
+.detail{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:16px 18px;margin:14px 0 0;min-height:96px}
+.detail h3{margin:0 0 3px;font-size:16px}
+.detail .dk{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);margin-bottom:8px}
+.detail ul{margin:0;padding-left:18px}
+.detail li{margin:0 0 5px;font-size:13.5px;color:#3a4855}
+.detail code{background:#eef3f7;border-radius:4px;padding:1px 5px;font-size:12.5px;color:#2c4a5e}
+.detail .empty{color:var(--faint);font-size:13.5px}
+
+/* lower cards */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+@media(max-width:860px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.card h3{margin:0 0 10px;font-size:15px}
+.card table{width:100%;border-collapse:collapse;font-size:13px}
+.card th{text-align:left;font-weight:600;color:var(--faint);font-size:11px;
+  text-transform:uppercase;letter-spacing:.5px;padding:0 8px 6px 0;border-bottom:1px solid var(--line)}
+.card td{padding:7px 8px 7px 0;border-bottom:1px solid #eef2f6;vertical-align:top;color:#3a4855}
+.card tr:last-child td{border-bottom:0}
+.card code{background:#eef3f7;border-radius:4px;padding:1px 5px;font-size:12px;color:#2c4a5e}
+.warn{border-left:4px solid var(--red)}
+.warn li{margin-bottom:8px;font-size:13.5px;color:#3a4855}
+.warn b{color:var(--red)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:10px 2px 0;font-size:12px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:6px}
+.swatch{width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.08)}
+
+</style>
+<style id="pynav-css">
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-solo{font-weight:800;color:#3f6f8f;text-decoration:none;font-size:12px;padding:4px 8px;border-radius:8px;margin-left:5px;border-left:1px solid #edf0f4;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-solo:hover{background:#eef2f8}
+.pn-solo.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+</style>
+</head><body>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.5</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+  
+<div class="mapsub"><span class="mapsub-lbl">🗺 Maps</span><a href="maps.html">Overview</a><a href="dfd.html">Data Flow Diagram</a><a href="blueprint.html">Knowledge Graph</a><a href="knowledge-graph.html">Interactive Graph</a><a href="architecture-map.html">Architecture Map</a><a href="data-flow-map.html" class="on">Data Flow Map</a><span class="mapsub-ver">Maps v1.2</span></div>
+<div class="wrap">
+  <div class="secbar"><h1>Project YOU OS · Data Flow Map</h1><span class="ver">v1.0</span><span class="date"></span></div>
+  <p class="sub">How Drafts, Strava, Supabase and GitHub actually connect. Every table, function and scheduled task on this page was checked against the live database on Aug 15, 2026. Click any box for what it holds and what breaks it.</p>
+
+<div class="lede">
+  <p><b>The one-line version.</b> Supabase is the whole system. Everything else is either a way of getting data <i>into</i> it (Drafts, Strava, the browser) or a way of getting code <i>out</i> of it (GitHub).</p>
+  <p><b>Data in.</b> Drafts and Strava never talk to each other and never touch GitHub. Each one lands rows in Postgres tables, and the web pages simply read those tables. Drafts goes through a review gate first; Strava files itself straight in as already-completed.</p>
+  <p><b>Code out.</b> The pages themselves live as gzipped blobs in a Supabase table. Writing one fires a database trigger that pokes GitHub, an Action decompresses it into the repo, and GitHub Pages is what your browser actually renders. Supabase stores the site, GitHub serves it.</p>
+</div>
+
+<div class="chips">
+  <span class="lbl">Trace a flow</span>
+  <button class="chip on" data-flow="all">Everything</button>
+  <button class="chip" data-flow="cap">Drafts capture</button>
+  <button class="chip" data-flow="str">Strava</button>
+  <button class="chip" data-flow="brd">Board &amp; habits</button>
+  <button class="chip" data-flow="pub">Publish to GitHub</button>
+</div>
+
+<div class="scroller">
+  <div class="canvas" id="canvas">
+    <svg class="edges" id="svg" viewBox="0 0 1420 1000" preserveAspectRatio="none"></svg>
+    <svg class="labels" id="svgTop" viewBox="0 0 1420 1000" preserveAspectRatio="none"></svg>
+    <div class="col-band" style="left:34px">Outside world</div>
+    <div class="col-band" style="left:300px">Entry point</div>
+    <div class="col-band" style="left:600px">Supabase Postgres</div>
+    <div class="col-band" style="left:900px">What you look at</div>
+    <div class="col-band" style="left:1180px">Hosting</div>
+  </div>
+</div>
+<div class="legend">
+  <span><i class="swatch" style="background:#8a97a4"></i> outside service</span>
+  <span><i class="swatch" style="background:#3f6f8f"></i> edge function</span>
+  <span><i class="swatch" style="background:#1e8e5a"></i> scheduled task</span>
+  <span><i class="swatch" style="background:#6b5b95"></i> database table</span>
+  <span><i class="swatch" style="background:#3f8f7a"></i> live page</span>
+  <span><i class="swatch" style="background:#c68a2e"></i> GitHub</span>
+  <span style="color:var(--faint)">dashed line = fires automatically, no one clicks anything</span>
+  <span style="color:var(--faint)">the long line back to the left is GitHub Pages rendering in your browser, closing the loop</span>
+</div>
+
+<div class="detail" id="detail">
+  <div class="empty">Click any box on the map for what it holds, what writes to it, and what breaks.</div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <h3>Who writes to what</h3>
+    <table>
+      <tr><th>Writer</th><th>Lands in</th><th>When</th></tr>
+      <tr><td>Drafts &rarr; <code>capture</code> fn</td><td><code>inbox</code> + <code>todos</code></td><td>Instantly, on the action</td></tr>
+      <tr><td>Drafts sweep task</td><td><code>inbox</code> + <code>todos</code> + <code>board_meta</code></td><td>Every 2h, 7am&ndash;11pm</td></tr>
+      <tr><td>Strava sync task</td><td><code>todos</code> + <code>qs_log</code></td><td>Every 2h, 7am&ndash;9pm</td></tr>
+      <tr><td>You, in the browser</td><td><code>todos</code>, <code>session_todos</code>, module tables</td><td>Every tick and drag</td></tr>
+      <tr><td>Postgres triggers</td><td><code>qs_log</code>, <code>connections</code>, <code>daily_completed</code></td><td>Automatic, on completion</td></tr>
+      <tr><td>Claude, via MCP</td><td><code>pages_upload</code> &rarr; <code>pages</code></td><td>Every publish</td></tr>
+      <tr><td>GitHub Action</td><td>the repo, then Pages</td><td>~20s after a publish</td></tr>
+    </table>
+  </div>
+
+  <div class="card warn">
+    <h3>Five things that have actually bitten</h3>
+    <ul class="warn" style="padding-left:18px;margin:0">
+      <li><b>Grants are not policies.</b> <code>service_role</code> once had no write access to any table, so the capture function returned HTTP 200 while storing nothing. Always write one real row as the real role.</li>
+      <li><b>Supabase will not render HTML.</b> Anything on <code>*.supabase.co</code> is served as <code>text/plain</code> on purpose. That is why GitHub Pages, not the <code>site</code> function, is the live host. A custom domain is the only fix.</li>
+      <li><b>The local deploy folder goes stale.</b> GitHub is canonical. Editing a local copy and publishing it has silently wiped live sections before.</li>
+      <li><b>The wheel only reads <code>todos</code>.</b> Strava wrote to <code>qs_log</code> for days and nothing appeared, because nothing bridged the two tables.</li>
+      <li><b>Scheduled sessions have no Supabase connector.</b> That is why the Midnight Run writes nothing overnight, and why it cannot even report its own failure.</li>
+    </ul>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <h3>The four named pieces, in one sentence each</h3>
+  <table>
+    <tr><th style="width:120px">Piece</th><th>Its actual job</th></tr>
+    <tr><td><b>Drafts</b></td><td>The mouth. You dictate, it posts the raw words to a Supabase function or waits for the 2-hourly sweep. It never sees GitHub and never writes a finished to-do, only a staged one.</td></tr>
+    <tr><td><b>Strava</b></td><td>A sensor. A scheduled task pulls your activities and writes them into <code>todos</code> as already-completed rows so the Time Bandit Wheel can draw them. Read-only from Strava's side.</td></tr>
+    <tr><td><b>Supabase</b></td><td>The whole system: the database every page reads, the auth, the functions that receive captures, and the store the site's own HTML lives in.</td></tr>
+    <tr><td><b>GitHub</b></td><td>The printing press. It holds no data of its own. A database trigger pokes it, an Action unzips the pages out of Supabase into the repo, and GitHub Pages serves them to your browser.</td></tr>
+  </table>
+</div>
+</div>
+<script>
+const NODES = [
+  // ---- outside world ----
+  {id:'drafts', x:36, y:60, k:'k-ext', t:'Drafts app', s:'iPhone, Mac, Apple Watch', tag:'outside service', flows:['cap'],
+   d:['You dictate a rough note. The Watch app can only <b>capture</b>, it cannot run the action, so a Watch note waits for the phone or the sweep.',
+      'The action <code>Sweep to ProjectYou</code> POSTs to the capture function with an <code>x-capture-secret</code> header.',
+      'Nothing here is a to-do yet. The raw words are kept verbatim so the Staging Area can show them back to you.']},
+  {id:'strava', x:36, y:270, k:'k-ext', t:'Strava', s:'walks, rides, runs', tag:'outside service', flows:['str'],
+   d:['Read-only. Strava never receives anything from the system.',
+      'Reached through the Strava connector, not a webhook, so activities arrive on the sync task\'s schedule rather than the moment you finish.',
+      '<code>start_local</code> is already New York time. Append the <code>-04:00</code> offset before casting or the wheel arc lands hours off.']},
+  {id:'you', x:36, y:470, k:'k-ext', t:'You, in a browser', s:'ticking, dragging, typing', tag:'outside service', flows:['brd'],
+   d:['Every page is a live Supabase web app. It signs in with your email and talks straight to Postgres from the browser.',
+      'This is the highest-volume writer in the whole system, by a distance.',
+      'Pages import supabase-js from a CDN, which is why none of them work inside a Claude preview pane. Use the real URL.']},
+  {id:'claude', x:36, y:690, k:'k-ext', t:'Claude / Cowork', s:'this session', tag:'outside service', flows:['pub'],
+   d:['Direct network to supabase.co is firewalled from the session, so every write goes through the Supabase MCP connector.',
+      'Push to GitHub is also blocked. The <code>pages</code> table is the only write path to the repo.',
+      'An interactive session has the connector. A scheduled one does not, which is the root of the Midnight Run problem.']},
+
+  // ---- entry points ----
+  {id:'captureFn', x:300, y:36, k:'k-fn', t:'capture', s:'edge function, v7', tag:'instant push', flows:['cap'],
+   d:['Public function, no JWT. Authenticates on a shared secret header.',
+      'Classifies the note with Claude, then parks <b>everything</b> as a staged row. It no longer files straight to a board.',
+      'Returns <code>{staged, proposed, confidence, est_minutes}</code>.',
+      '<b>Open bug:</b> it still returns <code>ok:true</code> when <code>staged=false</code>, so Drafts can report success on a failed store.']},
+  {id:'sweepTask', x:300, y:150, k:'k-task', t:'Drafts sweep', s:'every 2h, 7am to 11pm', tag:'scheduled task', flows:['cap'],
+   d:['The backstop for anything the instant push missed. Needs the desktop awake.',
+      'Reads a <b>watermark</b> in <code>board_meta</code> and processes everything created after it, oldest first. It only advances the watermark once every draft is captured and archived.',
+      'The old "today since 3am" window stranded 37 drafts between Aug 10 and 14. The watermark exists to make that impossible.',
+      'It must write a clean headline, a short description, a confidence of <code>lo</code>/<code>mid</code>/<code>hi</code>, and an estimate on every row.']},
+  {id:'stravaTask', x:300, y:270, k:'k-task', t:'Strava sync', s:'every 2h, 7am to 9pm', tag:'scheduled task', flows:['str'],
+   d:['Lists recent activities, skips any whose <code>link</code> is already in <code>todos</code>. The link is the dedupe key.',
+      'Inserts each new one as an already-completed row, then upserts one aggregate <code>qs_log</code> row per affected date.',
+      'All activity types count, any length. That was your call.']},
+  {id:'pageJs', x:300, y:470, k:'k-fn', t:'Page JavaScript', s:'supabase-js in the browser', tag:'direct to postgres', flows:['brd'],
+   d:['No API layer. Each page reads and writes its own tables under row-level security keyed to your email.',
+      'Ticking a cue card writes <code>done</code>, <code>done_at</code> and <code>actual_minutes</code> (default 10) onto a <code>todos</code> habit row.',
+      'The module pages used to update by name only, so if no row existed the write did nothing and still showed a success toast. They now create the row first.']},
+  {id:'mcp', x:300, y:690, k:'k-fn', t:'Supabase MCP', s:'execute_sql', tag:'the only write path', flows:['pub'],
+   d:['Pages are pasted in as gzip + base64 in <b>600-character chunks</b>, each guarded by an md5 of the prior state.',
+      'At 1200 characters, 1 chunk in 9 corrupted. At 600, seventeen straight chunks landed clean.',
+      'The guard proves the previous state, not the chunk you just pasted, so verify length and md5 after every single chunk.']},
+  {id:'midnight', x:300, y:800, k:'k-warn', t:'Midnight Run', s:'4am daily', tag:'currently silent', flows:['pub','brd'],
+   d:['Fires a fresh headless session to work the queue overnight.',
+      '<b>It writes nothing.</b> Scheduled sessions do not inherit the interactively-authenticated Supabase connector, so it cannot reach the board, and cannot even push a failure notice, because that needed the connector too.',
+      'The working pattern today is asking an interactive session to run the queue live.']},
+
+  // ---- tables ----
+  {id:'inbox', x:600, y:36, k:'k-tbl', t:'inbox', s:'43 rows', tag:'table', flows:['cap'],
+   d:['The raw capture log and audit trail. <code>text</code> holds the verbatim dictation, never condensed.',
+      'The Staging Area joins this to the to-do row by matching <code>inbox.headline</code> to <code>todos.task</code> exactly, which is what the 🍿 Popcorn view shows.',
+      'Captures made before Aug 15, 2026 have no raw text stored and say so.']},
+  {id:'todos', x:600, y:150, k:'k-tbl', t:'todos', s:'175 rows &middot; the hub', tag:'table', flows:['cap','str','brd'],
+   d:['The busiest table in the system. Today\'s board, habits, staged captures and Strava activities all live here, separated by <code>section</code>.',
+      'The <b>Time Bandit Wheel reads only this table</b>. Anything that should appear on the wheel has to land here, not in <code>qs_log</code>.',
+      'A wheel arc is drawn for any row that is done, has <code>done_at</code> today, and whose effective section is Core To-Dos or After Core. Arc length comes from <code>actual_minutes</code>.',
+      'Staging columns: <code>stage_guess</code>, <code>stage_board</code>, <code>stage_conf</code>, <code>staging_note</code>.']},
+  {id:'modulesT', x:600, y:290, k:'k-tbl', t:'Module tables', s:'movies &middot; quotes &middot; future_travel &middot; connections', tag:'tables', flows:['cap','brd'],
+   d:['Approving a Learning destination in the Staging Area inserts here and deletes the to-do row, rather than just relabelling it.',
+      '🎬 &rarr; <code>movies</code>, 💬 &rarr; <code>quotes</code>, ✈️ &rarr; <code>future_travel</code>, 👋 &rarr; <code>connections</code>.',
+      'A Friends Visit is a plan, so its <code>happened_on</code> is deliberately left null.',
+      'If the insert works but the delete fails, the new row is removed again rather than leaving a duplicate.']},
+  {id:'qslog', x:600, y:410, k:'k-tbl', t:'qs_log', s:'40 rows', tag:'table', flows:['str','brd'],
+   d:['One row per day per tracker, feeding the Quantified Self dashboard. <b>Not</b> what the wheel reads.',
+      'Written two ways: the Strava task upserts a daily mileage total, and a Postgres trigger copies every completed habit here automatically.',
+      '<code>status</code> has a check constraint: <code>done</code>, <code>rest</code>, <code>skipped</code> or <code>partial</code>. Anything else is rejected.']},
+  {id:'sessionTodos', x:600, y:530, k:'k-tbl', t:'session_todos', s:'70 rows', tag:'table', flows:['brd','pub'],
+   d:['The build backlog behind All ToDos and the Midnight Run page, kept separate from your personal to-dos.',
+      'The lane a card sits in <b>is</b> its <code>run_status</code>: queued, overnight, parked, done.',
+      '<code>note</code> holds your spec above a 🌙 marker and the run\'s reports below it. Editing must preserve the tail.',
+      'Archiving sets <code>archived_at</code>; nothing is ever destroyed.']},
+  {id:'stagingEvents', x:600, y:650, k:'k-tbl', t:'staging_events', s:'23 rows', tag:'table', flows:['cap'],
+   d:['One row per approve, reroute, park or dismiss. This is the learning loop.',
+      'Powers "% approved as-is", the six-week sparkline and estimate accuracy.',
+      'Scores stay blank until 8 decisions rather than showing a fake number.',
+      'This table was created with a policy but no grants, so every decision failed to log while looking perfectly configured.']},
+  {id:'pagesUpload', x:600, y:770, k:'k-tbl', t:'pages_upload', s:'scratch buffer', tag:'table', flows:['pub'],
+   d:['A staging table with <b>no publish trigger</b>, so appending chunks fires nothing.',
+      'Once its md5 matches the local file, one statement copies it across to <code>pages</code>, firing the GitHub publish exactly once.',
+      'Without this, every chunk would poke GitHub.']},
+  {id:'pages', x:600, y:880, k:'k-tbl', t:'pages', s:'34 rows &middot; the site itself', tag:'table', flows:['pub'],
+   d:['The site\'s own HTML, stored as gzip + base64 in <code>gzb64</code>, keyed by path.',
+      'The publish workflow reads <b>only</b> <code>gzb64</code>. A row with just <code>html</code> set never reaches GitHub.',
+      'Rows with an empty <code>gzb64</code> are skipped, not blanked, which is how a page can serve from GitHub alone.',
+      'A version guard blocks an older incoming page and writes PUBLISH-BLOCKED.md into the repo instead. It has already caught a real regression.']},
+
+  // ---- surfaces ----
+  {id:'staging', x:900, y:60, k:'k-page', t:'Staging Area', s:'staging-area.html &middot; v0.5', tag:'live page', flows:['cap'],
+   d:['<b>The gate.</b> Every capture stops here. Nothing files itself to a board any more.',
+      'Each row shows the clean headline, a short description, the raw dictation, and a pre-selected destination with a confidence dot.',
+      'Approve, reroute, park or dismiss. Every decision is logged to <code>staging_events</code>.',
+      'Confidence must be written as <code>lo</code>/<code>mid</code>/<code>hi</code>. Writing <code>low</code> silently fell through to the orange default.']},
+  {id:'today', x:900, y:210, k:'k-page', t:'Today\'s Tasks + Wheel', s:'index.html &middot; v5.14', tag:'live page', flows:['brd','str'],
+   d:['The daily board, plus the Time Bandit Wheel as a view within the same page.',
+      'The wheel\'s outer ring is what actually happened: Strava activities, ticked habits, completed tasks, drawn at real clock time.',
+      'It renders <b>the current day only</b>. A backfilled activity is in the database but will not appear.']},
+  {id:'modules', x:900, y:350, k:'k-page', t:'Habit modules', s:'habit-modules + 4 cue-card pages', tag:'live pages', flows:['brd'],
+   d:['Cue cards for AI Insights, Atomic Habits, Things Worth Knowing and Compass.',
+      'All three layers match on the exact <code>todos.task</code> string, so renaming one side only breaks the link silently.',
+      'v3.0 recorded completions in localStorage only, so a tick could never reach the wheel. Fixed in v3.1.']},
+  {id:'alltodos', x:900, y:480, k:'k-page', t:'All ToDos', s:'all-todos.html &middot; v2.14', tag:'live page', flows:['brd'],
+   d:['The build board. Archive is the single completion word, with a 10 second undo.',
+      'Per task: 🔧 Needs a fix, 📏 Make it a rule, ⚙️ Send to Midnight Run.',
+      'A Recent captures strip at the top reads <code>inbox</code> live.']},
+  {id:'midnightPage', x:900, y:610, k:'k-page', t:'Midnight Run control', s:'midnight-run-v2.html &middot; v4.0', tag:'live page', flows:['brd','pub'],
+   d:['Three planning lanes plus a Finished shade. Dragging a card between lanes is the decision, because the lane is the status.',
+      'One continuous run order runs down the whole page.',
+      '"Code now" just sets a flag in the database. The work still happens in a real session.']},
+  {id:'qsdash', x:900, y:730, k:'k-page', t:'QS dashboard', s:'qs-dashboard, qs-log, life-snapshot', tag:'live pages', flows:['brd','str'],
+   d:['Reads <code>qs_log</code> for the longer-run tracker view, as opposed to the wheel\'s single day.',
+      'This is where Strava mileage totals surface once the daily row is upserted.']},
+  {id:'siteFn', x:900, y:850, k:'k-warn', t:'site', s:'edge function, v13', tag:'cannot render html', flows:['pub'],
+   d:['Serves a page out of the <code>pages</code> table, falling back to a GitHub proxy, and injects the shared nav.',
+      '<b>It works, but you cannot use it.</b> Supabase deliberately serves all HTML as <code>text/plain</code> on <code>*.supabase.co</code> as an anti-abuse measure, so pages show as raw source.',
+      'A custom domain is the only fix, and it would solve the clean-URL want at the same time.']},
+
+  // ---- hosting ----
+  {id:'ghAction', x:1180, y:700, k:'k-gh', t:'publish.yml', s:'GitHub Action', tag:'github', flows:['pub'],
+   d:['Triggered two ways: a <code>repository_dispatch</code> poke from Postgres, and a cron every 5 minutes as a safety net.',
+      'Reads <code>pages</code>, gunzips <code>gzb64</code>, writes the files and commits.',
+      'It also appends the shared <code>nav-config.js</code> and <code>navpatch.js</code> tags to any page missing them, which is why a site-wide UI change belongs in navpatch, not in each page.']},
+  {id:'repo', x:1180, y:810, k:'k-gh', t:'xrodgers28/ProjectYou', s:'branch: main', tag:'canonical source', flows:['pub'],
+   d:['<b>This is canonical.</b> Read it before editing any page. The local deploy folder is a working copy and goes stale.',
+      'Clone anonymously over HTTPS to read. Push is blocked from the session.',
+      'You sometimes upload here directly, so the repo can be ahead of the <code>pages</code> table.']},
+  {id:'ghPages', x:1180, y:900, k:'k-gh', t:'GitHub Pages', s:'the render host', tag:'what you actually open', flows:['pub'],
+   d:['A real static host, so HTML renders properly here. This is the live site.',
+      'End to end, a publish reaches it in about 20 seconds.',
+      'Verify with a cache-buster and read the version marker on the page. A matching database row is not proof.']},
+];
+
+const EDGES = [
+  ['drafts','captureFn','POST + secret','cap',0],
+  ['drafts','sweepTask','read + archive','cap',0],
+  ['captureFn','inbox','raw verbatim','cap',0],
+  ['captureFn','todos','staged row','cap',0],
+  ['sweepTask','inbox','','cap',0],
+  ['sweepTask','todos','staged row','cap',0],
+  ['inbox','staging','🍿 raw text','cap',0],
+  ['todos','staging','Inbox rows','cap',0],
+  ['staging','modulesT','approve to a module','cap',0,0.82],
+  ['staging','stagingEvents','every decision','cap',0],
+
+  ['strava','stravaTask','list activities','str',0],
+  ['stravaTask','todos','completed rows','str',0],
+  ['stravaTask','qslog','daily total','str',0],
+  ['todos','today','wheel outer ring','str',0,0.32],
+
+  ['you','pageJs','','brd',0],
+  ['pageJs','todos','tick / drag','brd',0],
+  ['pageJs','sessionTodos','','brd',0],
+  ['todos','modules','cue cards','brd',0],
+  ['todos','qslog','trigger: habit_to_qs_log','brd',1],
+  ['todos','modulesT','trigger: social well-being','brd',1,0.7],
+  ['qslog','qsdash','','brd',0],
+  ['sessionTodos','alltodos','','brd',0],
+  ['sessionTodos','midnightPage','lane = run_status','brd',0],
+  ['midnight','sessionTodos','no connector','pub',1],
+
+  ['claude','mcp','','pub',0],
+  ['mcp','pagesUpload','600-char chunks','pub',0],
+  ['pagesUpload','pages','one copy across','pub',0],
+  ['pages','ghAction','pg_net poke','pub',1],
+  ['pages','siteFn','','pub',0],
+  ['ghAction','repo','gunzip + commit','pub',0],
+  ['repo','ghPages','','pub',0],
+  ['ghPages','you','','pub',0],
+];
+
+const canvas = document.getElementById('canvas');
+const svg = document.getElementById('svg');
+const svgTop = document.getElementById('svgTop');
+const detail = document.getElementById('detail');
+const byId = {};
+
+NODES.forEach(n=>{
+  byId[n.id]=n;
+  const el=document.createElement('div');
+  el.className='node '+n.k;
+  el.style.left=n.x+'px'; el.style.top=n.y+'px';
+  el.dataset.id=n.id;
+  el.innerHTML='<div class="nt">'+n.t+'</div><div class="ns">'+n.s+'</div><div class="tag">'+n.tag+'</div>';
+  el.addEventListener('click',()=>select(n.id));
+  canvas.appendChild(el);
+  n.el=el;
+});
+
+const NS='http://www.w3.org/2000/svg';
+function draw(){
+  svg.innerHTML=''; svgTop.innerHTML='';
+  const cr=canvas.getBoundingClientRect();
+  EDGES.forEach(([a,b,label,flow,dash,lt])=>{
+    const A=byId[a].el.getBoundingClientRect(), B=byId[b].el.getBoundingClientRect();
+    const ax=A.left-cr.left, ay=A.top-cr.top, bx=B.left-cr.left, by=B.top-cr.top;
+    let x1,y1,x2,y2,d;
+    if(Math.abs(bx-ax)<10){
+      // same column: loop out to the left so the line does not cross the boxes between them
+      x1=ax; y1=ay+A.height/2; x2=bx; y2=by+B.height/2;
+      const bulge=78;
+      d=`M${x1},${y1} C${x1-bulge},${y1} ${x2-bulge},${y2} ${x2},${y2}`;
+    } else {
+      if(bx>ax){ x1=ax+A.width; y1=ay+A.height/2; x2=bx; y2=by+B.height/2; }
+      else { x1=ax; y1=ay+A.height/2; x2=bx+B.width; y2=by+B.height/2; }
+      const dx=Math.max(40,Math.abs(x2-x1)*0.45)*(bx>ax?1:-1);
+      d=`M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`;
+    }
+    const p=document.createElementNS(NS,'path');
+    p.setAttribute('d',d);
+    p.setAttribute('class','edge f-'+flow+(dash?' dash':''));
+    p.dataset.flow=flow; p.dataset.a=a; p.dataset.b=b;
+    svg.appendChild(p);
+    if(label){
+      const mid=p.getPointAtLength(p.getTotalLength()*(lt||0.5));
+      const t=document.createElementNS(NS,'text');
+      t.setAttribute('x',mid.x); t.setAttribute('y',mid.y-5);
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('class','elabel'); t.dataset.flow=flow;
+      t.dataset.a=a; t.dataset.b=b;
+      t.textContent=label;
+      svgTop.appendChild(t);
+    }
+  });
+  applyFilter();
+}
+
+let flow='all', sel=null;
+function applyFilter(){
+  NODES.forEach(n=>{
+    const on = flow==='all' || n.flows.includes(flow);
+    n.el.classList.toggle('dim',!on);
+  });
+  canvas.querySelectorAll('.edge,.elabel').forEach(e=>{
+    const on = flow==='all' || e.dataset.flow===flow;
+    e.classList.toggle('dim',!on);
+  });
+}
+document.querySelectorAll('.chip').forEach(c=>{
+  c.addEventListener('click',()=>{
+    document.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on'); flow=c.dataset.flow; applyFilter();
+  });
+});
+
+function select(id){
+  const n=byId[id];
+  NODES.forEach(x=>x.el.classList.toggle('sel',x.id===id));
+  sel=id;
+  detail.innerHTML='<div class="dk">'+n.tag+'</div><h3>'+n.t+' <span style="font-weight:400;color:var(--muted);font-size:14px">'+n.s+'</span></h3><ul>'+
+    n.d.map(x=>'<li>'+x+'</li>').join('')+'</ul>';
+}
+
+draw();
+window.addEventListener('resize',draw);
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body></html>
