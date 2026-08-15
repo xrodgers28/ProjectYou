@@ -94,7 +94,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v3.1</span>
+    <span class="pn-ver">v3.2</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -127,7 +127,11 @@
    ring draws. Default 10 min unless the card's own last page logged a time. */
 const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+/* guard the client: if the Supabase CDN ever fails to load, the board must
+   still paint its cards and fall back to the local streak ledger rather than
+   white-screening on a ReferenceError */
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
 const DEFAULT_MIN=10;
 
 const IC={
@@ -160,7 +164,9 @@ function setHist(id,on){var h=getHist(),k=todayKey();var s=new Set(h[k]||[]);if(
 function streakDays(){var h=getHist();var d=new Date();var n=0;for(var i=0;i<400;i++){var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');var c=(h[key]||[]).length;if(i===0){if(c>0)n++;}else{if(c>0)n++;else break;}d.setDate(d.getDate()-1);}return n;}
 
 /* a card counts as done when today's habit row says so */
-function isDone(m){var r=ROWS[m.habit];return !!(r&&r.done&&r.for_date===todayKey());}
+function isDone(m){
+  if(!sb){var h=getHist();return (h[todayKey()]||[]).indexOf(m.id)>-1;}
+  var r=ROWS[m.habit];return !!(r&&r.done&&r.for_date===todayKey());}
 function minsOf(m){var r=ROWS[m.habit];return (r&&r.for_date===todayKey()&&r.actual_minutes)?r.actual_minutes:null;}
 
 async function loadRows(){
@@ -192,6 +198,7 @@ async function ensureRow(m){
 }
 
 async function toggle(m,el){
+  if(!sb){setHist(m.id,!isDone(m));render();toast('Offline \u2014 recorded here, but it did not reach the wheel.');return;}
   if(!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
   if(el)el.classList.add('busy');
   var want=!isDone(m);
@@ -262,6 +269,7 @@ async function signIn(){
 
 async function boot(){
   render();  /* paint immediately, then reconcile with the database */
+  if(!sb){document.querySelector('.wheelnote').innerHTML='Could not reach the database \u2014 ticks are being kept locally only. Reload to try again.';return;}
   var s=await sb.auth.getSession();
   if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadRows();await handleReturn();}
   else{document.getElementById('gate').classList.remove('hidden');}
