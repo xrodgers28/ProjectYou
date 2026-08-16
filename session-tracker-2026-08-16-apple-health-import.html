@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Tracker · Aug 16 · Swarm connector</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#20242b;--muted:#6b7280;--line:#e7e9ee;--bg:#fbfbfa;--card:#fff;--accent:#3f6f8f;--hub:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--blue:#3f6f8f;--red:#c0453b;--amber:#c68a2e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.25;padding:18px 16px 210px}
+  .head{max-width:1160px;margin:0 auto}
+  h1{font-size:22px;color:var(--hub);font-weight:800}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 10px;margin-top:7px;background:#eef7f1;color:var(--green);border:1px solid #cfe9db}
+  .chip.off{background:#fbe7e5;color:var(--red);border-color:#f0cfcb}
+  .sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.4;max-width:820px}
+  h2{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--hub);max-width:1160px;margin:18px auto 6px}
+  .tbl{max-width:1160px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .r{display:grid;grid-template-columns:34px 1fr 128px 150px 260px;align-items:flex-start;border-bottom:1px solid var(--line);transition:opacity .25s,max-height .3s,padding .3s;max-height:900px;overflow:hidden}
+  .r:last-child{border-bottom:none}
+  .r.hd{background:#f4f5f7;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);align-items:center}
+  .r.gone{opacity:0;max-height:0;border:none}
+  .c{padding:9px 14px}
+  .c.lt{padding:12px 0 9px 12px}
+  .dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .dot.green{background:var(--green)} .dot.amber{background:#e08b1f} .dot.red{background:var(--red)}
+  .r.hd .c.lt{padding-left:12px}
+  .legend{max-width:1160px;margin:10px auto 0;display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);font-weight:700;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;font-style:normal}
+  .asof{max-width:1160px;margin:14px auto 0;font-size:12.5px;font-style:italic;color:#808080}
+  .c.mid,.c.act,.c.next{padding:9px 12px}
+  .task .tt{color:var(--accent);text-decoration:none;font-size:14px;font-weight:700;line-height:1.2;border-bottom:1px solid #cfdae5}
+  .task .tt:hover{border-bottom-color:var(--accent)}
+  .task .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
+  .pill.green{background:var(--green)} .pill.blue{background:var(--blue)} .pill.red{background:var(--red)} .pill.amber{background:var(--amber)}
+  .act{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .got{font-weight:800;font-size:12.5px;border:1.5px solid var(--green);background:#fff;color:var(--green);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .yn{font-weight:800;font-size:12.5px;border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .yn.yes.on{background:var(--green);border-color:var(--green);color:#fff} .yn.no.on{background:var(--red);border-color:var(--red);color:#fff}
+  .ynrow{display:flex;gap:6px}
+  .notelink{font-size:11.5px;font-weight:700;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:0}
+  .notelink:hover{color:var(--accent)}
+  .nt{width:100%;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:30px;margin-top:2px}
+  .hidden{display:none}
+  .next{font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .next.none{color:#a7adb6}
+  .next.todo{background:#fdf6e9;color:#5c4a24;border-left:3px solid var(--amber)}
+  .next .nh{display:block;font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+  .next ol{margin:0 0 0 16px;padding:0}
+  .next ol li{margin:0 0 5px;line-height:1.4}
+  .next ol li:last-child{margin-bottom:0}
+  .next .lead{display:block;margin-bottom:4px}
+  .next code{background:#fff;border:1px solid #e2d9c2;border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+  .next a{color:var(--accent);font-weight:700}
+  .mins{display:inline-block;font-weight:800;font-size:10.5px;color:var(--muted);background:var(--chip);border-radius:999px;padding:2px 7px;margin-left:4px}
+  .allclear{max-width:1160px;margin:0 auto;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  @media(max-width:900px){
+    .r{grid-template-columns:22px 1fr auto}
+    .c.lt{grid-row:span 2}
+    .c.act,.c.next{grid-column:1/-1;border-top:1px solid var(--line)}
+    .c.act{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .r.hd{display:none}
+  }
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(31,42,68,.10);padding:9px 16px}
+  .dock .bar{max-width:1160px;margin:0 auto}
+  .dock .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:10px;flex-wrap:wrap}
+  .dock .top b{font-size:12.5px;color:var(--hub)}.dock .hint{font-size:11px;color:var(--muted)}
+  #out{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;border:1px solid var(--line);border-radius:10px;padding:8px;height:80px;resize:vertical;background:#fbfcfe;color:var(--ink)}
+  .copybtn{font-weight:700;font-size:12px;border:1px solid var(--line);background:var(--chip);color:var(--accent);border-radius:9px;padding:6px 11px;cursor:pointer;margin-top:5px}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Session Tracker</h1>
+  <div class="meta">Project YOU OS · Aug 16, 2026 · Apple Health is connected, and one publish was stopped on purpose</div>
+  <div id="syncchip" class="chip">connecting...</div>
+  <div class="sub">Apple Health is live. Ten years of steps and sleep, 16,823 readings, are now in your database, and the Automated Tracking page has been rebuilt to check its own feeds instead of trusting a hand-typed label. One thing needs two minutes on your phone. Three decisions sit at the bottom. Everything green is finished and needs nothing.</div>
+<div class="legend"><span><i style="background:#1e8e5a"></i>Done</span><span><i style="background:#e08b1f"></i>Awaiting your comments</span><span><i style="background:#c0453b"></i>Not started</span></div>
+<div class="asof">As of August 16th</div>
+
+<h2>Work this session · <span id="leftct"></span></h2>
+<div class="tbl" id="tblWork"><div class="r hd"><div class="c lt"></div><div class="c">Input / Task</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+<div id="allclear" class="allclear hidden"></div>
+
+<h2>Your call · decisions</h2>
+<div class="tbl" id="tblLater"><div class="r hd"><div class="c lt"></div><div class="c">Item</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+
+<div class="dock"><div class="bar">
+  <div class="top"><b>Your responses (live)</b><span class="hint">saved automatically · this box is the fallback</span></div>
+  <textarea id="out" readonly></textarea>
+  <button class="copybtn" onclick="copyOut()">Copy</button>
+</div></div>
+
+<script>
+const SLUG='2026-08-16-apple-health-import';
+const SITE='https://xrodgers28.github.io/ProjectYou/';
+const TRACKING=SITE+'automated-tracking.html';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+const HAE='https://apps.apple.com/us/app/health-auto-export-json-csv/id1115567069';
+const GUIDE='computer:///Users/scottyex/Downloads/apple-health-setup.html';
+const HEALTHFN='https://arnjntspmrhigodlssbn.supabase.co/functions/v1/health-in';
+const STATUS='https://arnjntspmrhigodlssbn.supabase.co/functions/v1/swarm?status';
+
+const WORK=[
+  {item:SLUG+'::pipe', label:'Apple Health is connected, 16,823 readings imported', url:HEALTHFN, pill:'green', ptext:'Live', light:'green',
+   desc:'Ten years of history, from September 14, 2016 to yesterday. Steps, active energy, exercise minutes, heart rate variability and six sleep stages, all backfilled and current to the last 30 days. Your phone now pushes an update every hour on its own.',
+   next:'Nothing. It runs by itself from here.', mins:''},
+
+  {item:SLUG+'::watchnbsp', label:'The bug that would have told you your Watch had died', url:HEALTHFN, pill:'green', ptext:'Found and fixed', light:'green',
+   desc:'Apple writes device names with an invisible non-breaking space, so the text Apple Watch is not the text it appears to be. Searching for it returned zero rows against 13,872 real readings. Any future check would have reported the Watch as a dead feed while it was working perfectly. Every query now strips that character first.',
+   next:'Nothing. Worth knowing it exists, because it will bite anything else that reads Apple device names.', mins:''},
+
+  {item:SLUG+'::sleep', label:'Your sleep record splits into two eras, and one field is junk', url:TRACKING, pill:'green', ptext:'Established', light:'green',
+   desc:'Watch nights from October 2022 onward are real measured sleep, averaging 6 hours 59 minutes across 1,331 nights, and the stages add up correctly. Everything before that came from Clock, Nacho Hotspot and AutoSleep, which only ever recorded time in bed, so those six years read as zero sleep. Separately, time in bed is empty on 849 of your 1,331 Watch nights, because the Watch does not measure it. Charting it would produce a nonsense figure.',
+   next:'Nothing now. It matters the day we build a sleep chart, and it is written into the project notes so nobody charts the wrong field.', mins:''},
+
+  {item:SLUG+'::fitness', label:'Apple Fitness was live all along and labelled wrong', url:TRACKING, pill:'green', ptext:'Established', light:'green',
+   desc:'Your Move and Exercise rings have been feeding the system the whole time, 3,111 readings, current to yesterday. The Automated Tracking page had it sitting in the roadmap as not yet connected.',
+   next:'Nothing yet. It turns green by itself once the new page below goes live.', mins:''},
+
+  {item:SLUG+'::selfcheck', label:'Automated Tracking v1.5 built: it now checks itself', url:TRACKING, pill:'blue', ptext:'Built, not published', light:'amber',
+   desc:'Six sources, Apple Health, Apple Watch, Apple Fitness, Health Auto Export, FITINDEX and Waking Up, no longer carry a hand-typed status. The page asks the database when each one last sent data and marks it live, stale or not yet on the answer. A feed that quietly dies now shows as stale instead of staying green. Tested with the database reachable and with it cut off.',
+   lead:'It is built and tested. I stopped before publishing, on purpose, see the row below.',
+   steps:[
+     'Nothing tonight.',
+     'Tomorrow, tell me the other session is finished with that page.',
+     'I rebuild v1.5 on top of whatever it published and put it live in about 20 seconds.'
+   ], mins:'1', todo:true},
+
+  {item:SLUG+'::collision', label:'I stopped a publish rather than overwrite another session', url:TRACKING, pill:'red', ptext:'Blocked, deliberately', light:'amber',
+   desc:'Partway through uploading, the staging row started changing underneath me. It was not corruption, it was a second Cowork session uploading its own build of the same page. That table holds one row per page with no locking, so two sessions publishing the same file both lose. Forcing mine through would have destroyed whatever the other session was building, which is the same failure that cost you a day on August 14. Your live page never moved and is still on v1.4.',
+   lead:'This is the one thing I need from you before the page can go live.',
+   steps:[
+     'Answer the first decision at the bottom of this page.',
+     'Nothing else. I do the publishing and the checking.'
+   ], mins:'1', todo:true},
+
+  {item:SLUG+'::metrics', label:'Six health metrics are still arriving empty', url:HAE, pill:'amber', ptext:'Awaiting you', light:'amber',
+   desc:'Weight, body fat, lean body mass, resting heart rate, mindful minutes and time in daylight have never received a single row. You confirmed Resting Heart Rate and Body Measurements both show live charts in the Health app, so the data exists and something between Apple Health and the export app is blocking it. Most likely the app saved its metric selection before you granted permission, and All Selected only ever meant all the types it could see at that moment.',
+   lead:'Two minutes on your phone, and it is the last thing standing between you and weight tracking.',
+   steps:[
+     'Open <b>Health Auto Export</b>, go to <b>Automations</b>, open <b>ProjectYOU</b>.',
+     'Tap <b>Select Health Metrics</b>. The list should be longer than it was.',
+     'Find <b>Weight and Body Mass</b> and <b>Resting Heart Rate</b> and make sure both are ticked. If there is a <b>Select All</b>, tap it again.',
+     'Back out, tap <b>Update</b>, then tap <b>Manual Export</b>.',
+     'Tell me, and I will read the database back metric by metric.'
+   ], mins:'2', todo:true},
+
+  {item:SLUG+'::meditation', label:'The meditation link is designed and waiting on data', url:TRACKING, pill:'blue', ptext:'Designed, blocked', light:'amber',
+   desc:'Your database already has a Meditation tracker under Emotional Health with exactly one row in it, from the cue card you ticked. You chose Waking Up only, so a Watch Breathe prompt will not inflate your streak, and Apple wins on minutes, so ticking the card keeps the habit done while the real measured minutes replace the count. One thing to solve first: the log allows a manual row and an Apple row on the same day, so anything adding them up would double count.',
+   lead:'Nothing to do until mindful minutes actually arrive, which needs the row above.',
+   steps:[
+     'Do the Health Auto Export step above first.',
+     'Meditation history does not backfill, so it starts from the day Waking Up began writing, not from your first session.'
+   ], mins:'0', todo:true},
+
+  {item:SLUG+'::guide', label:'Your setup guide is now partly wrong', url:GUIDE, pill:'amber', ptext:'Needs a rewrite', light:'amber',
+   desc:'It tells you to tick only eleven metrics, when the better answer turned out to be leaving everything selected. It also does not mention that Sync Cadence is two separate fields that default to sending every five minutes, which would have hammered the endpoint 288 times a day.',
+   lead:'No rush, this only matters if you or somebody else follows it again.',
+   steps:[
+     'Answer the second decision at the bottom of this page.',
+     'I rewrite it and repin the artifact.'
+   ], mins:'1', todo:true},
+
+  {item:SLUG+'::notes', label:'Everything learned is written into the project memory', url:'computer:///Users/scottyex/Documents/SER%20FILES/CoWork', pill:'green', ptext:'Saved', light:'green',
+   desc:'The Apple Health notes now carry the phone settings as actually configured, the non-breaking space trap, the two sleep eras, your two meditation decisions and the double counting risk. A new note records the publishing collision so no future session repeats it.',
+   next:'Nothing. It is there for whichever session picks this up next.', mins:''}
+];
+
+const LATER=[
+  {item:SLUG+'::dec-publish', label:'Publish Automated Tracking v1.5 once the other session is done?', url:TRACKING, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'The self-checking version. I will not touch that page while another session holds it, so this is a yes for later rather than a yes for now. I rebuild on top of whatever it published so neither of us loses work, then publish and read the live page back to prove it landed.',
+   next:'Yes and I publish it the moment the other session is clear. No and it stays as a file in this chat.', mins:''},
+
+  {item:SLUG+'::dec-guide', label:'Rewrite the Apple Health setup guide?', url:GUIDE, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'Corrects the metric selection advice and adds the Sync Cadence trap, so the guide matches the screens you actually saw.',
+   next:'Yes and I rewrite it and repin the artifact. No and it stays as it is.', mins:''},
+
+  {item:SLUG+'::dec-sessions', label:'Keep two Cowork sessions running on Project YOU at once?', url:TRACKING, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'Tonight both sessions independently diagnosed the same missing health metrics, and both tried to publish the same page. You paid twice for one answer. Separate jobs would fix it, one session per area of the system.',
+   next:'Yes to keep running two and I will check for the other before touching any shared page. No and I will suggest closing one at the start of each session.', mins:''}
+];
+
+const ALL=[...WORK,...LATER];
+const state={}; ALL.forEach(x=>state[x.item]={choice:'',note:'',got:false});
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const TODAY=ymd(new Date());
+let sb=null; try{ sb=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co',KEY); }catch(e){}
+function chip(ok){const c=document.getElementById('syncchip');if(ok){c.textContent='saved. Claude can see it';c.className='chip';}else{c.textContent='offline: copy the box below';c.className='chip off';}}
+function nextCell(x){
+  const mins=x.mins?'<span class="mins">'+x.mins+' min</span>':'';
+  if(x.steps){
+    const lead=x.lead?'<span class="lead">'+x.lead+'</span>':'';
+    return '<div class="c next todo"><span class="nh">Your move</span>'+lead+
+           '<ol>'+x.steps.map(t=>'<li>'+t+'</li>').join('')+'</ol>'+mins+'</div>';
+  }
+  if(x.todo) return '<div class="c next todo"><span class="nh">Your move</span>'+x.next+mins+'</div>';
+  if(x.decide) return '<div class="c next">'+x.next+'</div>';
+  const none=/^Nothing\.?$/i.test((x.next||'').trim());
+  return '<div class="c next'+(none?' none':'')+'">'+(x.next||'')+mins+'</div>';
+}
+function rowNode(x){
+  const d=document.createElement('div'); d.className='r'; d.dataset.i=x.item;
+  const desc=x.desc?'<div class="desc">'+x.desc+'</div>':'';
+  let act='';
+  if(x.decide){
+    act='<div class="ynrow"><button class="yn yes" data-i="'+x.item+'" data-v="Yes">Yes</button><button class="yn no" data-i="'+x.item+'" data-v="No">No</button></div>';
+  } else {
+    act='<button class="got" data-i="'+x.item+'">Got It</button>';
+  }
+  act+='<button class="notelink" data-i="'+x.item+'">＋ note</button><textarea class="nt hidden" data-i="'+x.item+'" placeholder="comment (optional)"></textarea>';
+  const lt=x.light||'amber';
+  d.innerHTML=
+    '<div class="c lt"><span class="dot '+lt+'" title="'+({green:'Done',amber:'Awaiting your comments',red:'Not started'}[lt])+'"></span></div>'+
+    '<div class="c task"><a class="tt" href="'+x.url+'" target="_blank" rel="noopener">'+x.label+'</a>'+desc+'</div>'+
+    '<div class="c mid"><span class="pill '+x.pill+'">'+x.ptext+'</span></div>'+
+    '<div class="c act">'+act+'</div>'+
+    nextCell(x);
+  return d;
+}
+let viewed=new Set();
+function renderWork(){
+  const tw=document.getElementById('tblWork');
+  tw.querySelectorAll('.r:not(.hd)').forEach(n=>n.remove());
+  WORK.filter(x=>!viewed.has(x.item)).forEach(x=>tw.appendChild(rowNode(x)));
+  updateLeft();
+}
+function updateLeft(){
+  const left=WORK.filter(x=>!viewed.has(x.item)).length;
+  document.getElementById('leftct').textContent=left+' left';
+  const ac=document.getElementById('allclear');
+  if(left===0){ ac.textContent='All caught up. '+viewed.size+' filed to today\'s session content.'; ac.classList.remove('hidden'); document.getElementById('tblWork').classList.add('hidden'); }
+  else { ac.classList.add('hidden'); document.getElementById('tblWork').classList.remove('hidden'); }
+}
+const tl=document.getElementById('tblLater'); LATER.forEach(x=>tl.appendChild(rowNode(x)));
+async function saveContent(x){ if(!sb){chip(false);return;} try{ const {error}=await sb.from('session_content').upsert({day:TODAY,item:x.item,label:x.label,session:SLUG,saved_at:new Date().toISOString()},{onConflict:'day,item'}); chip(!error);}catch(e){chip(false);} }
+async function saveTracker(x){ compile(); if(!sb){chip(false);return;} try{ const {error}=await sb.from('tracker').upsert({item:x.item,label:x.label,choice:state[x.item].choice,note:state[x.item].note,session:SLUG,updated_at:new Date().toISOString()},{onConflict:'item'}); chip(!error);}catch(e){chip(false);} }
+document.body.addEventListener('click',e=>{
+  const g=e.target.closest('.got');
+  if(g){ const i=g.dataset.i, x=ALL.find(z=>z.item===i); state[i].got=true; viewed.add(i); saveContent(x);
+    const rowEl=g.closest('.r'); rowEl.classList.add('gone'); setTimeout(()=>{rowEl.remove();updateLeft();},300); compile(); return; }
+  const nl=e.target.closest('.notelink');
+  if(nl){ const ta=nl.parentElement.querySelector('.nt'); ta.classList.toggle('hidden'); if(!ta.classList.contains('hidden')) ta.focus(); return; }
+  const b=e.target.closest('.yn'); if(!b)return;
+  const i=b.dataset.i,v=b.dataset.v; state[i].choice=(state[i].choice===v)?'':v;
+  b.closest('.act').querySelectorAll('.yn').forEach(y=>y.classList.remove('on')); if(state[i].choice)b.classList.add('on');
+  saveTracker(ALL.find(x=>x.item===i));
+});
+let t=null;
+document.body.addEventListener('input',e=>{ const n=e.target.closest('.nt'); if(!n)return; state[n.dataset.i].note=n.value; clearTimeout(t); t=setTimeout(()=>saveTracker(ALL.find(x=>x.item===n.dataset.i)),500); });
+function compile(){
+  const lines=['Session Tracker, Project YOU OS, Aug 16, 2026, Apple Health import, Swarm connector',''];
+  const got=WORK.filter(x=>state[x.item].got);
+  if(got.length){ lines.push('Filed to today\'s session content ('+got.length+'):'); got.forEach(x=>lines.push('- '+x.label)); lines.push(''); }
+  ALL.forEach(x=>{ const s=state[x.item]; if(!s.choice && !s.note) return; let l='- '+x.label+': '+(s.choice||'(note)'); if(s.note) l+=' , '+s.note; lines.push(l); });
+  if(lines.length===2) lines.push('(tap Got It, or answer the three decisions)');
+  document.getElementById('out').value=lines.join('\n');
+}
+function copyOut(){const o=document.getElementById('out');o.select();try{document.execCommand('copy');}catch(e){}}
+async function boot(){
+  if(!sb){chip(false);renderWork();compile();return;}
+  try{
+    const sc=await sb.from('session_content').select('item').eq('day',TODAY).eq('session',SLUG);
+    viewed=new Set((sc.data||[]).map(r=>r.item).filter(Boolean));
+    viewed.forEach(i=>{ if(state[i]) state[i].got=true; });
+    renderWork();
+    const tr=await sb.from('tracker').select('*').eq('session',SLUG);
+    (tr.data||[]).forEach(r=>{ if(!state[r.item])return; state[r.item].choice=r.choice||''; state[r.item].note=r.note||'';
+      if(r.choice){const b=document.querySelector('.yn[data-i="'+r.item+'"][data-v="'+r.choice+'"]'); if(b)b.classList.add('on');}
+      if(r.note){const n=document.querySelector('.nt[data-i="'+r.item+'"]'); if(n){n.value=r.note;n.classList.remove('hidden');}} });
+    chip(true); compile();
+  }catch(e){ chip(false); renderWork(); compile(); }
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
