@@ -3,36 +3,48 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Project YOU OS · Knowledge Graph</title>
+<title>Project YOU OS &middot; Interactive Knowledge Graph</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
 <style>
   :root{
-    --accent:#3f6f8f; --ink:#1f2a44; --muted:#5b6472; --line:#e3e7ee;
+    --accent:#3f6f8f; --accent2:#2f5a74; --ink:#1f2a44; --muted:#5b6472; --line:#e3e7ee;
     --bg:#eef1f6; --card:#fff;
-    --page:#3f6f8f; --table:#2f8f5b; --auto:#c58a2e;
+    --page:#3f6f8f; --table:#2f8f5b; --view:#7c5cbf; --orphan:#c0453b; --auto:#c58a2e;
   }
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:var(--bg)}
-  header{background:var(--card);border-bottom:1px solid var(--line);padding:14px 20px}
-  header h1{margin:0;font-size:20px;color:var(--accent);letter-spacing:.2px}
-  header .sub{margin-top:3px;font-size:12.5px;color:var(--muted)}
-  header .gen{float:right;font-size:11.5px;color:#9aa6b4;margin-top:2px}
-  .stage{display:flex;height:calc(100vh - 62px)}
+  header{background:var(--card);border-bottom:1px solid var(--line);padding:13px 20px}
+  header h1{margin:0;font-size:20px;color:var(--accent);letter-spacing:.2px;display:inline-block}
+  header .ver{font-size:11px;font-weight:800;color:var(--accent);background:#eaf1f6;border:1px solid #cfe0ea;border-radius:999px;padding:2px 9px;margin-left:9px;vertical-align:3px}
+  header .sub{margin-top:4px;font-size:12.5px;color:var(--muted);max-width:920px;line-height:1.45}
+  .verify{margin-top:7px;display:flex;gap:18px;flex-wrap:wrap;font-size:11.5px}
+  .verify span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+  .verify b{color:var(--ink);font-weight:800}
+  .verify i{width:8px;height:8px;border-radius:50%;background:#1e8e5a;display:inline-block;font-style:normal;flex:none}
+  .verify i.amber{background:#c58a2e}
+  .stage{display:flex;height:calc(100vh - 108px);min-height:460px}
   #net{flex:1;background:#f7f9fc}
-  aside{width:280px;background:var(--card);border-left:1px solid var(--line);padding:16px 16px 24px;overflow:auto}
-  aside h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 10px}
-  .leg{display:flex;align-items:center;gap:9px;font-size:13px;margin:8px 0}
-  .sw{width:16px;height:16px;border-radius:4px;border:1px solid rgba(0,0,0,.12);flex:0 0 auto}
+  #fallback{flex:1;overflow:auto;padding:16px 20px;display:none}
+  aside{width:300px;background:var(--card);border-left:1px solid var(--line);padding:15px 15px 26px;overflow:auto}
+  aside h2{font-size:11.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin:0 0 9px}
+  .leg{display:flex;align-items:center;gap:9px;font-size:13px;margin:7px 0}
+  .sw{width:15px;height:15px;border-radius:4px;border:1px solid rgba(0,0,0,.12);flex:0 0 auto}
   .sw.round{border-radius:50%}
-  .sw.dia{border-radius:3px;transform:rotate(45deg);width:13px;height:13px}
-  .grp{margin-top:16px}
-  .grp .leg .dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
-  .hint{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:12px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:12px}
+  .card{background:#fbfcfe;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:12px}
   .stat{display:flex;justify-content:space-between;font-size:12.5px;padding:2px 0;color:var(--muted)}
   .stat b{color:var(--ink)}
+  .orph{font-size:12px;line-height:1.6;color:var(--muted)}
+  .orph code{background:#fdecea;border:1px solid #f4cdc8;border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:#8f3229}
+  .hint{margin-top:14px;font-size:11.5px;color:var(--muted);line-height:1.55;border-top:1px solid var(--line);padding-top:11px}
   button.reset{margin-top:8px;font-family:inherit;font-size:12px;background:var(--accent);color:#fff;border:0;border-radius:6px;padding:6px 10px;cursor:pointer}
+  button.reset:hover{background:var(--accent2)}
+  table.fb{border-collapse:collapse;width:100%;font-size:13px;background:#fff;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  table.fb th{background:#f4f6f9;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);padding:8px 11px}
+  table.fb td{padding:7px 11px;border-top:1px solid var(--line);vertical-align:top}
+  table.fb td.t{color:var(--muted);font-size:12px}
+  .loading{padding:40px;text-align:center;color:#9aa6b4;font-size:13px}
 </style>
 <style id="pynav-css">
 .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
@@ -63,189 +75,126 @@
 .pn-menu.open{display:flex}
 .pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}
 </style>
-<style id="mapsub-css">
-.mapsub{display:flex;flex-wrap:wrap;align-items:center;gap:6px;max-width:1180px;margin:12px auto 2px;padding:8px 12px;background:#fff;border:1px solid #e3e7ee;border-radius:12px;box-shadow:0 4px 14px rgba(31,42,68,.05);font-family:Arial,Helvetica,sans-serif}
-.mapsub-lbl{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#3f6f8f;margin-right:2px;display:inline-flex;align-items:center;gap:5px}
-.mapsub a{font-size:12.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:5px 10px;border-radius:8px;white-space:nowrap}
-.mapsub a:hover{background:#eef2f8;color:#3f6f8f}
-.mapsub a.on{background:#3f6f8f;color:#fff}
-.mapsub .mapsub-ver{margin-left:auto;font-size:10.5px;font-weight:800;color:#9aa6b4;font-variant-numeric:tabular-nums;padding-left:6px}
-</style>
 </head>
 <body>
 <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn on" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">Maps</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
-<div class="mapsub"><span class="mapsub-lbl">🗺 Maps</span><a href="maps.html">Overview</a><a href="dfd.html">Data Flow Diagram</a><a href="blueprint.html">Knowledge Graph</a><a href="knowledge-graph.html" class="on">Interactive Graph</a><a href="architecture-map.html">Architecture Map</a><span class="mapsub-ver">Maps v1.1</span></div>
 <header>
-  <span class="gen">generated 2026-08-12</span>
-  <h1>Project YOU OS &middot; Knowledge Graph</h1>
-  <div class="sub">Every page/module and every Supabase table as nodes; edges are real <code>sb.from()</code> reads/writes plus the deploy &amp; in-app automations. Drag nodes, scroll to zoom, click to highlight neighbours.</div>
+  <h1>Project YOU OS &middot; Interactive Knowledge Graph</h1><span class="ver">v2.0</span>
+  <div class="sub">Every page in the system and every table it reads. Nothing on this diagram is typed in by hand any more: the tables and views are read from the database the moment you open the page, so it cannot describe a table that does not exist or miss one that does.</div>
+  <div class="verify">
+    <span><i></i>Schema <b id="vSchema">reading&hellip;</b></span>
+    <span><i class="amber"></i>Page links last scanned <b id="vEdges">&ndash;</b></span>
+    <span>Pages <b id="vPages">&ndash;</b> &middot; Tables <b id="vTables">&ndash;</b> &middot; Views <b id="vViews">&ndash;</b></span>
+  </div>
 </header>
+
 <div class="stage">
-  <div id="net"></div>
+  <div id="net"><div class="loading" id="netLoading">Loading the graph&hellip;</div></div>
+  <div id="fallback"></div>
   <aside>
-    <h2>Layers</h2>
-    <div class="leg"><span class="sw" style="background:#3f6f8f"></span> Page / module</div>
-    <div class="leg"><span class="sw round" style="background:#2f8f5b"></span> Supabase table</div>
-    <div class="leg"><span class="sw dia" style="background:#c58a2e"></span> Automation</div>
+    <h2>Legend</h2>
+    <div class="leg"><span class="sw" style="background:var(--page)"></span>Page</div>
+    <div class="leg"><span class="sw round" style="background:var(--table)"></span>Table</div>
+    <div class="leg"><span class="sw round" style="background:var(--view)"></span>View</div>
+    <div class="leg"><span class="sw round" style="background:var(--orphan)"></span>Read by no page</div>
 
-    <div class="grp">
-      <h2>Page groups (nav)</h2>
-      <div class="leg"><span class="dot" style="background:#3f6f8f"></span> To Do List</div>
-      <div class="leg"><span class="dot" style="background:#6a54c9"></span> Habit Modules</div>
-      <div class="leg"><span class="dot" style="background:#1e8e8a"></span> Quantified Self</div>
-      <div class="leg"><span class="dot" style="background:#c0453b"></span> Editors</div>
-      <div class="leg"><span class="dot" style="background:#b07a1e"></span> Operating System</div>
-      <div class="leg"><span class="dot" style="background:#7a8291"></span> Parking Lot</div>
-    </div>
+    <h2 style="margin-top:18px">Counts</h2>
+    <div class="card" id="counts"></div>
 
-    <div class="grp">
-      <h2>Counts</h2>
-      <div class="card">
-        <div class="stat"><span>Pages / modules</span><b id="cP">0</b></div>
-        <div class="stat"><span>Tables</span><b id="cT">0</b></div>
-        <div class="stat"><span>Read/write edges</span><b id="cE">0</b></div>
-        <div class="stat"><span>Unused tables</span><b id="cU">0</b></div>
-      </div>
-      <button class="reset" onclick="RESET()">Reset view</button>
-    </div>
+    <h2>Read by no page</h2>
+    <div class="orph" id="orphans">&nbsp;</div>
 
-    <div class="hint">Dashed amber edges are the auto-publish pipeline: pages are stored gzip+base64 in <b>pages</b>, a GitHub Action reads it every ~5 min and commits to GitHub Pages. The in-app Social logger auto-writes <b>connections</b> + <b>daily_completed</b> when a Social task is ticked.</div>
+    <button class="reset" onclick="fit()">Reset the view</button>
+
+    <div class="hint"><b>What can still go stale.</b> The tables and views are live, so they are right by construction. The lines between a page and a table come from the last scan of the site source, dated above. If a page starts reading a new table, this graph will not know until that scan runs again.</div>
   </aside>
 </div>
+
 <script>
-// ---- Page groups from the pynav block ----
-var GCOL = {
-  'To Do List':'#3f6f8f','Habit Modules':'#6a54c9','Quantified Self':'#1e8e8a',
-  'Editors':'#c0453b','Operating System':'#b07a1e','Parking Lot':'#7a8291'
-};
-var PAGES = [
-  ['p_index','Todays Tasks / Wheel','index.html','To Do List'],
-  ['p_alltodos','All ToDos','all-todos.html','To Do List'],
-  ['p_ai','AI Insights','ai.html','Habit Modules'],
-  ['p_quotes','Clever Phrases','quotes.html','Habit Modules'],
-  ['p_compass','Compass','compass.html','Habit Modules'],
-  ['p_qslog','Habits Tracker','qs-log.html','Quantified Self'],
-  ['p_qswheel','Clarity Compass','qs-wheel.html','Quantified Self'],
-  ['p_lifesnap','Life Snapshot','life-snapshot.html','Quantified Self'],
-  ['p_daily','Daily Habits','daily-template.html','Editors'],
-  ['p_style','Style Guide','style-guide.html','Editors'],
-  ['p_build','Components','build.html','Operating System'],
-  ['p_autotrack','Automated Tracking','automated-tracking.html','Operating System'],
-  ['p_dfd','Data Flow Diagram','dfd.html','Operating System'],
-  ['p_blueprint','Knowledge Graph','blueprint.html','Operating System'],
-  ['p_mission','Mission Control','mission.html','Operating System'],
-  ['p_travel','Future Travel','future-travel.html','Parking Lot'],
-  ['p_conn','Social','connections.html','Parking Lot'],
-  ['p_movies','Movies','movies.html','Parking Lot'],
-  ['p_cheat','Cheat Sheet','cheat-sheet.html','Parking Lot'],
-  ['p_aitools','AI Tools','ai-tools.html','Parking Lot']
-];
-// ---- Tables (22 from Supabase list_tables) ----
-var TABLES = [
-  't_todos','t_daily_template','t_daily_completed','t_connections','t_app_meta',
-  't_session_todos','t_board_meta','t_rule_candidates','t_ai_cards','t_favorites',
-  't_quotes','t_compass_questions','t_compass_log','t_qs_log','t_inbox',
-  't_future_travel','t_movies','t_ai_deck_pool','t_pages',
-  't_feedback','t_tracker','t_session_content'
-];
-var UNUSED = {'t_feedback':1,'t_tracker':1,'t_session_content':1}; // no page references them
-// ---- page -> table edges, from actual sb.from() usage (deduped) ----
-var USES = [
-  ['p_index',['t_app_meta','t_todos','t_daily_template','t_connections','t_daily_completed']],
-  ['p_alltodos',['t_rule_candidates','t_session_todos','t_board_meta']],
-  ['p_ai',['t_ai_cards','t_todos','t_favorites','t_quotes']],
-  ['p_quotes',['t_quotes','t_favorites','t_todos']],
-  ['p_compass',['t_compass_questions','t_compass_log','t_todos']],
-  ['p_qslog',['t_qs_log']],
-  ['p_qswheel',['t_daily_template']],
-  ['p_daily',['t_daily_template','t_todos','t_inbox']],
-  ['p_style',['t_app_meta']],
-  ['p_travel',['t_future_travel']],
-  ['p_conn',['t_connections']],
-  ['p_movies',['t_movies']],
-  ['p_mission',['t_todos','t_quotes','t_ai_cards','t_inbox']],
-  ['p_aitools',['t_ai_deck_pool']]
-];
+const SUPABASE_URL='https://arnjntspmrhigodlssbn.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+let sb=null; try{ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){}
+const GCOL={'To Do List':'#3f6f8f','Habit Modules':'#8a5cbf','Quantified Self':'#2f8f8f','Editors':'#c58a2e','Operating System':'#5b6472','Not in nav':'#9aa6b4'};
+let net=null;
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function fit(){ if(net) net.fit({animation:true}); }
 
-var nodes = new vis.DataSet();
-var edges = new vis.DataSet();
+async function load(){
+  if(!sb){ degrade('Could not reach the database, so nothing here can be trusted. Reload.'); return; }
+  const [objs, pages, edges, meta] = await Promise.all([
+    sb.from('v_schema_objects').select('*'),
+    sb.from('kg_pages').select('*'),
+    sb.from('kg_edges').select('*'),
+    sb.from('kg_meta').select('*')
+  ]);
+  const O=objs.data||[], P=pages.data||[], E=edges.data||[], M={};
+  (meta.data||[]).forEach(r=>M[r.key]=r.val);
 
-PAGES.forEach(function(p){
-  nodes.add({id:p[0],label:p[1],title:p[2]+'  ['+p[3]+']',group:'page',
-    shape:'box',color:{background:'#ffffff',border:GCOL[p[3]],
-      highlight:{background:'#f2f6fb',border:GCOL[p[3]]}},
-    font:{color:'#1f2a44',size:14,face:'Arial',multi:false},
-    borderWidth:2,margin:8});
-});
-TABLES.forEach(function(t){
-  var used = !UNUSED[t];
-  nodes.add({id:t,label:t.slice(2),title:'table: '+t.slice(2)+(used?'':'  (no page uses it)'),
-    group:'table',shape:'dot',size:used?16:12,
-    color:{background:used?'#2f8f5b':'#cdd6cf',border:used?'#256f47':'#9faea3',
-      highlight:{background:'#3fae72',border:'#256f47'}},
-    font:{color:used?'#20402f':'#8a938a',size:12.5,face:'Arial'}});
-});
-// automation nodes
-[['a_action','GitHub Action\n(publish.yml)'],['a_pages','GitHub Pages\n(live site)'],
- ['a_social','In-app Social\nlogger']].forEach(function(a){
-  nodes.add({id:a[0],label:a[1],group:'auto',shape:'diamond',size:20,
-    color:{background:'#e9c987',border:'#c58a2e',highlight:{background:'#f0d59c',border:'#c58a2e'}},
-    font:{color:'#5a4413',size:12.5,face:'Arial'}});
-});
+  const tables=O.filter(o=>o.kind==='table'), views=O.filter(o=>o.kind==='view');
+  const used=new Set(E.map(e=>e.tbl));
+  const orphans=O.filter(o=>!used.has(o.name)).map(o=>o.name);
 
-var eN=0;
-USES.forEach(function(u){
-  u[1].forEach(function(t){
-    edges.add({from:u[0],to:t,color:{color:'#b8c2d0',highlight:'#3f6f8f'},width:1.4,
-      smooth:{type:'continuous'},arrows:{to:{enabled:true,scaleFactor:.45}}});
-    eN++;
-  });
-});
-// deploy pipeline (dashed amber)
-function auto(f,t,lbl){edges.add({from:f,to:t,dashes:true,color:{color:'#d1a24e',highlight:'#c58a2e'},
-  width:1.8,label:lbl,font:{size:10.5,color:'#8a6b1e',align:'middle',strokeWidth:4,strokeColor:'#f7f9fc'},
-  arrows:{to:{enabled:true,scaleFactor:.5}},smooth:{type:'cubicBezier'}});}
-auto('t_pages','a_action','read gzb64');
-auto('a_action','a_pages','commit + publish');
-auto('a_pages','p_index','serves pages');
-// in-app Social automation
-auto('p_index','a_social','tick Social ✓');
-auto('a_social','t_connections','auto-insert');
-auto('a_social','t_daily_completed','auto-insert');
+  document.getElementById('vSchema').textContent='read live just now';
+  document.getElementById('vEdges').textContent=M.edges_scanned_at||'unknown';
+  document.getElementById('vPages').textContent=P.length;
+  document.getElementById('vTables').textContent=tables.length;
+  document.getElementById('vViews').textContent=views.length;
+  document.getElementById('counts').innerHTML=[
+    ['Pages in the nav',P.filter(p=>p.in_nav).length],
+    ['Pages outside the nav',P.filter(p=>!p.in_nav).length],
+    ['Tables',tables.length],['Views',views.length],
+    ['Page to table links',E.length],
+    ['Read by no page',orphans.length]
+  ].map(r=>'<div class="stat"><span>'+r[0]+'</span><b>'+r[1]+'</b></div>').join('');
+  document.getElementById('orphans').innerHTML = orphans.length
+    ? orphans.map(o=>'<code>'+esc(o)+'</code>').join(' ')
+      + '<div style="margin-top:8px">Most of these are written by a scheduled job or an edge function rather than a page, which is normal. Anything here you do not recognise is worth a look.</div>'
+    : 'Every table and view is read by at least one page.';
 
-var container=document.getElementById('net');
-var data={nodes:nodes,edges:edges};
-var options={
-  physics:{stabilization:{iterations:220},barnesHut:{gravitationalConstant:-9000,springLength:130,springConstant:.035,damping:.5,avoidOverlap:.4}},
-  interaction:{hover:true,tooltipDelay:120,navigationButtons:false,multiselect:true},
-  nodes:{shadow:{enabled:true,size:5,x:0,y:2,color:'rgba(31,42,68,.10)'}},
-  edges:{selectionWidth:1.6}
-};
-var network=new vis.Network(container,data,options);
-
-// click-to-highlight neighbourhood
-var baseNodes=nodes.get();
-network.on('click',function(params){
-  if(!params.nodes.length){RESET();return;}
-  var sel=params.nodes[0];
-  var keep={}; keep[sel]=1;
-  edges.get().forEach(function(e){ if(e.from===sel)keep[e.to]=1; if(e.to===sel)keep[e.from]=1;});
-  nodes.update(baseNodes.map(function(n){
-    var on=keep[n.id];
-    var f=Object.assign({},n.font||{});
-    return {id:n.id,opacity:on?1:0.15,font:Object.assign(f,{color:on?f.color:'#c3cad4'})};
-  }));
-});
-function RESET(){
-  nodes.update(baseNodes.map(function(n){return {id:n.id,opacity:1,font:n.font};}));
-  network.fit({animation:{duration:400}});
+  drawFallback(P,E,O);
+  drawGraph(P,E,O,orphans);
 }
 
-document.getElementById('cP').textContent=PAGES.length;
-document.getElementById('cT').textContent=TABLES.length;
-document.getElementById('cE').textContent=eN;
-document.getElementById('cU').textContent=Object.keys(UNUSED).length;
+function drawGraph(P,E,O,orphans){
+  const nl=document.getElementById('netLoading');
+  if(typeof vis==='undefined'){ degrade('The graph library did not load, so here is the same information as a list.'); return; }
+  const kind={}; O.forEach(o=>kind[o.name]=o.kind);
+  const rows={}; O.forEach(o=>rows[o.name]=o.approx_rows);
+  const orph=new Set(orphans);
+  const nodes=[], edges=[];
+  P.forEach(p=>nodes.push({id:'p:'+p.page, label:p.label, shape:'box', color:{background:GCOL[p.grp]||'#3f6f8f',border:'#ffffff'},
+      font:{color:'#fff',size:13,face:'Arial'}, title:p.page+'  ('+p.grp+')'}));
+  O.forEach(o=>{
+    const c = orph.has(o.name) ? '#c0453b' : (o.kind==='view' ? '#7c5cbf' : '#2f8f5b');
+    nodes.push({id:'t:'+o.name, label:o.name, shape:'dot', size:o.kind==='view'?9:12,
+      color:{background:c,border:'#fff'}, font:{color:'#1f2a44',size:12,face:'Arial'},
+      title:o.kind+' &middot; about '+(rows[o.name]||0).toLocaleString('en-US')+' rows'});
+  });
+  E.forEach(e=>edges.push({from:'p:'+e.page, to:'t:'+e.tbl, color:{color:'#c9d3de'}, width:1}));
+  net=new vis.Network(document.getElementById('net'),
+    {nodes:new vis.DataSet(nodes), edges:new vis.DataSet(edges)},
+    {physics:{stabilization:{iterations:220}, barnesHut:{gravitationalConstant:-9000, springLength:130}},
+     interaction:{hover:true, tooltipDelay:120}, nodes:{borderWidth:2}});
+  nl.style.display='none';
+}
+
+function drawFallback(P,E,O){
+  const byPage={}; E.forEach(e=>{(byPage[e.page]=byPage[e.page]||[]).push(e.tbl);});
+  const rowsHtml=P.filter(p=>byPage[p.page]).sort((a,b)=>(a.grp+a.label).localeCompare(b.grp+b.label))
+    .map(p=>'<tr><td><b>'+esc(p.label)+'</b><div class="t">'+esc(p.page)+'</div></td>'
+      +'<td class="t">'+esc(p.grp)+'</td><td class="t">'+byPage[p.page].sort().map(esc).join(', ')+'</td></tr>').join('');
+  document.getElementById('fallback').innerHTML=
+    '<table class="fb"><tr><th>Page</th><th>Group</th><th>Reads</th></tr>'+rowsHtml+'</table>';
+}
+
+function degrade(msg){
+  document.getElementById('net').style.display='none';
+  const fb=document.getElementById('fallback');
+  fb.style.display='block';
+  fb.insertAdjacentHTML('afterbegin','<div style="margin-bottom:12px;font-size:12.5px;color:#8f6a1f;background:#fdf6e6;border-left:3px solid #c58a2e;padding:9px 12px;border-radius:7px">'+esc(msg)+'</div>');
+}
+
+load().catch(e=>{ console.warn(e); degrade('Something went wrong loading the graph. The list below is built from whatever did load.'); });
 </script>
-<script id="pn-maps-js">document.addEventListener("click",function(e){var b=e.target.closest(".pn-dropbtn");var cur=b?b.parentNode.querySelector(".pn-menu"):null;document.querySelectorAll(".pn-menu.open").forEach(function(m){if(m!==cur)m.classList.remove("open");});if(b){var r=b.getBoundingClientRect();cur.style.left=Math.max(6,Math.min(r.left,window.innerWidth-210))+"px";cur.style.top=(r.bottom+2)+"px";cur.classList.toggle("open");e.stopPropagation();e.preventDefault();}});</script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
