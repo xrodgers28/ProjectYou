@@ -15,7 +15,8 @@ window.NAV_CONFIG = {
   ],
   "Quantified Self": [
     { "label": "QS Dashboard", "href": "qs-dashboard.html" },
-    { "label": "Where I've<br>Been", "href": "where-ive-been.html" }
+    { "label": "Where I've<br>Been", "href": "where-ive-been.html" },
+    { "label": "Coffee<br>Days", "href": "coffee-days.html" }
   ],
   "Editors": [
     { "label": "Daily<br>Habits", "href": "daily-template.html" },

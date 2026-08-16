@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coffee Days &middot; Project YOU</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
+    --accent:#3f6f8f;--green:#1e8e5a;--hot:#c0453b;
+    --bean:#7B4B2A;--beandk:#5A3419;--beanbg:#f6efe8;--beanlt:#e6d5c6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45;font-size:14px}
+  .hidden{display:none!important}
+  a{color:inherit}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px 14px;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit}
+  .err{color:var(--hot);font-size:12.5px;margin-top:8px;min-height:16px}
+  #login{max-width:340px;margin:14vh auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 8px 26px rgba(31,42,68,.09)}
+  #login h1{font-size:19px;margin-bottom:5px}
+  #login p{font-size:13px;color:var(--muted);margin-bottom:16px}
+  #login input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;font-size:14px}
+
+  .secbar-wrap{max-width:1180px;margin:0 auto;padding:12px 20px 0}
+  .secbar{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px}
+  .secbar h1{font-size:20px}
+  .secbar .ver{font-size:11px;font-weight:800;color:var(--bean);background:var(--beanbg);border:1px solid var(--beanlt);border-radius:999px;padding:2px 9px}
+  .secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700;margin-left:auto}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:16px 20px 80px}
+  .sub{font-size:13.5px;color:var(--muted);max-width:900px;line-height:1.6}
+  .srcline{font-size:11.5px;color:#9aa6b4;margin-top:8px}
+
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:12px;margin-top:18px}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 4px 12px rgba(31,42,68,.05)}
+  .tile .v{font-size:27px;font-weight:800;letter-spacing:-.4px;color:var(--beandk);line-height:1.15}
+  .tile .l{font-size:12.5px;color:var(--ink);font-weight:700;margin-top:3px}
+  .tile .x{font-size:11.5px;color:#9aa6b4;margin-top:2px}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-top:16px;box-shadow:0 4px 12px rgba(31,42,68,.05)}
+  .panel h2{font-size:12px;font-weight:800;letter-spacing:.9px;text-transform:uppercase;color:var(--muted)}
+  .panel .note{font-size:12.5px;color:#8b95a4;margin:4px 0 14px;max-width:860px;line-height:1.55}
+
+  .cal{overflow-x:auto;padding-bottom:6px}
+  .calinner{min-width:640px}
+  .calrow{display:flex;align-items:center;gap:10px;margin-bottom:3px}
+  .yr{width:34px;text-align:right;color:#9aa6b4;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;flex:none}
+  .cells{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,9px);gap:2px}
+  .c{width:9px;height:9px;border-radius:2px;background:#e6e9ef}
+  .c.on{background:var(--bean);cursor:pointer}
+  .c.pad{background:transparent}
+  .mlab{display:grid;grid-auto-flow:column;grid-template-columns:repeat(12,1fr);gap:2px;color:#9aa6b4;font-size:10.5px;font-weight:700;width:583px}
+  .mrow{display:flex;gap:10px;margin-bottom:5px}
+  .mrow .yr{visibility:hidden}
+  .legend{display:flex;align-items:center;gap:7px;color:#9aa6b4;font-size:11.5px;margin-top:12px}
+
+  .bars{display:flex;align-items:flex-end;gap:6px;height:170px;padding-top:8px}
+  .bar{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;cursor:pointer}
+  .bar .fill{width:100%;background:var(--bean);border-radius:4px 4px 0 0;min-height:2px}
+  .bar:hover .fill{background:var(--beandk)}
+  .bar .n{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;font-variant-numeric:tabular-nums}
+  .xaxis{display:flex;gap:6px;border-top:1px solid #cdd4dd;padding-top:6px}
+  .xaxis span{flex:1;text-align:center;color:#9aa6b4;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+
+  table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:#9aa6b4;font-weight:800;padding:0 8px 8px 0;border-bottom:1px solid var(--line)}
+  th.r,td.r{text-align:right;padding-right:0}
+  td{padding:9px 8px 9px 0;border-bottom:1px solid #f0f2f6;color:var(--muted);font-size:13px}
+  td.name{color:var(--ink);font-weight:700}
+  .city{color:#9aa6b4;font-size:11.5px;font-weight:400}
+  tr:last-child td{border-bottom:none}
+
+  #tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .1s;background:var(--ink);color:#fff;
+       padding:6px 9px;border-radius:7px;font-size:12px;line-height:1.35;white-space:nowrap;z-index:80;font-weight:700;
+       box-shadow:0 6px 18px rgba(31,42,68,.25)}
+  #tip .t2{display:block;font-weight:400;color:#c8d0dd;font-size:11px}
+  .loading{color:#9aa6b4;font-size:13px;padding:20px 0}
+  .foot{font-size:12px;color:#9aa6b4;margin-top:20px;line-height:1.7;max-width:900px}
+  .foot code{background:#fff;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px}
+
+  .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;gap:1px}
+  .pynav::-webkit-scrollbar{height:0}
+  .pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+  .pn-logo img{height:28px;width:auto;display:block}
+  .pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+  .pn-group.first{border-left:none}
+  .pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+  a.pn-label{text-decoration:none;cursor:pointer}
+  a.pn-label:hover,a.pn-label.on{color:var(--accent)}
+  .pn-links{display:flex;gap:1px;align-items:stretch}
+  .pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+  .pn-link:hover{background:#eef2f8;color:#3f6f8f}
+  .pn-link.on{background:#3f6f8f;color:#fff}
+  .pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+  .pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+  .pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+  .pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+  .pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+  .pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+  .pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+  .pn-drop{position:relative;display:inline-flex;align-items:stretch}
+  .pn-dropbtn{cursor:pointer;user-select:none}
+  .pn-menu{position:fixed;background:#fff;border:1px solid #e3e7ee;border-radius:9px;box-shadow:0 10px 28px rgba(31,42,68,.16);padding:5px;display:none;flex-direction:column;min-width:200px;z-index:60}
+  .pn-menu.open{display:flex}
+  .pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>Coffee Days</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link">Staging<br>Area</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a><a href="where-ive-been.html" class="pn-link">Where I've<br>Been</a><a href="coffee-days.html" class="pn-link on">Coffee<br>Days</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span><span class="pn-ver">v1.0</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
+
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Coffee Days</h1><span class="ver">v1.0</span><span class="date"></span></div></div>
+
+<div class="wrap">
+  <p class="sub">Every day you are known to have had coffee, rebuilt from your Swarm check-in history going back to 2009. <strong>This is check-in data only</strong> &mdash; no credit card, bank or Monarch data touches this page. From here on it fills itself: a check-in at a coffee shop ticks the day automatically, and the &#9749; Coffee habit on your daily list catches everything you brewed at home.</p>
+  <p class="srcline">Live from <code style="font-family:ui-monospace,Menlo,monospace">v_coffee_days</code> &middot; hover any square for the shop</p>
+
+  <div class="tiles" id="tiles"><div class="loading">Loading&hellip;</div></div>
+
+  <div class="panel">
+    <h2>One square per day</h2>
+    <p class="note">Filled = coffee recorded that day. An empty square before today is <em>not</em> proof of no coffee &mdash; it means there was no check-in, which is exactly the gap the daily habit tick now closes.</p>
+    <div class="cal" id="cal"></div>
+    <div class="legend"><span class="c"></span> no record <span class="c on" style="margin-left:6px"></span> coffee &mdash; hover for the shop</div>
+  </div>
+
+  <div class="panel">
+    <h2>Coffee days per year</h2>
+    <p class="note">The climb from 2022 is real behaviour, not better data &mdash; your check-in volume is steady across the whole period. The current year is partial.</p>
+    <div class="bars" id="ybars"></div>
+    <div class="xaxis" id="yaxis"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Which day of the week</h2>
+    <p class="note">Across all 17 years.</p>
+    <div class="bars" id="dbars" style="height:130px"></div>
+    <div class="xaxis" id="daxis"></div>
+  </div>
+
+  <div class="panel">
+    <h2>The regular haunts</h2>
+    <p class="note">Top 20 coffee venues by check-in count.</p>
+    <table><thead><tr><th>Venue</th><th>First</th><th>Last</th><th class="r">Visits</th></tr></thead><tbody id="vrows"></tbody></table>
+  </div>
+
+  <p class="foot">
+    &ldquo;Coffee&rdquo; is decided in exactly one place &mdash; the Postgres function <code>is_coffee_checkin()</code>. It counts Foursquare&rsquo;s Coffee Shop, Caf&eacute; and Donut Shop categories plus venues explicitly named for coffee, and deliberately excludes bakeries, bagel shops, tea rooms and restaurants merely named &ldquo;&hellip;Cafe&rdquo;. Widen or narrow it there and every number on this page follows.
+  </p>
+</div>
+</div>
+<div id="tip"></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');_a.style.display='none';}if(_l){_l.classList.remove('hidden');_l.style.display='';var _e=document.getElementById('loginErr');if(_e)_e.textContent='Your session expired. Please sign in again.';}}});
+
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const MS=86400000;
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DOW=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const d0=s=>{const p=String(s).slice(0,10).split("-").map(Number);return Date.UTC(p[0],p[1]-1,p[2]);};
+const iso=t=>new Date(t).toISOString().slice(0,10);
+const fmt=s=>{const p=String(s).slice(0,10).split("-").map(Number);return p[2]+" "+MON[p[1]-1]+" "+p[0];};
+
+async function boot(){ const {data:{session}}=await sb.auth.getSession(); if(session) onLogin(session); }
+async function signIn(){
+  const email=document.getElementById('email').value.trim(), pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}
+  onLogin(data.session);
+}
+async function onLogin(session){
+  try{ await sb.realtime.setAuth(session.access_token); }catch(e){}
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  load();
+}
+
+async function load(){
+  const [st, dy, ck, vn] = await Promise.all([
+    sb.from('v_coffee_stats').select('*').single(),
+    sb.from('v_coffee_days').select('day,from_checkin,self_logged').order('day'),
+    sb.from('v_coffee_checkins').select('day,venue,city,state,country'),
+    sb.from('v_coffee_venues').select('*').order('visits',{ascending:false}).limit(20)
+  ]);
+  const S = st.data || {};
+  const days = (dy.data||[]).map(r=>String(r.day).slice(0,10));
+  const flags = {}; (dy.data||[]).forEach(r=>{ flags[String(r.day).slice(0,10)] = r; });
+
+  /* exact day -> [venue, city] map, so the hover names the shop */
+  const where = {};
+  (ck.data||[]).forEach(r=>{
+    const k = String(r.day).slice(0,10);
+    const place = r.city ? r.venue+" · "+r.city : r.venue;
+    if(!where[k]) where[k]=[];
+    if(where[k].indexOf(place)<0) where[k].push(place);
+  });
+
+  renderTiles(S, days);
+  renderCal(days, flags, where);
+  renderYears(days);
+  renderDow(days);
+  renderVenues(vn.data||[]);
+}
+
+function renderTiles(S, days){
+  const n = S.total_days != null ? S.total_days : days.length;
+  const pct = S.days_last_365 ? Math.round(S.days_last_365/365*100) : 0;
+  const t = [
+    [ (n||0).toLocaleString(), "days with coffee on record", S.first_day ? "since "+fmt(S.first_day) : "" ],
+    [ String(S.days_last_365||0), "in the last 12 months", pct+"% of days" ],
+    [ String(S.days_this_year||0), "so far this year", "" ],
+    [ (S.longest_streak||0)+" days", "longest run", S.longest_streak_ended ? "ended "+fmt(S.longest_streak_ended) : "" ],
+    [ String(S.current_streak||0), "current run",
+      (S.current_streak ? "still going" : (S.last_day ? "last coffee "+fmt(S.last_day) : "")) ]
+  ];
+  document.getElementById('tiles').innerHTML = t.map(x=>
+    `<div class="tile"><div class="v">${esc(x[0])}</div><div class="l">${esc(x[1])}</div><div class="x">${esc(x[2])}</div></div>`).join('');
+}
+
+function renderCal(days, flags, where){
+  if(!days.length){ document.getElementById('cal').innerHTML='<div class="loading">No coffee days yet.</div>'; return; }
+  const set = new Set(days);
+  const y0 = Number(days[0].slice(0,4)), y1 = Number(days[days.length-1].slice(0,4));
+  let h = `<div class="calinner"><div class="mrow"><span class="yr">0</span><div class="mlab">${MON.map(m=>`<span>${m}</span>`).join('')}</div></div>`;
+  for(let y=y0;y<=y1;y++){
+    let cells='';
+    const start=Date.UTC(y,0,1), pad=new Date(start).getUTCDay();
+    for(let i=0;i<pad;i++) cells+='<span class="c pad"></span>';
+    for(let t=start;t<Date.UTC(y+1,0,1);t+=MS){
+      const s=iso(t);
+      if(set.has(s)){
+        const f=flags[s]||{};
+        const w=(where[s]||[]).join(", ");
+        const src = w ? w : (f.self_logged ? "Logged by hand" : "Coffee");
+        cells+=`<span class="c on" data-d="${s}" data-w="${esc(src)}"></span>`;
+      } else cells+='<span class="c"></span>';
+    }
+    h+=`<div class="calrow"><span class="yr">${y}</span><div class="cells">${cells}</div></div>`;
+  }
+  document.getElementById('cal').innerHTML = h+'</div>';
+}
+
+function renderYears(days){
+  const by={}; days.forEach(s=>{const y=s.slice(0,4); by[y]=(by[y]||0)+1;});
+  const yrs=Object.keys(by).sort(), mx=Math.max.apply(null,yrs.map(y=>by[y]));
+  document.getElementById('ybars').innerHTML = yrs.map(y=>
+    `<div class="bar" data-t="${by[y]} coffee days in ${y}"><span class="n">${by[y]}</span><span class="fill" style="height:${(by[y]/mx*100).toFixed(1)}%"></span></div>`).join('');
+  document.getElementById('yaxis').innerHTML = yrs.map(y=>`<span>${y.slice(2)}</span>`).join('');
+}
+
+function renderDow(days){
+  const c=[0,0,0,0,0,0,0];
+  days.forEach(s=>c[new Date(d0(s)).getUTCDay()]++);
+  const mx=Math.max.apply(null,c);
+  document.getElementById('dbars').innerHTML = c.map((n,i)=>
+    `<div class="bar" data-t="${n} coffee days on a ${DOW[i]}day"><span class="n">${n}</span><span class="fill" style="height:${(n/mx*100).toFixed(1)}%"></span></div>`).join('');
+  document.getElementById('daxis').innerHTML = DOW.map(d=>`<span>${d}</span>`).join('');
+}
+
+function renderVenues(rows){
+  document.getElementById('vrows').innerHTML = rows.map(v=>{
+    const place=[v.city,v.state].filter(Boolean).join(', ') || v.country || '';
+    return `<tr><td class="name">${esc(v.venue)}<div class="city">${esc(place)}</div></td>
+      <td>${fmt(v.first_visit)}</td><td>${fmt(v.last_visit)}</td><td class="r">${v.visits}</td></tr>`;
+  }).join('');
+}
+
+/* hover */
+const tip=document.getElementById('tip');
+document.addEventListener('mouseover',e=>{
+  const el=e.target.closest&&e.target.closest('[data-d],[data-t]'); if(!el) return;
+  tip.innerHTML = el.dataset.d
+    ? esc(el.dataset.w)+'<span class="t2">'+fmt(el.dataset.d)+'</span>'
+    : esc(el.dataset.t);
+  tip.style.opacity=1;
+});
+document.addEventListener('mousemove',e=>{
+  if(tip.style.opacity!=='1') return;
+  tip.style.left=Math.min(e.clientX+12, window.innerWidth-tip.offsetWidth-8)+'px';
+  tip.style.top=Math.max(6, e.clientY-42)+'px';
+});
+document.addEventListener('mouseout',e=>{
+  if(e.target.closest&&e.target.closest('[data-d],[data-t]')) tip.style.opacity=0;
+});
+
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>
