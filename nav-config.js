@@ -14,7 +14,8 @@ window.NAV_CONFIG = {
     { "label": "Cue Cards", "href": "habit-modules.html" }
   ],
   "Quantified Self": [
-    { "label": "QS Dashboard", "href": "qs-dashboard.html" }
+    { "label": "QS Dashboard", "href": "qs-dashboard.html" },
+    { "label": "Where I've<br>Been", "href": "where-ive-been.html" }
   ],
   "Editors": [
     { "label": "Daily<br>Habits", "href": "daily-template.html" },
