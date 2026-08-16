@@ -29,8 +29,8 @@ window.NAV_CONFIG = {
     { "label": "Maps", "children": [
       { "label": "Overview", "href": "maps.html" },
       { "label": "Data Flow Diagram", "href": "dfd.html" },
-      { "label": "Knowledge Graph", "href": "blueprint.html" },
-      { "label": "Interactive Knowledge Graph", "href": "knowledge-graph.html" },
+      { "label": "Compass Sources", "href": "blueprint.html" },
+      { "label": "Knowledge Graph", "href": "knowledge-graph.html" },
       { "label": "Architecture Map", "href": "architecture-map.html" },
       { "label": "Data Flow Map", "href": "data-flow-map.html" }
     ] },
