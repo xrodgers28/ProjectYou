@@ -94,7 +94,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v3.3</span>
+    <span class="pn-ver">v3.4</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -174,8 +174,11 @@ function saveHist(h){try{localStorage.setItem('pb_hist',JSON.stringify(h));}catc
 function setHist(id,on){var h=getHist(),k=todayKey();var s=new Set(h[k]||[]);if(on)s.add(id);else s.delete(id);h[k]=Array.from(s);saveHist(h);}
 
 /* ===== the real streak =====
-   A day counts ONLY when every card on this board was completed that day.
-   Scott's rule, chosen Aug 15 2026: a perfect day or it does not count.
+   A day counts when ANY card on this board was completed that day.
+   Scott's rule, chosen Aug 16 2026, replacing the all-four-perfect rule of
+   Aug 15. That earlier rule could never read above 1: "Atomic Habits" had
+   only ever been ticked once, so every prior day failed the all-four test
+   and the run broke immediately. Any-card scoring gives the true 6 days.
    History lives in qs_log, because `todos` keeps a single row per habit and
    is wiped each night, so it cannot hold a past day.
    Today is allowed to be unfinished without breaking the run: it simply does
@@ -184,7 +187,7 @@ var STREAK=null;              /* null = not loaded, fall back to the local mirro
 function qsNames(){return MODS.map(function(m){return m.qs;});}
 function streakLocal(){var h=getHist(),d=todayAnchor(),n=0;
   for(var i=0;i<400;i++){var c=(h[keyOf(d)]||[]).length;
-    if(c>=MODS.length)n++;else if(i>0)break;
+    if(c>=1)n++;else if(i>0)break;
     d.setUTCDate(d.getUTCDate()-1);}
   return n;}
 function streakDays(){return STREAK===null?streakLocal():STREAK;}
@@ -197,11 +200,11 @@ async function loadStreak(){
   if(res.error){STREAK=null;return;}
   var byDay={};
   (res.data||[]).forEach(function(r){ if(!byDay[r.date])byDay[r.date]={}; byDay[r.date][r.tracker]=1; });
-  function perfect(k){var s=byDay[k];if(!s)return false;
-    for(var i=0;i<names.length;i++){if(!s[names[i]])return false;}return true;}
+  function counted(k){var s=byDay[k];if(!s)return false;
+    for(var i=0;i<names.length;i++){if(s[names[i]])return true;}return false;}
   var d=todayAnchor(), n=0;
   for(var i=0;i<400;i++){
-    if(perfect(keyOf(d)))n++;
+    if(counted(keyOf(d)))n++;
     else if(i>0)break;
     d.setUTCDate(d.getUTCDate()-1);
   }
@@ -260,13 +263,19 @@ async function toggle(m,el){
     upd={done:false,status:'todo',done_at:null,actual_minutes:null,updated_at:now};
   }
   var res=await sb.from('todos').update(upd).eq('id',row.id);
+  if(res.error){if(el)el.classList.remove('busy');toast('Did not save: '+res.error.message);return;}
+  /* The trigger only ever WRITES qs_log on a false->true flip; it never removes.
+     So an untick has to clear its own row, or the streak can only ever climb.
+     That is exactly why unticking looked like it did nothing. */
+  if(!want){
+    var del=await sb.from('qs_log').delete()
+      .eq('date',today).eq('tracker',m.qs).eq('source','habit-bandit');
+    if(del.error){toast('Cleared the card, but the streak row stayed: '+del.error.message);}
+  }
   if(el)el.classList.remove('busy');
-  if(res.error){toast('Did not save: '+res.error.message);return;}
   Object.keys(upd).forEach(function(k){row[k]=upd[k];});
   setHist(m.id,want);
   render();
-  /* the database trigger writes qs_log as part of that update, so the streak
-     is already current by the time we ask for it again */
   loadStreak().then(render);
   toast(want?(m.name+' \u2192 wheel, '+upd.actual_minutes+' min \u2713'):(m.name+' cleared from the wheel'));
 }
