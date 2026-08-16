@@ -94,7 +94,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v3.2</span>
+    <span class="pn-ver">v3.3</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -121,7 +121,7 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ===== Cue Cards board v3.1 — every card wired to the Time Bandit Wheel =====
+/* ===== Cue Cards board v3.3 — cards wired to the wheel, streak wired to qs_log =====
    Tick a card  ->  today's habit row in `todos` is created-or-updated with
    done / done_at / actual_minutes, which is exactly what the wheel's outer
    ring draws. Default 10 min unless the card's own last page logged a time. */
@@ -143,25 +143,70 @@ const IC={
 /* habit = the exact task name in `todos`. These are the names the wheel,
    the CrushingIt board and each module page all match on. Do not rename
    one without renaming it in the module page too. */
+/* `qs` is the name this habit lands under in qs_log, which is what the streak
+   counts. The database trigger uses todos.tracker when it is set, otherwise
+   the task name with a trailing "(...)" stripped. Change one, change both. */
 const MODS=[
- {id:'ai',      name:"AI Insights",          href:"ai.html",          acc:"#3f6f8f", icon:'ai',      kick:"Today's AI insight",     ds:"A fresh daily blend of AI insights to learn from.", habit:"AI (Learning/Mental Fitness)", est:10, pos:7},
- {id:'atomic',  name:"Atomic Habits",        href:"james-clear.html", acc:"#3f8f7a", icon:'atom',    kick:"Today's 3-2-1",          ds:"Two ideas, a quote, and a question.",              habit:"Atomic Habits (3-2-1)",       est:10, pos:11},
- {id:'twk',     name:"Things Worth Knowing", href:"quotes.html",      acc:"#7a4f9c", icon:'speech',  kick:"Today's three",          ds:"Things worth knowing, worth keeping.",             habit:"Clever Phrases",              est:3,  pos:8},
- {id:'compass', name:"Compass",              href:"compass.html",     acc:"#b8962f", icon:'compass', kick:"One question, answered", ds:"A guided daily reflection to point your day.",     habit:"Compass",                     est:10, pos:10}
+ {id:'ai',      name:"AI Insights",          href:"ai.html",          acc:"#3f6f8f", icon:'ai',      kick:"Today's AI insight",     ds:"A fresh daily blend of AI insights to learn from.", habit:"AI (Learning/Mental Fitness)", qs:"AI",            est:10, pos:7},
+ {id:'atomic',  name:"Atomic Habits",        href:"james-clear.html", acc:"#3f8f7a", icon:'atom',    kick:"Today's 3-2-1",          ds:"Two ideas, a quote, and a question.",              habit:"Atomic Habits (3-2-1)",       qs:"Atomic Habits", est:10, pos:11},
+ {id:'twk',     name:"Things Worth Knowing", href:"quotes.html",      acc:"#7a4f9c", icon:'speech',  kick:"Today's three",          ds:"Things worth knowing, worth keeping.",             habit:"Clever Phrases",              qs:"Learning",      est:3,  pos:8},
+ {id:'compass', name:"Compass",              href:"compass.html",     acc:"#b8962f", icon:'compass', kick:"One question, answered", ds:"A guided daily reflection to point your day.",     habit:"Compass",                     qs:"Compass",       est:10, pos:10}
 ];
 const BY_HABIT={}; MODS.forEach(function(m){BY_HABIT[m.habit]=m;});
 
 let ROWS={};            /* habit name -> todos row */
 let signedIn=false;
 
-function todayKey(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+/* the day always means the Eastern day, never the browser's clock, so a tick
+   made while travelling still lands on the right date and lines up with the
+   4am habit reset running in the database */
+function todayKey(){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}catch(e){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}}
+/* walk days backwards without tripping over daylight saving: anchor at noon UTC */
+function keyOf(d){return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');}
+function todayAnchor(){var p=todayKey().split('-');return new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12,0,0));}
 function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2400);}
 
-/* localStorage stays on as the streak ledger + offline mirror */
+/* localStorage stays on as the offline mirror only. It is NOT the streak any
+   more: it only ever knew about this one browser, which is why the badge read
+   1 day no matter how long the real run was. */
 function getHist(){try{return JSON.parse(localStorage.getItem('pb_hist')||'{}');}catch(e){return {};}}
 function saveHist(h){try{localStorage.setItem('pb_hist',JSON.stringify(h));}catch(e){}}
 function setHist(id,on){var h=getHist(),k=todayKey();var s=new Set(h[k]||[]);if(on)s.add(id);else s.delete(id);h[k]=Array.from(s);saveHist(h);}
-function streakDays(){var h=getHist();var d=new Date();var n=0;for(var i=0;i<400;i++){var key=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');var c=(h[key]||[]).length;if(i===0){if(c>0)n++;}else{if(c>0)n++;else break;}d.setDate(d.getDate()-1);}return n;}
+
+/* ===== the real streak =====
+   A day counts ONLY when every card on this board was completed that day.
+   Scott's rule, chosen Aug 15 2026: a perfect day or it does not count.
+   History lives in qs_log, because `todos` keeps a single row per habit and
+   is wiped each night, so it cannot hold a past day.
+   Today is allowed to be unfinished without breaking the run: it simply does
+   not count yet, so the badge never punishes you at 9am. */
+var STREAK=null;              /* null = not loaded, fall back to the local mirror */
+function qsNames(){return MODS.map(function(m){return m.qs;});}
+function streakLocal(){var h=getHist(),d=todayAnchor(),n=0;
+  for(var i=0;i<400;i++){var c=(h[keyOf(d)]||[]).length;
+    if(c>=MODS.length)n++;else if(i>0)break;
+    d.setUTCDate(d.getUTCDate()-1);}
+  return n;}
+function streakDays(){return STREAK===null?streakLocal():STREAK;}
+async function loadStreak(){
+  if(!sb||!signedIn){STREAK=null;return;}
+  var names=qsNames();
+  var from=todayAnchor(); from.setUTCDate(from.getUTCDate()-400);
+  var res=await sb.from('qs_log').select('date,tracker')
+    .eq('source','habit-bandit').in('tracker',names).gte('date',keyOf(from));
+  if(res.error){STREAK=null;return;}
+  var byDay={};
+  (res.data||[]).forEach(function(r){ if(!byDay[r.date])byDay[r.date]={}; byDay[r.date][r.tracker]=1; });
+  function perfect(k){var s=byDay[k];if(!s)return false;
+    for(var i=0;i<names.length;i++){if(!s[names[i]])return false;}return true;}
+  var d=todayAnchor(), n=0;
+  for(var i=0;i<400;i++){
+    if(perfect(keyOf(d)))n++;
+    else if(i>0)break;
+    d.setUTCDate(d.getUTCDate()-1);
+  }
+  STREAK=n;
+}
 
 /* a card counts as done when today's habit row says so */
 function isDone(m){
@@ -178,9 +223,10 @@ async function loadRows(){
     /* if the same habit somehow has more than one row, keep the freshest */
     if(!prev||String(r.for_date||'')>String(prev.for_date||''))ROWS[r.task]=r;
   });
-  /* keep the streak ledger in step with the database */
+  /* keep the offline mirror in step with the database */
   MODS.forEach(function(m){setHist(m.id,isDone(m));});
   render();
+  loadStreak().then(render);
 }
 
 /* create today's row if the habit has none — this is the bug that used to
@@ -219,6 +265,9 @@ async function toggle(m,el){
   Object.keys(upd).forEach(function(k){row[k]=upd[k];});
   setHist(m.id,want);
   render();
+  /* the database trigger writes qs_log as part of that update, so the streak
+     is already current by the time we ask for it again */
+  loadStreak().then(render);
   toast(want?(m.name+' \u2192 wheel, '+upd.actual_minutes+' min \u2713'):(m.name+' cleared from the wheel'));
 }
 
