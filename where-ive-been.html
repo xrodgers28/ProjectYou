@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Where I've Been &middot; Project YOU</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root{
     --ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
     --accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;
-    --amber:#b07d12;--amberbg:#fdf6e6;
+    --amber:#b07d12;--amberbg:#fdf6e6;--hot:#c0453b;--sea:#8fd0c4;
     --swarm:#F5822A;--swarmdk:#C25E14;--swarmbg:#fff3e8;
     --trav:#2E6E8E;--travbg:#e9f0f5;--travdk:#1d5570;--land:#dfe4ea;--landln:#cdd4dd;
   }
@@ -102,17 +104,38 @@
   .empty h3{font-size:16px;margin:8px 0 6px}
   .empty p{font-size:13px;color:var(--muted);max-width:580px;margin:0 auto 4px}
 
-  .sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
-  @media(max-width:880px){.sgrid{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:560px){.sgrid{grid-template-columns:1fr}}
-  .scard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-  .scard .f{font-size:19px;line-height:1}
-  .scard .p{font-size:14px;font-weight:700;margin-top:6px}
-  .scard .loc{font-size:12px;color:var(--muted);margin-top:2px}
-  .scard .rec{font-size:11.5px;color:var(--trav);margin-top:6px;font-weight:700}
-  .scard .n{font-size:12px;color:var(--muted);margin-top:6px;font-style:italic}
-  .blist{display:flex;flex-direction:column;gap:7px}
-  .bitem{background:#fff;border:1px solid var(--line);border-left:3px solid var(--amber);border-radius:10px;padding:10px 13px;font-size:13.5px}
+  /* Someday tab — mirrors the Future Travel page, namespaced ft- so it cannot
+     collide with the country-map styles above. */
+  .ft-intro{font-size:13px;color:var(--muted);margin:2px 0 14px;line-height:1.5}
+  .ft-intro b{color:var(--ink)}
+  .ft-addbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px;box-shadow:0 4px 12px rgba(31,42,68,.05)}
+  .ft-addbar input{font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px}
+  .ft-addbar #ftp{flex:2;min-width:150px}.ft-addbar #ftco{flex:1;min-width:110px}.ft-addbar #ftci{flex:1;min-width:120px}.ft-addbar #ftre{flex:1;min-width:120px}
+  .ft-addbar button{font-family:inherit;font-size:13px;font-weight:700;padding:9px 15px;border:none;border-radius:9px;background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap}
+  .ft-addbar button:disabled{opacity:.5;cursor:default}
+  .ft-viewtog{display:flex;gap:8px;margin:0 0 12px}
+  .ft-vt{font-family:inherit;font-weight:800;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:7px 15px;cursor:pointer}
+  .ft-vt.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  #ftmap{height:440px;border-radius:14px;border:1px solid var(--line);box-shadow:0 8px 22px rgba(31,42,68,.08);margin-bottom:8px;background:#dfe7f0}
+  .leaflet-popup-content{font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.4}
+  .leaflet-popup-content .pp-place{font-weight:800;font-size:14px;color:var(--ink)}
+  .leaflet-popup-content .pp-meta{color:var(--muted);font-size:12px;margin-top:2px}
+  .ft-maphint{font-size:11px;color:#9aa6b4;margin:0 0 18px 2px}
+  .ft-count{font-size:12px;color:var(--muted);margin:8px 0 10px;font-weight:700}
+  .ft-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px}
+  .ft-card{position:relative;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 15px 13px;box-shadow:0 6px 16px rgba(31,42,68,.06);overflow:hidden}
+  .ft-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--sea)}
+  .ft-card .flag{font-size:30px;line-height:1}
+  .ft-card .place{font-weight:800;font-size:15.5px;margin-top:6px;line-height:1.2;padding-right:16px}
+  .ft-card .row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:7px}
+  .ft-card .pill{font-size:11px;font-weight:700;border-radius:999px;padding:2px 9px;background:var(--chip);color:var(--accent2)}
+  .ft-card .pill.rec{background:#eef7f0;color:var(--green)}
+  .ft-card .pill.nogeo{background:#fdf3e6;color:#b5762a}
+  .ft-card .note2{font-size:12px;color:var(--muted);margin-top:7px;font-style:italic}
+  .ft-card .del{position:absolute;top:9px;right:10px;font-size:15px;color:#c9cfd6;cursor:pointer;line-height:1}
+  .ft-card .del:hover{color:var(--hot)}
+  .ft-empty{color:var(--muted);font-size:14px;padding:16px 2px}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:80}.toast.show{opacity:1}
 
   .note{background:var(--amberbg);border:1px solid #eadfbe;border-left:4px solid var(--amber);border-radius:11px;padding:13px 15px;margin-top:16px;font-size:13px;color:#6b5a2e}
   .note b{color:var(--amber)}
@@ -158,9 +181,9 @@
 </div>
 
 <div id="app" class="hidden">
-<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.2</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.3</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Where I've Been</h1><span class="ver">v1.2</span><span class="date"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Where I've Been</h1><span class="ver">v1.3</span><span class="date"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Every country, place and trip you have actually been to. Fed by Swarm check-ins and TripIt trip history once those are connected. Your Future Travel list lives here too, kept deliberately separate so a place you dream about is never counted as a place you have been.</p>
@@ -236,10 +259,19 @@
   <div class="panel" id="p4">
     <h2 class="st">Someday <span class="h" id="sdHint">&nbsp;</span></h2>
     <div class="note" style="margin-top:0"><b>Why this sits apart.</b> The system tracks only what has happened, and a wish list is the opposite of that. Someday lives here for convenience, keeps the "add [place] to Future Travel" capture, and is excluded from every count on this page. A place moves into Countries only when a real check-in or a completed trip proves you went.</div>
-    <h2 class="st">Destinations</h2>
-    <div class="sgrid" id="sgrid"></div>
-    <h2 class="st">Bucket list</h2>
-    <div class="blist" id="blist"></div>
+    <p class="ft-intro">Your someday map. Every dream destination tagged by country, nearest city, and who put you onto it. Tip: say <b>"add [place] to Future Travel"</b> in any Claude chat and it lands right here.</p>
+    <div class="ft-addbar">
+      <input id="ftp" placeholder="Place (e.g. Positano)">
+      <input id="ftco" placeholder="Country">
+      <input id="ftci" placeholder="Nearest city">
+      <input id="ftre" placeholder="Recommended by">
+      <button id="ftadd" onclick="ftAddPlace()">Add to map</button>
+    </div>
+    <div class="ft-viewtog"><button id="ftvd" class="ft-vt on" onclick="ftSetView('destinations')">&#128506;&#65039; Destinations</button><button id="ftvb" class="ft-vt" onclick="ftSetView('bucket')">&#127919; Bucket List</button></div>
+    <div id="ftmap"></div>
+    <div class="ft-maphint">Tap a pin for details. Drag to explore.</div>
+    <div class="ft-count" id="ftcount"></div>
+    <div class="ft-grid" id="ftcards"></div>
   </div>
 
   <div class="stamp">As of August 16th</div>
@@ -247,6 +279,7 @@
 </div>
 
 <div id="tip"></div>
+<div class="toast" id="toast"></div>
 
 <script src="world-countries.js"></script>
 <script>
@@ -415,19 +448,110 @@ function zoomTo(co){
 }
 cvBack.addEventListener('click',()=>{cvSvg.setAttribute('viewBox','0 14 1000 404');cvBack.style.display='none';document.getElementById('tip').style.opacity=0;});
 
+/* ---- Someday: the Future Travel page, embedded ---- */
+let PLACES=[], ftMap=null, ftMarkers=null, ftView='destinations';
+const FLAGS={'italy':'\u{1F1EE}\u{1F1F9}','canada':'\u{1F1E8}\u{1F1E6}','united states':'\u{1F1FA}\u{1F1F8}','usa':'\u{1F1FA}\u{1F1F8}','us':'\u{1F1FA}\u{1F1F8}','united kingdom':'\u{1F1EC}\u{1F1E7}','uk':'\u{1F1EC}\u{1F1E7}','england':'\u{1F1EC}\u{1F1E7}','france':'\u{1F1EB}\u{1F1F7}','spain':'\u{1F1EA}\u{1F1F8}','portugal':'\u{1F1F5}\u{1F1F9}','switzerland':'\u{1F1E8}\u{1F1ED}','germany':'\u{1F1E9}\u{1F1EA}','netherlands':'\u{1F1F3}\u{1F1F1}','greece':'\u{1F1EC}\u{1F1F7}','iceland':'\u{1F1EE}\u{1F1F8}','norway':'\u{1F1F3}\u{1F1F4}','sweden':'\u{1F1F8}\u{1F1EA}','denmark':'\u{1F1E9}\u{1F1F0}','ireland':'\u{1F1EE}\u{1F1EA}','austria':'\u{1F1E6}\u{1F1F9}','croatia':'\u{1F1ED}\u{1F1F7}','japan':'\u{1F1EF}\u{1F1F5}','china':'\u{1F1E8}\u{1F1F3}','taiwan':'\u{1F1F9}\u{1F1FC}','thailand':'\u{1F1F9}\u{1F1ED}','vietnam':'\u{1F1FB}\u{1F1F3}','india':'\u{1F1EE}\u{1F1F3}','indonesia':'\u{1F1EE}\u{1F1E9}','philippines':'\u{1F1F5}\u{1F1ED}','south korea':'\u{1F1F0}\u{1F1F7}','korea':'\u{1F1F0}\u{1F1F7}','jordan':'\u{1F1EF}\u{1F1F4}','israel':'\u{1F1EE}\u{1F1F1}','morocco':'\u{1F1F2}\u{1F1E6}','egypt':'\u{1F1EA}\u{1F1EC}','namibia':'\u{1F1F3}\u{1F1E6}','botswana':'\u{1F1E7}\u{1F1FC}','south africa':'\u{1F1FF}\u{1F1E6}','kenya':'\u{1F1F0}\u{1F1EA}','tanzania':'\u{1F1F9}\u{1F1FF}','mexico':'\u{1F1F2}\u{1F1FD}','colombia':'\u{1F1E8}\u{1F1F4}','brazil':'\u{1F1E7}\u{1F1F7}','argentina':'\u{1F1E6}\u{1F1F7}','chile':'\u{1F1E8}\u{1F1F1}','peru':'\u{1F1F5}\u{1F1EA}','costa rica':'\u{1F1E8}\u{1F1F7}','australia':'\u{1F1E6}\u{1F1FA}','new zealand':'\u{1F1F3}\u{1F1FF}','turkey':'\u{1F1F9}\u{1F1F7}','georgia':'\u{1F1EC}\u{1F1EA}'};
+function flagFor(c){ if(!c) return '\u{1F4CD}'; return FLAGS[c.trim().toLowerCase()] || '\u{1F4CD}'; }
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2400);}
+
 function drawSomeday(rows){
-  const dest=rows.filter(r=>r.kind!=='bucket_list'), buck=rows.filter(r=>r.kind==='bucket_list');
-  document.getElementById('nS').textContent=rows.length;
+  PLACES=rows||[];
+  const dest=PLACES.filter(r=>(r.kind||'destination')!=='bucket_list'), buck=PLACES.filter(r=>r.kind==='bucket_list');
+  document.getElementById('nS').textContent=PLACES.length;
   document.getElementById('sdHint').textContent=dest.length+' destinations and '+buck.length+' bucket list items';
-  document.getElementById('sgrid').innerHTML=dest.map(s=>{
-    const loc=[s.city,s.country].filter(Boolean).join(', ');
-    return '<div class="scard"><div class="f">'+esc(s.flag||'\u{1F4CD}')+'</div><div class="p">'+esc(s.place)+'</div>'
-      +(loc?'<div class="loc">'+esc(loc)+'</div>':'')
-      +(s.recommender?'<div class="rec">via '+esc(s.recommender)+'</div>':'')
-      +(s.notes?'<div class="n">'+esc(s.notes)+'</div>':'')+'</div>';
-  }).join('') || '<div class="empty"><p>Nothing on the list yet.</p></div>';
-  document.getElementById('blist').innerHTML=buck.map(b=>'<div class="bitem">\u{1F3AF} '+esc(b.place)+'</div>').join('')
-    || '<div class="bitem" style="border-left-color:#dbe2ea;color:#9aa6b4">Nothing on the bucket list yet.</div>';
+  ftRenderMap(); ftRenderCards();
+}
+
+function ftRenderMap(){
+  if(typeof L==='undefined') return;
+  if(!ftMap){
+    ftMap=L.map('ftmap',{scrollWheelZoom:false}).setView([25,5],2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(ftMap);
+    ftMarkers=L.layerGroup().addTo(ftMap);
+  }
+  ftMarkers.clearLayers();
+  const pts=[];
+  PLACES.forEach(p=>{
+    if((p.kind||'destination')==='bucket_list') return;
+    if(p.lat==null||p.lng==null) return;
+    const html='<div class="pp-place">'+(p.flag||flagFor(p.country))+' '+esc(p.place)+'</div>'+
+      '<div class="pp-meta">'+esc([p.country,p.city].filter(Boolean).join(' · '))+'</div>'+
+      (p.recommender?'<div class="pp-meta">\u{1F5E3}\u{FE0F} '+esc(p.recommender)+'</div>':'');
+    L.marker([p.lat,p.lng]).addTo(ftMarkers).bindPopup(html);
+    pts.push([p.lat,p.lng]);
+  });
+  if(pts.length){ try{ ftMap.fitBounds(pts,{padding:[40,40],maxZoom:6}); }catch(e){} }
+  ftFixMap();
+}
+/* The panel starts hidden, so Leaflet measures a zero-height box unless it is
+   told to re-measure the moment the tab becomes visible. */
+function ftFixMap(){ setTimeout(()=>{ if(ftMap) ftMap.invalidateSize(); },160); }
+
+function ftRenderCards(){
+  const el=document.getElementById('ftcards');
+  const list = ftView==='bucket'
+    ? PLACES.filter(p=>p.kind==='bucket_list')
+    : PLACES.filter(p=>(p.kind||'destination')!=='bucket_list');
+  document.getElementById('ftcount').textContent = ftView==='bucket'
+    ? list.length+' bucket-list item'+(list.length===1?'':'s')
+    : list.length+' destination'+(list.length===1?'':'s')+' on the list';
+  if(!list.length){ el.innerHTML='<div class="ft-empty">'+(ftView==='bucket'?'No bucket-list items yet. Say "add [a dream] to my Future Travel board".':'No destinations yet. Add one above, or say "add [place] to Future Travel" in any Claude chat.')+'</div>'; return; }
+  el.innerHTML=list.map(p=>{
+    const flag=p.flag||flagFor(p.country);
+    let pills='';
+    if(p.country) pills+='<span class="pill">'+esc(p.country)+'</span>';
+    if(p.city) pills+='<span class="pill">\u{1F4CD} '+esc(p.city)+'</span>';
+    if(p.recommender) pills+='<span class="pill rec">\u{1F5E3}\u{FE0F} '+esc(p.recommender)+'</span>';
+    if(ftView!=='bucket' && (p.lat==null||p.lng==null)) pills+='<span class="pill nogeo">no map pin yet</span>';
+    return '<div class="ft-card"><span class="del" title="Remove" onclick="ftDelPlace(\''+p.id+'\')">✕</span>'+
+      '<div class="flag">'+flag+'</div><div class="place">'+esc(p.place)+'</div>'+
+      '<div class="row">'+pills+'</div>'+
+      (p.notes?'<div class="note2">'+esc(p.notes)+'</div>':'')+'</div>';
+  }).join('');
+}
+
+function ftSetView(v){
+  ftView=v;
+  document.getElementById('ftvd').classList.toggle('on',v==='destinations');
+  document.getElementById('ftvb').classList.toggle('on',v==='bucket');
+  const mp=document.getElementById('ftmap'), hint=document.querySelector('.ft-maphint');
+  if(mp) mp.style.display = v==='bucket' ? 'none' : '';
+  if(hint) hint.style.display = v==='bucket' ? 'none' : '';
+  if(v!=='bucket') ftFixMap();
+  ftRenderCards();
+}
+
+async function ftGeocode(q){
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+    const j=await r.json();
+    if(j&&j.length) return {lat:parseFloat(j[0].lat), lng:parseFloat(j[0].lon)};
+  }catch(e){}
+  return null;
+}
+async function ftReload(){
+  const {data}=await sb.from('future_travel').select('*').order('country',{nullsFirst:false});
+  drawSomeday(data||[]);
+}
+async function ftAddPlace(){
+  const place=document.getElementById('ftp').value.trim(); if(!place){toast('Add a place name first.');return;}
+  const country=document.getElementById('ftco').value.trim();
+  const city=document.getElementById('ftci').value.trim();
+  const rec=document.getElementById('ftre').value.trim();
+  const btn=document.getElementById('ftadd'); btn.disabled=true; btn.textContent='Finding…';
+  const geo=await ftGeocode([place,country].filter(Boolean).join(', '));
+  const row={place, country:country||null, city:city||null, recommender:rec||null, flag:flagFor(country), lat:geo?geo.lat:null, lng:geo?geo.lng:null};
+  const {error}=await sb.from('future_travel').insert(row);
+  btn.disabled=false; btn.textContent='Add to map';
+  if(error){toast('Could not add: '+error.message);return;}
+  ['ftp','ftco','ftci','ftre'].forEach(id=>document.getElementById(id).value='');
+  toast(geo?'Added '+place+' \u{1F30D}':'Added '+place+' (no pin found, still on your list)');
+  ftReload();
+}
+async function ftDelPlace(id){
+  const {error}=await sb.from('future_travel').delete().eq('id',id);
+  if(error){toast('Could not remove: '+error.message);return;}
+  toast('Removed.'); ftReload();
 }
 
 document.querySelectorAll('.box').forEach(b=>{
@@ -436,6 +560,7 @@ document.querySelectorAll('.box').forEach(b=>{
     document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
     b.classList.add('on');
     document.getElementById(b.dataset.p).classList.add('on');
+    if(b.dataset.p==='p4') ftFixMap();
   });
 });
 
