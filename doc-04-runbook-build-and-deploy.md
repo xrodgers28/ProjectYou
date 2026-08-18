@@ -2,7 +2,7 @@
 
 **What this is:** the numbered operating procedures for publishing pages, changing the nav, adding trackers and connectors, testing locally, and recovering when a publish goes wrong.
 **Read this when:** you are about to change anything that ends up on `https://xrodgers28.github.io/ProjectYou/`, or something on the live site is wrong.
-**Last verified:** 2026-08-16, by reading the live workflow at `.github/workflows/publish.yml`, `nav-config.js` and `navpatch.js` in a fresh read-only clone of `xrodgers28/ProjectYou`, and by reconciling those against the project memory files `publish-guard.md`, `canonical-source-rule.md`, `pages-upload-collision.md`, `publish-race-hazard.md`, `concurrent-sessions.md`, `navpatch-shared-layer.md`, `nav-config.md`, `supabase-grants-trap.md`, `automated-tracking-page.md`, `tracking-inputs-research.md`, `historical-only-rule.md` and `living-docs-must-self-verify.md`. Every measured number below carries the date it was measured.
+**Last verified:** 2026-08-18, by reading the live workflow at `.github/workflows/publish.yml`, `nav-config.js` and `navpatch.js` in a fresh read-only clone of `xrodgers28/ProjectYou`, and by reconciling those against the project memory files `publish-guard.md`, `canonical-source-rule.md`, `pages-upload-collision.md`, `publish-race-hazard.md`, `concurrent-sessions.md`, `navpatch-shared-layer.md`, `nav-config.md`, `supabase-grants-trap.md`, `automated-tracking-page.md`, `tracking-inputs-research.md`, `historical-only-rule.md` and `living-docs-must-self-verify.md`. Every measured number below carries the date it was measured.
 **Supersedes:** Fix-a-live-page.md, Build-A-Tracker-Playbook.md, Web-App-Build-Playbook.md, CoWork-Build-Directory.md, SER-nav-handoff.md, Clarity-Compass-nav-handoff.md, DEPLOY-automated-tracking-and-life-snapshot.md, AI-Favorites-and-Great-Quotes-BUILD.md, MAPS-NAV-HANDOFF.md, SETUP-two-fixes.md, MAPS-INDEX-BUILD-SPEC.md, wheel-publish/spec.md, wheel-publish/DO-NOT-PUBLISH.md.
 
 The shape of the system (what the `pages` table is, what the publish Action does, why GitHub Pages is the host) is in **02-Architecture.md**. This document assumes you already know that and only tells you what to type. Table and view shapes are in **03-Data-Model.md**. Anything about drafts, capture and the staging area is in **05-Capture-Pipeline.md**.
@@ -285,9 +285,37 @@ on conflict (path) do nothing;
 
 Do this **before** the copy-across, or the copy-across updates zero rows and nothing publishes. This is the normal case for every new session-tracker page. Note that the empty string does not fire the trigger, which is the point: it just creates the slot.
 
-### 5.3 Very large pages
+### 5.3 Very large pages, and the recipe method
 
-`library.html` is 187 KB on disk. When it was first published its base64 ran to 88 KB and had to go in verified 5 KB chunks reassembled server side. It works, it is slow, and one wrong character fails the checksum. For anything in that class, weigh the chunked run against handing Scott the file.
+`library.html` is 187 KB on disk. When it was first published its base64 ran to 88 KB and had to go in verified 5 KB chunks reassembled server side. It works, it is slow, and one wrong character fails the checksum.
+
+**When a chunked run fails more than twice, stop chunking. Send the recipe, not the page.**
+
+Proved Aug 18 2026 on `automated-tracking.html` v1.7, after three uploads corrupted in a row at two different block sizes (1,400 and 600). Every failure landed at the right length with the wrong md5, was caught by the guard, and was rolled back. The live page was never damaged, but the page sat unpublished for two days.
+
+The chunked path fails because **a large base64 string has to be transmitted through tool calls**. Nothing to transmit means nothing to corrupt. So build the page where it already lives.
+
+**The procedure.** Deploy a one-off edge function that:
+
+1. `fetch`es the CURRENT live page from `https://raw.githubusercontent.com/xrodgers28/ProjectYou/main/<page>` with `cache: "no-store"`, so it is always editing the canonical version.
+2. Applies the edits as ordinary string and regex replacements in JavaScript.
+3. On `?check`, returns `sha256`, the byte count and a few sanity counts, and **writes nothing**.
+4. On `?write` plus the API key, gzips with `CompressionStream("gzip")`, base64s it, and PATCHes `pages.gzb64`, which fires the publish trigger.
+
+**Verify before writing, always.** Run the identical transform locally in node, compute the sha256, call `?check`, and only call `?write` when the two fingerprints match exactly. That read-only check step is what makes this safe: a mangled transform can never reach the live page, because nothing is written until you have seen the fingerprint agree.
+
+On the Aug 18 run the local and server fingerprints matched first time, the write fired, and the file on GitHub came back byte-identical to the transform output.
+
+**Why this beats the alternatives.** It transmits about 3 KB of replacement rules instead of 14 KB of base64, and the rules are human-readable, so a slip is visible rather than silent. A character-level `difflib` diff of the two versions was tried first and came out at 38 KB across 291 regions, larger than the whole file, with non-unique anchors: do not bother. Embedding the whole HTML in the function moves the same volume as the upload. Handing the file to Scott works but costs a wait.
+
+**Four things that bite.**
+
+- `crypto.subtle` in Deno has **no md5**. Use sha256 on both sides.
+- Build the base64 in 8 KB slices, `String.fromCharCode(...bytes.subarray(i, i + 8192))`, or a large array blows the stack.
+- Anchor every replacement on something unique. Regexes keyed on `name:"<App>", feed:"..."` worked because the app name appears once in the array.
+- **Retire the function afterwards.** It can write to `pages`. Redeploy it as an inert 410 stub, the way `code-run` is, with a comment recording what it shipped and the sha256 it produced.
+
+For anything in the `library.html` size class that is a genuinely new page rather than an edit, the recipe has nothing to fetch, so weigh the chunked run against handing Scott the file.
 
 ### 5.4 Binary assets, ever
 
@@ -778,4 +806,4 @@ Run these on any day you doubt it. Each one either confirms a claim above or tel
 
 Anything in this document that states a number must say how to re-check it. If you add a number here and cannot write the check, do not add the number.
 
-*As of August 16th, all times EST*
+*As of August 18th, all times EST*
