@@ -477,12 +477,15 @@ Serve the clone and drive it with Playwright (procedure 12). Pages will throw Su
 
 Every page shows its version twice, and the two used to drift (1.1). Since Aug 18 2026 `navpatch.js` ends with a parity pass that runs on every page load:
 
-- It collects `.pn-ver` plus `.secbar .ver`, `.topbar .ver`, `h1.ph-h1 .ver` and `#ver`.
+- It collects `.pn-ver` plus `.secbar .ver`, `.topbar .ver`, `h1.ph-h1 .ver`, `#ver`, `h1 .ver` and `h1 .badge`. That list covers every badge markup the site uses: `library.html` puts the badge inside the h1 with `class="badge"`, and `knowledge-graph.html` puts a `.ver` span next to the h1 rather than inside it.
+- On `knowledge-graph.html` the `.pn-ver` slot holds the word "Maps", used as a section label rather than a version. Anything that does not parse as a dotted number is skipped, so a label in that slot is never rewritten and never reported as a mismatch.
 - It parses each as a dotted number and takes the **highest**, comparing segment by segment as integers, so v5.31 correctly beats v5.9.
 - It writes that value back to every one of those elements.
 - It exposes the result as `window.PY_VERSION`, which is what a Playwright check should assert on.
 
 **Card and module badges are deliberately not in the selector list.** `james-clear.html` and `quotes.html` carry `.ver` badges inside habit-module cards that version the component, not the page. Pulling those into the parity pass would rewrite them to the page version and destroy real information. Any new selector added here must be checked against those two pages first.
+
+**Pages that load no nav carry their own badge.** The 13 standalone pages, the session tracker index, the dated session trackers and the Aug 16 feedback page, have no `.pynav` and therefore never run the parity pass. Each carries `<span class="ver">` inside its `<h1>` with a matching `h1 .ver` rule in its own style block, added 2026-08-18. The session tracker reference template carries both, so every new tracker gets one for free. Every page on the site now has a badge, and `[VC]` reports any that does not.
 
 The pass is a net, not a fix. A mismatch it silently corrects is still a wrong file, and the file is what the next session reads. Run the `version-check` skill (`[VC]`) to find the files that are actually wrong. A parity mismatch that survives that sweep means `navpatch.js` failed to load on that page, which is the real finding.
 
