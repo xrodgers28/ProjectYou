@@ -16,3 +16,28 @@
   });
   if(ver) ver.textContent='Maps v1.2';
 }catch(e){}})();
+
+/* Version chip parity. A page carries its version in two places: the chip in the
+   nav bar (.pn-ver) and the chip beside the page heading (.secbar .ver, and the
+   older .topbar / #ver variants). They are hand-maintained and used to drift.
+   This makes them self-correcting: the highest version found wins and is written
+   to every chip on the page. Card and module badges are never touched.
+   Added 2026-08-18. */
+(function(){
+  function sync(){try{
+    var PAGE_SEL='.secbar .ver, .topbar .ver, h1.ph-h1 .ver, #ver';
+    var els=[].slice.call(document.querySelectorAll('.pn-ver, '+PAGE_SEL));
+    if(els.length<2) return;
+    function key(t){var m=String(t||'').trim().match(/^v?(\d+(?:\.\d+)*)$/);
+      return m?m[1].split('.').map(Number):null;}
+    function cmp(a,b){var n=Math.max(a.length,b.length);
+      for(var i=0;i<n;i++){var x=a[i]||0,y=b[i]||0;if(x!==y)return x-y;}return 0;}
+    var best=null,txt=null;
+    els.forEach(function(e){var k=key(e.textContent);if(!k)return;
+      if(!best||cmp(k,best)>0){best=k;txt=e.textContent.trim();}});
+    if(!txt) return;
+    els.forEach(function(e){if(key(e.textContent)&&e.textContent.trim()!==txt)e.textContent=txt;});
+    window.PY_VERSION=txt;
+  }catch(e){}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync);else sync();
+})();
