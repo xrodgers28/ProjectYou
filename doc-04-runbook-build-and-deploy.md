@@ -39,6 +39,10 @@ Anonymous HTTPS clone and fetch work from the container. **Push and the GitHub A
 
 Re-run the `fetch` **immediately before you encode**, not only at the start of the session. On Aug 16 2026 one session cloned `where-ive-been.html` at v1.0, another published v1.2 twelve minutes later, and the first session's v1.1 was refused by the guard. Nothing was lost, but the whole edit had to be re-applied on the newer file.
 
+**A page carries its version in more than one place, and every one of them must move together.** The nav badge (`.pn-ver`) and the heading badge (`.secbar .ver`, or `.topbar #ver` on the older pages) are separate strings in separate parts of the file. On Aug 18 2026 `automated-tracking.html` was reconciled, published and verified live, and Scott still read v1.6 in two browsers, because only the nav badge had been bumped. He reasonably concluded the work had not shipped. A sweep found seven more pages carrying the same split, some of them weeks old.
+
+Grep for all of them, change all of them in the same edit, and confirm the new number from `raw.githubusercontent.com`, not from the file you just edited. Since Aug 18 2026 `navpatch.js` also corrects this at runtime (8.4), but that is a safety net, not permission to leave the file wrong: the file is what the next session reads.
+
 ### 1.2 Never edit out of the local deploy folder
 
 `CoWork/ProjectYou-deploy-Aug11/` is a working copy only. Treat it as stale until proven otherwise. On Aug 14 2026 it held **v2.7** of `all-todos.html` while the live page was **v2.11**. Publishing the local copy silently wiped Scott's Parking Lot section, the Known Bugs category, the Queue and Run / Scott to Drive lanes, and the mini section nav. He caught it, the process did not.
@@ -468,6 +472,21 @@ Login-gated pages have an `<h1>` inside the hidden `#login` panel **and** the re
 Serve the clone and drive it with Playwright (procedure 12). Pages will throw Supabase errors without auth, which is fine: the nav layer still runs. To see gated content, force `#app` visible with `setProperty('display','block','important')`. A plain `style.display = ''` is **not** enough and will make a working change look broken.
 
 **Verify:** md5 the published `navpatch.js` against local from `origin/main`, then serve the clone and assert the change renders on at least three pages chosen to cover the cases: one ordinary page, one login-gated page, and one page with no `.pynav` (which must be unaffected).
+
+### 8.4 Version badge parity, handled in navpatch.js
+
+Every page shows its version twice, and the two used to drift (1.1). Since Aug 18 2026 `navpatch.js` ends with a parity pass that runs on every page load:
+
+- It collects `.pn-ver` plus `.secbar .ver`, `.topbar .ver`, `h1.ph-h1 .ver` and `#ver`.
+- It parses each as a dotted number and takes the **highest**, comparing segment by segment as integers, so v5.31 correctly beats v5.9.
+- It writes that value back to every one of those elements.
+- It exposes the result as `window.PY_VERSION`, which is what a Playwright check should assert on.
+
+**Card and module badges are deliberately not in the selector list.** `james-clear.html` and `quotes.html` carry `.ver` badges inside habit-module cards that version the component, not the page. Pulling those into the parity pass would rewrite them to the page version and destroy real information. Any new selector added here must be checked against those two pages first.
+
+The pass is a net, not a fix. A mismatch it silently corrects is still a wrong file, and the file is what the next session reads. Run the `version-check` skill (`[VC]`) to find the files that are actually wrong. A parity mismatch that survives that sweep means `navpatch.js` failed to load on that page, which is the real finding.
+
+---
 
 ---
 

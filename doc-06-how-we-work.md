@@ -193,11 +193,17 @@ Never publish a version number lower than what is live. Origin: on Aug 14, 2026 
 
 **When Scott edits a generated deliverable, his copy is the master.** Before editing or rebuilding: stage his current file from the project folder, diff it against what the build script produces (comparing text, order, shape geometry and fonts, because a structural comparison of positions, sizes, font size, bold and color catches edits a plain text diff misses), fold every change he made back into the build script, and only then apply the new change. Never overwrite his edited file without asking. General rule: whenever Claude owns the source and Scott owns the output, reconcile from his output first.
 
+**When a version number changes, change it everywhere it appears.** A version is rarely stored once: a page can carry it in a nav badge, a heading badge, a title, and a doc that quotes it. Bumping one and leaving the rest is worse than not bumping at all, because the reader sees a stale number on a page that is actually current and concludes the work never shipped. Search the whole file and the whole project for the old value, change every copy in the same edit, then confirm from the published source rather than from the copy you edited. Where a value is displayed in two places by design, make one the source of truth and have the other read from it. This generalizes past versions: any duplicated value drifts.
+
 **Protect Scott's own files.** Never hide, collapse, archive or make less visible anything he can currently see without asking first. Making things more visible is fine to just do. Never edit Scott's own working files: notes he authors are off limits to sweeps and renames. When something looks unexpected, ask straight out with AskUserQuestion and a yes or no ("Did you delete `filename`?") rather than writing paragraphs theorizing.
 
 ### 5. Commands
 
-`[wrap]`, `[SC]`, `[ST]`, `[start new project]`, `/morning`, and "hardpull". All of them are covered in the ritual table below.
+`[wrap]`, `[SC]`, `[ST]`, `[RULE]`, `[VC]`, `[start new project]`, `/morning`, and "hardpull". All of them are covered in the ritual table below.
+
+`[RULE]` saves a standing rule. Scott types `[RULE]` then the instruction, and Claude decides global versus project-only, writes it to that one file, reports back the exact file and section it landed in, and applies it in the current session rather than only the next one. "From now on", "always", "every time" and "going forward" do the same thing; the bracket is for when he wants to be explicit.
+
+`[VC]` runs the `version-check` skill: a read-only sweep of the published site for version badges that disagree, pages with no badge, broken internal links, and pages missing the shared nav. It changes nothing, and it also runs automatically as step 5b of `[wrap]`.
 
 ### 6. Capturing new rules
 
