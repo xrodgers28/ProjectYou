@@ -75,11 +75,8 @@ td.srccol{position:sticky;left:0;z-index:30;background:#fff;min-width:270px;max-
 .cover{flex:none;width:60px;height:82px;border-radius:7px;padding:7px 6px;color:#fff;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 3px 8px rgba(31,42,68,.22);overflow:hidden;position:relative}
 .cover .glyph{font-size:13px;line-height:1;opacity:.9}
 .cover .ct{font-size:9px;font-weight:800;line-height:1.12;text-shadow:0 1px 2px rgba(0,0,0,.25);overflow-wrap:normal;hyphens:none}
-.cover.round{border-radius:50%;width:70px;height:70px;align-items:center;justify-content:center;text-align:center}
-.cover.round .ct{font-size:11px}
 /* real artwork layers over the coloured tile; onerror removes it so the tile shows through */
 .cover .shot{position:absolute;inset:0;width:100%;height:100%;border-radius:inherit;display:block;background:#fff;object-fit:contain}
-.cover.round .shot{object-fit:cover;background:#eef2f8}
 .cover.hasimg{box-shadow:0 3px 9px rgba(31,42,68,.26)}
 .smeta{min-width:0}
 .sname{font-size:13.5px;font-weight:800;color:var(--ink);line-height:1.15}
@@ -118,7 +115,7 @@ tr.srow:hover td.srccol{background:#f8fbff}
 <div class="mapsub"><span class="mapsub-lbl">🗺 Maps</span><a href="maps.html">Overview</a><a href="dfd.html">Data Flow Diagram</a><a href="blueprint.html" class="on">Compass Sources</a><a href="knowledge-graph.html">Knowledge Graph</a><a href="architecture-map.html">Architecture Map</a><span class="mapsub-ver">Maps v1.1</span></div>
 <div class="topbar">
   <span class="bt">Compass Sources</span>
-  <span id="ver" class="ver">v2.1</span><span class="date" id="date">Rebuilt Aug 16, 2026</span>
+  <span id="ver" class="ver">v2.2</span><span class="date" id="date">Rebuilt Aug 16, 2026</span>
   <span class="live" id="live"><i></i><span id="livetxt">Reading live</span></span>
   <input class="search" id="search" placeholder="Search insights, sources, tenets…">
 </div>
@@ -150,17 +147,14 @@ function glyphFor(t){return ({Book:'📖',Podcast:'🎙',Course:'🎓',Person:'�
 function coverHTML(s){
   var hue=hashHue(s.name);
   var art = s.cover_url || '';
-  // Circles belong to the coloured fallback tile only. Real artwork is a book
-  // jacket or show art with its own edges, and a circular crop eats the title,
-  // so any source that HAS a cover renders rectangular whatever its type.
-  var round=!art && (s.type==='Person'||s.type==='Podcast');
-  var bg = round
-    ? 'radial-gradient(circle at 35% 30%, hsl('+hue+',55%,60%), hsl('+((hue+30)%360)+',60%,38%))'
-    : 'linear-gradient(150deg, hsl('+hue+',52%,52%), hsl('+((hue+28)%360)+',58%,34%))';
+  // Every tile in the Corpus column is a rectangle. Scott's call, Aug 18 2026.
+  // Circles cropped the titles off book jackets and made the Person and Podcast
+  // rows read as a different kind of thing from the rest of the column.
+  var bg = 'linear-gradient(150deg, hsl('+hue+',52%,52%), hsl('+((hue+28)%360)+',58%,34%))';
   // The coloured tile is ALWAYS rendered. Artwork layers on top when kg_sources.cover_url is set,
   // and onerror strips it so a dead URL degrades to the tile instead of leaving a blank hole.
-  return '<div class="cover'+(round?' round':'')+(art?' hasimg':'')+'" style="background:'+bg+'">'+
-    (round?'':'<div class="glyph">'+glyphFor(s.type)+'</div>')+
+  return '<div class="cover'+(art?' hasimg':'')+'" style="background:'+bg+'">'+
+    '<div class="glyph">'+glyphFor(s.type)+'</div>'+
     '<div class="ct">'+esc(s.name)+'</div>'+
     (art?'<img class="shot" src="'+art+'" alt="'+esc(s.name)+'" title="'+esc(s.name)+'" onerror="this.parentNode.classList.remove(\'hasimg\');this.remove();">':'')+
     '</div>';
