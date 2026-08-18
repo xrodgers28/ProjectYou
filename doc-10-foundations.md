@@ -529,6 +529,90 @@ The artifact is the **Time Bandit Wheel**. "Habit Bandit Time Wheel" and "Habit 
 
 ---
 
+## 10. Compass Sources, and how new source material enters the model
+
+Section 2 defines the canonical seven. Section 8 lists the books and podcasts behind them. This section is the mechanism that joins the two. Compass Sources is where a new source is read, broken into points, and mapped onto the seven sections. Its own tagline states the relationship plainly: "A mechanism for importing new betterment insights and mapping them to the Clarity Compass sections. This is how the Compass sections were ultimately decided."
+
+### What it is, structurally
+
+Live at `blueprint.html`, in the Operating System nav under Maps, labelled **Compass Sources** since Aug 16 2026. It was called Knowledge Graph until then, which collided with a completely different page. That name now belongs to `knowledge-graph.html` alone.
+
+It is a matrix, not a list. Sections are column groups, **tenets are the columns**, **sources are the rows**, and every filled cell is one source speaking to one tenet. Reading it as "sections with bullet points underneath" gets the model wrong.
+
+As of Aug 18, 2026 it holds the seven life areas plus a holding pile called Not sure yet, 37 active tenets, 3 retired tenets that keep their codes forever, 9 sources and 59 notes of which 14 are placeholders carrying no insight. Coverage is uneven: Physical Health holds the most, Recreational Health the least, and eight tenets hold nothing at all. Every one of those figures is a query, not a typed number, and the page footer recomputes them on load.
+
+**The page is generated, not typed.** Since v2.0 on Aug 16 2026 it holds no content of its own. It reads four tables at load: `kg_areas`, `kg_tenets`, `kg_sources` and `kg_links`. Adding a source is a handful of rows, not a republish, and the page shrank from 29,768 stored characters to 10,376 as a result. Cover artwork lives in `kg_sources.cover_url`, layered over a generated colour tile that shows through if a URL dies.
+
+Not to be confused with `knowledge-graph.html`, now simply **Knowledge Graph**, which is a system architecture diagram of pages, tables and automations. The two are unrelated and the naming collision was resolved on Aug 16 2026.
+
+**Every area and tenet carries a permanent code.** Areas are `A1` to `A7` plus `A0` for the holding pile. Tenets are `T001` upward, sources `S01` upward. The codes are deliberately meaningless: a code that named its area would go wrong the moment a tenet moved area, which the money and work rulings below caused twice in one day. A code is assigned once, never reused and never renumbered. The display label is free to change underneath it. A retired tenet keeps its code forever and records what it merged into, so a note filed years ago still resolves.
+
+### The rules settled on Aug 16, 2026
+
+**1. The canonical spelling is Social Well-Being, hyphenated.** This is a named exception to the standing writing rule against dashes: the hyphen is part of the name, not punctuation, and must never be "corrected" away. The Knowledge Graph is the surface that changes, because `todos`, `daily_template`, the Time Bandit Wheel palette and the `sync_social_wellbeing_completion` trigger all already use the hyphenated form, and that trigger matches the string exactly. Removing the hyphen anywhere upstream would stop social completions writing to `connections` and `daily_completed`, silently.
+
+**2. Money belongs to Emotional Health.** Reasoning, in Scott's words: confidence in your financial plan is what brings the emotional wellbeing. Money is therefore not a candidate for an eighth section, now or later. Consequence: the "Material Goals" tenet moves from Recreational Health to join the money tenet in Emotional Health, and the surviving tenet is reframed away from "avoid stress" toward confidence in the plan.
+
+**3. Work, meaning the current job and employer, belongs to Emotional Health.** As of Aug 16, 2026 that employer is Amazon. Reasoning, in Scott's words: having a job gives you emotional stability. Work is not a candidate for an eighth section either. Consequence: the Time Bandit Wheel Amazon slice can take the Emotional Health colour rather than the borrowed Amazon orange it uses today, because a life colour now exists for it.
+
+**4. Adding a source never rewrites the graph.** Each source is a new row. Nothing already in the graph is edited by an addition. The work of adding a source is analysis and placement, not revision.
+
+Rules 2 and 3 matter beyond their own subjects. Section 2 sets the test for an eighth section: it must have its own habits, its own trackers and its own evidence base. Money and work were the two strongest candidates in the system, both were examined on Aug 16, 2026, and both were absorbed into an existing section rather than promoted. The seven stand.
+
+### The intake process, standing from Aug 16, 2026
+
+For every new book, podcast, course or person:
+
+1. Read the source and pull out its key points.
+2. Decide, point by point, which existing tenets those points belong to, if any.
+3. Present the findings as an interactive summary, one item per proposed tenet, with the reasoning visible.
+4. Scott approves or rejects each item individually. Only approved items enter the canonical graph.
+5. Anything that fits nowhere goes to the Outlier pile. A source is never allowed to invent a tenet on the day it arrives.
+
+Seven supporting rules govern the quality of what enters:
+
+1. Every source declares itself: title, type, author, year, and one line on what it is for. Four of the nine current sources have that last field blank.
+2. Every cell carries an insight and a practice. No bare dots. 13 of the 62 current cells are content-free dots, 11 of them from one source.
+3. A new source can never create a tenet on arrival. It maps to what exists, or it goes to Outlier.
+4. Scott approves every point individually. Nothing enters without an explicit yes.
+5. The Outlier pile is reviewed at 5 items or quarterly, whichever comes first. Three or more items circling the same idea is the evidence that justifies a new tenet, promoted deliberately.
+6. Tenet wording never changes to accommodate a source. A source that repeatedly fits nowhere is information about the model, not a labelling problem.
+7. Every count on the page is computed, never typed.
+
+### The structural weakness to fix first
+
+No tenet has a stable identifier. All 62 mappings point at a column position rather than a name that sticks, so inserting, removing or moving a tenet re-attaches mappings silently, with no error and no warning. Rules 2 and 3 turn this from theoretical into immediate, because both move content between sections.
+
+The agreed shape of the fix: a permanent code for every section and every tenet, assigned once, never reused, never renumbered, with the display label free to change independently of it. The choice of code style is open and logged in 08. The recommendation on the table is a meaningless code such as `A1` to `A7` for sections and `T001` upward for tenets, precisely because a code that names its section becomes wrong the moment a tenet changes section, which rules 2 and 3 have just caused twice.
+
+### Re-checking this section
+
+```bash
+# The two similarly named pages, and confirmation that neither reads from the database at runtime.
+# Fetch each and confirm the graph page contains an inlined DATA object and no fetch call.
+curl -s https://xrodgers28.github.io/ProjectYou/blueprint.html | grep -c "const DATA"
+```
+
+```sql
+-- The graph is still one compressed blob per page, not a set of rows.
+select path, length(gzb64) as blob_len, updated_at
+from public.pages where path in ('blueprint.html','knowledge-graph.html');
+
+-- Rule 1 holds: the hyphenated spelling is the only one in live use.
+select section, count(*) from public.todos where section ilike 'social well%' group by 1;
+select section, count(*) from public.daily_template where section ilike 'social well%' group by 1;
+
+-- The trigger that depends on the exact hyphenated string still exists.
+select tgname from pg_trigger where tgname = 'trg_social_wellbeing_completion';
+```
+
+```bash
+# Rule 1 is also a writing rule: no unhyphenated variant should appear in the library.
+grep -rn "Social Well Being" CoWork/_Docs/ || echo "clean"
+```
+
+If the seven sections in section 2, the tenets in the live graph, and the section values in `todos` ever stop agreeing, that is a real divergence and belongs in **08-Roadmap-and-Open-Decisions.md**, not a quiet edit here.
+
 ## How to re-verify this document
 
 Most of this file is source material and does not go stale. Three things in it can, and these are the checks.
