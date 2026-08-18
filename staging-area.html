@@ -193,10 +193,10 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link on">Staging<br>Area</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v0.5</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
+  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link on">Staging<br>Area</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v0.6</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
 
   <div class="wrap">
-    <h1>Staging Area <span class="ver">v0.5</span> <span class="date" id="today"></span></h1>
+    <h1>Staging Area <span class="ver">v0.6</span> <span class="date" id="today"></span></h1>
     <p class="lede">Every idea (<b>Popcorn</b> 🍿) dictated to Drafts arrives here. Claude proposes a destination for each; you <b>approve</b> it, reroute it, or <b>dismiss</b> it. Every choice trains the next guess &mdash; shaky ones sit on top.</p>
 
     <div class="toprow"><button class="pullbtn" id="pullnow" title="Run the Drafts sweep right now instead of waiting for the next 2-hour run"><span class="sp">&#10227;</span> Pull from Drafts now</button><span class="saved" id="save"><span class="dt"></span> saved</span></div>
@@ -359,6 +359,20 @@ function wirePull(){
   btn.onclick=()=>{
     btn.classList.add('spin'); btn.disabled=true;
     const before=ROWS.length;
+
+    // Did the hand-off actually happen? Firing drafts:// on a device WITHOUT
+    // Drafts is silent: no error, no exception, nothing. So "no new notes" and
+    // "the button did nothing" used to print the identical message, which is
+    // the one case where you most need to know the difference.
+    // The tell is focus: if Drafts opens, the browser goes to the background,
+    // so document.hidden flips or the window blurs. If neither ever happens,
+    // Drafts never opened.
+    let handedOff=false;
+    const noteHandoff=()=>{ if(document.hidden||!document.hasFocus()) handedOff=true; };
+    document.addEventListener('visibilitychange',noteHandoff);
+    window.addEventListener('blur',noteHandoff);
+    const stopWatch=()=>{ document.removeEventListener('visibilitychange',noteHandoff); window.removeEventListener('blur',noteHandoff); };
+
     // Drafts registers the drafts:// scheme on Mac and iOS. This hands off to the app,
     // which runs the sweep action against its own inbox and POSTs each note to /capture.
     try{
@@ -371,12 +385,25 @@ function wirePull(){
     let tries=0;
     const iv=setInterval(async()=>{
       tries++; await load();
-      if(ROWS.length>before){ clearInterval(iv); btn.classList.remove('spin'); btn.disabled=false;
+      if(ROWS.length>before){ clearInterval(iv); stopWatch(); btn.classList.remove('spin'); btn.disabled=false;
         toast('Pulled '+(ROWS.length-before)+' new capture'+((ROWS.length-before)===1?'':'s')); return; }
-      if(tries>=8){ clearInterval(iv); btn.classList.remove('spin'); btn.disabled=false;
-        toast('Nothing new came back from Drafts'); }
+      if(tries>=8){ clearInterval(iv); stopWatch(); btn.classList.remove('spin'); btn.disabled=false;
+        if(handedOff){
+          // Drafts really did run. An empty inbox is the honest answer.
+          toast('Drafts ran, but had no new notes to send');
+        } else {
+          // Drafts never came to the front, so the sweep never ran at all.
+          toast('Drafts did not open on this device — press Setup');
+          const hint=document.getElementById('pullhint');
+          if(hint) hint.innerHTML='<b>Drafts did not open.</b> Either Drafts is not installed on this device, or the action is not named exactly <b>'+DRAFTS_ACTION+'</b>. Nothing was pulled. The every-2-hour sweep still runs on its own. <a id="pullsetup">Setup</a>';
+          wireSetup();
+        }
+      }
     },3000);
   };
+  wireSetup();
+}
+function wireSetup(){
   const setup=document.getElementById('pullsetup');
   if(setup) setup.onclick=()=>{
     alert('One-time setup, on the Mac or iPhone where Drafts lives:\n\n'
