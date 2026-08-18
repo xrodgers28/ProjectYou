@@ -25,7 +25,7 @@
    Added 2026-08-18. */
 (function(){
   function sync(){try{
-    var PAGE_SEL='.secbar .ver, .topbar .ver, h1.ph-h1 .ver, #ver';
+    var PAGE_SEL='.secbar .ver, .topbar .ver, h1.ph-h1 .ver, #ver, h1 .ver, h1 .badge';
     var els=[].slice.call(document.querySelectorAll('.pn-ver, '+PAGE_SEL));
     if(els.length<2) return;
     function key(t){var m=String(t||'').trim().match(/^v?(\d+(?:\.\d+)*)$/);
