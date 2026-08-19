@@ -59,7 +59,7 @@ These are the spine of the system, kept in their original order. The "Today" col
 | 3 | **Standing working standards.** One master skill, `how-we-work-rules`, holds the universal standards. Always on, every project. | Live, plus a web mirror at `how-we-work.html`. Design work now follows mock or prototype first, then build (set Aug 12). No em-dashes is a global writing rule. |
 | 4 | **Session commands and rituals.** `[wrap]`, `[SC]`, `/morning`, `[new project]`. | All live, plus `hardpull` for an instant Drafts sweep. `[wrap]` now also publishes a session tracker page as step 2. See section 8 and 06-How-We-Work.md. |
 | 5 | **Session-start safeguards.** Each new chat confirms which project it is in, tags the first reply, and stamps the location as work goes. | Unchanged. Concurrent sessions are now the bigger hazard: several chats write the same file and the same memory, so merge, never overwrite. |
-| 6 | **Time and measurement (the Quantified Self layer).** A global time tracker rolls hours up by project; per-project hours settle at wrap. | Split in two. Project hours still settle at wrap into the xlsx tracker. Life measurement moved into Supabase and grew far past the original plan: `qs_log`, `health_metrics`, `checkins`, `time_log`, the QS Dashboard and four connectors. |
+| 6 | **Time and measurement (the Quantified Self layer).** A global time tracker rolls hours up by project; per-project hours settle at wrap. | Split in two. Project hours still settle at wrap into the xlsx tracker. Life measurement moved into Supabase and grew far past the original plan: `qs_log`, `health_metrics`, `checkins`, `time_log`, YouMatics and four connectors. |
 | 7 | **To-do system.** Global and per-project to-do lists are the record of truth, click not type, every task carries a time estimate, estimate versus actual is tracked, duplicates flagged not silently added. | The record of truth for the board is now Supabase `public.todos`, not any file on disk. The xlsx lists survive for CoWork-level and per-project work. Estimate versus actual is live: `est_minutes` and `actual_minutes` on the board, on the Staging Area, and as accuracy scoring in `staging_events`. |
 | 8 | **Accomplishment logging.** Dated accomplishments per project, one row per real change, separate from hours. | Live, via the `log-accomplishments` skill. |
 | 9 | **Habit and coaching layer.** Identity-based habits, the four laws, habit stacking, the two-minute rule, habit tracking, plus the time wheel. | The methodology is still the frame. What shipped is concrete: the Cue Cards board with a daily meter and a streak, four ticking habit modules, a nightly habit reset, and the Time Bandit Wheel. Note that "Atomic Habits" now names three different things (see section 6). |
@@ -134,9 +134,9 @@ Most of these are deliberate: they hang off a hub page rather than the top nav.
 | `quotes.html` | Things Worth Knowing, also called Clever Phrases. v1.4. | Cue Cards board | Not in nav |
 | `compass.html` | Compass. One reflection question a day, tagged by category and minutes. This is the Year Compass daily-questions design, built. v1.4. | Cue Cards board | Not in nav |
 | `takeaways.html` | Takeaways. 12 cards, 58 tiles, one tile at a time. Browse only, no tick. v1.3. | Cue Cards board (first card) | Not in nav |
-| `qs-log.html` | Habits Tracker. The year-in-habits dot grid. v1.1 delivered, v1.0 in repo. **No `pages` row.** | QS Dashboard | Not in nav |
-| `qs-wheel.html` | Clarity Compass. Static seven-section wheel image plus the daily template. Its interactive `draw()` is dead code. Empty `pages` row. v1.3. | QS Dashboard | Not in nav |
-| `life-snapshot.html` | Life Snapshot. A life in weeks, 52 across, one year per row. v1.0. | QS Dashboard | Not in nav |
+| `qs-log.html` | Habits Tracker. The year-in-habits dot grid. v1.1 delivered, v1.0 in repo. **No `pages` row.** | YouMatics | Not in nav |
+| `qs-wheel.html` | Clarity Compass. Static seven-section wheel image plus the daily template. Its interactive `draw()` is dead code. Empty `pages` row. v1.3. | YouMatics | Not in nav |
+| `life-snapshot.html` | Life Snapshot. A life in weeks, 52 across, one year per row. v1.0. | YouMatics | Not in nav |
 | `movies.html` | Movie List. Empty `pages` row. v1.0. | Staging Area, Mission Control | Not in nav |
 | `connections.html` | Social. People logged or planned to see. Also the Friends Visit destination. v1.0. | Staging Area, Mission Control | Not in nav |
 | `future-travel.html` | Future Travel. Destinations and bucket list, mirrored by the Where I've Been Someday tab. v1.1. | Staging Area, Mission Control | Not in nav |
@@ -202,7 +202,7 @@ The travel page, four panels. **Countries** is a world map driven by `visited_co
 
 Built end to end in one session from the question "can I sync my credit card statements or Monarch to count coffee days?" The answer, worth keeping because it generalizes: a card charge is not a consumption day, and Monarch has no public API. The tracker is check-in data only, zero financial records touched. A single SQL function, `is_coffee_checkin()`, defines coffee-ness once and every view and trigger calls it. 588 distinct coffee days from Aug 2009 to Aug 2026, 622 check-ins, 175 venues, longest run 5 days, Friday is the coffee day. A day can hold both a `swarm` row and a `habit-bandit` row in `qs_log`, so `v_coffee_days` is the canonical answer and `qs_log` must never be counted directly. Stated limit: Swarm caught roughly 18 days in the last 90, so the history is excellent and the completeness is poor.
 
-### The QS Dashboard
+### YouMatics
 
 Six tiles: Time Bandit Wheel, Habits Tracker, Clarity Compass, Life Snapshot, Where I've Been, Coffee Days. It is a launcher, and **every statistic on its tiles is hardcoded**, including a "142-day streak" and "41 / 193 countries" that the database now contradicts (the streak reads 6 and `visited_countries` holds 51). Wiring the tiles live is an open decision in 08-Roadmap-and-Open-Decisions.md.
 
@@ -357,7 +357,7 @@ select table_name from information_schema.tables where table_schema = 'public';
 
 Also check `max(created_at)` as well as the data's own date column: a decade-deep backfill running oldest-first looks like a dead feed if you judge it by the data's dates alone.
 
-**When the old docs and the live system disagree, the live system wins.** Three cases resolved that way in this document: the Year Compass daily questions are described as unbuilt and are live at `compass.html`; the Staging Area is described as a mock and shipped at v0.5; and the QS Dashboard's tile statistics are hardcoded and contradict the database they claim to summarize.
+**When the old docs and the live system disagree, the live system wins.** Three cases resolved that way in this document: the Year Compass daily questions are described as unbuilt and are live at `compass.html`; the Staging Area is described as a mock and shipped at v0.5; and the YouMatics tile statistics are hardcoded and contradict the database they claim to summarize.
 
 ---
 
