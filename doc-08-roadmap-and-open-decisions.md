@@ -178,7 +178,7 @@ This has since become a live experiment rather than a settled fact. The System M
 
 ### 2.9 Seven `pages` rows are empty shells, and one of them is in the nav
 
-**The question.** Seven rows in `pages` have zero bytes in both `html` and `gzb64`: `daily-template.html`, `mission.html`, `morning-update.html`, `movies.html`, `qs-wheel.html`, `quotes.html`, `style-guide.html`. Three of these are live nav targets: `mission.html` (Operating System group), `daily-template.html` and `style-guide.html` (Editors group). `qs-wheel.html` is referenced by `navpatch.js`, which inserts a "back to the QS Dashboard" link into it. An empty row is not automatically a dead link, because `publish.yml` skips empty rows rather than blanking the repo file, so the repo copy may still be serving. But nothing in the pipeline will ever update these pages again.
+**The question.** Seven rows in `pages` have zero bytes in both `html` and `gzb64`: `daily-template.html`, `mission.html`, `morning-update.html`, `movies.html`, `qs-wheel.html`, `quotes.html`, `style-guide.html`. Three of these are live nav targets: `mission.html` (Operating System group), `daily-template.html` and `style-guide.html` (Editors group). `qs-wheel.html` is referenced by `navpatch.js`, which inserts a "back to YouMatics" link into it. An empty row is not automatically a dead link, because `publish.yml` skips empty rows rather than blanking the repo file, so the repo copy may still be serving. But nothing in the pipeline will ever update these pages again.
 
 **Options.** For each page: rebuild it, delete the row so the repo file is the only copy and the confusion ends, or leave it.
 
