@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Tracker · Aug 19 · Docs Library, plain English pass</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#20242b;--muted:#6b7280;--line:#e7e9ee;--bg:#fbfbfa;--card:#fff;--accent:#3f6f8f;--hub:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--blue:#3f6f8f;--red:#c0453b;--amber:#c68a2e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.25;padding:18px 16px 210px}
+  .head{max-width:1160px;margin:0 auto}
+  h1{font-size:22px;color:var(--hub);font-weight:800}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 10px;margin-top:7px;background:#eef7f1;color:var(--green);border:1px solid #cfe9db}
+  .chip.off{background:#fbe7e5;color:var(--red);border-color:#f0cfcb}
+  .sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.4;max-width:820px}
+  h2{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--hub);max-width:1160px;margin:18px auto 6px}
+  .h2note{max-width:1160px;margin:0 auto 6px;font-size:12.5px;color:var(--muted);line-height:1.4}
+  .tbl{max-width:1160px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .r{display:grid;grid-template-columns:34px 1fr 128px 150px 260px;align-items:flex-start;border-bottom:1px solid var(--line);transition:opacity .25s,max-height .3s,padding .3s;max-height:900px;overflow:hidden}
+  .r:last-child{border-bottom:none}
+  .r.hd{background:#f4f5f7;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);align-items:center}
+  .r.gone{opacity:0;max-height:0;border:none}
+  .c{padding:9px 14px}
+  .c.lt{padding:12px 0 9px 12px}
+  .dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .dot.green{background:var(--green)} .dot.amber{background:#e08b1f} .dot.red{background:var(--red)}
+  .r.hd .c.lt{padding-left:12px}
+  .legend{max-width:1160px;margin:10px auto 0;display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);font-weight:700;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;font-style:normal}
+  .asof{max-width:1160px;margin:14px auto 0;font-size:12.5px;font-style:italic;color:#808080}
+  .c.mid,.c.act,.c.next{padding:9px 12px}
+  .task .tt{color:var(--accent);text-decoration:none;font-size:14px;font-weight:700;line-height:1.2;border-bottom:1px solid #cfdae5}
+  .task .tt:hover{border-bottom-color:var(--accent)}
+  .task .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .task .desc b{color:#414855}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
+  .pill.green{background:var(--green)} .pill.blue{background:var(--blue)} .pill.red{background:var(--red)} .pill.amber{background:var(--amber)}
+  .act{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .got{font-weight:800;font-size:12.5px;border:1.5px solid var(--green);background:#fff;color:var(--green);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .yn{font-weight:800;font-size:12.5px;border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .yn.yes.on{background:var(--green);border-color:var(--green);color:#fff} .yn.no.on{background:var(--red);border-color:var(--red);color:#fff}
+  .ynrow{display:flex;gap:6px}
+  .notelink{font-size:11.5px;font-weight:700;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:0}
+  .notelink:hover{color:var(--accent)}
+  .nt{width:100%;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:30px;margin-top:2px}
+  .hidden{display:none}
+  .next{font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .next.none{color:#a7adb6}
+  .next.todo{background:#fdf6e9;color:#5c4a24;border-left:3px solid var(--amber)}
+  .next .nh{display:block;font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+  .next ol{margin:0 0 0 16px;padding:0}
+  .next ol li{margin:0 0 5px;line-height:1.4}
+  .next ol li:last-child{margin-bottom:0}
+  .next .lead{display:block;margin-bottom:4px}
+  .next code{background:#fff;border:1px solid #e2d9c2;border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+  .next a{color:var(--accent);font-weight:700}
+  .mins{display:inline-block;font-weight:800;font-size:10.5px;color:var(--muted);background:var(--chip);border-radius:999px;padding:2px 7px;margin-left:4px}
+  .allclear{max-width:1160px;margin:0 auto;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  @media(max-width:900px){
+    .r{grid-template-columns:22px 1fr auto}
+    .c.lt{grid-row:span 2}
+    .c.act,.c.next{grid-column:1/-1;border-top:1px solid var(--line)}
+    .c.act{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .r.hd{display:none}
+  }
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(31,42,68,.10);padding:9px 16px}
+  .dock .bar{max-width:1160px;margin:0 auto}
+  .dock .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:10px;flex-wrap:wrap}
+  .dock .top b{font-size:12.5px;color:var(--hub)}.dock .hint{font-size:11px;color:var(--muted)}
+  #out{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;border:1px solid var(--line);border-radius:10px;padding:8px;height:80px;resize:vertical;background:#fbfcfe;color:var(--ink)}
+  .copybtn{font-weight:700;font-size:12px;border:1px solid var(--line);background:var(--chip);color:var(--accent);border-radius:9px;padding:6px 11px;cursor:pointer;margin-top:5px}
+  .allbtn{font-weight:800;font-size:12px;border:1px solid #cfe9db;background:#eef7f1;color:var(--green);border-radius:9px;padding:6px 11px;cursor:pointer;margin:0 0 0 6px}
+  h1 .ver{display:inline-block;margin-left:9px;font-size:11px;font-weight:800;color:#9aa6b4;background:none;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;vertical-align:middle;letter-spacing:0}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Docs Library, plain English pass<span class="ver">v1.0</span></h1>
+  <div class="meta">Project YOU OS · Aug 19, 2026 · Backup taken, nothing edited yet, 14 proposals waiting on you</div>
+  <div id="syncchip" class="chip">connecting...</div>
+  <div class="sub">Your eleven documents run to about <b>69,800 words</b>, roughly 280 printed pages, and they are written for an engineer. Doc 02 names a Supabase project reference and a workflow filename before it ever says what the system does. Doc 03 lists 35 database tables before explaining what a table is. Nothing here is wrong, it is just pitched at the wrong reader.<br><br><b>The fix you picked:</b> every document opens in plain English, and all the technical precision stays underneath behind a <b>window shade</b> you click to open. One file, one truth, and you only ever read the top. Below is what I propose for each document. Tap Yes or No on every row, add a note where you want something different, then tell me to go.</div>
+<div class="legend"><span><i style="background:#1e8e5a"></i>Done</span><span><i style="background:#e08b1f"></i>Awaiting your comments</span><span><i style="background:#c0453b"></i>Not started</span></div>
+<div class="asof">As of August 19th</div>
+
+<h2>Work this session · <span id="leftct"></span></h2>
+<div class="tbl" id="tblWork"><div class="r hd"><div class="c lt"></div><div class="c">Input / Task</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+<div id="allclear" class="allclear hidden"></div>
+
+<h2>The proposal, document by document</h2>
+<div class="h2note">Fourteen rows. Eleven are the existing documents, three are new things. Yes means do it as described. No means leave that document alone. A note beats a No if you want it done differently. <button class="allbtn" onclick="yesAll()">Yes to all</button></div>
+<div class="tbl" id="tblProposal"><div class="r hd"><div class="c lt"></div><div class="c">Document</div><div class="c mid">Effort</div><div class="c act">Your call</div><div class="c next">What changes for you</div></div></div>
+
+<h2>Your call · three decisions</h2>
+<div class="tbl" id="tblLater"><div class="r hd"><div class="c lt"></div><div class="c">Item</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+
+<div class="dock"><div class="bar">
+  <div class="top"><b>Your responses (live)</b><span class="hint">saved automatically · this box is the fallback</span></div>
+  <textarea id="out" readonly></textarea>
+  <button class="copybtn" onclick="copyOut()">Copy</button>
+</div></div>
+
+<script>
+const SLUG='2026-08-19-docs-plain-english';
+const K=s=>SLUG+'::'+s;
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+const D='computer:///Users/scottyex/Documents/SER%20FILES/CoWork/_Docs/';
+const BK='computer:///Users/scottyex/Documents/SER%20FILES/CoWork/_Docs_Backup_2026-08-19';
+const LIB='https://xrodgers28.github.io/ProjectYou/library.html';
+
+const WORK=[
+  {item:K('backup'), label:'Backup taken before anything was touched', url:BK, pill:'green', ptext:'Done', light:'green',
+   desc:'All eleven documents copied to <b>_Docs_Backup_2026-08-19</b> in your CoWork folder, with their original timestamps intact. Nothing in _Docs has been edited. If you hate the result, the old library is one copy-back away.',
+   next:'Nothing. Worth knowing it is there.', mins:''},
+
+  {item:K('diagnosis'), label:'Read all eleven documents and found where they lose you', url:D, pill:'green', ptext:'Done', light:'green',
+   desc:'About <b>69,800 words</b> across eleven files. The three that fight you hardest are <b>02 Architecture</b> (opens with infrastructure names, not with what the thing does), <b>03 Data Model</b> (35 tables before defining a table) and <b>08 Roadmap</b> (10,100 words, and it is the one you most need, because it holds every decision waiting on you). There is no glossary anywhere in the library, so a term like gzb64 appears 29 times in doc 04 and is never once explained.',
+   next:'Nothing. The proposals below come out of this.', mins:''},
+
+  {item:K('samples'), label:'Two samples you asked to see before deciding', url:LIB, pill:'amber', ptext:'Awaiting you', light:'amber',
+   desc:'You said yes to diagrams outright, and asked to see a sample of the <b>glossary</b> and the <b>one page system summary</b> before committing. Both are in this chat as files: <b>SAMPLE-Glossary.md</b> and <b>SAMPLE-System-Summary.md</b>.',
+   lead:'These two are quick reads, five minutes for the pair.',
+   steps:[
+     'Open <b>SAMPLE-System-Summary.md</b> in this chat. It is the whole system on two pages.',
+     'Open <b>SAMPLE-Glossary.md</b>. It shows 14 of about 45 terms.',
+     'Answer decisions 1 and 2 at the bottom of this page.'
+   ], mins:'5', todo:true}
+];
+
+const PROPOSAL=[
+  {item:K('d00'), label:'00 START HERE', url:D+'00-START-HERE.md', pill:'blue', ptext:'Small', decide:true, light:'amber',
+   desc:'<b>Today:</b> 1,450 words, and more than half of it is a 55 row table of where old files went during the August 16 cleanup. Useful once, never again.<br><b>Proposed:</b> keep the routing table that tells you which document answers which question. Shade away the old file map. Put the two page system summary at the top if you approve it. Add one line at the very top: if you read nothing else, read this.',
+   next:'It becomes a 60 second read that points you at the right door.', mins:''},
+
+  {item:K('d01'), label:'01 Product Overview', url:D+'01-Product-Overview.md', pill:'blue', ptext:'Medium', decide:true, light:'amber',
+   desc:'<b>Today:</b> 6,840 words. The closest to readable already, and the most useful to you. It lists every page, module and connector. But it reads as an inventory, not a menu, so you cannot tell what any of it does for you without reading the whole entry.<br><b>Proposed:</b> one plain sentence under every page and module name saying what it does for you and when you would open it. Shade away the file names, paths and table names into a reference block per module. Add a picture of the site structure showing what sits under what.',
+   next:'You can scan the whole system in five minutes and know what each page is for.', mins:''},
+
+  {item:K('d02'), label:'02 Architecture', url:D+'02-Architecture.md', pill:'blue', ptext:'Large', decide:true, light:'amber',
+   desc:'<b>Today:</b> 5,600 words, and the worst offender. It opens with a Supabase project reference, a REST base URL and a workflow filename before it tells you what any of it is. The system diagram is drawn in plus signs and dashes.<br><b>Proposed:</b> new opening called <b>What the system is made of, in five parts</b>, in words you would use out loud. Replace the plus sign diagram with a real one. Add <b>the three things that go wrong, and why</b>, which is the part that has actually cost us time. Shade away the constants table, the publish chain internals, the security posture and the re-verify commands.',
+   next:'This is the document that should let you say I understand the architecture. Right now it cannot.', mins:''},
+
+  {item:K('d03'), label:'03 Data Model', url:D+'03-Data-Model.md', pill:'blue', ptext:'Large', decide:true, light:'amber',
+   desc:'<b>Today:</b> 7,570 words. Lists 35 database tables before ever explaining what a table is. Uses schema 19 times, trigger 20 times, RLS 14 times, none of them defined.<br><b>Proposed:</b> open with <b>your data in seven groups</b>, a plain paragraph per group saying what it holds, which page shows it, and how it gets there. Add a diagram of which table feeds which page. Then shade away the full catalogue, every column, every trigger and every job, unchanged and complete.',
+   next:'You will be able to answer where does that number come from without opening a database.', mins:''},
+
+  {item:K('d04'), label:'04 Runbook, Build and Deploy', url:D+'04-Runbook-Build-and-Deploy.md', pill:'blue', ptext:'Light touch', decide:true, light:'amber',
+   desc:'<b>Today:</b> 8,810 words of pure copy and paste procedure. This is my instruction manual, not yours.<br><b>Proposed:</b> deliberately the lightest touch. A short opener saying what this file is for, plus plain English for the handful of moments it affects you, mainly what it means when I say I am publishing and why it takes 20 seconds. Everything else goes behind one shade, untouched. <b>Making this one readable would risk making it wrong,</b> and wrong here breaks your live site.',
+   next:'Nothing changes in how you use it. You just stop opening it by accident.', mins:''},
+
+  {item:K('d05'), label:'05 Capture Pipeline', url:D+'05-Capture-Pipeline.md', pill:'blue', ptext:'Medium', decide:true, light:'amber',
+   desc:'<b>Today:</b> 5,940 words. Explains how a dictated note becomes a to-do, in terms of edge functions, watermarks and join rules. The word trigger appears 23 times.<br><b>Proposed:</b> open with <b>the journey of one note</b>, from your mouth to the board in six plain steps, with a diagram. Then every failure mode gets a plain <b>how you would notice</b> line, so you can tell me it is broken before I find out. Technical stages shaded.',
+   next:'When a dictated note goes missing you will know where to look and what to tell me.', mins:''},
+
+  {item:K('d06'), label:'06 How We Work', url:D+'06-How-We-Work.md', pill:'blue', ptext:'Medium', decide:true, light:'amber',
+   desc:'<b>Today:</b> 8,290 words, and a lot of it restates the how-we-work-rules skill, which is the real live source. Two copies of the same rules will drift apart, and that is the exact mess the August 16 cleanup was cleaning up.<br><b>Proposed:</b> open with <b>the rules on one screen</b>. Keep the rituals in plain language, because those are yours. Shade away the section by section restatement and replace the bulk of it with a pointer to the live skill, so there is only ever one copy.',
+   next:'One place to look for how we work, instead of two that can disagree.', mins:''},
+
+  {item:K('d07'), label:'07 Templates', url:D+'07-Templates.md', pill:'blue', ptext:'Light touch', decide:true, light:'amber',
+   desc:'<b>Today:</b> 3,320 words of blank templates to copy and paste. Fine as it is.<br><b>Proposed:</b> an opener saying what each template is for and when you would reach for one. The templates themselves are not rewritten, because a template you paraphrase stops working.',
+   next:'You can tell at a glance which one you want.', mins:''},
+
+  {item:K('d08'), label:'08 Roadmap and Open Decisions', url:D+'08-Roadmap-and-Open-Decisions.md', pill:'blue', ptext:'Large', decide:true, light:'amber',
+   desc:'<b>Today:</b> 10,110 words, the longest in the library, and the one you most need, because it holds <b>fourteen decisions waiting on you</b> plus every known problem. Right now each one is argued in prose and you have to extract the question yourself.<br><b>Proposed:</b> rewrite every open decision to the same four plain lines: <b>the question, what happens if we do nothing, the options, my recommendation.</b> Every known problem gets a <b>does this affect me</b> line. This is the document that turns into your next tracker.',
+   next:'Fourteen decisions you can actually answer in one sitting, instead of fourteen essays.', mins:''},
+
+  {item:K('d09'), label:'09 Governance and Doc Rules', url:D+'09-Governance-and-Doc-Rules.md', pill:'blue', ptext:'Small', decide:true, light:'amber',
+   desc:'<b>Today:</b> 1,820 words, the shortest and one of the clearest. It is the rules the library itself runs on.<br><b>Proposed:</b> a plain opener on why the library is eleven documents and not sixty one, and what would make me add a twelfth. <b>I would also do this one first, as the test case,</b> so you can see the window shade treatment on a small file before I commit to the other ten.',
+   next:'You get to see and reject the format on a small file first.', mins:''},
+
+  {item:K('d10'), label:'10 Foundations', url:D+'10-Foundations.md', pill:'blue', ptext:'Large', decide:true, light:'amber',
+   desc:'<b>Today:</b> 10,060 words. The why behind everything: the 5,000 weeks premise, the seven life sections, Atomic Habits, Tiny Habits, Dunbar, the measurement philosophy, every source book. The most interesting document in the library, and it reads like a literature review.<br><b>Proposed:</b> restructure to a repeating shape: <b>the belief, the evidence, what we built because of it.</b> Every source kept. Every design decision stated plainly enough that you can agree or disagree with it in one line.',
+   next:'This is the document that lets you say yes I agree with the thinking, or no I do not.', mins:''},
+
+  {item:K('newdiagrams'), label:'NEW: five real diagrams, replacing the plus sign drawings', url:D+'02-Architecture.md', pill:'green', ptext:'You said yes', decide:true, light:'amber',
+   desc:'You already approved this, the row is here so you can see the scope and veto any of the five. Proposed: <b>1</b> how the whole system fits together, <b>2</b> how a change reaches your live site, <b>3</b> how a spoken note becomes a to-do, <b>4</b> which database table feeds which page, <b>5</b> the site map, what lives under what. Drawn as proper pictures, readable on your phone.',
+   next:'Five pictures that replace roughly 2,000 words of description.', mins:''},
+
+  {item:K('newglossary'), label:'NEW: shared glossary, every term linked to it', url:LIB, pill:'amber', ptext:'Sample sent', decide:true, light:'amber',
+   desc:'About 45 terms, one sentence each plus a why you care line. <b>Every technical term across all eleven documents becomes a link straight to its entry,</b> so you never have to go looking. Sample of 14 terms is in this chat as SAMPLE-Glossary.md.<br><b>This is the row to say no to if the sample felt patronizing.</b>',
+   next:'No term in the library is ever unexplained again.', mins:''},
+
+  {item:K('newsummary'), label:'NEW: the whole system on two pages, at the front', url:LIB, pill:'amber', ptext:'Sample sent', decide:true, light:'amber',
+   desc:'A new short document sitting in front of all eleven. Read it in five minutes and you know what you own, what it costs, what it depends on, and the six design decisions everything rests on. Sample is in this chat as SAMPLE-System-Summary.md, and it is the full thing, not an excerpt.<br>It would be numbered so it sorts first, and linked from the library shelf.',
+   next:'A five minute re-orientation whenever you have been away from this for a week.', mins:''}
+];
+
+const LATER=[
+  {item:K('dec-glossary'), label:'Decision 1: is the glossary sample the right level?', url:LIB, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'Read SAMPLE-Glossary.md in this chat. The question is not is it correct, it is <b>does it explain things at the level you want.</b> If it feels too basic, say so in the note and I will pitch it up. If it feels still too technical, say that instead.',
+   next:'Yes and I write all 45 terms. No and I drop the glossary entirely. A note and I re-pitch it and show you again.', mins:''},
+
+  {item:K('dec-summary'), label:'Decision 2: does the two page summary earn its place?', url:LIB, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'Read SAMPLE-System-Summary.md in this chat. It is the finished article, not a sketch, so you are judging the real thing. The risk with it is that it becomes a twelfth document that goes stale, so if you say yes I will put it under the nightly reconciliation check like the others.',
+   next:'Yes and it goes in front of the library. No and I fold its best parts into 00 START HERE instead.', mins:''},
+
+  {item:K('dec-go'), label:'Decision 3: start with 09 as a test, or do all eleven in one pass?', url:D+'09-Governance-and-Doc-Rules.md', pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'I would rather rewrite <b>09, the shortest document,</b> first and show it to you, so you can reject the window shade format before I have applied it to sixty thousand words. There is one real unknown: your library shelf renders these documents in the browser, and I have not yet proven the shades open and close correctly there. Doing 09 first tests that too.<br><b>Yes</b> means do 09 first and wait for your word. <b>No</b> means you trust the format, do all eleven in one pass.',
+   next:'Yes is the safer route and costs you one extra look. No is faster and I go quiet for a while.', mins:''}
+];
+
+const ALL=[...WORK,...PROPOSAL,...LATER];
+const state={}; ALL.forEach(x=>state[x.item]={choice:'',note:'',got:false});
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const TODAY=ymd(new Date());
+let sb=null; try{ sb=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co',KEY); }catch(e){}
+function chip(ok){const c=document.getElementById('syncchip');if(ok){c.textContent='saved. Claude can see it';c.className='chip';}else{c.textContent='offline: copy the box below';c.className='chip off';}}
+function nextCell(x){
+  const mins=x.mins?'<span class="mins">'+x.mins+' min</span>':'';
+  if(x.steps){
+    const lead=x.lead?'<span class="lead">'+x.lead+'</span>':'';
+    return '<div class="c next todo"><span class="nh">Your move</span>'+lead+
+           '<ol>'+x.steps.map(t=>'<li>'+t+'</li>').join('')+'</ol>'+mins+'</div>';
+  }
+  if(x.todo) return '<div class="c next todo"><span class="nh">Your move</span>'+x.next+mins+'</div>';
+  if(x.decide) return '<div class="c next">'+x.next+'</div>';
+  const none=/^Nothing\.?$/i.test((x.next||'').trim());
+  return '<div class="c next'+(none?' none':'')+'">'+(x.next||'')+mins+'</div>';
+}
+function rowNode(x){
+  const d=document.createElement('div'); d.className='r'; d.dataset.i=x.item;
+  const desc=x.desc?'<div class="desc">'+x.desc+'</div>':'';
+  let act='';
+  if(x.decide){
+    act='<div class="ynrow"><button class="yn yes" data-i="'+x.item+'" data-v="Yes">Yes</button><button class="yn no" data-i="'+x.item+'" data-v="No">No</button></div>';
+  } else {
+    act='<button class="got" data-i="'+x.item+'">Got It</button>';
+  }
+  act+='<button class="notelink" data-i="'+x.item+'">＋ note</button><textarea class="nt hidden" data-i="'+x.item+'" placeholder="comment (optional)"></textarea>';
+  const lt=x.light||'amber';
+  d.innerHTML=
+    '<div class="c lt"><span class="dot '+lt+'" title="'+({green:'Done',amber:'Awaiting your comments',red:'Not started'}[lt])+'"></span></div>'+
+    '<div class="c task"><a class="tt" href="'+x.url+'" target="_blank" rel="noopener">'+x.label+'</a>'+desc+'</div>'+
+    '<div class="c mid"><span class="pill '+x.pill+'">'+x.ptext+'</span></div>'+
+    '<div class="c act">'+act+'</div>'+
+    nextCell(x);
+  return d;
+}
+let viewed=new Set();
+function renderWork(){
+  const tw=document.getElementById('tblWork');
+  tw.querySelectorAll('.r:not(.hd)').forEach(n=>n.remove());
+  WORK.filter(x=>!viewed.has(x.item)).forEach(x=>tw.appendChild(rowNode(x)));
+  updateLeft();
+}
+function updateLeft(){
+  const left=WORK.filter(x=>!viewed.has(x.item)).length;
+  document.getElementById('leftct').textContent=left+' left';
+  const ac=document.getElementById('allclear');
+  if(left===0){ ac.textContent='All caught up. '+viewed.size+' filed to today\'s session content. The proposal below is still open.'; ac.classList.remove('hidden'); document.getElementById('tblWork').classList.add('hidden'); }
+  else { ac.classList.add('hidden'); document.getElementById('tblWork').classList.remove('hidden'); }
+}
+const tp=document.getElementById('tblProposal'); PROPOSAL.forEach(x=>tp.appendChild(rowNode(x)));
+const tl=document.getElementById('tblLater'); LATER.forEach(x=>tl.appendChild(rowNode(x)));
+async function saveContent(x){ if(!sb){chip(false);return;} try{ const {error}=await sb.from('session_content').upsert({day:TODAY,item:x.item,label:x.label,session:SLUG,saved_at:new Date().toISOString()},{onConflict:'day,item'}); chip(!error);}catch(e){chip(false);} }
+async function saveTracker(x){ compile(); if(!sb){chip(false);return;} try{ const {error}=await sb.from('tracker').upsert({item:x.item,label:x.label,choice:state[x.item].choice,note:state[x.item].note,session:SLUG,updated_at:new Date().toISOString()},{onConflict:'item'}); chip(!error);}catch(e){chip(false);} }
+function setChoice(i,v,btn){
+  state[i].choice=v;
+  const scope=btn?btn.closest('.act'):document.querySelector('.yn[data-i="'+i+'"]').closest('.act');
+  scope.querySelectorAll('.yn').forEach(y=>y.classList.remove('on'));
+  const on=scope.querySelector('.yn[data-v="'+v+'"]'); if(v&&on) on.classList.add('on');
+}
+function yesAll(){ PROPOSAL.forEach(x=>{ setChoice(x.item,'Yes',null); saveTracker(x); }); compile(); }
+document.body.addEventListener('click',e=>{
+  const g=e.target.closest('.got');
+  if(g){ const i=g.dataset.i, x=ALL.find(z=>z.item===i); state[i].got=true; viewed.add(i); saveContent(x);
+    const rowEl=g.closest('.r'); rowEl.classList.add('gone'); setTimeout(()=>{rowEl.remove();updateLeft();},300); compile(); return; }
+  const nl=e.target.closest('.notelink');
+  if(nl){ const ta=nl.parentElement.querySelector('.nt'); ta.classList.toggle('hidden'); if(!ta.classList.contains('hidden')) ta.focus(); return; }
+  const b=e.target.closest('.yn'); if(!b)return;
+  const i=b.dataset.i,v=b.dataset.v;
+  setChoice(i,(state[i].choice===v)?'':v,b);
+  saveTracker(ALL.find(x=>x.item===i));
+});
+let t=null;
+document.body.addEventListener('input',e=>{ const n=e.target.closest('.nt'); if(!n)return; state[n.dataset.i].note=n.value; clearTimeout(t); t=setTimeout(()=>saveTracker(ALL.find(x=>x.item===n.dataset.i)),500); });
+function compile(){
+  const lines=['Docs Library plain English pass, Project YOU OS, Aug 19, 2026',''];
+  const got=WORK.filter(x=>state[x.item].got);
+  if(got.length){ lines.push('Filed to today\'s session content ('+got.length+'):'); got.forEach(x=>lines.push('- '+x.label)); lines.push(''); }
+  const props=PROPOSAL.filter(x=>state[x.item].choice||state[x.item].note);
+  if(props.length){ lines.push('Proposal answers ('+props.length+' of '+PROPOSAL.length+'):');
+    props.forEach(x=>{ const s=state[x.item]; let l='- '+x.label+': '+(s.choice||'(note only)'); if(s.note) l+=' , '+s.note; lines.push(l); }); lines.push(''); }
+  const decs=LATER.filter(x=>state[x.item].choice||state[x.item].note);
+  if(decs.length){ lines.push('Decisions:');
+    decs.forEach(x=>{ const s=state[x.item]; let l='- '+x.label+': '+(s.choice||'(note only)'); if(s.note) l+=' , '+s.note; lines.push(l); }); }
+  if(lines.length===2) lines.push('(tap Yes or No on the fourteen proposals, then answer the three decisions)');
+  document.getElementById('out').value=lines.join('\n');
+}
+function copyOut(){const o=document.getElementById('out');o.select();try{document.execCommand('copy');}catch(e){}}
+async function boot(){
+  if(!sb){chip(false);renderWork();compile();return;}
+  try{
+    const sc=await sb.from('session_content').select('item').eq('day',TODAY).eq('session',SLUG);
+    viewed=new Set((sc.data||[]).map(r=>r.item).filter(Boolean));
+    viewed.forEach(i=>{ if(state[i]) state[i].got=true; });
+    renderWork();
+    const tr=await sb.from('tracker').select('*').eq('session',SLUG);
+    (tr.data||[]).forEach(r=>{ if(!state[r.item])return; state[r.item].choice=r.choice||''; state[r.item].note=r.note||'';
+      if(r.choice){const b=document.querySelector('.yn[data-i="'+r.item+'"][data-v="'+r.choice+'"]'); if(b)b.classList.add('on');}
+      if(r.note){const n=document.querySelector('.nt[data-i="'+r.item+'"]'); if(n){n.value=r.note;n.classList.remove('hidden');}} });
+    chip(true); compile();
+  }catch(e){ chip(false); renderWork(); compile(); }
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
