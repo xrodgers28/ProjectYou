@@ -25,14 +25,7 @@ window.NAV_CONFIG = {
   "Operating System": [
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
     { "label": "Guardrails", "href": "guardrails.html" },
-    { "label": "Maps &amp;<br>Diagrams", "children": [
-      { "label": "Overview", "href": "maps.html" },
-      { "label": "Knowledge Graph", "href": "blueprint.html" },
-      { "label": "Architecture Map", "href": "architecture-map.html" },
-      { "label": "Data Flow Chart", "href": "dfd.html" },
-      { "label": "Data Flow Map", "href": "data-flow-map.html" },
-      { "label": "Spider Diagram", "href": "knowledge-graph.html" }
-    ] },
+    { "label": "Maps &amp;<br>Diagrams", "href": "maps.html" },
     { "label": "Mission<br>Control", "href": "mission.html" },
     { "label": "Docs<br>Library", "href": "library.html" }
   ]
@@ -42,3 +35,22 @@ window.NAV_CONFIG = {
    When a group name here has a URL, navpatch.js renders its grey label as a
    clickable link (and marks it active on that page). */
 window.NAV_GROUP_LINKS = {};
+
+/* Maps & Diagrams subsection.
+   No dropdown: the top nav links straight to the Overview hub (maps.html), and
+   navpatch.js renders THIS list as a horizontal strip on the five sub pages.
+   One list, two places, so the strip can never drift from the nav again.
+   Add a new map here and it appears on every sub page automatically. */
+window.MAPS_NAV = {
+  "label": "\uD83D\uDDFA Maps",
+  "hub": "maps.html",
+  "ver": "Maps v1.3",
+  "items": [
+    { "label": "Overview", "href": "maps.html" },
+    { "label": "Knowledge Graph", "href": "blueprint.html" },
+    { "label": "Architecture Map", "href": "architecture-map.html" },
+    { "label": "Data Flow Chart", "href": "dfd.html" },
+    { "label": "Data Flow Map", "href": "data-flow-map.html" },
+    { "label": "Spider Diagram", "href": "knowledge-graph.html" }
+  ]
+};
