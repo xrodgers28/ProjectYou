@@ -23,7 +23,6 @@ window.NAV_CONFIG = {
     { "label": "Style<br>Guide", "href": "style-guide.html" }
   ],
   "Operating System": [
-    { "label": "Components", "href": "build.html" },
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
     { "label": "Guardrails", "href": "guardrails.html" },
     { "label": "Maps", "children": [
