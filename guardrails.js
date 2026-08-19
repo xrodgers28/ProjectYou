@@ -86,25 +86,25 @@ window.GUARDRAILS = [
     how:'When a request matches something that already exists, the earlier thing gets named and the overlap shown, before anything new is built.',
     where:'how-we-work-rules, section 6' },
 
-  { id:'duplicate-detector', name:'Duplicate detector', status:'proposed', since:'',
-    catches:'Two pages, two tables or two skills quietly doing the same job.',
-    how:'Extend the site sweep to compare page titles, headings and section names across everything published, and flag near-identical pairs for you to merge, rename or keep.',
-    where:'proposed, would live in the version-check skill' },
+  { id:'duplicate-detector', name:'Duplicate detector', status:'live', since:'2026-08-18',
+    catches:'Two pages quietly doing the same job, or a page wearing the wrong heading because it was copied from another one.',
+    how:'The sweep normalises every page title and heading and compares all of them, reporting any pair more than 85 percent alike. Pages generated from one template are treated as a family and compared as a group, so a legitimate shared heading is not eleven false alarms.',
+    where:'the version-check skill' },
 
-  { id:'orphan-check', name:'Orphan check', status:'proposed', since:'',
-    catches:'A page that is published and correct but that nothing anywhere links to.',
-    how:'Build the link graph during the sweep and report any page with no inbound link from the nav or any other page.',
-    where:'proposed, would live in the version-check skill' },
+  { id:'orphan-check', name:'Orphan check', status:'live', since:'2026-08-18',
+    catches:'A page that is published and correct but that nothing anywhere links to, so it is effectively lost.',
+    how:'The sweep builds the whole link graph, counting the shared nav as an inbound link, and reports any page nothing points at. A page whose index builds its links at runtime from the database is not counted as an orphan.',
+    where:'the version-check skill' },
 
-  { id:'links-in-scripts', name:'Links hidden in scripts', status:'proposed', since:'',
-    catches:'A broken link that lives inside JavaScript rather than an href, so the link checker never sees it.',
-    how:'Also resolve page names found in script strings. The Components page currently links this way, which is exactly the blind spot.',
-    where:'proposed, would live in the version-check skill' },
+  { id:'links-in-scripts', name:'Links hidden in scripts', status:'live', since:'2026-08-18',
+    catches:'A broken link that lives inside JavaScript rather than an href, which a plain link checker never sees.',
+    how:'The sweep also reads page names out of script strings and resolves them. It found a dead link on the Docs Library the first time it ran. Working ones are counted quietly, because they are what makes the orphan check accurate.',
+    where:'the version-check skill' },
 
-  { id:'staleness-clock', name:'Staleness clock', status:'proposed', since:'',
-    catches:'A page that describes how the system works but has not been re-checked against it in weeks.',
-    how:'Every living document already shows a Last verified date written by its own nightly check. Report any date older than a set age, rather than waiting for someone to notice.',
-    where:'proposed, would extend the nightly checks' },
+  { id:'staleness-clock', name:'Staleness clock', status:'live', since:'2026-08-18',
+    catches:'A document that describes how the system works but has not been re-checked against it in weeks.',
+    how:'The sweep reads the Last verified date off every canonical document and reports anything older than the threshold, seven days by default, plus any document carrying no verified date at all.',
+    where:'the version-check skill' },
 ];
 
 (function(){
@@ -130,7 +130,9 @@ window.GUARDRAILS = [
       '.gr-line .n{flex:0 0 190px;font-size:12.5px;font-weight:800;color:#2f5a74}'+
       '.gr-line .c{font-size:12.5px;color:#5b6472;line-height:1.45}'+
       '.gr-line .c i{font-style:normal;color:#b07d1e;font-weight:800;font-size:10px;'+
-        'text-transform:uppercase;letter-spacing:.4px;margin-left:6px}';
+        'text-transform:uppercase;letter-spacing:.4px;margin-left:6px}'+
+      '.gr-empty{background:#fff;border:1px dashed #dfe4ec;border-radius:13px;padding:16px 18px;'+
+        'font-size:12.5px;color:#8a93a0;line-height:1.5}';
     document.head.appendChild(st);
   }
   function full(g){
@@ -157,6 +159,11 @@ window.GUARDRAILS = [
       var mode=m.getAttribute('data-mode')||'full';
       var only=m.getAttribute('data-status');
       var list=window.GUARDRAILS.filter(function(g){return !only||g.status===only;});
+      if(!list.length){
+        m.innerHTML='<div class="gr-empty">'+(m.getAttribute('data-empty')||
+          'Nothing here right now.')+'</div>';
+        return;
+      }
       m.innerHTML = mode==='compact'
         ? list.map(compact).join('')
         : '<div class="gr-grid">'+list.map(full).join('')+'</div>';
