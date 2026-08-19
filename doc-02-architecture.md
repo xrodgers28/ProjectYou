@@ -250,7 +250,7 @@ Every page ships a **hardcoded** `<div class="pynav">` containing `.pn-group` bl
 
 **A site-wide UI change belongs in `navpatch.js`, not in the pages.** This is both the correct design and the cheap path: `navpatch.js` is about 6.7 KB, so changing it is a small publish, while making the same change page by page means re-encoding files up to 117 KB each, one at a time. Always ask whether a change belongs in the shared layer before touching individual pages.
 
-Beyond the nav, `navpatch.js` currently also: injects the `pn-maps-css` dropdown styles and the `ph-header-css` page-header styles, adds `.ph-h1` to the page's real `<h1>`, stamps today's date into any empty `.date` element, marks the current page's link `.on` (including marking a dropdown button active when one of its children is the current page), positions dropdown menus with `position: fixed` on click, inserts the "back to the QS Dashboard" link on `qs-log.html`, `qs-wheel.html`, `life-snapshot.html` and inside `#wheelview` on `index.html`, and appends newer maps to the hardcoded `.mapsub` strip from an `EXTRA` array at the bottom of the file.
+Beyond the nav, `navpatch.js` currently also: injects the `pn-maps-css` dropdown styles and the `ph-header-css` page-header styles, adds `.ph-h1` to the page's real `<h1>`, stamps today's date into any empty `.date` element, marks the current page's link `.on` (including marking a dropdown button active when one of its children is the current page), positions dropdown menus with `position: fixed` on click, inserts the "back to YouMatics" link on `qs-log.html`, `qs-wheel.html`, `life-snapshot.html` and inside `#wheelview` on `index.html`, and appends newer maps to the hardcoded `.mapsub` strip from an `EXTRA` array at the bottom of the file.
 
 ### Current nav groups and items
 
@@ -260,7 +260,7 @@ Reproduced verbatim from `/tmp/py/nav-config.js` as of 2026-08-16. `<br>` inside
 | --- | --- |
 | To Do List | Todays Tasks (`index.html`), Staging Area (`staging-area.html`), All ToDos (`all-todos.html`) |
 | Habit Modules | Cue Cards (`habit-modules.html`) |
-| Quantified Self | QS Dashboard (`qs-dashboard.html`), Where I've Been (`where-ive-been.html`), Coffee Days (`coffee-days.html`) |
+| Quantified Self | YouMatics (`qs-dashboard.html`), Where I've Been (`where-ive-been.html`), Coffee Days (`coffee-days.html`) |
 | Editors | Daily Habits (`daily-template.html`), Midnight Run (`midnight-run-v2.html`), Style Guide (`style-guide.html`) |
 | Operating System | Components (`build.html`), Automated Tracking (`automated-tracking.html`), **Maps** (dropdown), Mission Control (`mission.html`), Docs Library (`library.html`) |
 
