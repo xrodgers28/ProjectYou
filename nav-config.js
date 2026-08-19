@@ -25,13 +25,13 @@ window.NAV_CONFIG = {
   "Operating System": [
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
     { "label": "Guardrails", "href": "guardrails.html" },
-    { "label": "Maps", "children": [
+    { "label": "Maps &amp;<br>Diagrams", "children": [
       { "label": "Overview", "href": "maps.html" },
-      { "label": "Data Flow Diagram", "href": "dfd.html" },
-      { "label": "Compass Sources", "href": "blueprint.html" },
-      { "label": "Knowledge Graph", "href": "knowledge-graph.html" },
+      { "label": "Knowledge Graph", "href": "blueprint.html" },
       { "label": "Architecture Map", "href": "architecture-map.html" },
-      { "label": "Data Flow Map", "href": "data-flow-map.html" }
+      { "label": "Data Flow Chart", "href": "dfd.html" },
+      { "label": "Data Flow Map", "href": "data-flow-map.html" },
+      { "label": "Spider Diagram", "href": "knowledge-graph.html" }
     ] },
     { "label": "Mission<br>Control", "href": "mission.html" },
     { "label": "Docs<br>Library", "href": "library.html" }
