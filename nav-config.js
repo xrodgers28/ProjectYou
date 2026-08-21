@@ -106,3 +106,16 @@ window.PAGE_VERSIONS = {
   "tracker.html": "v1.0",
   "midnight-run.html": "v3.0"
 };
+
+/* ============================================================
+   DARK-BACKGROUND HEADINGS  (rule, Aug 21, 2026, Scott)
+   ============================================================
+   On any page whose heading sits on a dark background, the
+   heading text is VERY LIGHT GREY, never white and never the
+   dark ink used on white pages.
+
+   Change the shade here and every dark-bar heading on the site
+   follows. navpatch.js works out which backgrounds are dark at
+   load, so a new page inherits the rule with no extra work.
+   ============================================================ */
+window.ONDARK_INK = "#d6dce4";
