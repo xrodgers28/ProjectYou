@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Feed &middot; ProjectYou</title>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--key:#c2c8d1;--accent:#3f6f8f;--acc:#6b7f9c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  a{color:inherit}
+  /* shared ProjectYou nav */
+  .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;gap:1px}
+  .pynav::-webkit-scrollbar{height:0}
+  .pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+  .pn-logo img{height:28px;width:auto;display:block}
+  .pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+  .pn-group.first{border-left:none}
+  .pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+  a.pn-label{text-decoration:none;cursor:pointer}a.pn-label:hover{color:var(--accent)}a.pn-label.on{color:var(--accent)}
+  .pn-links{display:flex;gap:1px;align-items:stretch}
+  .pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+  .pn-link:hover{background:#eef2f8;color:#3f6f8f}.pn-link.on{background:#3f6f8f;color:#fff}.pn-link.pn-solo{min-height:31px}
+  .pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+  .pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+  .pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+  .pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+  .pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+  .pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+  .pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+  .pn-drop{position:relative;display:inline-flex;align-items:stretch}.pn-dropbtn{cursor:pointer;user-select:none}
+  .pn-menu{position:fixed;background:#fff;border:1px solid #e3e7ee;border-radius:9px;box-shadow:0 10px 28px rgba(31,42,68,.16);padding:5px;display:none;flex-direction:column;min-width:200px;z-index:60}
+  .pn-menu.open{display:flex}.pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}
+
+  .wrap{max-width:560px;margin:0 auto;padding:20px 16px 70px}
+  .head{text-align:center;margin-bottom:16px}
+  .head .kick{font-size:10.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--acc)}
+  .head h1{font-size:26px;margin-top:5px}
+  .head .sub{font-size:12.5px;color:var(--muted);margin-top:6px}
+  .deck{max-width:344px;margin:0 auto}
+  .dots{display:flex;gap:4px;justify-content:center;margin-bottom:11px;flex-wrap:wrap}
+  .dot{width:7px;height:7px;border-radius:50%;background:#d3d9e2;border:none;padding:0;cursor:pointer}
+  .dot.on{background:var(--acc);width:20px;border-radius:4px}
+  .dot.seen{background:#b9c4d0}
+  .dot.lock{background:transparent;border:1px solid #d3d9e2;cursor:default}
+  .item{border-top:1px solid var(--line);padding:13px 0 12px;position:relative;padding-right:30px}
+  .item:first-of-type{border-top:none;padding-top:4px}
+  .item .t{font-size:14.5px;font-weight:700;line-height:1.4}
+  .item .b{font-size:13.5px;color:#46516a;line-height:1.55;margin-top:5px}
+  .item .src{font-size:10.5px;color:#a8b0bb;font-style:normal;padding:0;margin-top:7px;letter-spacing:.1px}
+  .item .src a{color:#a8b0bb}
+  .item .st{position:absolute;top:10px;right:0;font-size:17px;color:#c8cfd9;background:none;border:none;cursor:pointer;line-height:1;padding:2px 3px}
+  .item .st.on{color:#e0a52e}
+  .feedlist{margin-top:10px}
+  .empty{font-size:13.5px;color:var(--muted);padding:16px 0}
+  .lockline{text-align:center;font-size:11px;color:var(--muted);margin:-6px 0 11px}
+  .tile{position:relative;background:#fff;border:1px solid var(--key);border-top:3px solid var(--acc);border-radius:16px;box-shadow:0 12px 34px rgba(31,42,68,.10);overflow:hidden;min-height:430px;display:flex;flex-direction:column}
+  .tile .top{padding:20px 20px 0;flex:1}
+  .chiprow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-right:26px}
+  .chip{font-size:9.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;padding:4px 8px;border-radius:999px;background:#eef2f8;color:#5b6472}
+  .chip.area{color:#fff}
+  .step{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc);margin-top:14px}
+  .tile h2{font-size:22px;line-height:1.22;margin-top:7px}
+  .tile .body{font-size:14.5px;color:#46516a;line-height:1.55;margin-top:11px}
+  .star{position:absolute;top:12px;right:12px;font-size:19px;color:#c8cfd9;background:none;border:none;cursor:pointer;line-height:1;padding:2px 4px}
+  .star.on{color:#e0a52e}
+  .prac{background:#f6f8fb;border-top:1px solid var(--line);padding:13px 20px 15px}
+  .prac .lab{font-size:9.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--acc)}
+  .prac .txt{font-size:14px;font-weight:700;margin-top:4px}
+  .src{font-size:11px;color:#8a93a0;padding:9px 20px 14px;font-style:italic}
+  .nav2{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px}
+  .bk{font-size:13px;font-weight:800;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:9px 4px}
+  .bk[disabled]{opacity:.35;cursor:default}
+  .nx{font-size:13px;font-weight:800;color:#fff;background:var(--acc);border:none;border-radius:999px;padding:10px 22px;cursor:pointer}
+  .done{max-width:344px;margin:16px auto 0;background:#fff;border:1px solid var(--key);border-radius:14px;padding:15px 16px;text-align:center}
+  .done h3{font-size:16px}
+  .done p{font-size:12.5px;color:var(--muted);margin-top:5px}
+  .logrow{display:flex;gap:7px;align-items:center;justify-content:center;margin-top:11px;flex-wrap:wrap}
+  .logrow input{width:66px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;text-align:center}
+  .logrow button{padding:9px 15px;border:none;border-radius:9px;background:var(--acc);color:#fff;font-size:13px;font-weight:800;cursor:pointer}
+  .logrow .lab{font-size:12.5px;color:var(--muted)}
+  .back{display:block;text-align:center;font-size:12.5px;font-weight:800;color:var(--accent);text-decoration:none;margin-top:18px}
+  .gate{max-width:340px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(31,42,68,.07)}
+  .gate h2{font-size:17px;margin-bottom:4px}
+  .gate p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .gate input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:9px;font-family:inherit}
+  .gate button{width:100%;padding:10px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer}
+  .gate .err{color:#c0453b;font-size:12px;margin-top:8px;min-height:16px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:#1f2a44;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(31,42,68,.28);opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
+  .toast.on{opacity:1}
+  .hidden{display:none!important}
+  .stamp{text-align:center;font-size:11px;color:#9aa6b4;margin-top:26px}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="pynav">
+    <a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a>
+    <span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link">Staging<br>Area</a></span></span>
+    <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
+    <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
+    <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
+    <span class="pn-ver">v1.0</span>
+    <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
+  </div>
+
+  <div class="wrap">
+    <div class="head">
+      <div class="kick">Today’s reading, bucketed</div>
+      <h1>The Feed</h1>
+      <div class="sub">Farnam Street’s Brain Food, kept in his own sections. Star anything worth keeping and it lands in your Farnam Street library — reading the card is how the library gets built.</div>
+    </div>
+
+    <div id="stage"></div>
+
+    <div class="done hidden" id="donecard">
+      <h3>That is today’s feed.</h3>
+      <p>Ticked on the Cue Cards board and sent to the Time Bandit Wheel. Starred items are in your library.</p>
+      <div class="logrow">
+        <span class="lab">How long did that take?</span>
+        <input id="mins" type="number" min="1" max="180" placeholder="min">
+        <button onclick="logTime()">Log it</button>
+      </div>
+    </div>
+
+    <a class="back" href="habit-modules.html">&larr; Back to the Cue Cards board</a>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="gate hidden" id="gate">
+    <h2>Sign in</h2>
+    <p>Starring writes to your library, so this page needs your account.</p>
+    <input id="email" type="email" placeholder="Email" autocomplete="username">
+    <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button onclick="signIn()">Sign in</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ===== The Feed v1.0 =====
+   A news source you read INTO your library. Items arrive in public.news_queue
+   from Farnam Street's Brain Food and are shown in Shane Parrish's own sections,
+   in his order, not re-bucketed into our vocabulary, because the whole point is
+   to read it the way he wrote it. Starring an item copies it into
+   public.farnam_street, the library named after the source. */
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
+
+const HABIT="The Feed", QS="The Feed", SOURCE="Farnam Street";
+const SRCLINE="Farnam Street &middot; Brain Food, Shane Parrish &middot; S15";
+
+/* Farnam Street's own section headers, in the order he runs them. Anything that
+   arrives under a heading we do not know about is appended rather than dropped,
+   so a new section in the newsletter shows up here instead of disappearing. */
+const SECTIONS=["Tiny Thoughts","Insights","Mental Models","The Knowledge Project","Etcetera","P.S."];
+
+let ITEMS=[], TILES=[], STARRED={}, idx=0, signedIn=false, ticked=false, habitRow=null;
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function todayKey(){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}catch(e){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}}
+function fmtDate(d){if(!d)return '';try{return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric'}).format(new Date(d+'T12:00:00Z'));}catch(e){return d;}}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2600);}
+
+async function loadAll(){
+  var r=await sb.from('news_queue').select('id,source,section,title,body,url,published_on,status')
+        .eq('source',SOURCE).neq('status','hidden').order('published_on',{ascending:false}).order('id');
+  ITEMS=r.data||[];
+  var f=await sb.from('farnam_street').select('id,section,title');
+  STARRED={}; (f.data||[]).forEach(function(x){STARRED[keyOf(x)]=x.id;});
+  buildTiles();
+  await loadHabit();
+  render();
+  markSeen();
+}
+
+function keyOf(x){return (x.section||'')+' · '+(x.title||'');}
+
+/* one tile per Farnam Street section that actually has something in it */
+function buildTiles(){
+  var order={}, extra=[];
+  SECTIONS.forEach(function(s,i){order[s]=i;});
+  var by={};
+  ITEMS.forEach(function(it){
+    var s=it.section||'Etcetera';
+    if(!(s in order)&&extra.indexOf(s)<0)extra.push(s);
+    (by[s]=by[s]||[]).push(it);
+  });
+  var names=SECTIONS.filter(function(s){return by[s]&&by[s].length;}).concat(extra);
+  TILES=names.map(function(s){return {section:s, items:by[s]};});
+  if(idx>=TILES.length)idx=0;
+}
+
+async function loadHabit(){
+  var r=await sb.from('todos').select('id,task,done,actual_minutes,for_date').eq('is_habit',true).eq('task',HABIT).order('for_date',{ascending:false}).limit(1);
+  habitRow=(r.data&&r.data[0])||null;
+  ticked=!!(habitRow&&habitRow.done&&habitRow.for_date===todayKey());
+}
+
+/* reading the card is what marks the queue read */
+async function markSeen(){
+  var ids=ITEMS.filter(function(i){return i.status==='new';}).map(function(i){return i.id;});
+  if(!ids.length)return;
+  await sb.from('news_queue').update({status:'seen',seen_on:todayKey()}).in('id',ids);
+  ITEMS.forEach(function(i){if(i.status==='new')i.status='seen';});
+}
+
+function itemHTML(it){
+  var k=keyOf(it), on=!!STARRED[k];
+  var when=fmtDate(it.published_on);
+  return '<div class="item">'+
+    '<button class="st'+(on?' on':'')+'" data-k="'+esc(k)+'" title="'+(on?'Remove from your Farnam Street library':'Keep this in your Farnam Street library')+'">'+(on?'★':'☆')+'</button>'+
+    '<div class="t">'+esc(it.title)+'</div>'+
+    (it.body?'<div class="b">'+esc(it.body)+'</div>':'')+
+    '<div class="src">'+SRCLINE+(when?' &middot; '+esc(when):'')+
+      (it.url?' &middot; <a href="'+esc(it.url)+'" target="_blank" rel="noopener">read it there</a>':'')+'</div>'+
+  '</div>';
+}
+
+function render(){
+  if(!TILES.length){
+    document.getElementById('stage').innerHTML='<div class="done"><h3>Nothing in the feed yet</h3><p>Nothing is queued from '+esc(SOURCE)+'. New issues land in news_queue and appear here.</p></div>';
+    return;
+  }
+  var c=TILES[idx], n=TILES.length;
+  var d='';
+  for(var j=0;j<n;j++) d+='<button class="dot'+(j===idx?' on':'')+'" data-i="'+j+'" aria-label="'+esc(TILES[j].section)+'"></button>';
+  var kept=c.items.filter(function(it){return STARRED[keyOf(it)];}).length;
+
+  document.getElementById('stage').innerHTML=
+   '<div class="deck">'+
+    '<div class="dots">'+d+'</div>'+
+    '<div class="lockline">'+esc(c.section)+' &middot; '+c.items.length+' item'+(c.items.length===1?'':'s')+
+      (kept?' &middot; '+kept+' kept':'')+'</div>'+
+    '<div class="tile">'+
+      '<div class="top">'+
+        '<div class="chiprow"><span class="chip area" style="background:#6b7f9c">Farnam Street</span><span class="chip">Brain Food</span></div>'+
+        '<div class="step">Section '+(idx+1)+' of '+n+'</div>'+
+        '<h2>'+esc(c.section)+'</h2>'+
+        '<div class="feedlist">'+(c.items.length?c.items.map(itemHTML).join(''):'<div class="empty">Nothing under this heading this week.</div>')+'</div>'+
+      '</div>'+
+      '<div class="prac"><div class="lab">How this works</div><div class="txt">Star anything worth keeping. It copies into your Farnam Street library, so reading the card is what builds it.</div></div>'+
+    '</div>'+
+    '<div class="nav2"><button class="bk" id="bk"'+(idx===0?' disabled':'')+'>&larr; Back</button>'+
+      '<button class="nx" id="nx">'+(idx===n-1?'Finish':'Next')+'</button></div>'+
+   '</div>';
+
+  document.querySelectorAll('.dot[data-i]').forEach(function(b){b.onclick=function(){idx=+b.dataset.i;render();};});
+  document.getElementById('bk').onclick=function(){if(idx>0){idx--;render();}};
+  document.getElementById('nx').onclick=function(){if(idx<n-1){idx++;render();}else{finish();}};
+  document.querySelectorAll('.item .st').forEach(function(b){
+    b.onclick=function(){
+      var k=b.dataset.k, it=null;
+      for(var q=0;q<ITEMS.length;q++){if(keyOf(ITEMS[q])===k){it=ITEMS[q];break;}}
+      if(it)toggleStar(it);
+    };
+  });
+  document.getElementById('donecard').classList.toggle('hidden',!ticked);
+}
+
+async function toggleStar(it){
+  if(!sb||!signedIn){toast('Sign in first.');return;}
+  var k=keyOf(it);
+  if(STARRED[k]){
+    var del=await sb.from('farnam_street').delete().eq('id',STARRED[k]);
+    if(del.error){toast('Could not remove it: '+del.error.message);return;}
+    delete STARRED[k]; toast('Out of the library');
+  } else {
+    var ins=await sb.from('farnam_street').insert({
+      section:it.section, title:it.title, body:it.body, url:it.url, published_on:it.published_on
+    }).select().single();
+    if(ins.error){toast('Could not keep it: '+ins.error.message);return;}
+    STARRED[k]=ins.data.id; toast('Kept to your Farnam Street library');
+  }
+  render();
+}
+
+async function ensureRow(){
+  if(habitRow)return habitRow;
+  var ins=await sb.from('todos').insert({
+    task:HABIT, section:'Core To-Dos', subsection:'HABIT BANDIT', category:'HABIT BANDIT',
+    is_habit:true, bucket:'today', est_minutes:10, position:15,
+    for_date:todayKey(), done:false, status:'todo'
+  }).select().single();
+  if(ins.error){toast('Could not create the habit row: '+ins.error.message);return null;}
+  habitRow=ins.data; return habitRow;
+}
+
+async function finish(){
+  if(!sb||!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
+  if(ticked){document.getElementById('donecard').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return;}
+  var row=await ensureRow(); if(!row)return;
+  var now=new Date().toISOString(), today=todayKey();
+  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:row.actual_minutes||10,for_date:today,updated_at:now}).eq('id',row.id);
+  if(res.error){toast('Did not save: '+res.error.message);return;}
+  ticked=true; habitRow.done=true; habitRow.for_date=today;
+  document.getElementById('donecard').classList.remove('hidden');
+  toast('The Feed to the wheel ✓');
+  window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+}
+
+async function logTime(){
+  var v=parseInt(document.getElementById('mins').value,10);
+  if(!v||v<1){toast('Put a number of minutes in first.');return;}
+  var row=await ensureRow(); if(!row)return;
+  var now=new Date().toISOString(), today=todayKey();
+  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:v,for_date:today,updated_at:now}).eq('id',row.id);
+  if(res.error){toast('Did not log it: '+res.error.message);return;}
+  ticked=true; toast(v+' min logged to the wheel ✓');
+}
+
+async function signIn(){
+  var email=document.getElementById('email').value.trim(), pass=document.getElementById('pass').value;
+  var r=await sb.auth.signInWithPassword({email:email,password:pass});
+  if(r.error){document.getElementById('gateErr').textContent=r.error.message;return;}
+  document.getElementById('gate').classList.add('hidden');
+  signedIn=true; await loadAll();
+}
+
+async function boot(){
+  var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
+  document.getElementById('stamp').textContent='The Feed v1.0 · '+f+' · all times EST';
+  if(!sb){document.getElementById('stage').innerHTML='<div class="done"><h3>Could not reach the database</h3><p>Reload to try again.</p></div>';return;}
+  var s=await sb.auth.getSession();
+  if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadAll();}
+  else{document.getElementById('gate').classList.remove('hidden');}
+}
+document.addEventListener('keydown',function(e){
+  if(!TILES.length)return;
+  if(e.key==='ArrowLeft'&&idx>0){e.preventDefault();idx--;render();}
+  else if(e.key==='ArrowRight'&&idx<TILES.length-1){e.preventDefault();idx++;render();}
+});
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>
