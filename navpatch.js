@@ -176,7 +176,7 @@
   function curPage(){var p=(location.pathname.split('/').pop()||'index.html');return p||'index.html';}
   function pageVer(){
     if(window.PY_VERSION&&isVer(window.PY_VERSION))return window.PY_VERSION;
-    var e=document.querySelector('.secbar .ver, h1.ph-h1 .ver, .topbar .ver, #ver, h1 .ver, h1 .badge, header > .ver, h1 + .ver');
+    var e=document.querySelector('.secbar .ver, h1.ph-h1 .ver, .topbar .ver, #ver, h1 .ver, h1 .badge, header > .ver, h1 + .ver, h1 + .verbadge');
     if(e&&isVer(e.textContent))return e.textContent.trim();
     /* declared fallback for pages that carry no version anywhere in their markup */
     try{
@@ -187,13 +187,21 @@
   }
   function fixNavChip(){try{
     var n=document.querySelector('.pn-ver'); if(!n)return;
-    if(isVer(n.textContent))return;            /* already a real version, leave it */
-    var v=pageVer(); if(!v)return;             /* nothing trustworthy to copy in */
-    n.textContent=v;
+    var v=pageVer();
+    /* The nav chip is a MIRROR, never the declaration. If the page declares a
+       version at its heading, the chip follows it even when the chip already
+       holds a plausible-looking number — that disagreement is exactly the
+       maps.html bug, where the chip said v1.5 and the heading said v1.2. When
+       the page declares nothing, pageVer is null and we leave the chip alone,
+       because on those pages the chip is all there is. */
+    if(!v)return;
+    if(n.textContent.trim()!==v)n.textContent=v;
   }catch(e){}}
   function fixCardChips(){try{
     var v=pageVer(); if(!v)return;
-    document.querySelectorAll('.hd .ver').forEach(function(e){
+    /* maps.html calls its heading chip .verbadge, not .ver, which is why its
+       nav said v1.5 while the heading said v1.2 for weeks. Sync both. */
+    document.querySelectorAll('.hd .ver, .verbadge').forEach(function(e){
       if(isVer(e.textContent)&&e.textContent.trim()!==v)e.textContent=v;
     });
   }catch(e){}}
