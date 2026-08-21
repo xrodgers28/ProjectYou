@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decade View &middot; Project YOU</title>
+<style>
+  :root{
+    --ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
+    --accent:#3f6f8f;--chip:#eef2f8;
+    --steps:#c07a3b;--sleep:#3f6f8f;--hrv:#2f8f5b;--thin:#b07d1a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+  .wrap{max-width:1180px;margin:0 auto;padding:18px 20px 60px}
+  .pagehead{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:12px}
+  .pagehead h1{font-size:19px}
+  .pagehead .ver{font-size:11px;font-weight:800;color:#9aa6b4;font-variant-numeric:tabular-nums}
+  .pagehead .date{font-size:11.5px;color:var(--muted);margin-left:auto}
+  .lede{font-size:13px;color:var(--muted);margin:12px 0 0;max-width:760px}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-top:16px;box-shadow:0 2px 10px rgba(31,42,68,.05)}
+  .card h2{font-size:14px;margin-bottom:2px}
+  .card .sub{font-size:11.5px;color:var(--muted)}
+
+  .chartbox{overflow-x:auto;margin-top:10px}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:10px}
+  .legend b{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:700;color:var(--muted)}
+  .legend i{width:16px;height:3px;border-radius:2px;display:block}
+
+  table{border-collapse:collapse;width:100%;margin-top:8px;font-size:12px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  th{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#aab2bd;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  tbody tr:last-child td{border-bottom:none;font-weight:700;background:#f7f9fc}
+  td .days{color:#aab2bd;font-size:10px;font-weight:400}
+  td.gap{color:#c3c8d1}
+
+  .reads{list-style:none;display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .reads li{display:grid;grid-template-columns:4px 1fr;gap:10px;align-items:start}
+  .reads .rail{border-radius:2px;align-self:stretch;min-height:30px}
+  .reads h3{font-size:12.5px;margin-bottom:1px}
+  .reads p{font-size:12px;color:var(--muted)}
+
+  .caveat{font-size:11.5px;color:var(--muted);background:#fdf9ef;border:1px solid #f0e4c8;border-radius:9px;padding:10px 12px;margin-top:14px}
+  .caveat b{color:var(--thin)}
+  .stamp{text-align:right;font-style:italic;color:#808080;font-size:10px;margin-top:14px}
+  .msg{font-size:12px;color:var(--muted);padding:14px 2px}
+  @media(max-width:600px){.pagehead{align-items:flex-start;flex-direction:column}.pagehead .date{margin-left:0}}
+</style>
+<style id="pynav-css">
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-solo{font-weight:800;color:#3f6f8f;text-decoration:none;font-size:12px;padding:4px 8px;border-radius:8px;margin-left:5px;border-left:1px solid #edf0f4;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-solo:hover{background:#eef2f8}
+.pn-solo.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+.pn-drop{position:relative;display:inline-flex;align-items:stretch}
+.pn-dropbtn{cursor:pointer;user-select:none}
+.pn-menu{position:fixed;background:#fff;border:1px solid #e3e7ee;border-radius:9px;box-shadow:0 10px 28px rgba(31,42,68,.16);padding:5px;display:none;flex-direction:column;min-width:200px;z-index:60}
+.pn-menu.open{display:flex}
+.pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}
+
+</style>
+</head>
+<body>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a><a href="decade.html" class="pn-link on">Decade<br>View</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver"></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+
+<div class="wrap">
+  <div class="pagehead">
+    <h1>Decade View</h1>
+    <span class="ver">v1.0</span>
+    <span class="date"></span>
+  </div>
+  <p class="lede">Ten years of your own body on one picture, a year at a time. Steps go back to September 2016, heart rate variability to 2022, sleep to 2023. Every point is the average of the days that actually recorded something, so a year with thin coverage says so rather than pretending.</p>
+
+  <div class="card">
+    <h2>Steps, sleep and recovery by year</h2>
+    <div class="sub">Steps read on the left. Sleep and HRV are scaled to their own range so the shape of each line is readable next to the others.</div>
+    <div class="chartbox"><div id="chart"><div class="msg">Reading your history...</div></div></div>
+    <div class="legend">
+      <b><i style="background:var(--steps)"></i>Steps per day</b>
+      <b><i style="background:var(--sleep)"></i>Sleep, hours a night</b>
+      <b><i style="background:var(--hrv)"></i>HRV, milliseconds</b>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>What the lines say</h2>
+    <div class="sub">Written from the numbers on this page, not from memory.</div>
+    <ul class="reads" id="reads"></ul>
+  </div>
+
+  <div class="card">
+    <h2>The numbers behind the picture</h2>
+    <div class="sub">The small grey figure is how many days of that year actually carry a reading.</div>
+    <div class="chartbox"><table id="tbl"><thead><tr><th>Year</th><th>Steps</th><th>Sleep</th><th>HRV</th><th>Exercise</th></tr></thead><tbody></tbody></table></div>
+    <div class="caveat"><b>Read this before drawing conclusions.</b> Sleep rows exist back to October 2016 but they recorded zeros, so nothing before 2023 is plotted, and 2022 is left out of the sleep line because only 79 nights were captured. 2026 is a part year. Every figure comes from <b>v_health_daily</b>, which collapses repeated Apple Health exports down to one honest reading per day.</div>
+  </div>
+
+  <div class="stamp" id="stamp"></div>
+</div>
+
+<script>
+(function(){
+  var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+  var RPC='https://arnjntspmrhigodlssbn.supabase.co/rest/v1/rpc/py_body_decade';
+  var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function etNow(){
+    var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'});
+    var t=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit',hour12:true});
+    return f.format(new Date())+' \u00b7 '+t.format(new Date()).toLowerCase().replace(' ','')+' EST';
+  }
+  document.querySelector('.pagehead .date').textContent=etNow();
+  document.getElementById('stamp').textContent='Read live from Apple Health \u00b7 '+etNow();
+
+  function commas(n){return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+
+  function draw(rows){
+    var W=980,H=320,PL=52,PR=52,PT=16,PB=34;
+    var iw=W-PL-PR, ih=H-PT-PB;
+    var n=rows.length;
+    var X=function(i){return PL+(n<2?iw/2:iw*i/(n-1));};
+
+    function scaler(vals,pad){
+      var v=vals.filter(function(a){return a!=null;});
+      if(!v.length) return null;
+      var lo=Math.min.apply(null,v), hi=Math.max.apply(null,v);
+      if(hi===lo){hi=lo+1;}
+      var m=(hi-lo)*(pad||0.15);
+      lo-=m; hi+=m;
+      return {lo:lo,hi:hi,y:function(x){return PT+ih*(1-(x-lo)/(hi-lo));}};
+    }
+    var steps=rows.map(function(r){return r.steps==null?null:+r.steps;});
+    var sleep=rows.map(function(r){return (r.sleep==null||r.sleep_days<120)?null:+r.sleep;});
+    var hrv  =rows.map(function(r){return (r.hrv==null||r.hrv_days<30)?null:+r.hrv;});
+
+    var sS=scaler(steps), sP=scaler(sleep), sH=scaler(hrv);
+
+    function line(vals,sc,colour,dash){
+      if(!sc) return '';
+      var d='',open=false,out='';
+      for(var i=0;i<vals.length;i++){
+        if(vals[i]==null){open=false;continue;}
+        d+=(open?' L ':' M ')+X(i).toFixed(1)+' '+sc.y(vals[i]).toFixed(1);
+        open=true;
+        out+='<circle cx="'+X(i).toFixed(1)+'" cy="'+sc.y(vals[i]).toFixed(1)+'" r="3" fill="'+colour+'"><title>'+rows[i].year+'</title></circle>';
+      }
+      return '<path d="'+d.trim()+'" fill="none" stroke="'+colour+'" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"'+(dash?' stroke-dasharray="'+dash+'"':'')+'></path>'+out;
+    }
+
+    var g='';
+    for(var k=0;k<=4;k++){
+      var gy=PT+ih*k/4;
+      g+='<line x1="'+PL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+gy.toFixed(1)+'" stroke="#e8ecf2" stroke-width="1"></line>';
+    }
+    var xl='';
+    for(var i=0;i<n;i++){
+      xl+='<text x="'+X(i).toFixed(1)+'" y="'+(H-12)+'" text-anchor="middle" font-size="10.5" fill="#aab2bd">'+String(rows[i].year).slice(2)+'</text>';
+    }
+    var yl='';
+    if(sS){
+      for(var k=0;k<=4;k++){
+        var val=sS.hi-(sS.hi-sS.lo)*k/4;
+        yl+='<text x="'+(PL-8)+'" y="'+(PT+ih*k/4+3.5)+'" text-anchor="end" font-size="9.5" fill="#aab2bd">'+commas(val)+'</text>';
+      }
+    }
+    if(sP){
+      [0,2,4].forEach(function(k){
+        var val=sP.hi-(sP.hi-sP.lo)*k/4;
+        yl+='<text x="'+(W-PR+8)+'" y="'+(PT+ih*k/4+3.5)+'" text-anchor="start" font-size="9.5" fill="#8fa8bd">'+val.toFixed(1)+'h</text>';
+      });
+    }
+
+    document.getElementById('chart').innerHTML=
+      '<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="min-width:620px;height:auto" role="img" aria-label="Yearly averages for steps, sleep and heart rate variability">'
+      +g+xl+yl
+      +line(steps,sS,'#c07a3b')
+      +line(hrv,sH,'#2f8f5b')
+      +line(sleep,sP,'#3f6f8f')
+      +'</svg>';
+  }
+
+  function table(rows){
+    var b=document.querySelector('#tbl tbody');
+    b.innerHTML=rows.map(function(r){
+      function c(v,days,fmt){
+        if(v==null) return '<td class="gap">not tracked</td>';
+        return '<td>'+fmt(v)+' <span class="days">'+days+'d</span></td>';
+      }
+      return '<tr><td>'+r.year+'</td>'
+        +c(r.steps,r.step_days,function(v){return commas(v);})
+        +c(r.sleep,r.sleep_days,function(v){return (+v).toFixed(2)+'h';})
+        +c(r.hrv,r.hrv_days,function(v){return (+v).toFixed(1);})
+        +(r.exercise==null?'<td class="gap">not tracked</td>':'<td>'+Math.round(r.exercise)+' min</td>')
+        +'</tr>';
+    }).join('');
+  }
+
+  function reads(rows){
+    var out=[];
+    var withSteps=rows.filter(function(r){return r.steps!=null;});
+    if(withSteps.length>1){
+      var lowest=withSteps.reduce(function(a,b){return +b.steps<+a.steps?b:a;});
+      var latest=withSteps[withSteps.length-1];
+      out.push(['var(--steps)','Movement','Your quietest year was '+lowest.year+' at '+commas(lowest.steps)
+        +' steps a day. '+latest.year+' is running at '+commas(latest.steps)
+        +', which is '+Math.round((latest.steps/lowest.steps-1)*100)+' percent above that low point.']);
+    }
+    var withSleep=rows.filter(function(r){return r.sleep!=null && r.sleep_days>=120;});
+    if(withSleep.length>1){
+      var first=withSleep[0], last=withSleep[withSleep.length-1];
+      var mins=Math.round((last.sleep-first.sleep)*60);
+      out.push(['var(--sleep)','Sleep','From '+first.year+' to '+last.year+' your nightly average has moved '
+        +(mins>=0?'up ':'down ')+Math.abs(mins)+' minutes, from '+(+first.sleep).toFixed(2)+'h to '+(+last.sleep).toFixed(2)+'h. '
+        +'Sleep is the input with the shortest reliable history here, so treat the early end with care.']);
+    }
+    var withHrv=rows.filter(function(r){return r.hrv!=null && r.hrv_days>=30;});
+    if(withHrv.length>1){
+      var h1=withHrv[0], h2=withHrv[withHrv.length-1];
+      var dir=(+h2.hrv<+h1.hrv)?'fallen':'risen';
+      out.push(['var(--hrv)','Recovery','Heart rate variability has '+dir+' from '+(+h1.hrv).toFixed(1)
+        +'ms in '+h1.year+' to '+(+h2.hrv).toFixed(1)+'ms in '+h2.year
+        +'. It is the closest thing on this page to a recovery gauge, and it tends to follow sleep and load rather than fitness.']);
+    }
+    document.getElementById('reads').innerHTML=out.map(function(r){
+      return '<li><span class="rail" style="background:'+r[0]+'"></span><div><h3>'+r[1]+'</h3><p>'+r[2]+'</p></div></li>';
+    }).join('');
+  }
+
+  fetch(RPC,{method:'POST',headers:{'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'},body:'{}'})
+    .then(function(r){return r.ok?r.json():Promise.reject(new Error('HTTP '+r.status));})
+    .then(function(rows){
+      if(!rows||!rows.length){document.getElementById('chart').innerHTML='<div class="msg">No health history came back.</div>';return;}
+      rows.sort(function(a,b){return a.year-b.year;});
+      draw(rows); table(rows); reads(rows);
+    })
+    .catch(function(e){
+      document.getElementById('chart').innerHTML='<div class="msg">Could not read your history just now ('+e.message+').</div>';
+    });
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
