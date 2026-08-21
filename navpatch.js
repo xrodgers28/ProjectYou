@@ -230,3 +230,85 @@
     if(document.body)start(); else document.addEventListener('DOMContentLoaded',start);
   }catch(e){}
 })();
+
+/* LIGHT HEADINGS ON DARK BARS  (rule, Aug 21 2026, Scott)
+   ========================================================
+   THE RULE: on any page whose heading sits on a dark background, the heading
+   text is very light grey (#d6dce4), never white and never the dark ink used
+   on white pages. One shared definition, applied at runtime, so a new page
+   inherits it without anyone remembering to.
+
+   Why this exists: ph-header-css above sets h1.ph-h1 to #2f5a74 !important for
+   every page. That is correct on the white pages it was written for, but it is
+   also the exact end colour of the dark header gradient on library.html
+   (.secbar) and midnight-run-v2.html (header.top), so the headings on those two
+   pages were dark blue on dark blue and effectively invisible.
+
+   How it decides: it walks up from the heading to the first ancestor that
+   actually paints a background (a solid colour or a gradient), works out that
+   colour's brightness, and only recolours when the background is dark. Light
+   pages are never touched. Change ONE value, ONDARK below, to restyle every
+   dark-bar heading on the site. */
+(function(){
+  var ONDARK = window.ONDARK_INK || '#d6dce4';
+  var HEADS = 'h1.ph-h1, .secbar h1, header.top h1, .pagehead h1';
+
+  function firstRGB(s){
+    var m = String(s||'').match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s/]+([\d.]+))?\s*\)/g);
+    if(!m || !m.length) return null;
+    var r=0,g=0,b=0,n=0;
+    m.forEach(function(one){
+      var p = one.match(/[\d.]+/g);
+      if(!p) return;
+      if(p.length>3 && parseFloat(p[3])<0.35) return;   /* near transparent stop */
+      r+=+p[0]; g+=+p[1]; b+=+p[2]; n++;
+    });
+    return n ? [r/n, g/n, b/n] : null;
+  }
+  function bright(c){ return (0.299*c[0] + 0.587*c[1] + 0.114*c[2]) / 255; }
+
+  function bgBehind(el){
+    var node = el;
+    while(node && node.nodeType===1){
+      var cs = getComputedStyle(node);
+      if(cs.backgroundImage && cs.backgroundImage!=='none'){
+        var g = firstRGB(cs.backgroundImage);
+        if(g) return g;
+      }
+      var c = firstRGB(cs.backgroundColor);
+      if(c){
+        var a = String(cs.backgroundColor).match(/[\d.]+/g);
+        if(!a || a.length<4 || parseFloat(a[3])>=0.9) return c;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function paint(){try{
+    document.querySelectorAll(HEADS).forEach(function(h){
+      if(h.closest('.pynav')) return;
+      if(h.dataset.pnOndark==='1') return;
+      var bg = bgBehind(h);
+      if(!bg || bright(bg) > 0.5) return;              /* light bar, leave alone */
+      h.dataset.pnOndark='1';
+      h.style.setProperty('color', ONDARK, 'important');
+      h.querySelectorAll('.ver, .date, .badge').forEach(function(x){
+        x.style.setProperty('color', ONDARK, 'important');
+        x.style.setProperty('border-color', 'rgba(255,255,255,.35)', 'important');
+      });
+    });
+  }catch(e){}}
+
+  var queued=false;
+  function run(){ if(queued) return; queued=true; setTimeout(function(){queued=false;paint();},60); }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',paint);
+  else paint();
+  /* headings behind a sign-in gate (midnight-run) only become visible later */
+  try{
+    var mo=new MutationObserver(run);
+    var start=function(){mo.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['class','style']});};
+    if(document.body) start(); else document.addEventListener('DOMContentLoaded',start);
+  }catch(e){}
+})();
