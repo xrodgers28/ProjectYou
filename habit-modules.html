@@ -64,6 +64,17 @@
   .card.done .play{color:#9aa6b4}
   .add{border:2px dashed #cdd5e2;border-radius:16px;min-height:206px;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#9aa6b4;gap:8px}
   .add .plus{font-size:30px;font-weight:300}.add .t{font-size:12px;font-weight:700;text-align:center;padding:0 14px}
+  /* the Read shelf: decks you have been all the way through */
+  .shelf{margin:34px 0 0;border-top:1px solid var(--line,#e3e7ee);padding-top:18px}
+  .shelfhead{display:flex;align-items:baseline;gap:9px;margin-bottom:4px}
+  .shelfhead h2{font-size:13px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#8a93a0}
+  .shelfhead .cnt{font-size:11.5px;color:#9aa6b4;font-weight:700}
+  .shelfsub{font-size:12.5px;color:#8a93a0;margin-bottom:14px}
+  .shelf .board{margin-top:0}
+  .shelf .card{opacity:.72}
+  .shelf .card:hover{opacity:1}
+  .rback{display:block;width:100%;margin-top:10px;padding:8px 10px;border:1px solid var(--acc);background:#fff;color:var(--acc);border-radius:999px;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
+  .rback:hover{background:var(--acc);color:#fff}
   @media(max-width:640px){.board{grid-template-columns:1fr}.pagehead h1{font-size:26px}}
 
   /* v3.1 — wheel wiring */
@@ -94,7 +105,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v3.6</span>
+    <span class="pn-ver">v3.7</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -107,6 +118,11 @@
         <span class="streak">&#128293; <span class="n" id="streakn">0 day streak</span> <span class="sub">&middot; in a row</span></span></div>
     </div>
     <div class="board" id="board"></div>
+    <div class="shelf hidden" id="readshelf">
+      <div class="shelfhead"><h2>Read</h2><span class="cnt" id="readcnt"></span></div>
+      <div class="shelfsub">You have been all the way through these. They are out of the daily rotation until you put them back.</div>
+      <div class="board" id="readboard"></div>
+    </div>
     <div class="wheelnote">Ticking a card logs it to the <a href="index.html#wheel">Time Bandit Wheel</a> &mdash; 10 min unless you logged a different time inside the card.</div>
   </div>
 
@@ -121,7 +137,7 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ===== Cue Cards board v3.3 — cards wired to the wheel, streak wired to qs_log =====
+/* ===== Cue Cards board v3.7 — cards wired to the wheel, streak wired to qs_log =====
    Tick a card  ->  today's habit row in `todos` is created-or-updated with
    done / done_at / actual_minutes, which is exactly what the wheel's outer
    ring draws. Default 10 min unless the card's own last page logged a time. */
@@ -154,10 +170,30 @@ const MODS=[
  {id:'atomic',  name:"Atomic Habits",        href:"james-clear.html", acc:"#3f8f7a", icon:'atom',    kick:"Today's 3-2-1",          ds:"Two ideas, a quote, and a question.",              habit:"Atomic Habits (3-2-1)",       qs:"Atomic Habits", est:10, pos:11},
  {id:'twk',     name:"Things Worth Knowing", href:"quotes.html",      acc:"#7a4f9c", icon:'speech',  kick:"Today's three",          ds:"Things worth knowing, worth keeping.",             habit:"Clever Phrases",              qs:"Learning",      est:3,  pos:8},
  {id:'compass', name:"Compass",              href:"compass.html",     acc:"#b8962f", icon:'compass', kick:"One question, answered", ds:"A guided daily reflection to point your day.",     habit:"Compass",                     qs:"Compass",       est:10, pos:10},
- {id:'openmode',name:"Open Mode",            href:"open-mode.html",   acc:"#a35a4e", icon:'bulb',    kick:"One condition a day",    ds:"John Cleese on the conditions that let ideas arrive.", habit:"Open Mode",               qs:"Open Mode",     est:10, pos:13},
- {id:'env',     name:"Environmental Health", href:"environmental.html",acc:"#4fa08a",icon:'land',    kick:"Change where you are",   ds:"Safaris, light, noise and the room you think in.",  habit:"Environmental Health",        qs:"Environmental Health", est:10, pos:14}
+ {id:'openmode',name:"Open Mode",            href:"open-mode.html",   acc:"#a35a4e", icon:'bulb',    kick:"Two conditions a day",    ds:"John Cleese on the conditions that let ideas arrive.", habit:"Open Mode",               qs:"Open Mode",     est:10, pos:13, deck:'open-mode'},
+ {id:'env',     name:"Environmental Health", href:"environmental.html",acc:"#4fa08a",icon:'land',    kick:"Change where you are",   ds:"Safaris, light, noise and the room you think in.",  habit:"Environmental Health",        qs:"Environmental Health", est:10, pos:14, deck:'environmental'}
 ];
 const BY_HABIT={}; MODS.forEach(function(m){BY_HABIT[m.habit]=m;});
+
+/* Decks that have been dealt all the way through sit on the Read shelf at the
+   bottom rather than in the daily rotation. public.deck_state is the record. */
+let READ={};
+async function loadDecks(){
+  if(!sb)return;
+  try{
+    var r=await sb.from('deck_state').select('deck,status,finished_on').eq('status','read');
+    READ={}; (r.data||[]).forEach(function(x){READ[x.deck]=x;});
+  }catch(e){READ={};}
+}
+function isRead(m){return !!(m.deck&&READ[m.deck]);}
+async function rotateBack(m){
+  if(!sb||!m.deck)return;
+  var r=await sb.rpc('deck_reset',{p_deck:m.deck});
+  if(r.error){toast('Could not put it back: '+r.error.message);return;}
+  delete READ[m.deck];
+  toast(m.name+' is back in rotation');
+  render();
+}
 
 let ROWS={};            /* habit name -> todos row */
 let signedIn=false;
@@ -224,6 +260,7 @@ function minsOf(m){var r=ROWS[m.habit];return (r&&r.for_date===todayKey()&&r.act
 
 async function loadRows(){
   var names=MODS.map(function(m){return m.habit;});
+  await loadDecks();
   var res=await sb.from('todos').select('id,task,done,done_at,actual_minutes,for_date,est_minutes').eq('is_habit',true).in('task',names);
   ROWS={};
   (res.data||[]).forEach(function(r){
@@ -294,17 +331,37 @@ function render(){
     '<div class="ds">Twelve takeaway cards, 58 tiles, one at a time.</div>'+
     '<div class="play">tap to browse \u2192</div></a>';
 
-  document.getElementById('board').innerHTML = takeaways + MODS.map(function(m){
+  var LIVE=MODS.filter(function(m){return !isRead(m);});
+  var DONEDECKS=MODS.filter(isRead);
+
+  function cardHtml(m,shelf){
     var done=isDone(m), mins=minsOf(m);
-    return '<a class="card'+(done?' done':'')+'" style="--acc:'+m.acc+'" href="'+m.href+'">'+
-      '<span class="chk'+(done?' done':'')+'" data-id="'+m.id+'" role="button" tabindex="0" title="'+(done?'Untick — removes it from the wheel':'Tick — sends it to the wheel')+'"></span>'+
-      (done&&mins?'<span class="mins">'+mins+' min</span>':'')+
+    var fin=(shelf&&READ[m.deck]&&READ[m.deck].finished_on)?('Finished '+READ[m.deck].finished_on):'Finished';
+    return '<a class="card'+(!shelf&&done?' done':'')+'" style="--acc:'+m.acc+'" href="'+m.href+'">'+
+      (shelf?'':'<span class="chk'+(done?' done':'')+'" data-id="'+m.id+'" role="button" tabindex="0" title="'+(done?'Untick — removes it from the wheel':'Tick — sends it to the wheel')+'"></span>')+
+      (!shelf&&done&&mins?'<span class="mins">'+mins+' min</span>':'')+
       '<span class="badge">'+IC[m.icon]+'</span>'+
-      '<div class="kick">'+m.kick+'</div><div class="nm">'+m.name+'</div>'+
+      '<div class="kick">'+(shelf?fin:m.kick)+'</div><div class="nm">'+m.name+'</div>'+
       '<div class="ds">'+m.ds+'</div>'+
-      '<div class="play">'+(done?'On the wheel \u2713':'tap to play \u2192')+'</div></a>';
+      (shelf?'<button class="rback" data-back="'+m.id+'">Add back to rotation</button>'
+            :'<div class="play">'+(done?'On the wheel ✓':'tap to play →')+'</div>')+
+      '</a>';
+  }
+
+  var shelfEl=document.getElementById('readshelf');
+  document.getElementById('readboard').innerHTML=DONEDECKS.map(function(m){return cardHtml(m,true);}).join('');
+  document.getElementById('readcnt').textContent=DONEDECKS.length?DONEDECKS.length+(DONEDECKS.length===1?' card':' cards'):'';
+  shelfEl.classList.toggle('hidden',!DONEDECKS.length);
+
+  document.getElementById('board').innerHTML = takeaways + LIVE.map(function(m){
+    return cardHtml(m,false);
   }).join('') +
   '<div class="add"><span class="plus">+</span><span class="t">More habit modules land here</span></div>';
+
+  document.querySelectorAll('[data-back]').forEach(function(b){
+    var m=MODS.find(function(x){return x.id===b.dataset.back;});
+    b.onclick=function(e){e.preventDefault();e.stopPropagation();rotateBack(m);};
+  });
 
   document.querySelectorAll('.chk').forEach(function(el){
     var m=MODS.find(function(x){return x.id===el.dataset.id;});
@@ -312,9 +369,9 @@ function render(){
     el.onkeydown=function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();e.stopPropagation();toggle(m,el);}};
   });
 
-  var n=MODS.filter(isDone).length;
-  document.getElementById('progbar').style.width=(n/MODS.length*100)+'%';
-  document.getElementById('progtxt').textContent=n+'/'+MODS.length+' today';
+  var n=LIVE.filter(isDone).length;
+  document.getElementById('progbar').style.width=(LIVE.length?(n/LIVE.length*100):0)+'%';
+  document.getElementById('progtxt').textContent=n+'/'+LIVE.length+' today';
   document.getElementById('streakn').textContent=streakDays()+' day streak';
 }
 

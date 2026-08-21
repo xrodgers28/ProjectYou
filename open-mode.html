@@ -43,6 +43,8 @@
   .dot{width:7px;height:7px;border-radius:50%;background:#d3d9e2;border:none;padding:0;cursor:pointer}
   .dot.on{background:var(--acc);width:20px;border-radius:4px}
   .dot.seen{background:#b9c4d0}
+  .dot.lock{background:transparent;border:1px solid #d3d9e2;cursor:default}
+  .lockline{text-align:center;font-size:11px;color:var(--muted);margin:-6px 0 11px}
   .tile{position:relative;background:#fff;border:1px solid var(--key);border-top:3px solid var(--acc);border-radius:16px;box-shadow:0 12px 34px rgba(31,42,68,.10);overflow:hidden;min-height:430px;display:flex;flex-direction:column}
   .tile .top{padding:20px 20px 0;flex:1}
   .chiprow{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding-right:26px}
@@ -89,7 +91,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.0</span>
+    <span class="pn-ver">v1.1</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -127,7 +129,7 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ===== Open Mode v1.0 =====
+/* ===== Open Mode v1.1 =====
    The 18 tiles are NOT stored here. They are the approved John Cleese notes in
    kg_links where source_code = 'S12', joined to kg_tenets and kg_areas so each
    tile can show which part of the Clarity Compass it belongs to. One source of
@@ -144,19 +146,20 @@ const SRCLINE="Creativity: A Short and Cheerful Guide, John Cleese, 2020 &middot
 
 let TILES=[], AREAS={}, TENETS={}, FAVS={}, idx=0, signedIn=false, ticked=false, habitRow=null;
 
+/* Two conditions a day, not all eighteen at once. The deck remembers what it has
+   already dealt in public.deck_progress and unlocks the next pair tomorrow. */
+const DECK='open-mode', PER_DAY=2;
+let VIEW=[], SERVED={}, DECKSTATE=null, LOCKED=0;
+
+const DONE_TILE={id:'__done', done:true, tenet_code:null,
+  headline:'That is the whole deck',
+  insight:'You have been through every condition Cleese sets out. The card moves down to Read on the Cue Cards board, out of the daily rotation. Nothing is lost: the eighteen cards stay in the knowledge graph against source S12, and your starred ones stay in favourites.',
+  practice:null};
+
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function todayKey(){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}catch(e){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2400);}
 
-/* which tile is "today's". Deterministic from the Eastern date, so the same day
-   always shows the same condition no matter how many times the page is opened,
-   and it never depends on the browser clock. */
-function todayIndex(n){
-  if(!n)return 0;
-  var p=todayKey().split('-');
-  var days=Math.floor(Date.UTC(+p[0],+p[1]-1,+p[2])/86400000);
-  return ((days%n)+n)%n;
-}
 
 async function loadAll(){
   var a=await sb.from('kg_areas').select('code,label,color');
@@ -167,9 +170,47 @@ async function loadAll(){
   TILES=(l.data||[]).filter(function(r){return r.headline;});
   var f=await sb.from('cue_favorites').select('id,card_id').eq('module','open-mode');
   (f.data||[]).forEach(function(r){FAVS[String(r.card_id)]=r.id;});
-  idx=todayIndex(TILES.length);
+  await loadDeck();
   await loadHabit();
   render();
+}
+
+async function loadDeck(){
+  var t=todayKey();
+  var r=await sb.from('deck_progress').select('tile_key,served_on').eq('deck',DECK);
+  SERVED={}; (r.data||[]).forEach(function(x){SERVED[x.tile_key]=x.served_on;});
+  var s=await sb.from('deck_state').select('deck,status,finished_on').eq('deck',DECK).limit(1);
+  DECKSTATE=(s.data&&s.data[0])||null;
+
+  var todays=TILES.filter(function(x){return SERVED[String(x.id)]===t;});
+  if(!todays.length){
+    var unseen=TILES.filter(function(x){return !SERVED[String(x.id)];});
+    todays=unseen.slice(0,PER_DAY);
+    if(todays.length){
+      var rows=todays.map(function(x){return {deck:DECK,tile_key:String(x.id),served_on:t};});
+      var ins=await sb.from('deck_progress').upsert(rows,{onConflict:'deck,tile_key'});
+      if(ins.error){todays=[];}
+      else{todays.forEach(function(x){SERVED[String(x.id)]=t;});}
+    }
+  }
+  LOCKED=TILES.filter(function(x){return !SERVED[String(x.id)];}).length;
+  VIEW=todays.slice();
+  if(TILES.length&&LOCKED===0)VIEW=VIEW.concat([DONE_TILE]);
+  if(idx>=VIEW.length)idx=0;
+}
+
+async function markRead(){
+  if(DECKSTATE&&DECKSTATE.status==='read')return;
+  var t=todayKey();
+  var r=await sb.from('deck_state').upsert([{deck:DECK,status:'read',finished_on:t,updated_at:new Date().toISOString()}],{onConflict:'deck'});
+  if(!r.error)DECKSTATE={deck:DECK,status:'read',finished_on:t};
+}
+
+async function rotateBack(){
+  var r=await sb.rpc('deck_reset',{p_deck:DECK});
+  if(r.error){toast('Could not reset it: '+r.error.message);return;}
+  toast('Back in rotation. Two a day again.');
+  idx=0; await loadDeck(); render();
 }
 
 async function loadHabit(){
@@ -183,41 +224,52 @@ function render(){
     document.getElementById('stage').innerHTML='<div class="done"><h3>No cards yet</h3><p>Nothing is filed against source '+SOURCE_CODE+' in Compass Sources. Add the notes there and they appear here.</p></div>';
     return;
   }
-  var c=TILES[idx];
+  if(!VIEW.length)VIEW=[DONE_TILE];
+  var c=VIEW[idx]||VIEW[0];
+  var n=VIEW.length;
+  var seen=TILES.length-LOCKED;
+  var pairN=VIEW.filter(function(x){return !x.done;}).length;
   var tn=TENETS[c.tenet_code]||{};
   var ar=AREAS[tn.area_code]||{};
-  var faved=!!FAVS[String(c.id)];
+  var faved=!c.done&&!!FAVS[String(c.id)];
   var d='';
-  for(var j=0;j<TILES.length;j++) d+='<button class="dot'+(j===idx?' on':'')+'" data-i="'+j+'" aria-label="Condition '+(j+1)+' of '+TILES.length+'"></button>';
+  for(var j=0;j<n;j++) d+='<button class="dot'+(j===idx?' on':'')+'" data-i="'+j+'" aria-label="Card '+(j+1)+' of '+n+'"></button>';
+  for(var k=0;k<LOCKED;k++) d+='<span class="dot lock" title="Unlocks tomorrow"></span>';
+  var lock=LOCKED?('<div class="lockline">'+seen+' of '+TILES.length+' conditions so far. Two a day, '+LOCKED+' to go.</div>'):'';
 
   document.getElementById('stage').innerHTML=
    '<div class="deck">'+
-    '<div class="dots">'+d+'</div>'+
+    '<div class="dots">'+d+'</div>'+lock+
     '<div class="tile">'+
-      '<button class="star'+(faved?' on':'')+'" id="star" title="'+(faved?'Remove from favourites':'Save to favourites')+'">'+(faved?'★':'☆')+'</button>'+
+      (c.done?'':'<button class="star'+(faved?' on':'')+'" id="star" title="'+(faved?'Remove from favourites':'Save to favourites')+'">'+(faved?'★':'☆')+'</button>')+
       '<div class="top">'+
         '<div class="chiprow">'+
           (ar.label?'<span class="chip area" style="background:'+esc(ar.color||'#8a93a1')+'">'+esc(ar.label)+'</span>':'')+
           (tn.label?'<span class="chip">'+esc(tn.label)+'</span>':'')+
         '</div>'+
-        '<div class="step">Condition '+(idx+1)+' of '+TILES.length+'</div>'+
+        '<div class="step">'+(c.done?'Deck complete':'Condition '+(seen-pairN+idx+1)+' of '+TILES.length)+'</div>'+
         '<h2>'+esc(c.headline)+'</h2>'+
         '<div class="body">'+esc(c.insight)+'</div>'+
       '</div>'+
       (c.practice?'<div class="prac"><div class="lab">Try this</div><div class="txt">'+esc(c.practice)+'</div></div>':'')+
-      '<div class="src">'+SRCLINE+'</div>'+
+      (c.done?'<div style="margin-top:12px"><button class="nx" id="rotBack" style="width:100%">Add back to rotation</button></div>':'')+
+      (c.done?'':'<div class="src">'+SRCLINE+'</div>')+
     '</div>'+
     '<div class="nav2"><button class="bk" id="bk"'+(idx===0?' disabled':'')+'>&larr; Back</button>'+
-      '<button class="nx" id="nx">'+(idx===TILES.length-1?'Finish':'Next')+'</button></div>'+
+      '<button class="nx" id="nx">'+(idx===n-1?'Finish':'Next')+'</button></div>'+
    '</div>';
 
-  document.querySelectorAll('.dot').forEach(function(b){b.onclick=function(){idx=+b.dataset.i;render();};});
+  document.querySelectorAll('.dot[data-i]').forEach(function(b){b.onclick=function(){idx=+b.dataset.i;render();};});
   document.getElementById('bk').onclick=function(){if(idx>0){idx--;render();}};
   document.getElementById('nx').onclick=function(){
-    if(idx<TILES.length-1){idx++;render();}
+    if(idx<n-1){idx++;render();}
     else{finish();}
   };
-  document.getElementById('star').onclick=function(){toggleFav(c);};
+  var st=document.getElementById('star');
+  if(st)st.onclick=function(){toggleFav(c);};
+  var rb=document.getElementById('rotBack');
+  if(rb)rb.onclick=rotateBack;
+  if(c.done)markRead();
   document.getElementById('donecard').classList.toggle('hidden',!ticked);
 }
 
@@ -285,16 +337,16 @@ async function signIn(){
 
 async function boot(){
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  document.getElementById('stamp').textContent='Open Mode v1.0 · '+f+' · all times EST';
+  document.getElementById('stamp').textContent='Open Mode v1.1 · '+f+' · all times EST';
   if(!sb){document.getElementById('stage').innerHTML='<div class="done"><h3>Could not reach the database</h3><p>Reload to try again.</p></div>';return;}
   var s=await sb.auth.getSession();
   if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadAll();}
   else{document.getElementById('gate').classList.remove('hidden');}
 }
 document.addEventListener('keydown',function(e){
-  if(!TILES.length)return;
+  if(!VIEW.length)return;
   if(e.key==='ArrowLeft'&&idx>0){e.preventDefault();idx--;render();}
-  else if(e.key==='ArrowRight'&&idx<TILES.length-1){e.preventDefault();idx++;render();}
+  else if(e.key==='ArrowRight'&&idx<VIEW.length-1){e.preventDefault();idx++;render();}
 });
 boot();
 </script>
