@@ -18,6 +18,7 @@ window.NAV_CONFIG = {
     { "label": "Where I've<br>Been", "href": "where-ive-been.html" }
   ],
   "Parking Lot": [
+    { "label": "Bucket<br>List", "href": "my-bucket-list.html" },
     { "label": "Future<br>Travel", "href": "future-travel.html" },
     { "label": "Social", "href": "connections.html" },
     { "label": "Movies", "href": "movies.html" },
