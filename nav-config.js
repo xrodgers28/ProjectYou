@@ -15,6 +15,7 @@ window.NAV_CONFIG = {
   ],
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
+    { "label": "Decade<br>View", "href": "decade.html" },
     { "label": "Where I've<br>Been", "href": "where-ive-been.html" }
   ],
   "Parking Lot": [
