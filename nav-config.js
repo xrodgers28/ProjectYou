@@ -17,6 +17,13 @@ window.NAV_CONFIG = {
     { "label": "YouMatics", "href": "qs-dashboard.html" },
     { "label": "Where I've<br>Been", "href": "where-ive-been.html" }
   ],
+  "Parking Lot": [
+    { "label": "Future<br>Travel", "href": "future-travel.html" },
+    { "label": "Social", "href": "connections.html" },
+    { "label": "Movies", "href": "movies.html" },
+    { "label": "Cheat<br>Sheet", "href": "cheat-sheet.html" },
+    { "label": "AI<br>Tools", "href": "ai-tools.html" }
+  ],
   "Editors": [
     { "label": "Daily<br>Habits", "href": "daily-template.html" },
     { "label": "Midnight<br>Run", "href": "midnight-run-v2.html" },
