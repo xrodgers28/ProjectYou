@@ -39,6 +39,11 @@
     var l=g.querySelector('.pn-label');
     if(l)have[(l.textContent||'').trim()]=g;
   });
+  /* library.html's hand-written nav has no version slot and no user chip at all,
+     so there is nowhere for the version to land. Give it one. */
+  if(!nav.querySelector('.pn-ver')){
+    var vs=document.createElement('span'); vs.className='pn-ver'; nav.appendChild(vs);
+  }
   var anchor=nav.querySelector('.pn-ver')||nav.querySelector('.pn-user');
   keys.forEach(function(gl,i){
     var g=have[gl];
@@ -168,10 +173,17 @@
    next session reads the right thing in the file. Tracked on the ToDo board. */
 (function(){
   function isVer(t){return /^v?\d+(?:\.\d+)*$/.test(String(t||'').trim());}
+  function curPage(){var p=(location.pathname.split('/').pop()||'index.html');return p||'index.html';}
   function pageVer(){
     if(window.PY_VERSION&&isVer(window.PY_VERSION))return window.PY_VERSION;
-    var e=document.querySelector('.secbar .ver, h1.ph-h1 .ver, .topbar .ver, #ver, h1 .ver');
-    return (e&&isVer(e.textContent))?e.textContent.trim():null;
+    var e=document.querySelector('.secbar .ver, h1.ph-h1 .ver, .topbar .ver, #ver, h1 .ver, h1 .badge, header > .ver, h1 + .ver');
+    if(e&&isVer(e.textContent))return e.textContent.trim();
+    /* declared fallback for pages that carry no version anywhere in their markup */
+    try{
+      var m=window.PAGE_VERSIONS||{}, v=m[curPage()];
+      if(isVer(v))return String(v).trim();
+    }catch(_){}
+    return null;
   }
   function fixNavChip(){try{
     var n=document.querySelector('.pn-ver'); if(!n)return;
@@ -185,11 +197,27 @@
       if(isVer(e.textContent)&&e.textContent.trim()!==v)e.textContent=v;
     });
   }catch(e){}}
-  function run(){fixNavChip();fixCardChips();}
+  /* The floating corner badge. On james-clear.html and quotes.html this is a
+     position:fixed pill in the bottom-right reading "Atomic Habits v1.0" and
+     "Things Worth Knowing v1.0" — literal text in the HTML, never bumped, and
+     on screen the entire time you use the page. Rewrite only the version token
+     at the end, leave the module name alone. */
+  function fixCornerBadge(){try{
+    var v=pageVer(); if(!v)return;
+    document.querySelectorAll('.badge').forEach(function(e){
+      if(e.children.length)return;                 /* only plain-text badges */
+      var t=(e.textContent||'').trim();
+      var m=t.match(/^(.*\S)\s+(v?\d+(?:\.\d+)*)$/);
+      if(!m)return;
+      if(m[2]===v)return;
+      e.textContent=m[1]+' '+v;
+    });
+  }catch(e){}}
+  function run(){fixNavChip();fixCardChips();fixCornerBadge();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
   /* the decks render their cards later, and re-render on every Next, so watch */
   try{
-    var mo=new MutationObserver(function(){fixCardChips();});
+    var mo=new MutationObserver(function(){fixCardChips();fixCornerBadge();});
     var start=function(){mo.observe(document.body,{childList:true,subtree:true});};
     if(document.body)start(); else document.addEventListener('DOMContentLoaded',start);
   }catch(e){}

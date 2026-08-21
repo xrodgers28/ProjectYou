@@ -61,3 +61,14 @@ window.MAPS_NAV = {
     { "label": "Spider Diagram", "href": "knowledge-graph.html" }
   ]
 };
+
+/* Declared page versions.
+   navpatch.js reads a page's version out of its own markup first. These are the
+   pages that carry no version anywhere — no .ver chip, no badge — so the nav
+   would sit empty forever. Declaring it here means one edit, not a page publish.
+   Bump the number here when you ship a change to one of these pages. */
+window.PAGE_VERSIONS = {
+  "qs-health.html": "v0.1",
+  "tracker.html": "v1.0",
+  "midnight-run.html": "v3.0"
+};
