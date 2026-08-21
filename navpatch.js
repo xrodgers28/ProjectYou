@@ -91,3 +91,52 @@
   }catch(e){}}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',sync);else sync();
 })();
+
+/* Card-header version parity, and nav chips that hold a label instead of a number.
+   Added 2026-08-21.
+
+   Why: the deck pages draw their card header with JavaScript AFTER load, and the
+   version inside that template string was hand-typed. On james-clear.html and
+   quotes.html it read v1.0 while the page badge had been bumped three separate
+   times, v1.5 to v1.6 to v1.7. Every bump moved the badge and left the number
+   Scott actually looks at, the one on the card, reading v1.0. A badge sweep can
+   never catch it because it is not in the HTML at all.
+
+   Two fixes, both runtime and both safe:
+   1. Sync any card-header chip (.hd .ver) to the page version, re-running when
+      the deck re-renders, because that content does not exist at DOMContentLoaded.
+   2. If the nav chip (.pn-ver) holds something that is not a version number, for
+      example the word "Maps" on knowledge-graph.html, fill it with the page
+      version rather than leaving the page with no number at all.
+
+   This is a safety net, not a licence to leave the source wrong. The hardcoded
+   v1.0 strings still need removing from james-clear.html and quotes.html so the
+   next session reads the right thing in the file. Tracked on the ToDo board. */
+(function(){
+  function isVer(t){return /^v?\d+(?:\.\d+)*$/.test(String(t||'').trim());}
+  function pageVer(){
+    if(window.PY_VERSION&&isVer(window.PY_VERSION))return window.PY_VERSION;
+    var e=document.querySelector('.secbar .ver, h1.ph-h1 .ver, .topbar .ver, #ver, h1 .ver');
+    return (e&&isVer(e.textContent))?e.textContent.trim():null;
+  }
+  function fixNavChip(){try{
+    var n=document.querySelector('.pn-ver'); if(!n)return;
+    if(isVer(n.textContent))return;            /* already a real version, leave it */
+    var v=pageVer(); if(!v)return;             /* nothing trustworthy to copy in */
+    n.textContent=v;
+  }catch(e){}}
+  function fixCardChips(){try{
+    var v=pageVer(); if(!v)return;
+    document.querySelectorAll('.hd .ver').forEach(function(e){
+      if(isVer(e.textContent)&&e.textContent.trim()!==v)e.textContent=v;
+    });
+  }catch(e){}}
+  function run(){fixNavChip();fixCardChips();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();
+  /* the decks render their cards later, and re-render on every Next, so watch */
+  try{
+    var mo=new MutationObserver(function(){fixCardChips();});
+    var start=function(){mo.observe(document.body,{childList:true,subtree:true});};
+    if(document.body)start(); else document.addEventListener('DOMContentLoaded',start);
+  }catch(e){}
+})();
