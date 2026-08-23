@@ -112,6 +112,7 @@
     var st=document.createElement('style'); st.id='msub-css';
     st.textContent='.msub{display:flex;flex-wrap:wrap;align-items:center;gap:6px;max-width:1180px;margin:12px auto 2px;padding:8px 12px;background:#fff;border:1px solid #e3e7ee;border-radius:12px;box-shadow:0 4px 14px rgba(31,42,68,.05);font-family:Arial,Helvetica,sans-serif}'
       +'.msub-lbl{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#3f6f8f;margin-right:2px;display:inline-flex;align-items:center;gap:5px}'
+      +'a.msub-lbl{text-decoration:none;cursor:pointer;border-radius:8px;padding:4px 6px;margin-left:-4px}a.msub-lbl:hover{background:#eef2f8;color:#2f5a74}'
       +'.msub a{font-size:12.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:5px 10px;border-radius:8px;white-space:nowrap}'
       +'.msub a:hover{background:#eef2f8;color:#3f6f8f}'
       +'.msub a.on{background:#3f6f8f;color:#fff}'
@@ -123,8 +124,13 @@
   var bar=document.createElement('nav');
   bar.className='msub';
   bar.setAttribute('aria-label','Maps and Diagrams');
-  var lbl=document.createElement('span');
+  /* The label is the way back to the hub (Aug 23 2026, Scott: "all the maps and
+     diagrams sub pages are missing a way to get back to the maps index page").
+     It already reads as the section anchor at the left of the row, so making it
+     a link adds an affordance without adding a third row of chrome. */
+  var lbl=document.createElement(CFG.hub?'a':'span');
   lbl.className='msub-lbl'; lbl.textContent=CFG.label||'Maps';
+  if(CFG.hub){lbl.setAttribute('href',CFG.hub);lbl.setAttribute('title','Back to '+(CFG.label||'Maps'));}
   bar.appendChild(lbl);
   CFG.items.forEach(function(it){
     var a=document.createElement('a');
