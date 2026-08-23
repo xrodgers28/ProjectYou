@@ -7,23 +7,15 @@
 window.NAV_CONFIG = {
   "To Do List": [
     { "label": "Todays<br>Tasks", "href": "index.html" },
-    { "label": "All<br>ToDos", "href": "all-todos.html" },
-    { "label": "Staging<br>Area", "href": "staging-area.html" }
+    { "label": "Staging<br>Area", "href": "staging-area.html" },
+    { "label": "All<br>ToDos", "href": "all-todos.html" }
   ],
   "Habit Modules": [
-    { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
-    { "label": "AI<br>Insights", "href": "ai.html" },
-    { "label": "Clever<br>Phrases", "href": "quotes.html" },
-    { "label": "Compass", "href": "compass.html" },
-    { "label": "James<br>Clear", "href": "james-clear.html" }
+    { "label": "Cue Cards", "href": "habit-modules.html" }
   ],
   "Quantified Self": [
-    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
-    { "label": "Habits<br>Tracker", "href": "qs-log.html" },
-    { "label": "Clarity<br>Compass", "href": "qs-wheel.html" },
     { "label": "YouMatics", "href": "qs-dashboard.html" },
-    { "label": "Where I've<br>Been", "href": "where-ive-been.html" },
-    { "label": "Life<br>Snapshot", "href": "life-snapshot.html" }
+    { "label": "Where I've<br>Been", "href": "where-ive-been.html" }
   ],
   "Parking Lot": [
     { "label": "Bucket<br>List", "href": "my-bucket-list.html" },
@@ -39,16 +31,9 @@ window.NAV_CONFIG = {
     { "label": "Style<br>Guide", "href": "style-guide.html" }
   ],
   "Operating System": [
-    { "label": "Components", "href": "build.html" },
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
     { "label": "Guardrails", "href": "guardrails.html" },
-    { "label": "Maps", "children": [
-      { "label": "Overview", "href": "maps.html" },
-      { "label": "Data Flow Diagram", "href": "dfd.html" },
-      { "label": "Knowledge Graph", "href": "blueprint.html" },
-      { "label": "Interactive Knowledge Graph", "href": "knowledge-graph.html" },
-      { "label": "Architecture Map", "href": "architecture-map.html" }
-    ] },
+    { "label": "Maps &amp;<br>Diagrams", "href": "maps.html" },
     { "label": "Mission<br>Control", "href": "mission.html" },
     { "label": "Docs<br>Library", "href": "library.html" }
   ]
