@@ -113,7 +113,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v4.0</span>
+    <span class="pn-ver">v4.1</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -121,7 +121,7 @@
     <div class="pagehead">
       <div class="greet" id="greet">Good morning, Scott</div>
       <h1><span class="em">1%</span> Better Every Day</h1>
-      <p class="phil">Every habit you complete is a vote for the person you want to become. <b>One percent better each day</b> looks invisible on any single morning, but a year of tiny, boring reps compounds into someone almost unrecognizable. Show up, tap a card, and cast today's four votes.</p>
+      <p class="phil">Every habit you complete is a vote for the person you want to become. <b>One percent better each day</b> looks invisible on any single morning, but a year of tiny, boring reps compounds into someone almost unrecognizable. Show up, tap a card, and cast today's votes.</p>
       <div class="meter"><div class="bar"><i id="progbar" style="width:0%"></i></div><span class="mtxt" id="progtxt">0/4 today</span>
         <span class="streak">&#128293; <span class="n" id="streakn">0 day streak</span> <span class="sub">&middot; in a row</span></span></div>
     </div>
@@ -146,7 +146,11 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ===== Cue Cards board v4.0 — cards wired to the wheel, streak wired to qs_log =====
+/* ===== Cue Cards board v4.1 — cards wired to the wheel, streak wired to qs_log =====
+   v4.1: Takeaways became a full ticking deck (two tiles a day) instead of a
+   browse-only card rendered outside MODS. Ten ticking cards now, so the daily
+   meter reads x/10. See takeaways.html v2.0. */
+/*
    Tick a card  ->  today's habit row in `todos` is created-or-updated with
    done / done_at / actual_minutes, which is exactly what the wheel's outer
    ring draws. Default 10 min unless the card's own last page logged a time. */
@@ -178,7 +182,8 @@ const IC={
    counts. The database trigger uses todos.tracker when it is set, otherwise
    the task name with a trailing "(...)" stripped. Change one, change both. */
 const MODS=[
- {id:'ai',      name:"AI Insights",          href:"ai.html",          acc:"#3f6f8f", icon:'ai',      kick:"Today's AI insight",     ds:"A fresh daily blend of AI insights to learn from.", habit:"AI (Learning/Mental Fitness)", qs:"AI",            est:10, pos:7},
+ {id:'takeaways',name:"Takeaways",            href:"takeaways.html",   acc:"#8f5f3f", icon:'cards',   kick:"Two tiles a day",        ds:"Twelve takeaway cards, 58 tiles, two a day.",      habit:"Takeaways",                   qs:"Takeaways",     est:10, pos:20, deck:'takeaways'},
+ {id:'ai',      name:"AI Insights",         href:"ai.html",          acc:"#3f6f8f", icon:'ai',      kick:"Today's AI insight",     ds:"A fresh daily blend of AI insights to learn from.", habit:"AI (Learning/Mental Fitness)", qs:"AI",            est:10, pos:7},
  {id:'atomic',  name:"Atomic Habits",        href:"james-clear.html", acc:"#3f8f7a", icon:'atom',    kick:"Today's 3-2-1",          ds:"Two ideas, a quote, and a question.",              habit:"Atomic Habits (3-2-1)",       qs:"Atomic Habits", est:10, pos:11},
  {id:'twk',     name:"Things Worth Knowing", href:"quotes.html",      acc:"#7a4f9c", icon:'speech',  kick:"Today's three",          ds:"Things worth knowing, worth keeping.",             habit:"Clever Phrases",              qs:"Learning",      est:3,  pos:8},
  {id:'compass', name:"Compass",              href:"compass.html",     acc:"#b8962f", icon:'compass', kick:"One question, answered", ds:"A guided daily reflection to point your day.",     habit:"Compass",                     qs:"Compass",       est:10, pos:10},
@@ -346,14 +351,10 @@ async function toggle(m,el){
 }
 
 function render(){
-  /* Takeaways is a browse-only card: it is NOT in MODS, carries no .chk,
-     and so never counts toward the daily meter or writes a habits row. */
-  var takeaways = '<a class="card" style="--acc:#8f5f3f" href="takeaways.html">'+
-    '<span class="badge">'+IC.cards+'</span>'+
-    '<div class="kick">The card library</div><div class="nm">Takeaways</div>'+
-    '<div class="ds">Twelve takeaway cards, 58 tiles, one at a time.</div>'+
-    '<div class="play">tap to browse \u2192</div></a>';
-
+  /* Takeaways used to be a browse-only card rendered outside MODS. Since
+     v4.1 it is a full deck like Open Mode \u2014 two tiles a day, its own .chk,
+     it dims when done and it counts toward the daily meter and the streak.
+     That took the ticking cards from nine to ten, so the meter reads x/10. */
   var LIVE=MODS.filter(function(m){return !isRead(m);});
   var DONEDECKS=MODS.filter(isRead);
 
@@ -378,7 +379,7 @@ function render(){
 
   /* the main grid holds every live card with no section; sections draw after it */
   var MAIN=LIVE.filter(function(m){return !m.sect;});
-  document.getElementById('board').innerHTML = takeaways + MAIN.map(function(m){
+  document.getElementById('board').innerHTML = MAIN.map(function(m){
     return cardHtml(m,false);
   }).join('') +
   '<div class="add"><span class="plus">+</span><span class="t">More habit modules land here</span></div>';
