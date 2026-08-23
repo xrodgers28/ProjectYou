@@ -16,7 +16,7 @@ window.NAV_CONFIG = {
   ],
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
-    { "label": "Habit Bandit<br>Wheel", "href": "index.html#wheel" }
+    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" }
   ],
   "Parking Lot": [
     { "label": "Bucket<br>List", "href": "my-bucket-list.html" },
