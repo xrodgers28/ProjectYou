@@ -272,12 +272,12 @@ footer{margin-top:20px; font-family:"IBM Plex Mono",monospace; font-size:.71rem;
 .ulbtn:hover{background:var(--soft);border-color:var(--ink-2)}
 </style>
 
-<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v1.2</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v1.3</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
 
 <div class="shell">
   <div class="pillrow">
     <span class="pill">Project YOU</span>
-    <span class="pill">Habit Worksheets v1.2</span>
+    <span class="pill">Habit Worksheets v1.3</span>
     <span class="pill">Aug 23, 2026</span>
     <span class="pill" id="savedPill">Saves to your database</span>
   </div>
@@ -330,7 +330,7 @@ footer{margin-top:20px; font-family:"IBM Plex Mono",monospace; font-size:.71rem;
 
     <div class="today" id="todayPanel">
       <h3>Active Habits Summary</h3>
-      <div class="small">Every habit that is both required and active on this sheet.</div>
+      <div class="small">Every habit switched on for this sheet. Required ones first.</div>
       <div class="budgets" id="budgets" style="display:none"></div>
       <div id="todayList"></div>
       <div class="small" id="todaySum" style="margin-top:8px"></div>
@@ -414,7 +414,7 @@ var SEGMENTS = [
   {k:'emotional', name:'Emotional Health', c:'#7d81c2', tint:'#dcdcf2', ink:'#494c85', ready:true, idx:6, icon:'energy', draft:true}
 ];
 
-/* The catalogue lives in Supabase now: worksheet_rows and worksheet_sections.
+/* The catalogue lives in Supabase: worksheet_rows and worksheet_sections.
    These stubs only keep the renderer happy until the data layer loads. */
 var DATA = {physical:[], env:[], social:[], rec:[], purpose:[], mental:[], emotional:[]};
 var CADS = ['Daily','Weekly','Monthly','Annually'];
@@ -708,9 +708,10 @@ function renderToday(){
   document.getElementById('budgets').innerHTML=[10,25,45,60].map(function(m){
     return '<button class="bud'+(budget===m?' on':'')+'" onclick="setBudget('+m+')">'+m+' min</button>';
   }).join('');
-  var chosen=rowsOf(cur).filter(function(r){ return r.active && r.must; });
+  var chosen=rowsOf(cur).filter(function(r){ return r.active; })
+                 .sort(function(a,b){ return (b.must?1:0)-(a.must?1:0); });
+  var reqN=chosen.filter(function(r){ return r.must; }).length;
   var used=chosen.reduce(function(a,b){ return a+(+b.time||0); },0);
-  var must=chosen;
   if(!chosen.length){
     var total = rowsOf(cur).length;
     document.getElementById('todayList').innerHTML =
@@ -719,7 +720,7 @@ function renderToday(){
              : 'This sheet has not loaded from your database yet. If the badge in the corner says offline, the page cannot reach Supabase right now.')+
       '<br><button class="btn primary" style="margin-top:9px" onclick="setView(\'table\')">Open Adjust Habits and switch some on</button></div>';
     document.getElementById('todaySum').textContent =
-      'Star a habit to make it required, then switch it Active. Active habits flow to Daily Habits, Todays Tasks and the Clarity Compass.';
+      'Switch a habit Active to see it here. Star it as well to make it required.';
     return;
   }
   document.getElementById('todayList').innerHTML=chosen.map(function(r){
@@ -732,10 +733,11 @@ function renderToday(){
   }).join('');
   var doneN=chosen.filter(function(r){ return todayState[r.proc]==='done'; }).length;
   var skipN=chosen.filter(function(r){ return todayState[r.proc]==='skip'; }).length;
-  var mustLeft=must.filter(function(r){ return todayState[r.proc]!=='done'; }).length;
+  var mustLeft=chosen.filter(function(r){ return r.must && todayState[r.proc]!=='done'; }).length;
   document.getElementById('todaySum').textContent=
-    chosen.length+' required and active · '+fmt(used)+' in total · '+doneN+' done · '+skipN+' skipped, not counted · '+
-    (mustLeft? mustLeft+' still to do, so the day is not complete' : 'every required habit is done, the day counts');
+    chosen.length+' active'+(reqN? ', '+reqN+' required':', none starred yet')+' · '+fmt(used)+' in total · '+
+    doneN+' done · '+skipN+' skipped, not counted'+
+    (reqN ? ' · '+(mustLeft? mustLeft+' required still to do, so the day is not complete' : 'every required habit is done, the day counts') : '');
 }
 function mark(key,v){ todayState[key]=(todayState[key]===v?'':v); renderToday(); }
 
