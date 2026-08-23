@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Tracker · Aug 15 · Project YOU OS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#20242b;--muted:#6b7280;--line:#e7e9ee;--bg:#fbfbfa;--card:#fff;--accent:#3f6f8f;--hub:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--blue:#3f6f8f;--red:#c0453b;--amber:#c68a2e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.25;padding:18px 16px 210px}
+  .head{max-width:1160px;margin:0 auto}
+  h1{font-size:22px;color:var(--hub);font-weight:800}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 10px;margin-top:7px;background:#eef7f1;color:var(--green);border:1px solid #cfe9db}
+  .chip.off{background:#fbe7e5;color:var(--red);border-color:#f0cfcb}
+  .sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.4;max-width:820px}
+  h2{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--hub);max-width:1160px;margin:18px auto 6px}
+  .tbl{max-width:1160px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .r{display:grid;grid-template-columns:34px 1fr 128px 150px 260px;align-items:flex-start;border-bottom:1px solid var(--line);transition:opacity .25s,max-height .3s,padding .3s;max-height:900px;overflow:hidden}
+  .r:last-child{border-bottom:none}
+  .r.hd{background:#f4f5f7;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);align-items:center}
+  .r.gone{opacity:0;max-height:0;border:none}
+  .c{padding:9px 14px}
+  .c.lt{padding:12px 0 9px 12px}
+  .dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .dot.green{background:var(--green)} .dot.amber{background:#e08b1f} .dot.red{background:var(--red)}
+  .r.hd .c.lt{padding-left:12px}
+  .legend{max-width:1160px;margin:10px auto 0;display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);font-weight:700;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;font-style:normal}
+  .asof{max-width:1160px;margin:14px auto 0;font-size:12.5px;font-style:italic;color:#808080}
+  .c.mid,.c.act,.c.next{padding:9px 12px}
+  .task .tt{color:var(--accent);text-decoration:none;font-size:14px;font-weight:700;line-height:1.2;border-bottom:1px solid #cfdae5}
+  .task .tt:hover{border-bottom-color:var(--accent)}
+  .task .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
+  .pill.green{background:var(--green)} .pill.blue{background:var(--blue)} .pill.red{background:var(--red)} .pill.amber{background:var(--amber)}
+  .act{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .got{font-weight:800;font-size:12.5px;border:1.5px solid var(--green);background:#fff;color:var(--green);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .yn{font-weight:800;font-size:12.5px;border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .yn.yes.on{background:var(--green);border-color:var(--green);color:#fff} .yn.no.on{background:var(--red);border-color:var(--red);color:#fff}
+  .ynrow{display:flex;gap:6px}
+  .notelink{font-size:11.5px;font-weight:700;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:0}
+  .notelink:hover{color:var(--accent)}
+  .nt{width:100%;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:30px;margin-top:2px}
+  .hidden{display:none}
+  /* Fourth column: what Scott does next */
+  .next{font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .next.none{color:#a7adb6}
+  .next.todo{background:#fdf6e9;color:#5c4a24;border-left:3px solid var(--amber)}
+  .next .nh{display:block;font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+  .next ol{margin:0 0 0 16px;padding:0}
+  .next ol li{margin:0 0 5px;line-height:1.4}
+  .next ol li:last-child{margin-bottom:0}
+  .next .lead{display:block;margin-bottom:4px}
+  .next code{background:#fff;border:1px solid #e2d9c2;border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+  .next a{color:var(--accent);font-weight:700}
+  .mins{display:inline-block;font-weight:800;font-size:10.5px;color:var(--muted);background:var(--chip);border-radius:999px;padding:2px 7px;margin-left:4px}
+  .allclear{max-width:1160px;margin:0 auto;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  @media(max-width:900px){
+    .r{grid-template-columns:22px 1fr auto}
+    .c.lt{grid-row:span 2}
+    .c.act,.c.next{grid-column:1/-1;border-top:1px solid var(--line)}
+    .c.act{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .r.hd{display:none}
+  }
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(31,42,68,.10);padding:9px 16px}
+  .dock .bar{max-width:1160px;margin:0 auto}
+  .dock .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:10px;flex-wrap:wrap}
+  .dock .top b{font-size:12.5px;color:var(--hub)}.dock .hint{font-size:11px;color:var(--muted)}
+  #out{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;border:1px solid var(--line);border-radius:10px;padding:8px;height:80px;resize:vertical;background:#fbfcfe;color:var(--ink)}
+  .copybtn{font-weight:700;font-size:12px;border:1px solid var(--line);background:var(--chip);color:var(--accent);border-radius:9px;padding:6px 11px;cursor:pointer;margin-top:5px}
+  h1 .ver{display:inline-block;margin-left:9px;font-size:11px;font-weight:800;color:#9aa6b4;background:none;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;vertical-align:middle;letter-spacing:0}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Session Tracker<span class="ver">v1.0</span></h1>
+  <div class="meta">Calendar 2026 · Aug 22, 2026 · The calendar moved into Project YOU, learned to listen, and started talking to Google</div>
+  <div id="syncchip" class="chip">connecting...</div>
+  <div class="sub">Five columns. The light on the left is the fastest read: green is finished, amber is waiting on you, red is not started. Everything amber is yours. One thing changed that you will notice immediately: the calendar now asks you to sign in.</div>
+<div class="legend"><span><i style="background:#1e8e5a"></i>Done</span><span><i style="background:#e08b1f"></i>Awaiting your comments</span><span><i style="background:#c0453b"></i>Not started</span></div>
+<div class="asof">As of August 22nd</div>
+
+<h2>Work this session · <span id="leftct"></span></h2>
+<div class="tbl" id="tblWork"><div class="r hd"><div class="c lt"></div><div class="c">Input / Task</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+<div id="allclear" class="allclear hidden"></div>
+
+<h2>Your call · decisions</h2>
+<div class="tbl" id="tblLater"><div class="r hd"><div class="c lt"></div><div class="c">Item</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+
+<div class="dock"><div class="bar">
+  <div class="top"><b>Your responses (live)</b><span class="hint">saved automatically · this box is the fallback</span></div>
+  <textarea id="out" readonly></textarea>
+  <button class="copybtn" onclick="copyOut()">Copy</button>
+</div></div>
+
+<script>
+const SITE='https://xrodgers28.github.io/ProjectYou/';
+const TODOS=SITE+'all-todos.html';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+const CAL='https://xrodgers28.github.io/ProjectYou/calendar.html';
+const MISSION='https://xrodgers28.github.io/ProjectYou/mission.html';
+const TIMES='computer:///Users/scottyex/Documents/SER FILES/CoWork/2026 Calendar/10-Project Trackers/2026-calendar-time-tracker.xlsx';
+const GCAL='https://calendar.google.com/calendar/u/0/r/month/2026/10/28';
+const REPO='https://github.com/xrodgers28/ProjectYou/blob/main/calendar.html';
+const SLUG='2026-08-22-calendar-into-projectyou';
+const K=n=>SLUG+'::'+n;
+
+const WORK=[
+ {item:K('signin'), label:'The calendar now asks you to sign in', url:CAL, pill:'amber', ptext:'Awaiting you', light:'amber',
+  desc:'Your Gmail calendars now feed in, which means your and Asa’s private appointments sit in that table. It was readable by anyone with the URL, so I revoked that and put a sign-in on it. You have not signed in yet, so I cannot prove it works for you.',
+  steps:['Open the calendar link in this row.','Type the email and password you use on your other Project YOU pages.','Press Sign in.','If it does not let you in, tell me and I will fix it before you sleep.'], mins:2},
+
+ {item:K('live'), label:'The 2026 Calendar is live inside Project YOU', url:CAL, pill:'green', ptext:'Live', light:'green',
+  desc:'All 101 of your events moved out of calendar-events.xlsx and into the database, so the page reads live instead of being rebuilt. The spreadsheet is now a historical snapshot. Linked from Mission Control, where you asked for it.',
+  next:'Nothing.'},
+
+ {item:K('voice'), label:'Say it or type it, in plain English', url:CAL, pill:'green', ptext:'Live', light:'green',
+  desc:'Say "Dinner with Asa next Friday at 7" and it fills in the date and time, then asks about anything it could not work out, with tappable answers. Tested against eight phrasings, including "ZBB at Red Rocks on October 19", which it knows means Zac Brown Band.',
+  next:'Nothing. Try it when you are next on the page.', mins:1},
+
+ {item:K('calendars'), label:'USC and GHS calendars loaded, 63 dates', url:CAL, pill:'green', ptext:'Live', light:'green',
+  desc:'24 dates from the USC academic calendar, skipping two that duplicated entries you already had. A new GHS layer in cardinal red with 39 dates from the Greenwich district PDF. Graduation and summer school are TBD in the source, so they are not on there.',
+  next:'Nothing.'},
+
+ {item:K('carson'), label:'Carson’s first day is on two dates at once', url:CAL, pill:'amber', ptext:'Awaiting you', light:'amber',
+  desc:'Your calendar says Aug 27. The district calendar makes Aug 27 the Grade 6 and 9 orientation with early release, and Aug 28 the first day for all students. Both now sit on the calendar, which reads as a contradiction.',
+  steps:['Open the calendar and scroll to the week of Aug 24.','Decide which one is actually Carson’s day.','Tell me which to keep, or tell me to rename yours to "Carson orientation" and keep both.'], mins:2},
+
+ {item:K('gsync'), label:'Gmail calendars feed in, both directions, every two hours', url:CAL, pill:'green', ptext:'Live', light:'green',
+  desc:'Scottyex Default, Scott and Asa, and Family come in as their own layer. Tapping an event sends it out to whichever calendar you pick. I fired the task once by hand to check that a background run can reach your Google account, which was not a given. It pulled 21 events.',
+  next:'Nothing. I will confirm the first scheduled run.'},
+
+ {item:K('scweekend'), label:'SC Family Weekend corrected, Oct 28 to Nov 1', url:GCAL, pill:'green', ptext:'Done', light:'green',
+  desc:'Your Family Google calendar had it on Sep 17 to 20, which was stale. Fixed in Google itself, not just in the database, so the sync cannot drag the old date back. Your LINE Hotel booking for those nights now lines up. Notifications turned off so Asa was not pinged.',
+  next:'Nothing.'},
+
+ {item:K('star'), label:'Live events sit dimmed until you star them', url:CAL, pill:'green', ptext:'Live', light:'green',
+  desc:'You confirmed the McBride dates are tour dates, not your dates. So all 56 live events now sit faded, and starring one says you are going. The layer row shows a gold count. Your birthday is also hidden from the Family feed, since Personal already carries it.',
+  next:'Nothing.'},
+
+ {item:K('skill'), label:'The calendar-ingest skill is delivered but maybe not saved', url:CAL, pill:'amber', ptext:'Awaiting you', light:'amber',
+  desc:'It turns a link, a PDF or a spoken note into calendar events, from any chat. I handed it over in this conversation, but I cannot see whether it landed in your account.',
+  steps:['Scroll up to the calendar-ingest.skill file card in this chat.','If there is a Save option, press it.','If there is not, tell me and I will hand it over another way.'], mins:1},
+
+ {item:K('health'), label:'Site health sweep, 75 pages, nothing broken', url:REPO, pill:'green', ptext:'Done', light:'green',
+  desc:'Zero version mismatches, zero broken links. Six pages carry no version badge at all: midnight-run, midnight-run-v2, qs-health, tracker, one old session tracker and one draft. Two draft pages are missing the shared nav. All six are old pages, none from tonight.',
+  next:'Nothing tonight.'},
+
+ {item:K('concurrent'), label:'Something else was editing Project YOU while I was', url:MISSION, pill:'amber', ptext:'Awaiting you', light:'amber',
+  desc:'Files in CoWork/_upload-to-github changed at 12:09am and 12:31am and I did not touch them. There is also a session tracker registered for today from a different chat. Your standing rule is one Project YOU chat at a time, and that rule exists because concurrent sessions once overwrote each other.',
+  steps:['Check whether you have another Cowork chat open on Project YOU.','If you do, close it before you sleep.','If you did not, tell me and I will look at what wrote those files.'], mins:2},
+
+ {item:K('books'), label:'Books settled, 2 hours and 12 accomplishments', url:TIMES, pill:'green', ptext:'Done', light:'green',
+  desc:'Aug 22 logged at 2.0 hours, confirmed. Four to-dos closed at your word, though none of them were actually completed, so I wrote that reason into each. Ten new to-dos opened from tonight. The Aug 9 build session still has no hours against it.',
+  next:'Nothing.'},
+];
+
+const LATER=[
+ {item:K('dec-reggae'), label:'Should Reggae Festivals dim until starred too?', url:CAL, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+  desc:'Seven festivals sit on the calendar as things you are watching, exactly like the tour dates. You said live events, so I left them alone. Yes extends the star to them, No leaves them at full strength.',
+  next:'Two minutes either way.'},
+
+ {item:K('dec-outlook'), label:'Do you want Outlook feeding in after all?', url:CAL, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+  desc:'You parked it tonight. The reliable route is publishing your Outlook calendar as a link from Outlook settings and handing me the URL, which keeps working in background runs. Yes means I will tell you exactly where that setting is.',
+  next:'Say Yes and I will write the steps.'},
+
+ {item:K('dec-split'), label:'Move the calendar page’s code into its own file?', url:REPO, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+  desc:'Every change to that page costs 37 hand-copied chunks to publish, because the whole thing is one file. Splitting the JavaScript out means future edits ship in a handful of passes instead. Yes is about an hour of my time and changes nothing you can see.',
+  next:'Good overnight job if you say Yes.'},
+];
+
+const ALL=[...WORK,...LATER];
+const state={}; ALL.forEach(x=>state[x.item]={choice:'',note:'',got:false});
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const TODAY=ymd(new Date());
+let sb=null; try{ sb=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co',KEY); }catch(e){}
+function chip(ok){const c=document.getElementById('syncchip');if(ok){c.textContent='saved. Claude can see it';c.className='chip';}else{c.textContent='offline: copy the box below';c.className='chip off';}}
+function nextCell(x){
+  const mins=x.mins?'<span class="mins">'+x.mins+' min</span>':'';
+  if(x.steps){
+    const lead=x.lead?'<span class="lead">'+x.lead+'</span>':'';
+    return '<div class="c next todo"><span class="nh">Your move</span>'+lead+
+           '<ol>'+x.steps.map(t=>'<li>'+t+'</li>').join('')+'</ol>'+mins+'</div>';
+  }
+  if(x.todo) return '<div class="c next todo"><span class="nh">Your move</span>'+x.next+mins+'</div>';
+  if(x.decide) return '<div class="c next">'+x.next+'</div>';
+  const none=/^Nothing\.?$/i.test((x.next||'').trim());
+  return '<div class="c next'+(none?' none':'')+'">'+(x.next||'')+mins+'</div>';
+}
+function rowNode(x){
+  const d=document.createElement('div'); d.className='r'; d.dataset.i=x.item;
+  const desc=x.desc?'<div class="desc">'+x.desc+'</div>':'';
+  let act='';
+  if(x.decide){
+    act='<div class="ynrow"><button class="yn yes" data-i="'+x.item+'" data-v="Yes">Yes</button><button class="yn no" data-i="'+x.item+'" data-v="No">No</button></div>';
+  } else {
+    act='<button class="got" data-i="'+x.item+'">Got It</button>';
+  }
+  act+='<button class="notelink" data-i="'+x.item+'">＋ note</button><textarea class="nt hidden" data-i="'+x.item+'" placeholder="comment (optional)"></textarea>';
+  const lt=x.light||'amber';
+  d.innerHTML=
+    '<div class="c lt"><span class="dot '+lt+'" title="'+({green:'Done',amber:'Awaiting your comments',red:'Not started'}[lt])+'"></span></div>'+
+    '<div class="c task"><a class="tt" href="'+x.url+'" target="_blank" rel="noopener">'+x.label+'</a>'+desc+'</div>'+
+    '<div class="c mid"><span class="pill '+x.pill+'">'+x.ptext+'</span></div>'+
+    '<div class="c act">'+act+'</div>'+
+    nextCell(x);
+  return d;
+}
+let viewed=new Set();
+function renderWork(){
+  const tw=document.getElementById('tblWork');
+  tw.querySelectorAll('.r:not(.hd)').forEach(n=>n.remove());
+  WORK.filter(x=>!viewed.has(x.item)).forEach(x=>tw.appendChild(rowNode(x)));
+  updateLeft();
+}
+function updateLeft(){
+  const left=WORK.filter(x=>!viewed.has(x.item)).length;
+  document.getElementById('leftct').textContent=left+' left';
+  const ac=document.getElementById('allclear');
+  if(left===0){ ac.textContent='All caught up. '+viewed.size+' filed to today\'s session content.'; ac.classList.remove('hidden'); document.getElementById('tblWork').classList.add('hidden'); }
+  else { ac.classList.add('hidden'); document.getElementById('tblWork').classList.remove('hidden'); }
+}
+const tl=document.getElementById('tblLater'); LATER.forEach(x=>tl.appendChild(rowNode(x)));
+async function saveContent(x){ if(!sb){chip(false);return;} try{ const {error}=await sb.from('session_content').upsert({day:TODAY,item:x.item,label:x.label,session:SLUG,saved_at:new Date().toISOString()},{onConflict:'day,item'}); chip(!error);}catch(e){chip(false);} }
+async function saveTracker(x){ compile(); if(!sb){chip(false);return;} try{ const {error}=await sb.from('tracker').upsert({item:x.item,label:x.label,choice:state[x.item].choice,note:state[x.item].note,session:SLUG,updated_at:new Date().toISOString()},{onConflict:'item'}); chip(!error);}catch(e){chip(false);} }
+document.body.addEventListener('click',e=>{
+  const g=e.target.closest('.got');
+  if(g){ const i=g.dataset.i, x=ALL.find(z=>z.item===i); state[i].got=true; viewed.add(i); saveContent(x);
+    const rowEl=g.closest('.r'); rowEl.classList.add('gone'); setTimeout(()=>{rowEl.remove();updateLeft();},300); compile(); return; }
+  const nl=e.target.closest('.notelink');
+  if(nl){ const ta=nl.parentElement.querySelector('.nt'); ta.classList.toggle('hidden'); if(!ta.classList.contains('hidden')) ta.focus(); return; }
+  const b=e.target.closest('.yn'); if(!b)return;
+  const i=b.dataset.i,v=b.dataset.v; state[i].choice=(state[i].choice===v)?'':v;
+  b.closest('.act').querySelectorAll('.yn').forEach(y=>y.classList.remove('on')); if(state[i].choice)b.classList.add('on');
+  saveTracker(ALL.find(x=>x.item===i));
+});
+let t=null;
+document.body.addEventListener('input',e=>{ const n=e.target.closest('.nt'); if(!n)return; state[n.dataset.i].note=n.value; clearTimeout(t); t=setTimeout(()=>saveTracker(ALL.find(x=>x.item===n.dataset.i)),500); });
+function compile(){
+  const lines=['Session Tracker, Calendar 2026, Aug 22, 2026',''];
+  const got=WORK.filter(x=>state[x.item].got);
+  if(got.length){ lines.push('Filed to today\'s session content ('+got.length+'):'); got.forEach(x=>lines.push('- '+x.label)); lines.push(''); }
+  ALL.forEach(x=>{ const s=state[x.item]; if(!s.choice && !s.note) return; let l='- '+x.label+': '+(s.choice||'(note)'); if(s.note) l+=' , '+s.note; lines.push(l); });
+  if(lines.length===2) lines.push('(tap Got It, or answer the three decisions)');
+  document.getElementById('out').value=lines.join('\n');
+}
+function copyOut(){const o=document.getElementById('out');o.select();try{document.execCommand('copy');}catch(e){}}
+async function boot(){
+  if(!sb){chip(false);renderWork();compile();return;}
+  try{
+    const sc=await sb.from('session_content').select('item').eq('day',TODAY).eq('session',SLUG);
+    viewed=new Set((sc.data||[]).map(r=>r.item).filter(Boolean));
+    viewed.forEach(i=>{ if(state[i]) state[i].got=true; });
+    renderWork();
+    const tr=await sb.from('tracker').select('*').eq('session',SLUG);
+    (tr.data||[]).forEach(r=>{ if(!state[r.item])return; state[r.item].choice=r.choice||''; state[r.item].note=r.note||'';
+      if(r.choice){const b=document.querySelector('.yn[data-i="'+r.item+'"][data-v="'+r.choice+'"]'); if(b)b.classList.add('on');}
+      if(r.note){const n=document.querySelector('.nt[data-i="'+r.item+'"]'); if(n){n.value=r.note;n.classList.remove('hidden');}} });
+    chip(true); compile();
+  }catch(e){ chip(false); renderWork(); compile(); }
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
