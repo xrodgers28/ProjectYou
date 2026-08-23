@@ -52,9 +52,9 @@ window.NAV_GROUP_LINKS = {};
 window.MAPS_NAV = {
   "label": "\uD83D\uDDFA Maps",
   "hub": "maps.html",
-  "ver": "Maps v1.5",
+  "ver": "Maps v1.6",
   "items": [
-    { "label": "Overview", "href": "maps.html" },
+    { "label": "\u2190 Overview", "href": "maps.html" },
     { "label": "Knowledge Graph", "href": "blueprint.html" },
     { "label": "Architecture Map", "href": "architecture-map.html" },
     { "label": "Data Flow Chart", "href": "dfd.html" },
