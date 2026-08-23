@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Environmental Health &middot; ProjectYou</title>
+<!-- The one definition of a day, 2am to 2am Eastern. In the HEAD so it is ready
+     before this page's own script runs. See project memory day-boundary-rule. -->
+<script src="py-day.js"></script>
 <style>
   :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--key:#c2c8d1;--accent:#3f6f8f;--acc:#4fa08a}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -122,7 +125,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.1</span>
+    <span class="pn-ver">v1.2</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -194,7 +197,11 @@ let idx=0, signedIn=false, ticked=false, habitRow=null;
 let SAFARIS=[], showForm=false, formTags={}, filter='', DAYLIGHT=null, EXPLORE=null;
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function todayKey(){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}catch(e){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}}
+/* THE DAY IS DEFINED ONCE, in py-day.js: 2am to 2am Eastern, because Scott works
+   past midnight and that work belongs to the day he started. This used to be a
+   plain Eastern-midnight formatter, so anything ticked between midnight and 2am
+   filed under tomorrow. Never reimplement it here. SQL twin: public.py_today(). */
+function todayKey(){return PY.today();}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2600);}
 function fmtDate(d){try{return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date(d+'T12:00:00Z'));}catch(e){return d;}}
 
@@ -298,7 +305,10 @@ async function loadHabit(){
 
 async function loadLight(){
   try{
-    var from=new Date(Date.now()-13*86400000).toISOString().slice(0,10);
+    /* 13 days back from the 2am-boundary day, not from a UTC midnight, or the
+       window slides by one at the edges. */
+    var _t=PY.today().split('-').map(Number);
+    var from=new Date(Date.UTC(_t[0],_t[1]-1,_t[2]-13)).toISOString().slice(0,10);
     var r=await sb.from('health_metrics').select('day,value').eq('metric','time_in_daylight').gte('day',from);
     if(r.error){DAYLIGHT={err:true};return;}
     var byDay={};
