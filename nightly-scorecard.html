@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightly Scorecard &middot; ProjectYou</title>
+</head>
+<body>
+<div class="pynav"></div>
+<style>
+  :root{
+    --ink:#1f2a44; --onbg:#1f2a44; --muted:#5b6472; --faint:#9aa6b4;
+    --line:#e3e7ee; --bg:#eef1f6; --card:#fff; --key:#c2c8d1;
+    --sunk:#f6f8fb; --accent:#3f6f8f; --acc:#a35a4e;
+    --good:#2f8f5b; --goodbg:#e6f4ec; --warn:#c98a1e; --warnbg:#fdf3e0;
+    --noteBg:#fffbeb; --noteLine:#f0dfae; --shadow:0 12px 34px rgba(31,42,68,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#1f2a44; --onbg:#e7eaf0; --muted:#5b6472; --faint:#8892a3;
+      --line:#c9d0dc; --bg:#0f1420; --card:#e7eaf0; --key:#b7c0cf;
+      --sunk:#d9dee8; --accent:#3f6f8f; --acc:#a35a4e;
+      --good:#2f8f5b; --goodbg:#d7ecdf; --goodline:#8dc9a9;
+      --bad:#b8433a; --badbg:#f2ddda; --badline:#dda9a2;
+      --warn:#a9741a; --warnbg:#f2e6cd;
+      --noteBg:#f0e9d4; --noteLine:#d8c99c; --shadow:0 12px 34px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"], body.nightmode{
+    --ink:#1f2a44; --onbg:#e7eaf0; --muted:#5b6472; --faint:#8892a3;
+    --line:#c9d0dc; --bg:#0f1420; --card:#e7eaf0; --key:#b7c0cf;
+    --sunk:#d9dee8; --accent:#3f6f8f; --acc:#a35a4e;
+    --good:#2f8f5b; --goodbg:#d7ecdf; --goodline:#8dc9a9;
+    --bad:#b8433a; --badbg:#f2ddda; --badline:#dda9a2;
+    --warn:#a9741a; --warnbg:#f2e6cd;
+    --noteBg:#f0e9d4; --noteLine:#d8c99c; --shadow:0 12px 34px rgba(0,0,0,.55);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%;
+       transition:background .5s}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+  .nightbar{background:var(--accent);color:#fff;text-align:center;font-size:11px;
+            font-weight:800;letter-spacing:.6px;padding:7px 14px;display:none}
+  .nightbar.on{display:block}
+
+  .wrap{max-width:560px;margin:0 auto;padding:20px 14px 90px}
+  .head{text-align:center;margin-bottom:16px}
+  .kick{font-size:10.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--acc)}
+  h1{font-size:27px;margin:6px 0 0;letter-spacing:-.2px;color:var(--onbg)}
+  .head .sub{font-size:12.5px;color:var(--onbg);opacity:.72;margin-top:6px}
+
+  .hero{background:var(--card);border:1px solid var(--key);border-top:3px solid var(--acc);
+        border-radius:16px;box-shadow:var(--shadow);padding:18px 18px 16px;text-align:center;margin-top:14px}
+  .hero .lab{font-size:9.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc)}
+  .big{font-size:56px;font-weight:800;line-height:1;margin-top:4px;font-variant-numeric:tabular-nums}
+  .big small{font-size:20px;color:var(--faint);font-weight:700}
+  .raw{font-size:12px;color:var(--faint);margin-top:3px;font-variant-numeric:tabular-nums}
+  .meter{height:9px;background:var(--sunk);border:1px solid var(--line);border-radius:999px;
+         margin:12px 0 4px;overflow:hidden}
+  .meter i{display:block;height:100%;width:0;background:var(--accent);border-radius:999px;transition:width .35s}
+  .heronote{font-size:12.5px;color:var(--muted);margin-top:9px;min-height:19px}
+  .pills{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin-top:12px}
+  .pill{font-size:11px;font-weight:800;padding:6px 12px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+  .pill.streak{background:var(--goodbg);color:var(--good)}
+  .pill.grace{background:var(--warnbg);color:var(--warn)}
+
+  h2.sec{font-size:11.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;
+         color:var(--onbg);opacity:.6;margin:26px 0 4px;text-align:center}
+  .secsub{text-align:center;font-size:11.5px;color:var(--onbg);opacity:.62;margin-bottom:12px}
+
+  .q{background:var(--card);border:1px solid var(--key);border-left:5px solid var(--line);
+     border-radius:14px;padding:13px 14px 12px;margin-bottom:10px}
+  .qtop{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:7px}
+  .area{font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+        padding:4px 9px;border-radius:999px;color:#fff}
+  .tag{font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+       padding:4px 8px;border-radius:999px;background:var(--sunk);color:var(--faint)}
+  .qtext{font-size:15.5px;font-weight:700;line-height:1.34}
+  .qtext em{font-style:normal;color:var(--muted);font-weight:400}
+  .scale{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:12px}
+  .scale button{min-height:46px;border:1px solid var(--line);background:var(--card);
+                border-radius:10px;font-size:15px;font-weight:700;color:var(--muted);
+                cursor:pointer;font-variant-numeric:tabular-nums}
+  .scale button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .scalelab{display:flex;justify-content:space-between;font-size:10.5px;color:var(--faint);margin-top:6px}
+
+  .savewrap{text-align:center;margin-top:18px}
+  .save{padding:15px 34px;border:none;border-radius:999px;background:var(--acc);color:#fff;
+        font-size:15px;font-weight:800;cursor:pointer;min-height:50px}
+  .save[disabled]{opacity:.3;cursor:default}
+  .savenote{font-size:12px;color:var(--onbg);opacity:.72;margin-top:9px}
+
+  .card{background:var(--card);border:1px solid var(--key);border-radius:14px;
+        padding:16px 14px 12px;margin-top:14px;position:relative}
+  .card h3{font-size:15px;margin:0}
+  .card .sub2{font-size:11.5px;color:var(--muted);margin:3px 0 12px}
+  .sparkbox{overflow-x:auto}
+  .spark{width:100%;min-width:320px;height:126px;display:block}
+  .rank{margin-top:14px;border-top:1px solid var(--line);padding-top:11px;font-size:13px}
+  .rank .r{display:flex;gap:9px;align-items:center;margin-top:7px}
+  .swatch{width:10px;height:10px;border-radius:2px;flex:none}
+  .rank .m{color:var(--muted)}
+
+  .why{background:var(--sunk);border:1px solid var(--line);border-radius:12px;
+       padding:14px 15px;margin-top:22px;font-size:13.5px;color:var(--muted)}
+  .why b{color:var(--ink)} .why a{color:var(--accent)}
+  .why .lab{font-size:9.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;
+            color:var(--acc);display:block;margin-bottom:6px}
+  .why p{margin:0 0 9px} .why p:last-child{margin:0}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:var(--accent);
+         color:#fff;padding:12px 22px;border-radius:999px;font-size:13.5px;font-weight:700;
+         box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
+  .toast.on{opacity:1}
+  .msg{text-align:center;color:var(--onbg);font-size:13px;padding:30px 10px}
+  .stamp{text-align:center;font-size:11px;color:var(--faint);margin-top:26px;font-style:italic;color:var(--onbg);opacity:.55}
+  .ver{display:inline-block;vertical-align:middle;font-size:11px;font-weight:800;letter-spacing:.5px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 9px;margin-left:6px}
+</style>
+
+<div class="nightbar" id="nightbar">NIGHT MODE &middot; after 9pm the lights go down</div>
+
+<div class="wrap">
+  <div class="head">
+    <div class="kick">Triggers &middot; Marshall Goldsmith &middot; S14</div>
+    <h1>Nightly Scorecard <span id="ver" class="ver">v1.0</span></h1>
+    <div class="sub" id="datesub">Loading&hellip;</div>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="hero">
+      <div class="lab">Tonight</div>
+      <div class="big"><span id="pct">0</span><small>%</small></div>
+      <div class="raw"><span id="raw">0</span> out of <span id="possible">60</span></div>
+      <div class="meter"><i id="meter"></i></div>
+      <div class="heronote" id="heronote">Score the effort, not the result.</div>
+      <div class="pills" id="pills"></div>
+    </div>
+
+    <h2 class="sec">Did I do my best to&hellip;</h2>
+    <div class="secsub" id="mixnote"></div>
+    <div id="qs"></div>
+
+    <div class="savewrap">
+      <button class="save" id="savebtn" disabled>Save tonight</button>
+      <div class="savenote" id="savenote">Answer all six to save.</div>
+    </div>
+
+    <div class="card" id="trendcard" style="display:none">
+      <h3>Your last fourteen nights</h3>
+      <div class="sub2">Scored as a percentage, so nights with different questions still compare.</div>
+      <div class="sparkbox">
+        <svg class="spark" id="spark" viewBox="0 0 520 126" role="img"
+             aria-label="Nightly score percentage over the last fourteen nights"></svg>
+      </div>
+      <div class="rank" id="rank"></div>
+    </div>
+  </div>
+
+  <div class="msg" id="msg">Reading your questions&hellip;</div>
+
+  <div class="why">
+    <span class="lab">Where this came from</span>
+    <p><b>The idea.</b> Scott asked how to get two coaching books into Project YOU as something interactive rather than
+    something to read. The answer turned on a distinction: most of his corpus is <b>ideas to absorb</b>, where a card you
+    read is the right container, but these two books are <b>practices to run</b>. A question you ask, a score you give.
+    Putting a verb on a card you read is why most people finish these two books, nod, and change nothing. So instead of a
+    sixth cue card, this is the actual nightly ritual from the book, wired into the tracking that was already here.</p>
+    <p><b>The method is Goldsmith's, not an interpretation of it.</b> The wording ("Did I do my best to&hellip;"), the
+    one to ten scale, and the idea of an outside voice reading the list aloud are all his. His published set is
+    <b>six questions</b>; he personally answers <b>43</b> every day and pays someone to phone him and ask them.</p>
+    <p><b>What was designed here.</b> Three questions anchor every night so the trend means something, and three rotate
+    from a pool of fifteen so it does not go stale. Because the set changes, the headline number is a <b>percentage</b>
+    rather than a raw total, otherwise a six question night and a four question night could not be compared. A missed
+    night is forgiven once in any seven, because a streak that snaps on the first bad evening does not survive a bad week.</p>
+    <p><b>Sources.</b> Marshall Goldsmith, <i>Triggers: Creating Behavior That Lasts</i> (2015), source S14 in the
+    Knowledge Graph, 18 notes. Michael Bungay Stanier, <i>The Coaching Habit</i> (2016), source S13, 17 notes. The six
+    canonical questions and the one to ten scale verified against
+    <a href="https://www.marshallgoldsmith.com/post/six-daily-questions" target="_blank" rel="noopener">marshallgoldsmith.com</a>
+    and <a href="https://www.dukece.com/insights/improve-leadership-six-simple-daily-questions/" target="_blank" rel="noopener">Duke Corporate Education</a>.
+    Question wording marked <b>Goldsmith</b> is his; wording marked <b>yours</b> was drawn from Scott's own trait inventory.</p>
+  </div>
+
+  <div class="stamp" id="stamp"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+var SB="https://arnjntspmrhigodlssbn.supabase.co";
+var KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+var HABIT="Nightly Scorecard";
+var AREACOL={A1:"#c05f7a",A2:"#4fa08a",A3:"#5b8fce",A4:"#e0975a",A5:"#cf9088",A6:"#c6a63f",A7:"#7d81c2",A0:"#8a93a1"};
+
+var QUESTIONS=[], TONIGHT=[], TENETS={}, AREAS={}, vals={}, NIGHTS=[], savedTonight=false;
+
+function api(path,opts){
+  opts=opts||{};
+  opts.headers=Object.assign({apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},opts.headers||{});
+  return fetch(SB+"/rest/v1/"+path,opts).then(function(r){
+    if(!r.ok) return r.text().then(function(t){throw new Error(r.status+" "+t);});
+    return r.status===204?null:r.json();
+  });
+}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function toast(m){var t=document.getElementById("toast");t.textContent=m;t.classList.add("on");
+  clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove("on");},2800);}
+function nyParts(){
+  var f=new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"});
+  var h=new Intl.DateTimeFormat("en-US",{timeZone:"America/New_York",hour:"numeric",hour12:false});
+  return {day:f.format(new Date()), hour:parseInt(h.format(new Date()),10)};
+}
+function todayKey(){return nyParts().day;}
+function shortDay(iso){var p=iso.split("-");return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][+p[1]-1]+" "+(+p[2]);}
+function stampText(){
+  var d=new Date();
+  var dt=d.toLocaleString("en-US",{timeZone:"America/New_York",weekday:"long",month:"short",day:"numeric",year:"numeric"});
+  var tm=d.toLocaleString("en-US",{timeZone:"America/New_York",hour:"numeric",minute:"2-digit"}).toLowerCase().replace(" ","");
+  return {full:dt+" · "+tm+" EST", date:dt};
+}
+
+function applyNightMode(){
+  var h=nyParts().hour;
+  var on = h>=21 || h<5;
+  document.body.classList.toggle("nightmode",on);
+  document.getElementById("nightbar").classList.toggle("on",on);
+}
+
+async function boot(){
+  applyNightMode(); setInterval(applyNightMode,60000);
+  var st=stampText();
+  document.getElementById("datesub").textContent=st.date;
+  document.getElementById("stamp").textContent="Reading live · "+st.full;
+  try{
+    var t=todayKey();
+    var res=await Promise.all([
+      api("dq_questions?select=*&active=eq.true&order=sort"),
+      api("kg_tenets?select=code,label,area_code"),
+      api("kg_areas?select=code,label,color"),
+      api("dq_answers?select=question_id,score&day=eq."+t),
+      api("dq_nights?select=day,pct,raw,possible&order=day.desc&limit=21")
+    ]);
+    QUESTIONS=res[0]||[];
+    (res[1]||[]).forEach(function(r){TENETS[r.code]=r;});
+    (res[2]||[]).forEach(function(r){AREAS[r.code]=r;});
+    NIGHTS=(res[4]||[]).slice().reverse();
+    var existing=res[3]||[];
+
+    if(existing.length){
+      var byId={}; existing.forEach(function(a){byId[a.question_id]=a.score;});
+      TONIGHT=QUESTIONS.filter(function(q){return byId[q.id]!=null;});
+      TONIGHT.forEach(function(q){vals[q.id]=byId[q.id];});
+      savedTonight=true;
+    } else {
+      TONIGHT=pickTonight();
+    }
+    document.getElementById("msg").style.display="none";
+    document.getElementById("app").style.display="block";
+    renderMix(); renderQs(); tally();
+    if(savedTonight){ drawTrend(); }
+  }catch(e){
+    document.getElementById("msg").innerHTML="Could not reach the database.<br>"+esc(e.message);
+  }
+}
+
+/* Three anchors every night so the trend means something, three rotating from the pool
+   so it does not go stale. Rotation picks the least recently asked, deterministically,
+   so reloading the page before you save gives you the same six. */
+function pickTonight(){
+  var anchors=QUESTIONS.filter(function(q){return q.is_anchor;});
+  var rest=QUESTIONS.filter(function(q){return !q.is_anchor;}).sort(function(a,b){
+    var A=a.last_asked||"0000-00-00", B=b.last_asked||"0000-00-00";
+    if(A!==B) return A<B?-1:1;
+    return a.id-b.id;
+  });
+  return anchors.concat(rest.slice(0,3));
+}
+
+function renderMix(){
+  var g=TONIGHT.filter(function(q){return q.origin==="goldsmith";}).length;
+  document.getElementById("mixnote").textContent =
+    TONIGHT.length+" tonight · "+g+" from Goldsmith's list, "+(TONIGHT.length-g)+" from yours · three anchors, three rotating";
+}
+
+function renderQs(){
+  document.getElementById("qs").innerHTML=TONIGHT.map(function(q){
+    var ten=TENETS[q.tenet_code]||{}, ar=AREAS[ten.area_code]||{};
+    var col=AREACOL[ten.area_code]||"#8a93a1";
+    var v=vals[q.id], btns="";
+    for(var n=1;n<=10;n++){
+      btns+='<button class="'+(v===n?"on":"")+'" aria-pressed="'+(v===n)+'" '+
+            'aria-label="score '+n+' of 10" onclick="pick('+q.id+','+n+')">'+n+'</button>';
+    }
+    return '<div class="q" style="border-left-color:'+(v?col:"var(--line)")+'">'+
+      '<div class="qtop"><span class="area" style="background:'+col+'">'+esc(ar.label||"Unfiled")+'</span>'+
+      '<span class="tag">'+(q.is_anchor?"Anchor":"Rotating")+'</span>'+
+      '<span class="tag">'+(q.origin==="goldsmith"?"Goldsmith":"Yours")+'</span></div>'+
+      '<div class="qtext"><em>Did I do my best to</em> '+esc(q.text)+'?</div>'+
+      '<div class="scale">'+btns+'</div>'+
+      '<div class="scalelab"><span>1 &nbsp;no effort</span><span>my best &nbsp;10</span></div></div>';
+  }).join("");
+}
+
+function pick(id,n){ vals[id]=(vals[id]===n)?undefined:n; renderQs(); tally(); }
+
+function tally(){
+  var raw=0,answered=0;
+  TONIGHT.forEach(function(q){ if(vals[q.id]){raw+=vals[q.id];answered++;} });
+  var possible=TONIGHT.length*10, pct=possible?Math.round(raw/possible*100):0;
+  document.getElementById("pct").textContent=pct;
+  document.getElementById("raw").textContent=raw;
+  document.getElementById("possible").textContent=possible;
+  document.getElementById("meter").style.width=pct+"%";
+  var done=answered===TONIGHT.length;
+  document.getElementById("savebtn").disabled=!done;
+  document.getElementById("savebtn").textContent=savedTonight?"Update tonight":"Save tonight";
+  document.getElementById("savenote").textContent=done
+    ? (savedTonight?"Already saved. Change anything and save again.":"Ready. About ninety seconds, that is the whole thing.")
+    : (TONIGHT.length-answered)+" left to answer.";
+  document.getElementById("heronote").textContent=!done
+    ? "Score the effort, not the result."
+    : (pct>=80?"A strong night. Nothing to fix."
+      :pct>=60?"A fair night. One question is dragging the rest down."
+              :"A low night. That is information, not a verdict.");
+  drawPills();
+}
+
+/* Streak with grace: one missed night is forgiven in any rolling seven.
+   Two misses back to back ends it, because that is the pattern worth catching. */
+function streakInfo(){
+  var have={}; NIGHTS.forEach(function(n){have[n.day]=true;});
+  if(savedTonight) have[todayKey()]=true;
+  var d=new Date(todayKey()+"T12:00:00");
+  var run=0, graceUsed=0, misses=0;
+  for(var i=0;i<60;i++){
+    var iso=d.toISOString().slice(0,10);
+    if(have[iso]){ run++; misses=0; }
+    else{
+      if(i===0){ d.setDate(d.getDate()-1); continue; }
+      misses++;
+      if(misses>1) break;
+      graceUsed++;
+      if(graceUsed>1) break;
+    }
+    d.setDate(d.getDate()-1);
+  }
+  return {run:run, graceUsed:graceUsed};
+}
+
+function drawPills(){
+  var s=streakInfo(), html="";
+  html+='<span class="pill streak">'+s.run+(s.run===1?" night":" nights")+' running</span>';
+  if(s.graceUsed) html+='<span class="pill grace">Grace night used. Do not miss twice.</span>';
+  else html+='<span class="pill">One missed night is forgiven</span>';
+  document.getElementById("pills").innerHTML=html;
+}
+
+async function save(){
+  var t=todayKey(), raw=0;
+  TONIGHT.forEach(function(q){raw+=vals[q.id];});
+  var possible=TONIGHT.length*10, pct=Math.round(raw/possible*100);
+  var btn=document.getElementById("savebtn"); btn.disabled=true; btn.textContent="Saving…";
+  try{
+    await api("dq_answers?on_conflict=day,question_id",{method:"POST",
+      headers:{Prefer:"resolution=merge-duplicates,return=minimal"},
+      body:JSON.stringify(TONIGHT.map(function(q){return {day:t,question_id:q.id,score:vals[q.id]};}))});
+    await api("dq_nights?on_conflict=day",{method:"POST",
+      headers:{Prefer:"resolution=merge-duplicates,return=minimal"},
+      body:JSON.stringify([{day:t,raw:raw,possible:possible,pct:pct,questions:TONIGHT.length}])});
+    for(var i=0;i<TONIGHT.length;i++){
+      await api("dq_questions?id=eq."+TONIGHT[i].id,{method:"PATCH",
+        headers:{Prefer:"return=minimal"},body:JSON.stringify({last_asked:t})});
+    }
+    await tickHabit(t);
+    savedTonight=true;
+    NIGHTS=NIGHTS.filter(function(n){return n.day!==t;}).concat([{day:t,pct:pct,raw:raw,possible:possible}]);
+    drawTrend(); tally();
+    toast("Saved. "+pct+"% tonight.");
+    document.getElementById("trendcard").scrollIntoView({behavior:"smooth",block:"nearest"});
+  }catch(e){ toast("Could not save: "+e.message); btn.disabled=false; }
+}
+
+/* Same shape Open Mode uses, so the Wheel and the Bandit streak both see it. */
+async function tickHabit(t){
+  var rows=await api("todos?select=id,done,for_date&is_habit=eq.true&task=eq."+encodeURIComponent(HABIT)+"&order=for_date.desc&limit=1");
+  var row=(rows||[])[0];
+  var patch={done:true,for_date:t,done_at:new Date().toISOString(),actual_minutes:2,completed_at:new Date().toISOString()};
+  if(row) await api("todos?id=eq."+row.id,{method:"PATCH",headers:{Prefer:"return=minimal"},body:JSON.stringify(patch)});
+  else await api("todos",{method:"POST",headers:{Prefer:"return=minimal"},
+    body:JSON.stringify([Object.assign({task:HABIT,is_habit:true,bucket:"today",section:"Habits",
+      est_minutes:2,position:14,qs_group:"Emotional Health"},patch)])});
+}
+
+function drawTrend(){
+  document.getElementById("trendcard").style.display="block";
+  drawSpark(); drawRank();
+}
+
+function drawSpark(){
+  var data=NIGHTS.slice(-14);
+  if(!data.length) return;
+  var W=520,H=126,padL=32,padR=16,base=H-28,top=18;
+  var cs=getComputedStyle(document.documentElement.matches(":root")?document.documentElement:document.body);
+  function tok(n){return getComputedStyle(document.body).getPropertyValue(n).trim()||cs.getPropertyValue(n).trim();}
+  var ink=tok("--ink"),faint=tok("--faint"),line=tok("--line"),accent=tok("--accent"),acc=tok("--acc"),card=tok("--card");
+  var n=data.length;
+  var xs=data.map(function(_,i){return n===1?W/2:padL+i*((W-padL-padR)/(n-1));});
+  var y=function(v){return top+(1-v/100)*(base-top);};
+  var s="";
+  s+='<line x1="'+padL+'" y1="'+base+'" x2="'+(W-padR)+'" y2="'+base+'" stroke="'+line+'" stroke-width="1"/>';
+  s+='<line x1="'+padL+'" y1="'+y(100)+'" x2="'+(W-padR)+'" y2="'+y(100)+'" stroke="'+line+'" stroke-width="1" opacity=".55"/>';
+  s+='<text x="'+(padL-6)+'" y="'+(y(100)+3.5)+'" text-anchor="end" font-size="10" fill="'+faint+'" font-family="Arial">100</text>';
+  s+='<text x="'+(padL-6)+'" y="'+(base+3.5)+'" text-anchor="end" font-size="10" fill="'+faint+'" font-family="Arial">0</text>';
+  if(n>1){
+    var d=data.map(function(p,i){return (i?"L":"M")+xs[i]+" "+y(p.pct);}).join(" ");
+    s+='<path d="'+d+'" fill="none" stroke="'+accent+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+  data.forEach(function(p,i){
+    var last=i===n-1;
+    s+='<circle cx="'+xs[i]+'" cy="'+y(p.pct)+'" r="'+(last?6:4)+'" fill="'+(last?acc:accent)+'" stroke="'+card+'" stroke-width="2"><title>'+shortDay(p.day)+": "+p.pct+'%</title></circle>';
+    if(last) s+='<text x="'+xs[i]+'" y="'+(y(p.pct)-14)+'" text-anchor="middle" font-size="13" font-weight="bold" fill="'+ink+'" font-family="Arial">'+p.pct+'%</text>';
+    if(n<=8||i%2===0||last) s+='<text x="'+xs[i]+'" y="'+(H-7)+'" text-anchor="middle" font-size="10" fill="'+faint+'" font-family="Arial">'+shortDay(p.day)+'</text>';
+  });
+  document.getElementById("spark").innerHTML=s;
+}
+
+function drawRank(){
+  var rows=TONIGHT.map(function(q){return {q:q,v:vals[q.id]};}).filter(function(r){return r.v;})
+                  .sort(function(a,b){return b.v-a.v;});
+  if(!rows.length){document.getElementById("rank").innerHTML="";return;}
+  function line(lbl,r){
+    var ten=TENETS[r.q.tenet_code]||{}, ar=AREAS[ten.area_code]||{};
+    var col=AREACOL[ten.area_code]||"#8a93a1";
+    return '<div class="r"><span class="swatch" style="background:'+col+'"></span><span><b>'+lbl+'</b> '+
+      '<span class="m">'+esc(ar.label||"Unfiled")+', '+esc(r.q.text)+', scored '+r.v+'</span></span></div>';
+  }
+  document.getElementById("rank").innerHTML=
+    line("Strongest",rows[0])+line("Weakest",rows[rows.length-1])+
+    '<div class="r m" style="margin-top:10px;font-size:12.5px">Over a few weeks this is the useful part. It shows which life area you keep dropping, without you having to notice it yourself.</div>';
+}
+
+document.getElementById("savebtn").onclick=save;
+boot();
+</script>
+
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
