@@ -237,7 +237,11 @@
     document.querySelectorAll('.badge').forEach(function(e){
       if(e.children.length)return;                 /* only plain-text badges */
       var t=(e.textContent||'').trim();
-      var m=t.match(/^(.*\S)\s+(v?\d+(?:\.\d+)*)$/);
+      /* The v is REQUIRED. It used to be optional, so ANY plain-text badge ending
+         in a bare number matched: "Reconciled Aug 13, 2026" on how-we-work.html
+         was rewritten to "Reconciled Aug 13, v2.0" the moment that page declared
+         a version. A date or a count is not a version. Aug 23 2026. */
+      var m=t.match(/^(.*\S)\s+(v\d+(?:\.\d+)*)$/);
       if(!m)return;
       if(m[2]===v)return;
       e.textContent=m[1]+' '+v;
