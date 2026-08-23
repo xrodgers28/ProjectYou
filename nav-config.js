@@ -10,6 +10,9 @@ window.NAV_CONFIG = {
     { "label": "Staging<br>Area", "href": "staging-area.html" },
     { "label": "All<br>ToDos", "href": "all-todos.html" }
   ],
+  "Worksheets": [
+    { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" }
+  ],
   "Habit Modules": [
     { "label": "Cue Cards", "href": "habit-modules.html" }
   ],
@@ -43,7 +46,19 @@ window.NAV_CONFIG = {
    When a group name here has a URL, navpatch.js renders its grey label as a
    clickable link (and marks it active on that page). */
 window.NAV_GROUP_LINKS = {
-  "Habit Modules": "habit-modules.html"
+  "Habit Modules": "habit-modules.html",
+  "Worksheets": "habit-worksheets.html"
+};
+
+/* Rename a group WITHOUT touching a single page.
+   The grey label text is baked into all 45 pages and is also the key that
+   navpatch matches on, so you cannot rename a group by renaming its key here -
+   it would stop matching and the group would go stale. Instead leave the key
+   alone and add a line below: "<key in NAV_CONFIG above>": "<what to display>".
+   navpatch applies this last, so nothing else has to change.
+   Example:  "Habit Modules": "Cue Cards",
+   Delete a line to go back to the original name. */
+window.NAV_GROUP_RENAME = {
 };
 
 /* Maps & Diagrams subsection.

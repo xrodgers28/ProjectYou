@@ -338,3 +338,22 @@
     if(document.body) start(); else document.addEventListener('DOMContentLoaded',start);
   }catch(e){}
 })();
+
+/* ============================================================
+   GROUP RENAME  (layer 4)
+   The grey .pn-label text is hardcoded into every page's markup AND is the key
+   navpatch matches a NAV_CONFIG group on, so a group cannot be renamed from
+   nav-config.js alone - change the key and it simply stops matching.
+   window.NAV_GROUP_RENAME maps  config key -> the text to display.
+   Runs LAST, after the links are filled and after NAV_GROUP_LINKS may have
+   swapped the label for an <a>, so it only ever changes what you READ.
+   Renaming a group is therefore one line in nav-config.js and nothing else.
+   ============================================================ */
+(function(){try{
+  var map=window.NAV_GROUP_RENAME; if(!map)return;
+  var nav=document.querySelector('.pynav'); if(!nav)return;
+  nav.querySelectorAll('.pn-group .pn-label').forEach(function(l){
+    var k=(l.textContent||'').trim();
+    if(Object.prototype.hasOwnProperty.call(map,k)&&map[k])l.textContent=map[k];
+  });
+}catch(e){if(window.console)console.log('nav rename error',e);}})();
