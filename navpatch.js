@@ -1,3 +1,19 @@
+/* EMBEDDED PAGES CARRY NO NAV (Aug 23 2026, Scott: "clicking a sub page in the
+   maps section creates a 2nd main nav row").
+   The Maps hub previews each map in an iframe. The embedded page is a whole
+   page, so it renders its own .pynav underneath the hub's — two identical main
+   navs stacked, plus the maps strip. Any page shown inside any frame gets the
+   same treatment: the frame is a preview, the chrome belongs to the host.
+   Runs FIRST so the nav is never painted, not hidden after the fact. The nav
+   injector below still builds the markup; this only stops it being displayed,
+   so nothing downstream that queries .pynav breaks. */
+(function(){try{
+  if(window.self===window.top)return;
+  var st=document.createElement('style'); st.id='pn-embed-css';
+  st.textContent='.pynav,.msub,.pn-back,.pn-backwrap{display:none!important}';
+  (document.head||document.documentElement).appendChild(st);
+}catch(e){}})();
+
 /* NAV INJECTOR (Aug 21 2026, Scott: "midnight run page has no navigation").
    Some pages were built standalone and never got the shared .pynav markup —
    midnight-run, qs-health, tracker and every session tracker. Every page loads

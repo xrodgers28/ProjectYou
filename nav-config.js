@@ -52,7 +52,7 @@ window.NAV_GROUP_LINKS = {};
 window.MAPS_NAV = {
   "label": "\uD83D\uDDFA Maps",
   "hub": "maps.html",
-  "ver": "Maps v1.4",
+  "ver": "Maps v1.5",
   "items": [
     { "label": "Overview", "href": "maps.html" },
     { "label": "Knowledge Graph", "href": "blueprint.html" },
@@ -60,7 +60,7 @@ window.MAPS_NAV = {
     { "label": "Data Flow Chart", "href": "dfd.html" },
     { "label": "Data Flow Map", "href": "data-flow-map.html" },
     { "label": "Spider Diagram", "href": "knowledge-graph.html" },
-    { "label": "How Content Gets In", "href": "kg-ingest-process.html" }
+    { "label": "Adding new content to Knowledge Graph", "href": "kg-ingest-process.html" }
   ]
 };
 
