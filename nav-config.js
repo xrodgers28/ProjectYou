@@ -10,15 +10,13 @@ window.NAV_CONFIG = {
     { "label": "Staging<br>Area", "href": "staging-area.html" },
     { "label": "All<br>ToDos", "href": "all-todos.html" }
   ],
-  "Worksheets": [
-    { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" }
-  ],
   "Habit Modules": [
-    { "label": "Cue Cards", "href": "habit-modules.html" }
+    { "label": "Cue Cards", "href": "habit-modules.html" },
+    { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" }
   ],
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
-    { "label": "Where I've<br>Been", "href": "where-ive-been.html" }
+    { "label": "Habit Bandit<br>Wheel", "href": "index.html#wheel" }
   ],
   "Parking Lot": [
     { "label": "Bucket<br>List", "href": "my-bucket-list.html" },
@@ -46,8 +44,7 @@ window.NAV_CONFIG = {
    When a group name here has a URL, navpatch.js renders its grey label as a
    clickable link (and marks it active on that page). */
 window.NAV_GROUP_LINKS = {
-  "Habit Modules": "habit-modules.html",
-  "Worksheets": "habit-worksheets.html"
+  "Habit Modules": "habit-modules.html"
 };
 
 /* Rename a group WITHOUT touching a single page.
