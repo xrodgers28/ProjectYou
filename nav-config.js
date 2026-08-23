@@ -123,7 +123,13 @@ window.MAPS_NAV = {
 window.PAGE_VERSIONS = {
   "qs-health.html": "v0.1",
   "tracker.html": "v1.0",
-  "midnight-run.html": "v3.0"
+  "midnight-run.html": "v3.0",
+  /* how-we-work.html shows its version in a .badge, which navpatch does not read as
+     a declaration, so the nav chip sat on a hardcoded v1.5 while the page said v2.0.
+     It has NO row in the pages table, so it cannot be republished from here at all,
+     which is exactly the case this register exists for. If Scott ever uploads that
+     page with a .ver chip in its h1, the page wins and this line can go. */
+  "how-we-work.html": "v2.0"
 };
 
 /* ============================================================
