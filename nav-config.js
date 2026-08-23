@@ -121,6 +121,38 @@ window.PAGE_VERSIONS = {
   "qs-health.html": "v0.1",
   "tracker.html": "v1.0",
   "midnight-run.html": "v3.0",
+
+  /* ---- Site-wide reconciliation, Aug 23 2026 ----------------------------------
+     Audited all 72 pages by running navpatch's own pageVer() logic in a browser
+     rather than grepping, which is what caught that library.html and maps.html
+     were fine and my regex was wrong. Result: nothing on the site displayed a
+     WRONG version, but these 15 pages declared nothing at all. Their version
+     existed only as a literal typed into the nav chip, which is a mirror. Nothing
+     could verify it, and navpatch had nothing to sync from, so any future drift
+     would have been silent, exactly as it was on how-we-work.html.
+
+     Declared here rather than by editing 15 pages: one file instead of fifteen
+     publishes, and the page still wins if it ever grows a real .ver chip, because
+     pageVer() reads PY_VERSION, then the page markup, and only then this map.
+     The values are what each page was already showing, so nothing changed on
+     screen. decade.html and the old compass-sources tracker showed nothing at all
+     and start at v1.0. reconciliation.html read a bare "v1", which the publish
+     guard's regex cannot parse, so it is written properly as v1.0. */
+  "ai.html": "v1.9",
+  "bucket-list.html": "v1.0",
+  "compass.html": "v1.6",
+  "decade.html": "v1.0",
+  "environmental.html": "v1.2",
+  "feed.html": "v1.0",
+  "habit-modules.html": "v4.3",
+  "habit-worksheets.html": "v1.8",
+  "life-snapshot.html": "v1.0",
+  "open-mode.html": "v1.2",
+  "qs-dashboard.html": "v2.6",
+  "reconciliation.html": "v1.0",
+  "recreational.html": "v1.0",
+  "session-tracker-2026-08-18-compass-sources-shipped.html": "v1.0",
+  "takeaways.html": "v2.2",
   /* how-we-work.html shows its version in a .badge, which navpatch does not read as
      a declaration, so the nav chip sat on a hardcoded v1.5 while the page said v2.0.
      It has NO row in the pages table, so it cannot be republished from here at all,
