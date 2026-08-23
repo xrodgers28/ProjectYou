@@ -110,7 +110,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v2.0</span>
+    <span class="pn-ver">v2.1</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -128,7 +128,7 @@
     </div>
 
     <div class="done hidden" id="donecard">
-      <h3>That is today's two.</h3>
+      <h3>That is today's card.</h3>
       <p>Ticked on the Cue Cards board and sent to the Time Bandit Wheel.</p>
       <div class="logrow">
         <span class="lab">How long did that take?</span>
@@ -155,12 +155,14 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ===== Takeaways v2.0 =====
+/* ===== Takeaways v2.1 =====
    v1.3 was a browse-only library: all 58 tiles, any order, no credit. v2.0
-   gives it the Open Mode deck behaviour Scott asked for — TWO TILES A DAY,
-   the rest locked, and finishing the pair ticks the "Takeaways" habit so the
-   card dims on the Cue Cards board and the row lands on the to-do board and
-   the Time Bandit Wheel.
+   gave it the Open Mode deck behaviour Scott asked for. v2.1 fixes the unit:
+   ONE WHOLE CARD A DAY, all 4 or 5 of its tiles, the rest locked. A takeaway
+   card is a single idea told across its tiles, so v2.0's flat two-a-day cut
+   ideas in half — Scott caught it the same day. Twelve cards, twelve days.
+   Finishing the card ticks the "Takeaways" habit so the card dims on the Cue
+   Cards board and the row lands on the to-do board and the Time Bandit Wheel.
 
    Layout is unchanged and still obeys the three rules: one tile at a time,
    the tile IS the card (no wrapper chrome), and the AI Insights navigation at
@@ -182,7 +184,10 @@ const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 var sb=null;
 try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
 
-const HABIT="Takeaways", QS="Takeaways", DECK="takeaways", PER_DAY=2;
+/* v2.1: the daily unit is a WHOLE CARD, not a fixed number of tiles. A takeaway
+   card is one idea told across 4 or 5 tiles, so cutting it at two left an idea
+   half-finished. One card a day, all of its tiles, 12 days to read the library. */
+const HABIT="Takeaways", QS="Takeaways", DECK="takeaways";
 
 const CARDS=[
  {slug:"stability",           name:"Stability",             cat:"Physical Health",      tiles:5},
@@ -207,6 +212,7 @@ TILES.forEach(function(x,i){ x.n=i; });
 const END_TILE={end:true};
 
 let SERVED={}, VIEW=[], idx=0, LOCKED=TILES.length, DECKSTATE=null;
+let CARD=-1, CARDS_READ=0;
 let signedIn=false, ticked=false, habitRow=null, FREE=false;
 
 function url(slug,t){return BASE+slug+'-'+t+'.webp';}
@@ -216,6 +222,14 @@ function todayKey(){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'Americ
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2400);}
 
 /* ---- the deck ---------------------------------------------------------- */
+function tilesOf(ci){ return TILES.filter(function(x){return x.ci===ci;}); }
+function cardComplete(ci){ return tilesOf(ci).every(function(x){return !!SERVED[x.key];}); }
+/* the first card still holding an unseen tile — that is what comes next */
+function nextCardIndex(){
+  for(var i=0;i<CARDS.length;i++) if(!cardComplete(i)) return i;
+  return -1;
+}
+
 async function loadDeck(){
   var t=todayKey();
   var r=await sb.from('deck_progress').select('tile_key,served_on').eq('deck',DECK);
@@ -223,19 +237,26 @@ async function loadDeck(){
   var s=await sb.from('deck_state').select('deck,status,finished_on').eq('deck',DECK).limit(1);
   DECKSTATE=(s.data&&s.data[0])||null;
 
-  var todays=TILES.filter(function(x){return SERVED[x.key]===t;});
-  if(!todays.length){
-    var unseen=TILES.filter(function(x){return !SERVED[x.key];});
-    todays=unseen.slice(0,PER_DAY);
-    if(todays.length){
-      var rows=todays.map(function(x){return {deck:DECK,tile_key:x.key,served_on:t};});
+  /* One card is one day. If anything was dealt today, today's card is whichever
+     card those tiles belong to — reopening the page must never advance a card.
+     Only when nothing has been dealt today do we move to the next one. */
+  var servedToday=TILES.filter(function(x){return SERVED[x.key]===t;});
+  CARD = servedToday.length ? servedToday[0].ci : nextCardIndex();
+
+  if(CARD>=0){
+    /* deal the whole card: stamp today onto any of its tiles not yet served.
+       A card left half-read yesterday is simply re-dealt whole today. */
+    var fresh=tilesOf(CARD).filter(function(x){return !SERVED[x.key];});
+    if(fresh.length){
+      var rows=fresh.map(function(x){return {deck:DECK,tile_key:x.key,served_on:t};});
       var ins=await sb.from('deck_progress').upsert(rows,{onConflict:'deck,tile_key'});
-      if(ins.error){todays=[];}
-      else{todays.forEach(function(x){SERVED[x.key]=t;});}
+      if(!ins.error) fresh.forEach(function(x){SERVED[x.key]=t;});
     }
   }
+
   LOCKED=TILES.filter(function(x){return !SERVED[x.key];}).length;
-  VIEW=todays.slice();
+  CARDS_READ=0; for(var i=0;i<CARDS.length;i++) if(cardComplete(i)) CARDS_READ++;
+  VIEW = CARD>=0 ? tilesOf(CARD) : [];
   if(LOCKED===0)VIEW=VIEW.concat([END_TILE]);
   if(!VIEW.length)VIEW=[END_TILE];
   if(idx>=VIEW.length)idx=0;
@@ -251,7 +272,7 @@ async function markRead(){
 async function rotateBack(){
   var r=await sb.rpc('deck_reset',{p_deck:DECK});
   if(r.error){toast('Could not reset it: '+r.error.message);return;}
-  toast('Back in rotation. Two a day again.');
+  toast('Back in rotation. One card a day again.');
   idx=0; await loadDeck(); render();
 }
 
@@ -299,16 +320,24 @@ function render(){
 
   if(c.end){
     document.getElementById('nowNm').textContent='The whole library';
-    document.getElementById('nowKd').textContent='58 of 58 tiles';
+    document.getElementById('nowKd').textContent=CARDS.length+' cards · '+TILES.length+' tiles';
   } else {
     document.getElementById('nowNm').textContent=CARDS[c.ci].name;
     document.getElementById('nowKd').textContent=CARDS[c.ci].cat;
   }
 
+  /* the progress line counts CARDS, because a card is the unit of a day */
   var ll=document.getElementById('lockline');
-  if(FREE){ ll.textContent='Offline — browsing all '+TILES.length+' tiles. Nothing is being recorded.'; }
-  else if(LOCKED){ ll.textContent=seen+' of '+TILES.length+' tiles so far. Two a day, '+LOCKED+' to go.'; }
-  else { ll.textContent=''; }
+  if(FREE){
+    ll.textContent='Offline — browsing all '+TILES.length+' tiles. Nothing is being recorded.';
+  } else if(c.end){
+    ll.textContent='';
+  } else {
+    var toGo=CARDS.length-CARD-1;
+    var tn=CARDS[CARD].tiles;
+    ll.textContent='Card '+(CARD+1)+' of '+CARDS.length+' — all '+tn+' tiles'+
+      (toGo?('. '+toGo+' card'+(toGo===1?'':'s')+' to go.'):'. The last one.');
+  }
 
   var d='';
   for(var j=0;j<n;j++) d+='<button class="dot'+(j===idx?' on':'')+'" data-i="'+j+'" aria-label="Tile '+(j+1)+' of '+n+'"></button>';
@@ -422,7 +451,7 @@ function freeMode(msg){
 
 async function boot(){
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  document.getElementById('stamp').textContent='Takeaways v2.0 · artwork from the Gold Standard Master Cue Cards Library · as of '+f+' · all times EST';
+  document.getElementById('stamp').textContent='Takeaways v2.1 · artwork from the Gold Standard Master Cue Cards Library · as of '+f+' · all times EST';
   if(!sb){ freeMode('Could not reach the database — browsing all '+TILES.length+' tiles, nothing recorded. Reload to try again.'); return; }
   var s=await sb.auth.getSession();
   if(s.data.session){
