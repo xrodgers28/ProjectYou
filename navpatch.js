@@ -20,14 +20,23 @@
    nav-config.js + navpatch.js, so the cheapest correct fix is to BUILD the nav
    here when it is missing, then let the existing patch below fill in the links.
    Runs first, on purpose: everything after it starts with `if(!nav)return`. */
+/* The canonical nav stylesheet, hoisted out of the injector Aug 23 2026.
+   It used to be added ONLY when navpatch built a nav from scratch. Pages that
+   ship their own .pynav markup but no nav CSS therefore got links with no
+   styling at all: library, nightly-scorecard and recall-game rendered the full
+   21 links as raw underlined blue text. Defining it here lets the repair block
+   at the foot of this file call it for any page whose nav is unstyled. */
+window.__pnNavCss=function(){
+  if(document.getElementById('pn-inject-css'))return;
+  var st=document.createElement('style'); st.id='pn-inject-css';
+  st.textContent='.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;gap:1px}.pynav::-webkit-scrollbar{height:0}.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}.pn-logo img{height:28px;width:auto;display:block}.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}.pn-group.first{border-left:none}.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}a.pn-label{text-decoration:none;cursor:pointer}a.pn-label:hover{color:var(--accent)}a.pn-label.on{color:var(--accent)}.pn-links{display:flex;gap:1px;align-items:stretch}.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}.pn-link:hover{background:#eef2f8;color:#3f6f8f}.pn-link.on{background:#3f6f8f;color:#fff}.pn-link.pn-solo{min-height:31px}.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}.pn-drop{position:relative;display:inline-flex;align-items:stretch}.pn-dropbtn{cursor:pointer;user-select:none}.pn-menu{position:fixed;background:#fff;border:1px solid #e3e7ee;border-radius:9px;box-shadow:0 10px 28px rgba(31,42,68,.16);padding:5px;display:none;flex-direction:column;min-width:200px;z-index:60}.pn-menu.open{display:flex}.pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}';
+  document.head.appendChild(st);
+};
+
 (function(){try{
   if(document.querySelector('.pynav'))return;
   var cfg=window.NAV_CONFIG; if(!cfg)return;
-  if(!document.getElementById('pn-inject-css')){
-    var st=document.createElement('style'); st.id='pn-inject-css';
-    st.textContent='.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;gap:1px}.pynav::-webkit-scrollbar{height:0}.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}.pn-logo img{height:28px;width:auto;display:block}.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}.pn-group.first{border-left:none}.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}a.pn-label{text-decoration:none;cursor:pointer}a.pn-label:hover{color:var(--accent)}a.pn-label.on{color:var(--accent)}.pn-links{display:flex;gap:1px;align-items:stretch}.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}.pn-link:hover{background:#eef2f8;color:#3f6f8f}.pn-link.on{background:#3f6f8f;color:#fff}.pn-link.pn-solo{min-height:31px}.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}.pn-drop{position:relative;display:inline-flex;align-items:stretch}.pn-dropbtn{cursor:pointer;user-select:none}.pn-menu{position:fixed;background:#fff;border:1px solid #e3e7ee;border-radius:9px;box-shadow:0 10px 28px rgba(31,42,68,.16);padding:5px;display:none;flex-direction:column;min-width:200px;z-index:60}.pn-menu.open{display:flex}.pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}';
-    document.head.appendChild(st);
-  }
+  window.__pnNavCss();
   var nav=document.createElement('div'); nav.className='pynav';
   var h='<a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a>';
   var first=true;
@@ -362,3 +371,19 @@
     if(Object.prototype.hasOwnProperty.call(map,k)&&map[k])l.textContent=map[k];
   });
 }catch(e){if(window.console)console.log('nav rename error',e);}})();
+
+
+/* NAV STYLE REPAIR (Aug 23 2026, Scott: "Go" on nav item 102).
+   Runs last, once the links are in. Every page renders the same six groups and
+   21 links already, but three pages carried a hand-written .pynav with no nav
+   stylesheet behind it, so the bar came out as a stack of underlined links.
+   Detect that and add the canonical stylesheet. Pages that already style their
+   own nav are left alone, so this cannot shift the look of the other 69. */
+(function(){try{
+  var nav=document.querySelector('.pynav'); if(!nav) return;
+  var link=nav.querySelector('a.pn-link'); if(!link) return;
+  var navOk=getComputedStyle(nav).display==='flex';
+  var linkOk=getComputedStyle(link).textDecorationLine==='none';
+  if(navOk&&linkOk) return;
+  if(typeof window.__pnNavCss==='function') window.__pnNavCss();
+}catch(e){if(window.console)console.log('nav style repair error',e);}})();
