@@ -72,6 +72,13 @@ p.sub b{color:#2f8f5b}
 .chip .cx:hover{background:#e2b9b3;color:#7a2018}
 .tm{flex:none;font-weight:800;opacity:.75;font-size:9.5px}
 .spanchip{font-weight:700}
+/* Live events are things Scott is TRACKING. They sit dimmed until he stars one
+   to say he is actually going. */
+.chip.notgoing,.lchip.notgoing{opacity:.4}
+.chip .st,.lchip .st{flex:none;width:12px;text-align:center;font-size:10.5px;line-height:1;cursor:pointer;opacity:0;color:#c9a13a}
+.chip:hover .st,.lchip:hover .st{opacity:.8}
+.chip.going .st,.lchip.going .st{opacity:1;color:#E39B1F}
+.chip.going .ct,.lchip.going .ct{font-weight:800}
 .more{display:inline-block;margin-top:2px;font-size:9.5px;font-weight:700;color:#5a5a52;background:#ecece4;border-radius:8px;padding:0 6px;cursor:pointer}
 .more:hover{background:#e2e2d6}
 .evebar{margin:2px -4px 0;padding:2px 4px 3px;border-top:2px solid #8E44AD;background:#EFE2F7;border-radius:0}
@@ -107,6 +114,7 @@ p.sub b{color:#2f8f5b}
 .dot{width:11px;height:11px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.15)}
 .catrow .nm{font-size:12.5px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .catrow .cnt{font-size:10px;color:#aeaea4}
+.catrow .going{font-size:9.5px;font-weight:800;color:#E39B1F}
 .subs{margin:1px 0 3px 30px}
 .cat.collapsed .subs{display:none}
 .subrow{display:flex;align-items:center;gap:6px;padding:2px 4px;font-size:11.5px;color:#555}
@@ -172,6 +180,8 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 .card .acts .hide{background:#B4463A;color:#fff;border-color:#B4463A}
 .card .acts .gg{background:#1a73e8;color:#fff;border-color:#1a73e8}
 .card .acts .q{background:#2F8A5B;color:#fff;border-color:#2F8A5B}
+.card .acts .go1{background:#fff;color:#8a6a14;border-color:#e0c67c}
+.card .acts .go1.on{background:#E39B1F;color:#fff;border-color:#E39B1F}
 .card .acts .close{margin-left:auto}
 .gsel{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:11.5px;color:#666}
 .gsel select{font:inherit;font-size:11.5px;border:1px solid #d7d7cf;border-radius:6px;padding:3px 5px;flex:1;min-width:0}
@@ -216,13 +226,13 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v1.2</span>
+  <span class="pn-ver">v1.3</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v1.2</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
-  <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
+  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v1.3</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
+  <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Live events sit dimmed because they are tour dates you are tracking; star one to say you are going and it comes forward. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
 </div>
 
 <div class="layout">
@@ -282,7 +292,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Calendar v1.2 =====
+/* ===== Project YOU · Calendar v1.3 =====
    Events live in public.calendar_events, layers in public.calendar_categories.
    New in v1.2: sign-in (the Google feed brings personal appointments onto this
    page, so it can no longer be open to anyone with the URL), plain-English add
@@ -357,18 +367,33 @@ function labelOf(e){
   return e.title;
 }
 function hk(e){return e.cat+(e.sub?'|'+e.sub:'');}
+/* Only the Live events layer works this way for now. Everything else is
+   something Scott is doing, not something he is watching. */
+function tracked(e){return e.cat==='Live events';}
+function goCls(e){return tracked(e)?(e.attending?' going':' notgoing'):'';}
+function starHTML(e){
+  if(!tracked(e))return '';
+  return '<span class="st" data-star="'+e.id+'" title="'+(e.attending?'You are going, tap to undo':'Star it if you are going')+'">'+(e.attending?'\u2605':'\u2606')+'</span>';
+}
 function chipHTML(e,span){
-  return '<div class="chip'+(span?' spanchip':'')+'" data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'" style="color:'+catOf(e.cat).color+'">'
+  return '<div class="chip'+(span?' spanchip':'')+goCls(e)+'" data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'" style="color:'+catOf(e.cat).color+'">'
     +'<span class="cd" style="background:'+catOf(e.cat).color+'"></span>'
     +iconHTML(e)
     +(e.start_time?'<span class="tm">'+shortTime(e.start_time)+'</span>':'')
     +'<span class="ct">'+esc(labelOf(e))+'</span>'
+    +starHTML(e)
     +'<span class="cx" data-hide="'+e.id+'" title="Hide this one">&times;</span></div>';
 }
 function liveChipHTML(e){
-  return '<div class="lchip" data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'" style="color:'+catOf(e.cat).color+'">'
+  return '<div class="lchip'+goCls(e)+'" data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'" style="color:'+catOf(e.cat).color+'">'
     +'<span class="ct">'+esc(labelOf(e))+'</span>'
+    +starHTML(e)
     +'<span class="cx" data-hide="'+e.id+'" title="Hide this one">&times;</span></div>';
+}
+function setAttending(id,val){
+  const e=EVENTS.find(x=>x.id===id); if(!e)return;
+  e.attending=val; renderCal(); renderRail(); renderLater();
+  save('calendar_events',{attending:val},'id',id);
 }
 
 function renderCal(){
@@ -419,6 +444,8 @@ function renderCal(){
   const cal=document.getElementById('cal'); cal.innerHTML=html;
   cal.querySelectorAll('.chip,.lchip').forEach(el=>el.onclick=(ev)=>{
     if(ev.target.dataset.hide){setHidden(+ev.target.dataset.hide,true);return;}
+    if(ev.target.dataset.star){const id=+ev.target.dataset.star;
+      setAttending(id,!(EVENTS.find(x=>x.id===id)||{}).attending);return;}
     openEvent(+el.dataset.open);
   });
   cal.querySelectorAll('.more').forEach(el=>el.onclick=()=>openDay(el.dataset.day));
@@ -447,12 +474,16 @@ function highlight(key){
 function renderRail(){
   const r=document.getElementById('rail'); let h="";
   catOrder.forEach(c=>{
-    const cnt=EVENTS.filter(e=>e.cat===c&&visible(e)).length,col=catOf(c).color,subs=subsOf(c),has=subs.length>0;
+    const inLayer=EVENTS.filter(e=>e.cat===c&&visible(e));
+    const cnt=inLayer.length,col=catOf(c).color,subs=subsOf(c),has=subs.length>0;
+    const going=inLayer.filter(e=>tracked(e)&&e.attending).length;
     h+='<div class="cat'+(has?' has':'')+(collapsed[c]?' collapsed':'')+'" draggable="true" data-cat="'+esc(c)+'">'
       +'<div class="catrow" data-hov="'+esc(c)+'"><span class="grip">&#8942;&#8942;</span>'
       +'<span class="caret" data-fold="'+esc(c)+'">'+(collapsed[c]?'&#9656;':'&#9662;')+'</span>'
       +'<span class="dot" style="background:'+col+'"></span>'
-      +'<span class="nm">'+esc(c)+'</span><span class="cnt">'+cnt+'</span>'
+      +'<span class="nm">'+esc(c)+'</span>'
+      +(going?'<span class="going" title="You are going to '+going+'">\u2605'+going+'</span>':'')
+      +'<span class="cnt">'+cnt+'</span>'
       +'<input type="checkbox" data-cat="'+esc(c)+'"'+(enabledCat[c]?' checked':'')+'></div>';
     if(has){h+='<div class="subs">';subs.forEach(s=>{const k=c+"|"+s,on=enabledSub[k]!==false;h+='<div class="subrow" data-hov="'+esc(k)+'"><input type="checkbox" data-sub="'+esc(k)+'"'+(on?' checked':'')+'><span>'+esc(s)+'</span></div>';});h+='</div>';}
     h+='</div>';
@@ -521,9 +552,9 @@ function renderLater(){
   if(!list.length){body.innerHTML='<div class="y27empty">Nothing yet.</div>';return;}
   body.innerHTML=list.map(e=>{
     const tbd=/confirm/i.test(e.notes||'');
-    return '<div class="y27row" data-open="'+e.id+'"><span class="dot" style="background:'+catOf(e.cat).color+'"></span>'
+    return '<div class="y27row'+goCls(e)+'" data-open="'+e.id+'"><span class="dot" style="background:'+catOf(e.cat).color+'"></span>'
       +'<span class="d">'+fmt(e.date)+'</span>'
-      +'<span class="t">'+esc(labelOf(e))+'</span>'
+      +'<span class="t">'+(tracked(e)&&e.attending?'\u2605 ':'')+esc(labelOf(e))+'</span>'
       +(tbd?'<span class="tc">TBD</span>':'')+'</div>';
   }).join('');
   body.querySelectorAll('.y27row').forEach(el=>el.onclick=()=>openEvent(+el.dataset.open));
@@ -582,6 +613,7 @@ function openEvent(id){
       +'</select><button class="q" id="gq" style="font:inherit;font-size:11.5px;border-radius:7px;padding:4px 9px;cursor:pointer;border:1px solid #2F8A5B;background:#2F8A5B;color:#fff">Send</button></div>';
   }
   h+='<div class="acts">'
+    +(tracked(e)?'<button class="go1'+(e.attending?' on':'')+'" id="goBtn">'+(e.attending?'\u2605 You are going':'\u2606 I am going')+'</button>':'')
     +'<a class="btn gg" href="'+esc(gLink(e))+'" target="_blank" rel="noopener">Add to Google now</a>'
     +'<button class="hide" data-id="'+e.id+'">Hide</button>'
     +'<button class="close">Close</button></div>';
@@ -589,6 +621,8 @@ function openEvent(id){
   const pop=document.getElementById('pop');pop.classList.add('on');
   const gq=pop.querySelector('#gq');
   if(gq)gq.onclick=()=>queueToGoogle(id,pop.querySelector('#gcalSel').value);
+  const gb=pop.querySelector('#goBtn');
+  if(gb)gb.onclick=()=>{setAttending(id,!e.attending);openEvent(id);};
   pop.querySelector('.hide').onclick=()=>setHidden(id,true);
   pop.querySelector('.close').onclick=()=>pop.classList.remove('on');
 }
@@ -597,7 +631,7 @@ function openDay(ds){
   const evs=evsOn(ds);
   let h='<h3>'+fmtFull(ds)+'</h3><div class="meta">'+evs.length+' event'+(evs.length!==1?'s':'')+'</div><div class="dl">';
   evs.forEach(e=>{h+='<div class="dli" data-open="'+e.id+'"><span class="cd" style="background:'+catOf(e.cat).color+'"></span>'
-    +'<span class="dt">'+(e.start_time?'<b>'+shortTime(e.start_time)+'</b> ':'')+esc(labelOf(e))+(e.loc?' <span class="dloc">'+esc(e.loc)+'</span>':'')+'</span>'
+    +'<span class="dt"'+(tracked(e)&&!e.attending?' style="opacity:.55"':'')+'>'+(e.start_time?'<b>'+shortTime(e.start_time)+'</b> ':'')+(tracked(e)&&e.attending?'\u2605 ':'')+esc(labelOf(e))+(e.loc?' <span class="dloc">'+esc(e.loc)+'</span>':'')+'</span>'
     +'<span class="x" data-hide="'+e.id+'">&times;</span></div>';});
   h+='</div><div class="acts"><button class="close">Close</button></div>';
   const pop=document.getElementById('pop');document.getElementById('popCard').innerHTML=h;pop.classList.add('on');
@@ -896,7 +930,7 @@ async function load(scroll){
       if(collapsed[c.name]===undefined)collapsed[c.name]=false;});
     EVENTS=re.data.map(e=>({id:e.id,date:e.date,end:e.end_date,start_time:e.start_time,end_time:e.end_time,
       title:e.title,loc:e.loc,cat:e.cat,sub:e.sub,link:e.link,notes:e.notes,icon:e.icon,logo:e.logo,
-      hidden:!!e.hidden,readonly:!!e.readonly,gcal_status:e.gcal_status,gcal_calendar_id:e.gcal_calendar_id,gcal_error:e.gcal_error}));
+      hidden:!!e.hidden,attending:!!e.attending,readonly:!!e.readonly,gcal_status:e.gcal_status,gcal_calendar_id:e.gcal_calendar_id,gcal_error:e.gcal_error}));
     EVENTS.forEach(e=>{if(e.sub&&enabledSub[e.cat+"|"+e.sub]===undefined)enabledSub[e.cat+"|"+e.sub]=true;});
     const yrs=EVENTS.map(e=>+String(e.date).slice(0,4));
     const ty=+todayET().slice(0,4);
