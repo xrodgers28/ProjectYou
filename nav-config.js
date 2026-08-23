@@ -47,20 +47,21 @@ window.NAV_GROUP_LINKS = {};
 
 /* Maps & Diagrams subsection.
    No dropdown: the top nav links straight to the Overview hub (maps.html), and
-   navpatch.js renders THIS list as a horizontal strip on the five sub pages.
+   navpatch.js renders THIS list as a horizontal strip on the six sub pages.
    One list, two places, so the strip can never drift from the nav again.
    Add a new map here and it appears on every sub page automatically. */
 window.MAPS_NAV = {
   "label": "\uD83D\uDDFA Maps",
   "hub": "maps.html",
-  "ver": "Maps v1.3",
+  "ver": "Maps v1.4",
   "items": [
     { "label": "Overview", "href": "maps.html" },
     { "label": "Knowledge Graph", "href": "blueprint.html" },
     { "label": "Architecture Map", "href": "architecture-map.html" },
     { "label": "Data Flow Chart", "href": "dfd.html" },
     { "label": "Data Flow Map", "href": "data-flow-map.html" },
-    { "label": "Spider Diagram", "href": "knowledge-graph.html" }
+    { "label": "Spider Diagram", "href": "knowledge-graph.html" },
+    { "label": "How Content Gets In", "href": "kg-ingest-process.html" }
   ]
 };
 
