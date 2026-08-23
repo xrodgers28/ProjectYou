@@ -170,6 +170,25 @@ tr.grandnote td{background:transparent; color:var(--ink-2); font-size:.79rem; fo
   padding:2px 6px; margin:0 3px 3px 0; color:var(--ink-2); white-space:nowrap; text-decoration:none}
 a.cardchip:hover{border-color:var(--seg); color:var(--segInk); background:var(--segTint)}
 .cardchip.ext{border-style:dashed; color:var(--muted)}
+.cardchip.movable{cursor:grab}
+.cardchip.dragging{opacity:.4}
+td.route.droptarget, dd.trkcell.droptarget{outline:2px dashed var(--seg); outline-offset:-3px; background:var(--segTint)}
+.addcard{display:inline-block; font-size:.62rem; line-height:1; border:1px dashed var(--line-2);
+  border-radius:99px; padding:4px 7px; margin:2px; background:none; color:var(--muted); cursor:pointer}
+.addcard:hover{border-color:var(--seg); color:var(--segInk); background:var(--segTint); border-style:solid}
+.cardpick{position:absolute; z-index:9999; width:250px; background:var(--sheet); border:1px solid var(--line-2);
+  border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.28); padding:10px 11px;
+  max-height:58vh; overflow-y:auto}
+.cardpick h5{margin:0 0 6px; font-family:"IBM Plex Mono",monospace; font-size:.58rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted); font-weight:600}
+.cardpick h5+h5{margin-top:11px}
+.cardpick .opt{display:flex; align-items:center; gap:7px; padding:4px 5px; border-radius:6px;
+  font-size:.73rem; cursor:pointer; color:var(--ink)}
+.cardpick .opt:hover{background:var(--segTint); color:var(--segInk)}
+.cardpick .opt .bx{width:13px; height:13px; border:1px solid var(--line-2); border-radius:3px; flex:none;
+  display:flex; align-items:center; justify-content:center; font-size:.6rem; line-height:1}
+.cardpick .opt.on .bx{background:var(--seg); border-color:var(--seg); color:#fff}
+.cardpick .done{margin-top:9px; width:100%; font-size:.7rem}
 .autobadge{display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:.58rem; letter-spacing:.06em;
   border-radius:4px; padding:3px 6px; background:#2f6f5e; color:#fff; white-space:nowrap}
 .autobadge.man{background:transparent; border:1px dashed var(--line-2); color:var(--muted)}
@@ -272,12 +291,12 @@ footer{margin-top:20px; font-family:"IBM Plex Mono",monospace; font-size:.71rem;
 .ulbtn:hover{background:var(--soft);border-color:var(--ink-2)}
 </style>
 
-<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v1.4</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v1.5</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
 
 <div class="shell">
   <div class="pillrow">
     <span class="pill">Project YOU</span>
-    <span class="pill">Habit Worksheets v1.4</span>
+    <span class="pill">Habit Worksheets v1.5</span>
     <span class="pill">Aug 23, 2026</span>
     <span class="pill" id="savedPill">Saves to your database</span>
   </div>
@@ -303,17 +322,23 @@ footer{margin-top:20px; font-family:"IBM Plex Mono",monospace; font-size:.71rem;
         <div class="splitrow">
           <div><div class="k">Required ★</div><div class="v" id="reqTotal">0 min</div></div>
           <div><div class="k">Additional active</div><div class="v" id="addTotal">0 min</div></div>
-          <div><div class="k">All seven sheets</div><div class="v" id="allTotal">0 min</div></div>
         </div>
       </div>
 
       <div class="box">
-        <h4>Time Budget Dial</h4>
+        <h4>Total Habit Time, All Seven Sheets</h4>
+        <div class="big" id="allTotal">0 min</div>
+        <div class="small" id="allCopy">Every habit you have switched on, anywhere, comes to about 0 min a day.</div>
         <div class="wheelbox">
           <svg width="136" height="136" viewBox="0 0 150 150" role="img" aria-label="The seven segment Clarity Compass dial. Each section keeps its own slice of the circle. The slice grows outward with the number of active habits in that section, and shows that number. Empty sections stay faint. The centre reads how many of the seven have anything switched on.">
             <g id="wsegs"></g>
           </svg>
           <div class="small" id="wheelNote"></div>
+        </div>
+        <div class="splitrow">
+          <div><div class="k">Sections live</div><div class="v" id="allLit">0 of 7</div></div>
+          <div><div class="k">Habits switched on</div><div class="v" id="allOn">0</div></div>
+          <div><div class="k">Daily habits only</div><div class="v" id="allDaily">0 min</div></div>
         </div>
       </div>
     </div>
@@ -405,13 +430,13 @@ var QUOTE_POOL = {
 };
 
 var SEGMENTS = [
-  {k:'physical', name:'Physical Health Habits', c:'#c05f7a', tint:'#f2d3db', ink:'#853547', ready:true, idx:0, icon:'walk', draft:true},
+  {k:'physical', name:'Physical Health Habits', c:'#c05f7a', tint:'#f2d3db', ink:'#853547', ready:true, idx:0, icon:'walk'},
   {k:'env', name:'Environmental Health Habits', c:'#4fa08a', tint:'#d5e9e7', ink:'#2e6357', ready:true, idx:1, icon:'safari'},
-  {k:'social', name:'Social Well-Being Habits', c:'#5b8fce', tint:'#d6e4f6', ink:'#2f567f', ready:true, idx:2, icon:'tribes', draft:true},
-  {k:'rec', name:'Recreational Health Habits', c:'#e0975a', tint:'#fadfd0', ink:'#8a5527', ready:true, idx:3, icon:'cards', draft:true},
-  {k:'purpose', name:'Sense of Purpose Habits', c:'#cf9088', tint:'#fadada', ink:'#8a4f47', ready:true, idx:4, icon:'pywheel', draft:true},
+  {k:'social', name:'Social Well-Being Habits', c:'#5b8fce', tint:'#d6e4f6', ink:'#2f567f', ready:true, idx:2, icon:'tribes'},
+  {k:'rec', name:'Recreational Health Habits', c:'#e0975a', tint:'#fadfd0', ink:'#8a5527', ready:true, idx:3, icon:'cards'},
+  {k:'purpose', name:'Sense of Purpose Habits', c:'#cf9088', tint:'#fadada', ink:'#8a4f47', ready:true, idx:4, icon:'pywheel'},
   {k:'mental', name:'Mental Fitness', c:'#c6a63f', tint:'#f7f2cf', ink:'#6f5c17', ready:true, idx:5, icon:'bulb'},
-  {k:'emotional', name:'Emotional Health', c:'#7d81c2', tint:'#dcdcf2', ink:'#494c85', ready:true, idx:6, icon:'energy', draft:true}
+  {k:'emotional', name:'Emotional Health', c:'#7d81c2', tint:'#dcdcf2', ink:'#494c85', ready:true, idx:6, icon:'energy'}
 ];
 
 /* The catalogue lives in Supabase: worksheet_rows and worksheet_sections.
@@ -459,14 +484,125 @@ var CARD_LINKS={
   'Where I’ve Been':'where-ive-been.html','Bucket List':'my-bucket-list.html','Todays Tasks':'all-todos.html',
   'Connections':'connections.html','Movies':'movies.html'
 };
-function chips(r){
+function chips(r, i){
   if(!r.cards || !r.cards.length) return '';
   return r.cards.map(function(c){
     var href=CARD_LINKS[c[0]];
-    if(href && !c[1]) return '<a class="cardchip" href="'+SITE+href+'" target="_blank" rel="noopener">'+c[0]+'</a>';
-    return '<span class="cardchip'+(c[1]?' ext':'')+'">'+c[0]+'</span>';
+    var d = (i===undefined) ? '' : ' draggable="true" data-row="'+i+'" data-nm="'+esc(c[0])+'"';
+    if(href && !c[1]) return '<a class="cardchip'+(i===undefined?'':' movable')+'" href="'+SITE+href+'" target="_blank" rel="noopener"'+d+'>'+c[0]+'</a>';
+    return '<span class="cardchip'+(c[1]?' ext':'')+(i===undefined?'':' movable')+'"'+d+'>'+c[0]+'</span>';
   }).join('');
 }
+
+/* ---------- drag a tracker pill from one habit to another ----------
+   Pick up the pill, drop it on another habit's Habit Tracker cell. It leaves
+   the row it came from and joins the row it lands on. Hold Ctrl or Cmd while
+   dropping to copy it instead of moving it. */
+var dragPill = null;
+document.addEventListener('dragstart', function(e){
+  var el = e.target.closest && e.target.closest('.cardchip.movable[data-nm]');
+  if(!el){ dragPill=null; return; }
+  dragPill = {row:+el.dataset.row, nm:el.dataset.nm};
+  el.classList.add('dragging');
+  try{ e.dataTransfer.setData('text/plain', el.dataset.nm); }catch(x){}
+  e.dataTransfer.effectAllowed = 'copyMove';
+});
+document.addEventListener('dragend', function(){
+  dragPill=null;
+  document.querySelectorAll('.dragging').forEach(function(n){ n.classList.remove('dragging'); });
+  document.querySelectorAll('.droptarget').forEach(function(n){ n.classList.remove('droptarget'); });
+});
+function dropZone(e){
+  return e.target.closest && e.target.closest('td.route, dd.trkcell');
+}
+document.addEventListener('dragover', function(e){
+  var z = dropZone(e); if(!z || !dragPill) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = (e.ctrlKey||e.metaKey) ? 'copy' : 'move';
+  z.classList.add('droptarget');
+});
+document.addEventListener('dragleave', function(e){
+  var z = dropZone(e); if(z) z.classList.remove('droptarget');
+});
+document.addEventListener('drop', function(e){
+  var z = dropZone(e); if(!z || !dragPill) return;
+  e.preventDefault(); z.classList.remove('droptarget');
+  var host = z.closest('[data-i]'); if(!host) return;
+  var to = +host.dataset.i, from = dragPill.row, nm = dragPill.nm;
+  var copy = e.ctrlKey || e.metaKey;
+  dragPill = null;
+  if(to === from) return;
+  var src = DATA[cur][from], dst = DATA[cur][to];
+  if(!src || !dst || dst.t === 'group') return;
+  dst.cards = dst.cards || [];
+  if(!dst.cards.some(function(c){ return c[0]===nm; })){
+    var X = (typeof EXTERNAL!=='undefined') ? EXTERNAL : {};
+    dst.cards.push([nm, X[nm]?1:0]);
+    dst.card = cardFor(dst);
+  }
+  if(!copy){
+    src.cards = (src.cards||[]).filter(function(c){ return c[0]!==nm; });
+    src.card = cardFor(src);
+  }
+  render();
+  say('busy', copy ? 'copied '+nm : 'moved '+nm);
+});
+/* ---------- connect a habit to a cue card ----------
+   The chips said where a habit reports to, but there was no way to set them.
+   This adds a "+ connect" button beside them: pick any cue card on the site,
+   or an app you track it in, and the choice saves with the row. */
+function chipsEdit(r, i){
+  return chips(r, i) + '<button class="addcard" onclick="openPicker(event,'+i+')">'+
+    ((r.cards&&r.cards.length)?'+':'+ connect')+'</button>';
+}
+function trackerNames(){
+  var seen={}, on=[], ext=[];
+  Object.keys(CARD_LINKS).forEach(function(n){ if(!seen[n]){ seen[n]=1; on.push(n); } });
+  var X = (typeof EXTERNAL!=='undefined') ? EXTERNAL : {};
+  Object.keys(X).forEach(function(n){ if(!seen[n]){ seen[n]=1; ext.push(n); } });
+  return {on:on.sort(), ext:ext.sort()};
+}
+function closePicker(){
+  var p=document.getElementById('cardpick'); if(p) p.remove();
+}
+function openPicker(ev, i){
+  ev.stopPropagation(); closePicker();
+  var it=DATA[cur][i]; if(!it) return;
+  var has={}; (it.cards||[]).forEach(function(c){ has[c[0]]=1; });
+  var names=trackerNames();
+  function block(title, list){
+    if(!list.length) return '';
+    return '<h5>'+title+'</h5>'+list.map(function(n){
+      return '<div class="opt'+(has[n]?' on':'')+'" onclick="toggleTracker(event,'+i+',\''+
+        n.replace(/'/g,"\\'")+'\')"><span class="bx">'+(has[n]?'✓':'')+'</span>'+esc(n)+'</div>';
+    }).join('');
+  }
+  var p=document.createElement('div');
+  p.className='cardpick'; p.id='cardpick';
+  p.innerHTML = block('Cue cards on the site', names.on) +
+                block('Apps you track it in', names.ext) +
+                '<button class="btn done" onclick="closePicker()">Done</button>';
+  document.body.appendChild(p);
+  var r=ev.target.getBoundingClientRect();
+  var top=r.bottom+window.scrollY+5, left=r.left+window.scrollX;
+  left=Math.min(left, window.scrollX+document.documentElement.clientWidth-262);
+  p.style.top=top+'px'; p.style.left=Math.max(8,left)+'px';
+  p.addEventListener('click', function(e){ e.stopPropagation(); });
+}
+function toggleTracker(ev, i, name){
+  ev.stopPropagation();
+  var it=DATA[cur][i]; if(!it) return;
+  it.cards = it.cards || [];
+  var at=-1; it.cards.forEach(function(c,n){ if(c[0]===name) at=n; });
+  var X = (typeof EXTERNAL!=='undefined') ? EXTERNAL : {};
+  if(at>-1) it.cards.splice(at,1); else it.cards.push([name, X[name]?1:0]);
+  it.card = cardFor(it);
+  render();
+  var btn=document.querySelector('tr[data-i="'+i+'"] .addcard');
+  if(btn) openPicker({stopPropagation:function(){}, target:btn}, i); else closePicker();
+}
+document.addEventListener('click', closePicker);
+
 function autoCell(r){
   return r.auto ? '<span class="autobadge">'+r.auto+'</span>' : '<span class="autobadge man">manual</span>';
 }
@@ -485,7 +621,13 @@ function noteOf(it){
   if(it.notes && it.notes.length) return it.notes[Math.floor(Math.random()*it.notes.length)];
   return it.note || '';
 }
-function pick(k){ cur=k; todayState={}; applySeg(); render(); paintTabs(); }
+function pick(k){
+  cur=k; todayState={}; applySeg(); render(); paintTabs();
+  /* The summary only ever lists what is switched on. Landing on a sheet with
+     nothing on made it look like the sheet was empty, when the habits were
+     sitting one tab over. Show the full list instead. */
+  if(view==='summary' && !rowsOf(cur).some(function(r){ return r.active; })) setView('table');
+}
 
 function applySeg(){
   var s=seg(), r=document.documentElement.style;
@@ -548,8 +690,20 @@ function drawWheel(){
   document.getElementById('wheelNote').innerHTML =
     '<b>'+lit+' of 7 Compass Sections Active</b> · '+tot+' habit'+(tot===1?'':'s')+' switched on<br>'+
     '<span class="wkeys">'+(key||'<i style="opacity:.6">nothing switched on yet</i>')+'</span>'+
-    (off.length?'<span class="woff">Empty: '+off.join(', ')+'</span>':'')+
-    '<span class="woff">Across all seven: <b>'+fmt(at.Daily)+' a day</b> of daily habits, about <b>'+fmt(perDay(at))+' a day</b> all in.</span>';
+    (off.length?'<span class="woff">Empty: '+off.join(', ')+'</span>':'');
+
+  /* the all-seven figure now leads this panel, matching the sheet total opposite */
+  var allOn = 0;
+  Object.keys(DATA).forEach(function(k){
+    DATA[k].forEach(function(it){ if(it.t!=='group' && it.active) allOn++; });
+  });
+  document.getElementById('allTotal').textContent = fmt(perDay(at));
+  document.getElementById('allCopy').textContent =
+    allOn ? 'Every habit you have switched on, anywhere, comes to about '+fmt(perDay(at))+' a day.'
+          : 'Nothing is switched on yet, on any of the seven sheets.';
+  document.getElementById('allLit').textContent = lit+' of 7';
+  document.getElementById('allOn').textContent = allOn;
+  document.getElementById('allDaily').textContent = fmt(at.Daily);
 }
 
 function render(){
@@ -606,7 +760,7 @@ function render(){
         (it.ins?'<button class="shadebtn" onclick="shade(this)">more</button>':'')+'</td>'+
       '<td class="outc" contenteditable data-f="out">'+esc(it.out)+'</td>'+
       '<td class="ident" contenteditable data-f="id">'+esc(it.id)+'</td>'+
-      '<td class="route">'+chips(it)+'</td>'+
+      '<td class="route">'+chipsEdit(it,i)+'</td>'+
       '<td class="auto">'+autoCell(it)+'</td>'+
       CADS.map(function(c){
         return '<td class="cadv"><input type="number" min="0" step="1" value="'+(it.cad===c?(it.time||0):'')+
@@ -624,7 +778,7 @@ function render(){
         (it.ins?'<dt>Insight</dt><dd contenteditable data-f="ins">'+esc(it.ins)+'</dd>':'')+
         (it.out?'<dt>Outcome</dt><dd contenteditable data-f="out">'+esc(it.out)+'</dd>':'')+
         (it.id?'<dt>Identify</dt><dd contenteditable data-f="id" style="font-style:italic">'+esc(it.id)+'</dd>':'')+
-        '<dt>Tracker</dt><dd>'+chips(it)+'</dd>'+
+        '<dt>Tracker</dt><dd class="trkcell">'+chipsEdit(it,i)+'</dd>'+
         '<dt>Auto</dt><dd>'+autoCell(it)+'</dd>'+
       '</dl>'+
       '<div class="rcfoot"><span class="stat">'+(it.cad||'no cadence')+' · '+fmt(it.time)+'</span></div>';
@@ -652,7 +806,6 @@ function render(){
     'Active habits on this sheet come to about '+fmt(perDay(gt))+' a day.';
   document.getElementById('reqTotal').textContent = fmt(perDay(cadTotals(cur,'must')));
   document.getElementById('addTotal').textContent = fmt(perDay(cadTotals(cur,'extra')));
-  document.getElementById('allTotal').textContent = fmt(perDay(allSegTotals()));
 
   drawWheel(); renderToday(); wireDrag();
 }
@@ -970,7 +1123,11 @@ function seedFromPage(){ return Promise.resolve(); }
 var SECTIONS = {};
 var booted = false, snapshot = {};
 
-function snapOf(it){ return JSON.stringify([it.proc,it.tag,it.ic,it.ins,it.out,it.id,it.auto,it.cad,it.time,it.must,it.active,it._sec,it._pos]); }
+/* The fingerprint that decides whether a row needs saving. It has to name
+   every field the sheet can change: cue-card connections were missing, so
+   connecting a habit to a card looked right on screen and was never written. */
+function snapOf(it){ return JSON.stringify([it.proc,it.tag,it.ic,it.ins,it.out,it.id,it.auto,it.cad,it.time,it.must,it.active,it._sec,it._pos,
+  (it.cards||[]).map(function(c){return c[0];}).join('|'), it.card||'']); }
 
 function buildDATA(rows, secs){
   SECTIONS = {};
@@ -1063,8 +1220,12 @@ function saveAll(){
       pos++; it._sec=cur||'General'; it._pos=pos;
       if(!it._id && unnamed(it)){ waiting++; return; }
       var body=itemToRow(it, areaName, it._sec, pos);
-      if(it._id){ if(snapshot[it._id]!==snapOf(it)) puts.push([it, body]); }
-      else posts.push([it, body]);
+      /* stamp the fingerprint of what we are ACTUALLY sending. Stamping it when
+         the request comes back would record edits made while it was in flight,
+         and those edits would then never be saved. */
+      var fp = snapOf(it);
+      if(it._id){ if(snapshot[it._id]!==fp) puts.push([it, body, fp]); }
+      else posts.push([it, body, fp]);
     });
   });
   if(!puts.length && !posts.length){
@@ -1075,11 +1236,11 @@ function saveAll(){
   var jobs = puts.map(function(p){
     return sbFetch('worksheet_rows?id=eq.'+p[0]._id,
       {method:'PATCH', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(p[1])})
-      .then(function(){ snapshot[p[0]._id]=snapOf(p[0]); });
+      .then(function(){ snapshot[p[0]._id]=p[2]; });
   }).concat(posts.map(function(p){
     return sbFetch('worksheet_rows?on_conflict=area,habit',
       {method:'POST', headers:{'Prefer':'resolution=merge-duplicates,return=representation'}, body:JSON.stringify([p[1]])})
-      .then(function(r){ if(r&&r[0]){ p[0]._id=r[0].id; snapshot[r[0].id]=snapOf(p[0]); } });
+      .then(function(r){ if(r&&r[0]){ p[0]._id=r[0].id; snapshot[r[0].id]=p[2]; } });
   }));
   Promise.all(jobs)
     .then(function(){
