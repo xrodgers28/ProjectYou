@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Corpus Recall &middot; ProjectYou</title>
+</head>
+<body>
+<div class="pynav"></div>
+<style>
+  :root{
+    --ink:#1f2a44; --onbg:#1f2a44; --muted:#5b6472; --faint:#9aa6b4;
+    --line:#e3e7ee; --bg:#eef1f6; --card:#fff; --key:#c2c8d1;
+    --sunk:#f6f8fb; --accent:#3f6f8f; --acc:#a35a4e;
+    --good:#2f8f5b; --goodbg:#e6f4ec; --goodline:#9fd6b8;
+    --bad:#c0453b; --badbg:#fbeae8; --badline:#e8b0aa;
+    --warn:#c98a1e; --warnbg:#fdf3e0;
+    --shadow:0 12px 34px rgba(31,42,68,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#1f2a44; --onbg:#e7eaf0; --muted:#5b6472; --faint:#8892a3;
+      --line:#c9d0dc; --bg:#0f1420; --card:#e7eaf0; --key:#b7c0cf;
+      --sunk:#d9dee8; --accent:#3f6f8f; --acc:#a35a4e;
+      --good:#2f8f5b; --goodbg:#d7ecdf; --goodline:#8dc9a9;
+      --bad:#b8433a; --badbg:#f2ddda; --badline:#dda9a2;
+      --warn:#a9741a; --warnbg:#f2e6cd;
+      --noteBg:#f0e9d4; --noteLine:#d8c99c; --shadow:0 12px 34px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#1f2a44; --onbg:#e7eaf0; --muted:#5b6472; --faint:#8892a3;
+    --line:#c9d0dc; --bg:#0f1420; --card:#e7eaf0; --key:#b7c0cf;
+    --sunk:#d9dee8; --accent:#3f6f8f; --acc:#a35a4e;
+    --good:#2f8f5b; --goodbg:#d7ecdf; --goodline:#8dc9a9;
+    --bad:#b8433a; --badbg:#f2ddda; --badline:#dda9a2;
+    --warn:#a9741a; --warnbg:#f2e6cd;
+    --noteBg:#f0e9d4; --noteLine:#d8c99c; --shadow:0 12px 34px rgba(0,0,0,.55);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%}
+  button{font-family:inherit}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+  .wrap{max-width:560px;margin:0 auto;padding:20px 14px 90px}
+  .head{text-align:center;margin-bottom:14px}
+  .kick{font-size:10.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--acc)}
+  h1{font-size:27px;margin:6px 0 0;letter-spacing:-.2px;color:var(--onbg)}
+  .head .sub{font-size:12.5px;color:var(--onbg);opacity:.72;margin-top:6px}
+
+  .bar{display:flex;gap:8px;align-items:center;justify-content:center;margin:14px 0 4px;flex-wrap:wrap}
+  .chip{font-size:11px;font-weight:800;padding:6px 12px;border-radius:999px;background:var(--sunk);
+        color:var(--muted);font-variant-numeric:tabular-nums}
+  .chip.hot{background:var(--goodbg);color:var(--good)}
+  .progress{height:6px;background:var(--sunk);border:1px solid var(--line);border-radius:999px;
+            margin:12px 0 0;overflow:hidden}
+  .progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s}
+
+  .qcard{background:var(--card);border:1px solid var(--key);border-top:3px solid var(--accent);
+         border-radius:16px;box-shadow:var(--shadow);padding:18px 17px 16px;margin-top:14px}
+  .ask{font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc)}
+  .quote{font-size:17px;font-weight:700;line-height:1.36;margin-top:9px}
+  .qlabel{font-size:9.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;
+          color:var(--faint);margin-top:14px}
+  .opts{display:grid;gap:8px;margin-top:8px}
+  .opts button{text-align:left;padding:14px 14px;border:1px solid var(--line);background:var(--card);
+               border-radius:12px;font-size:14.5px;font-weight:700;color:var(--ink);cursor:pointer;
+               min-height:50px;display:flex;align-items:center;gap:10px}
+  .opts button .sw{width:11px;height:11px;border-radius:3px;flex:none}
+  .opts button:hover:not(:disabled){background:var(--sunk)}
+  .opts button:disabled{cursor:default}
+  .opts button.right{background:var(--goodbg);border-color:var(--goodline);color:var(--good)}
+  .opts button.wrong{background:var(--badbg);border-color:var(--badline);color:var(--bad)}
+  .opts button .mk{margin-left:auto;font-size:13px;font-weight:800}
+
+  .reveal{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;font-size:13.5px;color:var(--muted);display:none}
+  .reveal.on{display:block}
+  .reveal b{color:var(--ink)}
+  .reveal .src{font-size:11.5px;color:var(--faint);font-style:italic;margin-top:7px}
+  .next{margin-top:14px;width:100%;padding:14px;border:none;border-radius:999px;background:var(--acc);
+        color:#fff;font-size:15px;font-weight:800;cursor:pointer;min-height:50px}
+
+  .done{background:var(--card);border:1px solid var(--key);border-radius:16px;
+        box-shadow:var(--shadow);padding:20px 18px;margin-top:14px;text-align:center}
+  .done .big{font-size:52px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .done .big small{font-size:19px;color:var(--faint);font-weight:700}
+  .done h3{font-size:16px;margin:10px 0 4px}
+  .done p{font-size:13px;color:var(--muted);margin:0}
+  .breakdown{margin-top:16px;border-top:1px solid var(--line);padding-top:12px;text-align:left}
+  .brow{display:flex;align-items:center;gap:9px;margin-top:8px;font-size:13px}
+  .brow .sw{width:11px;height:11px;border-radius:3px;flex:none}
+  .brow .nm{flex:1}
+  .brow .bar2{width:84px;height:7px;background:var(--sunk);border-radius:999px;overflow:hidden;flex:none}
+  .brow .bar2 i{display:block;height:100%;background:var(--accent)}
+  .brow .pc{width:42px;text-align:right;font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px}
+  .again{margin-top:16px;padding:13px 30px;border:none;border-radius:999px;background:var(--accent);
+         color:#fff;font-size:14.5px;font-weight:800;cursor:pointer;min-height:48px}
+
+  .why{background:var(--sunk);border:1px solid var(--line);border-radius:12px;
+       padding:14px 15px;margin-top:22px;font-size:13.5px;color:var(--muted)}
+  .why b{color:var(--ink)} .why a{color:var(--accent)}
+  .why .lab{font-size:9.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;
+            color:var(--acc);display:block;margin-bottom:6px}
+  .why p{margin:0 0 9px} .why p:last-child{margin:0}
+  .msg{text-align:center;color:var(--onbg);font-size:13px;padding:34px 10px}
+  .stamp{text-align:center;font-size:11px;color:var(--faint);margin-top:24px;font-style:italic;color:var(--onbg);opacity:.55}
+  .ver{display:inline-block;vertical-align:middle;font-size:11px;font-weight:800;letter-spacing:.5px;background:var(--accent);color:#fff;border-radius:999px;padding:2px 9px;margin-left:6px}
+</style>
+
+<div class="wrap">
+  <div class="head">
+    <div class="kick">Clarity Compass &middot; live from your corpus</div>
+    <h1>Corpus Recall <span id="ver" class="ver">v1.0</span></h1>
+    <div class="sub" id="sub">Loading your notes&hellip;</div>
+  </div>
+
+  <div id="app" style="display:none">
+    <div class="bar">
+      <span class="chip" id="cProg">1 of 10</span>
+      <span class="chip" id="cScore">0 right</span>
+      <span class="chip" id="cStreak">streak 0</span>
+    </div>
+    <div class="progress"><i id="prog"></i></div>
+
+    <div class="qcard" id="qcard">
+      <div class="ask" id="ask"></div>
+      <div class="quote" id="quote"></div>
+      <div class="qlabel" id="qlabel"></div>
+      <div class="opts" id="opts"></div>
+      <div class="reveal" id="reveal"></div>
+      <button class="next" id="nextbtn" style="display:none">Next</button>
+    </div>
+  </div>
+
+  <div id="end" style="display:none">
+    <div class="done">
+      <div class="big"><span id="fScore">0</span><small> / 10</small></div>
+      <h3 id="fVerdict"></h3>
+      <p id="fBlurb"></p>
+      <div class="breakdown" id="breakdown"></div>
+      <button class="again" id="againbtn">Play another ten</button>
+    </div>
+  </div>
+
+  <div class="msg" id="msg">Reading your corpus&hellip;</div>
+
+  <div class="why">
+    <span class="lab">Where this came from</span>
+    <p><b>The idea.</b> Scott asked for a game built from two coaching books. The better answer was a game built from
+    <b>all of them</b>. His Knowledge Graph holds notes from fifteen sources mapped onto the seven parts of his Clarity
+    Compass, and until now there was no way to check whether any of it had stuck. Reading is not remembering. So this
+    plays over the whole corpus rather than one book, which also means every source he adds in future arrives with a
+    game already attached, at no extra build cost.</p>
+    <p><b>Why it asks these two questions.</b> Showing a practice and hiding where it came from is retrieval practice:
+    pulling something out of memory strengthens it far more than reading it again does. Asking which life area it belongs
+    to is the more useful of the two, because it tests whether he has internalised his own model rather than just the book.</p>
+    <p><b>What it records.</b> Every answer is logged, so the breakdown at the end shows accuracy by life area. Over a few
+    rounds that reveals which parts of his own Compass he cannot recall, which is a more honest signal than any reading list.
+    Notes answered wrongly are weighted to come back sooner.</p>
+    <p><b>Sources.</b> Everything on screen is live from the Knowledge Graph tables, written and approved over time.
+    Two arrived today: Michael Bungay Stanier, <i>The Coaching Habit</i> (2016) as S13, and Marshall Goldsmith,
+    <i>Triggers: Creating Behavior That Lasts</i> (2015) as S14. The retrieval practice and spacing effects behind the
+    format are long standing findings in cognitive psychology, not a claim from either book.</p>
+  </div>
+
+  <div class="stamp" id="stamp"></div>
+</div>
+
+<script>
+var SB="https://arnjntspmrhigodlssbn.supabase.co";
+var KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+var AREACOL={A1:"#c05f7a",A2:"#4fa08a",A3:"#5b8fce",A4:"#e0975a",A5:"#cf9088",A6:"#c6a63f",A7:"#7d81c2",A0:"#8a93a1"};
+var ROUND=10;
+
+var LINKS=[],TEN={},AREA={},SRC={},AREAS=[],SOURCES=[];
+var deck=[],i=0,score=0,streak=0,best=0,log=[];
+
+function api(p,o){o=o||{};o.headers=Object.assign({apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},o.headers||{});
+  return fetch(SB+"/rest/v1/"+p,o).then(function(r){if(!r.ok)return r.text().then(function(t){throw new Error(r.status+" "+t);});return r.status===204?null:r.json();});}
+function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+function shuffle(a){for(var j=a.length-1;j>0;j--){var k=Math.floor(Math.random()*(j+1));var t=a[j];a[j]=a[k];a[k]=t;}return a;}
+function stampText(){var d=new Date();
+  return d.toLocaleString("en-US",{timeZone:"America/New_York",weekday:"long",month:"short",day:"numeric",year:"numeric"})+" · "+
+    d.toLocaleString("en-US",{timeZone:"America/New_York",hour:"numeric",minute:"2-digit"}).toLowerCase().replace(" ","")+" EST";}
+
+async function boot(){
+  document.getElementById("stamp").textContent="Reading live · "+stampText();
+  try{
+    var r=await Promise.all([
+      api("kg_links?select=id,source_code,tenet_code,headline,insight,practice,is_stub"),
+      api("kg_tenets?select=code,label,area_code&status=eq.active"),
+      api("kg_areas?select=code,label,color,is_inbox&order=sort"),
+      api("kg_sources?select=code,name,author,year&order=sort"),
+      api("recall_attempts?select=link_id,correct&order=id.desc&limit=400")
+    ]);
+    (r[1]||[]).forEach(function(t){TEN[t.code]=t;});
+    (r[2]||[]).forEach(function(a){AREA[a.code]=a; if(!a.is_inbox) AREAS.push(a);});
+    (r[3]||[]).forEach(function(s){SRC[s.code]=s; SOURCES.push(s);});
+    var wrong={};
+    (r[4]||[]).forEach(function(a){ if(a.link_id!=null && !a.correct) wrong[a.link_id]=(wrong[a.link_id]||0)+1; });
+
+    LINKS=(r[0]||[]).filter(function(l){
+      if(l.is_stub) return false;
+      if(!l.practice && !l.insight) return false;
+      var t=TEN[l.tenet_code]; if(!t) return false;
+      var a=AREA[t.area_code]; if(!a||a.is_inbox) return false;
+      return !!SRC[l.source_code];
+    });
+    if(LINKS.length<8) throw new Error("Only "+LINKS.length+" usable notes found.");
+
+    document.getElementById("sub").textContent=
+      LINKS.length+" notes · "+SOURCES.length+" sources · "+AREAS.length+" life areas";
+    document.getElementById("msg").style.display="none";
+    document.getElementById("app").style.display="block";
+    newRound(wrong);
+  }catch(e){ document.getElementById("msg").innerHTML="Could not reach the database.<br>"+esc(e.message); }
+}
+
+/* Notes you have got wrong before are entered twice, so they come round sooner.
+   That is the spacing part: repetition concentrated where recall is weakest. */
+function newRound(wrong){
+  wrong=wrong||window._wrong||{};
+  window._wrong=wrong;
+  var pool=LINKS.slice();
+  LINKS.forEach(function(l){ if(wrong[l.id]) pool.push(l); });
+  deck=shuffle(pool).filter(function(l,ix,arr){return arr.findIndex(function(x){return x.id===l.id;})===ix;}).slice(0,ROUND);
+  i=0;score=0;streak=0;best=0;log=[];
+  document.getElementById("end").style.display="none";
+  document.getElementById("app").style.display="block";
+  render();
+}
+
+function render(){
+  var l=deck[i];
+  var ten=TEN[l.tenet_code], ar=AREA[ten.area_code];
+  var mode = (Math.random()<0.6) ? "area" : "source";
+  l._mode=mode;
+  document.getElementById("cProg").textContent=(i+1)+" of "+deck.length;
+  document.getElementById("cScore").textContent=score+" right";
+  var sc=document.getElementById("cStreak");
+  sc.textContent="streak "+streak; sc.className="chip"+(streak>=3?" hot":"");
+  document.getElementById("prog").style.width=((i)/deck.length*100)+"%";
+
+  document.getElementById("ask").textContent = mode==="area"
+    ? "Which part of your Compass is this?" : "Which source is this from?";
+  document.getElementById("quote").textContent = l.practice || l.insight;
+  document.getElementById("qlabel").textContent = l.practice ? "The practice" : "The insight";
+
+  var opts, correct;
+  if(mode==="area"){
+    correct=ar.code;
+    var others=shuffle(AREAS.filter(function(a){return a.code!==ar.code;})).slice(0,3);
+    opts=shuffle(others.concat([ar])).map(function(a){return {key:a.code,label:a.label,col:AREACOL[a.code]};});
+  } else {
+    correct=l.source_code;
+    var os=shuffle(SOURCES.filter(function(s){return s.code!==l.source_code;})).slice(0,3);
+    opts=shuffle(os.concat([SRC[l.source_code]])).map(function(s){return {key:s.code,label:s.name,col:null};});
+  }
+  l._correct=correct;
+
+  document.getElementById("opts").innerHTML=opts.map(function(o){
+    return '<button data-k="'+o.key+'" onclick="answer(this,\''+o.key+'\')">'+
+      (o.col?'<span class="sw" style="background:'+o.col+'"></span>':'')+
+      '<span>'+esc(o.label)+'</span><span class="mk"></span></button>';
+  }).join("");
+  var rv=document.getElementById("reveal"); rv.className="reveal"; rv.innerHTML="";
+  document.getElementById("nextbtn").style.display="none";
+}
+
+function answer(btn,key){
+  var l=deck[i], ok=(key===l._correct);
+  var ten=TEN[l.tenet_code], ar=AREA[ten.area_code], src=SRC[l.source_code];
+  Array.prototype.forEach.call(document.querySelectorAll("#opts button"),function(b){
+    b.disabled=true;
+    if(b.dataset.k===l._correct){ b.className="right"; b.querySelector(".mk").textContent="correct"; }
+    else if(b===btn){ b.className="wrong"; b.querySelector(".mk").textContent="you picked this"; }
+  });
+  if(ok){ score++; streak++; best=Math.max(best,streak); } else { streak=0; }
+  log.push({link:l,ok:ok,area:ten.area_code});
+  if(!ok) window._wrong[l.id]=(window._wrong[l.id]||0)+1;
+
+  var rv=document.getElementById("reveal");
+  rv.className="reveal on";
+  rv.innerHTML=(l.headline?'<b>'+esc(l.headline)+'</b><br>':'')+
+    (l.insight&&l.practice?esc(l.insight)+"<br>":"")+
+    '<div class="src">'+esc(ar.label)+" · "+esc(ten.label)+" · "+esc(src.name)+
+    (src.author?", "+esc(src.author):"")+(src.year?", "+src.year:"")+" · "+esc(l.source_code)+" "+esc(l.tenet_code)+"</div>";
+  document.getElementById("cScore").textContent=score+" right";
+  var sc=document.getElementById("cStreak");
+  sc.textContent="streak "+streak; sc.className="chip"+(streak>=3?" hot":"");
+  document.getElementById("nextbtn").style.display="block";
+  document.getElementById("nextbtn").textContent=(i===deck.length-1)?"See how you did":"Next";
+
+  api("recall_attempts",{method:"POST",headers:{Prefer:"return=minimal"},
+    body:JSON.stringify([{link_id:l.id,source_code:l.source_code,tenet_code:l.tenet_code,
+      area_code:ten.area_code,mode:l._mode,correct:ok}])}).catch(function(){});
+}
+
+function next(){
+  i++;
+  if(i>=deck.length){ finish(); return; }
+  render();
+  document.getElementById("qcard").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+function finish(){
+  document.getElementById("app").style.display="none";
+  document.getElementById("end").style.display="block";
+  document.getElementById("prog").style.width="100%";
+  document.getElementById("fScore").textContent=score;
+  document.getElementById("fVerdict").textContent =
+    score>=9?"You know your own corpus." : score>=7?"Solid." : score>=5?"Half of it stuck." : "Worth another round.";
+  document.getElementById("fBlurb").textContent =
+    "Best run of "+best+" in a row. The ones you missed will come back sooner.";
+
+  var by={};
+  log.forEach(function(r){ by[r.area]=by[r.area]||{n:0,ok:0}; by[r.area].n++; if(r.ok) by[r.area].ok++; });
+  var rows=Object.keys(by).map(function(k){return {k:k,n:by[k].n,ok:by[k].ok,pc:Math.round(by[k].ok/by[k].n*100)};})
+                 .sort(function(a,b){return a.pc-b.pc;});
+  document.getElementById("breakdown").innerHTML=
+    '<div style="font-size:9.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--faint)">By life area, weakest first</div>'+
+    rows.map(function(r){
+      return '<div class="brow"><span class="sw" style="background:'+(AREACOL[r.k]||"#8a93a1")+'"></span>'+
+        '<span class="nm">'+esc((AREA[r.k]||{}).label||r.k)+'</span>'+
+        '<span class="bar2"><i style="width:'+r.pc+'%"></i></span>'+
+        '<span class="pc">'+r.ok+"/"+r.n+'</span></div>';
+    }).join("");
+}
+
+document.getElementById("nextbtn").onclick=next;
+document.getElementById("againbtn").onclick=function(){newRound();};
+boot();
+</script>
+
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
