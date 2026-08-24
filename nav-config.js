@@ -12,7 +12,8 @@ window.NAV_CONFIG = {
   ],
   "Habit Modules": [
     { "label": "Cue Cards", "href": "habit-modules.html" },
-    { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" }
+    { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
+    { "label": "Approve<br>Sources", "href": "compass-approve.html" }
   ],
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
@@ -36,7 +37,8 @@ window.NAV_CONFIG = {
     { "label": "Guardrails", "href": "guardrails.html" },
     { "label": "Maps &amp;<br>Diagrams", "href": "maps.html" },
     { "label": "Mission<br>Control", "href": "mission.html" },
-    { "label": "Docs<br>Library", "href": "library.html" }
+    { "label": "Docs<br>Library", "href": "library.html" },
+    { "label": "Docs<br>Samples", "href": "docs-samples.html" }
   ]
 };
 
