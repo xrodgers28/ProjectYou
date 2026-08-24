@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2026 Import · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;--amber:#c68a2e;--gold:#d9a400}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:1080px;margin:0 auto;padding:14px 16px 80px}
+  .intro{font-size:13px;color:var(--muted);margin:2px 0 14px;line-height:1.55;max-width:760px}
+  .intro b{color:var(--ink)}
+
+  .stat{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:16px}
+  .stat .s{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 13px;font-size:12px;color:var(--muted)}
+  .stat .s b{color:var(--ink);font-size:15px;display:block;line-height:1.25}
+
+  .sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0;margin-bottom:20px;box-shadow:0 6px 16px rgba(31,42,68,.05);overflow:hidden}
+  .sech{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--line);background:#f8fafc}
+  .sech h2{font-size:15px;color:var(--accent2)}
+  .sech .cnt{font-size:11.5px;font-weight:700;color:#9aa6b4}
+  .sech .sp{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+  .sech button{font-family:inherit;font-size:11.5px;font-weight:700;border-radius:8px;padding:6px 11px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--accent)}
+  .sech button:hover{background:#eef2f8}
+  .sech button.go{background:var(--green);border-color:var(--green);color:#fff}
+  .sech button.go:hover{background:#17734a}
+  .sech button.go[disabled]{background:#c9d2dc;border-color:#c9d2dc;cursor:not-allowed}
+
+  .rows{padding:4px 0}
+  .r{display:flex;gap:9px;align-items:flex-start;padding:10px 15px;border-top:1px dashed #eef1f5;flex-wrap:wrap}
+  .r:first-child{border-top:none}
+  .r.off{opacity:.42}
+  .r.done{background:#f4faf6;opacity:1}
+  .r .ck{width:17px;height:17px;accent-color:var(--green);cursor:pointer;flex:none;margin-top:8px}
+  .r .dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:12px}
+  .dot.hi{background:#2fbf71}.dot.mid{background:#e2a33c}.dot.lo{background:#d1584d}
+  .r .main{flex:1;min-width:230px;display:flex;flex-direction:column;gap:5px}
+  .r input.nm{font-family:inherit;font-size:14px;font-weight:700;color:var(--ink);padding:6px 8px;border:1px solid var(--line);border-radius:8px;width:100%;background:#fff}
+  .r .raw{font-size:11px;color:#9aa6b4}
+  .r .raw i{font-style:normal;color:#b5bec9}
+  .r .note{font-size:11.5px;color:var(--amber);line-height:1.45}
+  .r .fields{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .r input.dt,.r select{font-family:inherit;font-size:12px;padding:6px 7px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff}
+  .r .runs{font-size:11px;font-weight:700;color:var(--accent);background:var(--chip);border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .r .to{font-size:11px;color:#9aa6b4;font-weight:700}
+  .r .flag{font-size:10.5px;font-weight:800;letter-spacing:.4px;border-radius:999px;padding:3px 8px;background:#fdf6e9;color:#8a6218;white-space:nowrap}
+  .r .ok{font-size:11.5px;font-weight:800;color:var(--green);white-space:nowrap;margin-top:9px}
+  .r .drop{font-family:inherit;font-size:11px;font-weight:700;color:#b5bec9;background:none;border:none;cursor:pointer;padding:6px 4px}
+  .r .drop:hover{color:var(--hot)}
+
+  .legend{font-size:11.5px;color:var(--muted);line-height:1.6;padding:11px 15px;background:#f8fafc;border-top:1px solid var(--line)}
+  .legend b{color:var(--ink)}
+  .sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:22px}
+  .feat h3{font-size:12.5px;color:var(--accent);margin-bottom:7px}
+  .feat li{list-style:none;font-size:11.5px;color:var(--muted);line-height:1.55;display:flex;gap:8px;padding:2px 0}
+  .feat .fk{font-weight:800;color:var(--ink);flex:none;min-width:118px}
+
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px 14px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50}.toast.show{opacity:1}
+  .hidden{display:none}
+  .secbar-wrap{max-width:1080px;margin:0 auto;padding:10px 16px 0}
+  .secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .secbar h1{font-size:23px;color:var(--accent)}
+  .secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}
+  @media(max-width:560px){.r .main{min-width:100%}}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>2026 Import</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="secbar-wrap"><div class="secbar"><h1>📥 2026 Import</h1><span class="ver">v1.0</span><span class="date"></span></div></div>
+  <div class="wrap">
+    <div class="intro">Everything read out of your <b>2026 calendar sheet</b>, sitting in a holding pen until you say it is right. Fix a name, change a date, switch a row off — nothing moves until you press <b>Send</b>. Rows that go through land on <b>Social</b> and <b>Movies</b> and disappear from here.
+    <br><br>A word of warning about the sheet: <b>its month headings are wrong.</b> The block labelled &ldquo;January 2025&rdquo; has the weekdays of January 2026, and it drifts from there. Every date below was rebuilt from the weekday row instead, which is internally consistent all the way through.</div>
+
+    <div class="stat" id="stat"></div>
+    <div id="secs"></div>
+
+    <div class="feat">
+      <h3>What everything on this page means</h3>
+      <ul>
+        <li><span class="fk">The tick</span><span>Whether this row gets sent. Rows Claude is unsure about, and the 2025 ones, start switched off.</span></li>
+        <li><span class="fk">Confidence dot</span><span><span class="sw" style="background:#2fbf71"></span>green means the sheet said it plainly. <span class="sw" style="background:#e2a33c"></span>amber means Claude expanded shorthand. <span class="sw" style="background:#d1584d"></span>red means Claude is guessing — read the note first.</span></li>
+        <li><span class="fk">From the sheet</span><span>The cell exactly as you typed it, so you can always see what Claude changed.</span></li>
+        <li><span class="fk">Runs of nights</span><span>A series watched over several evenings is one row, not six. The badge says how many nights, and the second date is the night you finished.</span></li>
+        <li><span class="fk">Send</span><span>Writes the ticked rows to Social or Movies, then clears them from this page. It will not write the same row twice.</span></li>
+        <li><span class="fk">Drop</span><span>Removes a row from the holding pen for good. It never reaches your lists.</span></li>
+      </ul>
+    </div>
+  </div>
+  <div class="badge">2026 Import v1.0</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange(function(_e,_s){if(!_s){var a=document.getElementById('app'),l=document.getElementById('login');
+  if(a){a.classList.add('hidden');}if(l){l.classList.remove('hidden');var er=document.getElementById('loginErr');if(er)er.textContent='Your session expired. Please sign in again.';}}});
+
+let ROWS=[];
+
+const PEOPLE_KINDS=['meeting','call','lunch','dinner','drinks','family','party','group','other'];
+const MOVIE_KINDS=['movie','tv show','documentary'];
+
+const SECS=[
+  {key:'people',icon:'👋',title:'People I met',dest:'Social',destPage:'connections.html',
+   blurb:'Each one becomes a dated entry on your Social page.'},
+  {key:'movies',icon:'🎬',title:'Movies and shows',dest:'Movies',destPage:'movies.html',
+   blurb:'Each one lands in the Seen lane on your Movies page, dated.'}
+];
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function jq(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2600);}
+
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(ymd){if(!ymd)return '';var p=String(ymd).slice(0,10).split('-');if(p.length!==3)return ymd;return MON[(+p[1])-1]+' '+(+p[2])+', '+p[0];}
+
+async function boot(){var r=await sb.auth.getSession();if(r.data&&r.data.session)onLogin(r.data.session);}
+async function signIn(){
+  var email=document.getElementById('email').value.trim(),pass=document.getElementById('pass').value;
+  var res=await sb.auth.signInWithPassword({email:email,password:pass});
+  if(res.error){document.getElementById('loginErr').textContent=res.error.message;return;}
+  onLogin(res.data.session);
+}
+async function onLogin(session){
+  try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  load();
+}
+
+async function load(){
+  var res=await sb.from('import_2026').select('*').is('imported_at',null);
+  if(res.error){toast('Could not load: '+res.error.message);return;}
+  ROWS=res.data||[];
+  render();
+}
+
+function sortRows(items){
+  return items.slice().sort(function(a,b){
+    var x=a.occurred_on||'9999-99-99',y=b.occurred_on||'9999-99-99';
+    return x.localeCompare(y);
+  });
+}
+
+function selOpts(list,cur){
+  return list.map(function(o){return '<option value="'+esc(o)+'"'+(o===cur?' selected':'')+'>'+esc(o)+'</option>';}).join('');
+}
+
+function rowHTML(r,sec){
+  var kinds=sec.key==='people'?PEOPLE_KINDS:MOVIE_KINDS;
+  var cls='r'+(r.include?'':' off');
+  var runword=sec.key==='movies'?(r.occurred_to?' nights':' entries'):' entries';
+  var runs=r.occurrences>1?'<span class="runs">'+r.occurrences+runword+'</span>':'';
+  var to=r.occurred_to?'<span class="to">→</span><input class="dt" type="date" value="'+esc(r.occurred_to)+'" onchange="setField(\''+jq(r.id)+'\',\'occurred_to\',this.value)">':'';
+  var yr=sec.key==='movies'?'<input class="dt" style="width:74px" type="number" placeholder="year" value="'+esc(r.release_year||'')+'" onchange="setField(\''+jq(r.id)+'\',\'release_year\',this.value?+this.value:null)">':'';
+  var flag=r.occurred_on&&r.occurred_on<'2026-01-01'?'<span class="flag">2025</span>':'';
+  return '<div class="'+cls+'" id="row-'+r.id+'">'+
+    '<input class="ck" type="checkbox" '+(r.include?'checked':'')+' onchange="setField(\''+jq(r.id)+'\',\'include\',this.checked)" title="Send this one">'+
+    '<span class="dot '+esc(r.confidence)+'" title="'+(r.confidence==='hi'?'Straight from the sheet':(r.confidence==='mid'?'Claude expanded your shorthand':'Claude is guessing — read the note'))+'"></span>'+
+    '<div class="main">'+
+      '<input class="nm" value="'+esc(r.proposed_name)+'" onchange="setField(\''+jq(r.id)+'\',\'proposed_name\',this.value)">'+
+      '<div class="fields">'+
+        '<input class="dt" type="date" value="'+esc(r.occurred_on||'')+'" onchange="setField(\''+jq(r.id)+'\',\'occurred_on\',this.value||null)">'+to+
+        '<select onchange="setField(\''+jq(r.id)+'\',\'proposed_kind\',this.value)">'+selOpts(kinds,r.proposed_kind)+'</select>'+
+        yr+runs+flag+
+      '</div>'+
+      '<div class="raw">From the sheet: <i>&ldquo;'+esc((r.raw_value||'').trim())+'&rdquo;</i></div>'+
+      (r.note?'<div class="note">'+esc(r.note)+'</div>':'')+
+    '</div>'+
+    '<button class="drop" onclick="drop(\''+jq(r.id)+'\')" title="Remove from the holding pen">Drop</button>'+
+  '</div>';
+}
+
+function render(){
+  var host=document.getElementById('secs');
+  host.innerHTML=SECS.map(function(sec){
+    var items=sortRows(ROWS.filter(function(r){return r.source===sec.key;}));
+    var on=items.filter(function(r){return r.include;}).length;
+    var body=items.length?items.map(function(r){return rowHTML(r,sec);}).join('')
+      :'<div class="r"><div class="main"><div class="raw">Nothing left here. Everything has been sent or dropped.</div></div></div>';
+    return '<div class="sec">'+
+      '<div class="sech"><h2>'+sec.icon+' '+esc(sec.title)+'</h2>'+
+        '<span class="cnt">'+on+' of '+items.length+' ticked · '+esc(sec.blurb)+'</span>'+
+        '<span class="sp">'+
+          '<button onclick="setAll(\''+sec.key+'\',true)">Tick all</button>'+
+          '<button onclick="setAll(\''+sec.key+'\',false)">Untick all</button>'+
+          '<button class="go" onclick="send(\''+sec.key+'\')"'+(on?'':' disabled')+'>Send '+on+' to '+esc(sec.dest)+'</button>'+
+        '</span></div>'+
+      '<div class="rows">'+body+'</div>'+
+      '<div class="legend">Sent rows land on <b><a href="'+sec.destPage+'" style="color:var(--accent)">'+esc(sec.dest)+'</a></b> and clear from this page.</div>'+
+    '</div>';
+  }).join('');
+  renderStat();
+}
+
+function renderStat(){
+  var p=ROWS.filter(function(r){return r.source==='people';});
+  var m=ROWS.filter(function(r){return r.source==='movies';});
+  var y2026=ROWS.filter(function(r){return r.occurred_on&&r.occurred_on>='2026-01-01';}).length;
+  var y2025=ROWS.filter(function(r){return r.occurred_on&&r.occurred_on<'2026-01-01';}).length;
+  var check=ROWS.filter(function(r){return r.confidence!=='hi';}).length;
+  document.getElementById('stat').innerHTML=
+    '<div class="s"><b>'+p.length+'</b>people waiting</div>'+
+    '<div class="s"><b>'+m.length+'</b>titles waiting</div>'+
+    '<div class="s"><b>'+y2026+'</b>dated in 2026</div>'+
+    '<div class="s"><b>'+y2025+'</b>dated in 2025</div>'+
+    '<div class="s"><b>'+check+'</b>worth a second look</div>';
+}
+
+async function setField(id,field,val){
+  var r=ROWS.find(function(x){return x.id===id;}); if(!r)return;
+  var prev=r[field]; r[field]=val;
+  var patch={}; patch[field]=val;
+  var res=await sb.from('import_2026').update(patch).eq('id',id);
+  if(res.error){r[field]=prev;toast('Did not save: '+res.error.message);render();return;}
+  if(field==='include'){
+    var el=document.getElementById('row-'+id);
+    if(el){if(val)el.classList.remove('off');else el.classList.add('off');}
+    refreshHeads();
+  }
+}
+
+function refreshHeads(){
+  var heads=document.querySelectorAll('.sech');
+  SECS.forEach(function(sec,i){
+    var items=ROWS.filter(function(r){return r.source===sec.key;});
+    var on=items.filter(function(r){return r.include;}).length;
+    var h=heads[i]; if(!h)return;
+    var c=h.querySelector('.cnt'); if(c)c.textContent=on+' of '+items.length+' ticked · '+sec.blurb;
+    var b=h.querySelector('button.go'); if(b){b.textContent='Send '+on+' to '+sec.dest;b.disabled=!on;}
+  });
+}
+
+async function setAll(key,val){
+  var ids=ROWS.filter(function(r){return r.source===key;}).map(function(r){return r.id;});
+  if(!ids.length)return;
+  var res=await sb.from('import_2026').update({include:val}).in('id',ids);
+  if(res.error){toast(res.error.message);return;}
+  ROWS.forEach(function(r){if(r.source===key)r.include=val;});
+  render();
+}
+
+async function drop(id){
+  var r=ROWS.find(function(x){return x.id===id;});
+  var res=await sb.from('import_2026').delete().eq('id',id);
+  if(res.error){toast(res.error.message);return;}
+  ROWS=ROWS.filter(function(x){return x.id!==id;});
+  toast('Dropped '+((r&&r.proposed_name)||'it')+'.');
+  render();
+}
+
+/* ---- sending ----------------------------------------------------------
+   One row at a time, so a single bad row cannot take the batch down with it,
+   and the holding pen is only cleared for rows that actually landed. */
+async function send(key){
+  var items=ROWS.filter(function(r){return r.source===key&&r.include;});
+  if(!items.length){toast('Nothing ticked.');return;}
+  var done=0,merged=0,failed=[];
+
+  for(var i=0;i<items.length;i++){
+    var r=items[i];
+    if(!r.proposed_name||!r.proposed_name.trim()){failed.push('a row with no name');continue;}
+    try{
+      var newId=null;
+      if(key==='people'){
+        var ins=await sb.from('connections').insert({
+          person:r.proposed_name.trim(),
+          kind:r.proposed_kind||'meeting',
+          place:null,
+          notes:noteFor(r),
+          happened_on:r.occurred_on
+        }).select('id').single();
+        if(ins.error)throw ins.error;
+        newId=ins.data.id;
+      }else{
+        var seenOn=r.occurred_to||r.occurred_on;
+        var ex=await sb.from('movies').select('id').ilike('title',r.proposed_name.trim()).limit(1);
+        if(ex.error)throw ex.error;
+        var patch={
+          title:r.proposed_name.trim(),
+          kind:r.proposed_kind||'movie',
+          status:'watched',
+          watched_on:seenOn,
+          release_year:r.release_year,
+          wiki_title:r.wiki_title,
+          notes:noteFor(r),
+          raw_input:(r.raw_value||'').trim(),
+          needs_confirm:r.confidence!=='hi',
+          confirm_note:r.confidence!=='hi'?r.note:null
+        };
+        if(ex.data&&ex.data.length){
+          var up=await sb.from('movies').update(patch).eq('id',ex.data[0].id);
+          if(up.error)throw up.error;
+          newId=ex.data[0].id; merged++;
+        }else{
+          var mi=await sb.from('movies').insert(patch).select('id').single();
+          if(mi.error)throw mi.error;
+          newId=mi.data.id;
+        }
+      }
+      var st=await sb.from('import_2026').update({imported_at:new Date().toISOString(),imported_id:newId}).eq('id',r.id);
+      if(st.error)throw st.error;
+      done++;
+    }catch(e){ failed.push((r.proposed_name||'a row')+' ('+(e.message||e)+')'); }
+  }
+
+  var msg=done+' sent';
+  if(merged)msg+=', '+merged+' merged into a title already on the board';
+  if(failed.length)msg+=' · '+failed.length+' did not go: '+failed[0];
+  toast(msg+'.');
+  load();
+}
+
+/* The note carries the provenance, so a year from now the row still explains
+   where it came from and how many nights it actually took. */
+function noteFor(r){
+  var bits=['From the 2026 calendar sheet: "'+(r.raw_value||'').trim()+'"'];
+  if(r.occurrences>1&&r.occurred_to) bits.push(r.occurrences+' nights, '+fmtDate(r.occurred_on)+' to '+fmtDate(r.occurred_to));
+  else if(r.occurrences>1) bits.push(r.occurrences+' separate entries');
+  if(r.note) bits.push(r.note);
+  return bits.join(' · ');
+}
+
+boot();
+</script>
+<script>(function(){var e=document.querySelector('.secbar .date');if(!e)return;
+ var k=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],p=k.split('-');
+ e.textContent=M[(+p[1])-1]+' '+(+p[2])+', '+p[0];})();</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
