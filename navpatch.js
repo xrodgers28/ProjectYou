@@ -119,7 +119,11 @@ window.__pnNavCss=function(){
     if(a.getAttribute('href')===CFG.hub) a.classList.add('on');
   });
 
-  if(cur===CFG.hub) return;
+  /* The hub used to be the one page in the section WITHOUT the strip, on the
+     reasoning that its cards already are the menu. In practice the strip
+     appearing on six pages and vanishing on the seventh read as a fault, and
+     Scott reported it as missing on Aug 23 2026. It now renders everywhere,
+     with Overview lit on the hub itself. */
   if(document.querySelector('.msub')) return;
 
   if(!document.getElementById('msub-css')){
