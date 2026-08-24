@@ -84,10 +84,9 @@
   .done{max-width:344px;margin:16px auto 0;background:#fff;border:1px solid var(--key);border-radius:14px;padding:15px 16px;text-align:center}
   .done h3{font-size:16px}
   .done p{font-size:12.5px;color:var(--muted);margin-top:5px}
-  .logrow{display:flex;gap:7px;align-items:center;justify-content:center;margin-top:11px;flex-wrap:wrap}
-  .logrow input{width:66px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;text-align:center}
-  .logrow button{padding:9px 15px;border:none;border-radius:9px;background:var(--acc);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
-  .logrow .lab{font-size:12.5px;color:var(--muted)}
+  /* the minute box now lives in the deck footer, on the last tile only, so one
+     press of Finish ticks the habit, logs the minutes and returns to the board. */
+  .minin{width:62px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;text-align:center}
 
   .gate{max-width:340px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(31,42,68,.07)}
   .gate h2{font-size:17px;margin-bottom:4px}
@@ -113,7 +112,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v2.2</span>
+    <span class="pn-ver">v2.3</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -126,17 +125,8 @@
       <div id="tilewrap"></div>
       <div class="foot">
         <button class="back" id="btnBack">Back</button>
+        <input class="minin hidden" id="mins" type="number" min="1" max="180" placeholder="min" title="How long did that take?">
         <button class="next" id="btnNext">Next</button>
-      </div>
-    </div>
-
-    <div class="done hidden" id="donecard">
-      <h3>That is today's card.</h3>
-      <p>Ticked on the Cue Cards board and sent to the Time Bandit Wheel.</p>
-      <div class="logrow">
-        <span class="lab">How long did that take?</span>
-        <input id="mins" type="number" min="1" max="180" placeholder="min">
-        <button onclick="logTime()">Log it</button>
       </div>
     </div>
 
@@ -382,7 +372,10 @@ function render(){
   var nxt=VIEW[(idx+1)%n];
   if(nxt&&!nxt.end){var pre=new Image(); pre.src=url(CARDS[nxt.ci].slug,nxt.ti);}
 
-  document.getElementById('donecard').classList.toggle('hidden',!ticked);
+  /* the minute box only exists on the last tile of a live deck — Finish reads it,
+     logs it and bounces to the board, so there is no separate credit card. */
+  document.getElementById('mins').classList.toggle('hidden', FREE||ticked||!!c.end||idx!==n-1);
+
 }
 
 function step(d){
@@ -410,27 +403,26 @@ async function ensureRow(){
 
 async function finish(){
   if(!sb||!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
-  if(ticked){document.getElementById('donecard').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return;}
+  if(ticked){toBoard();return;}
   var row=await ensureRow(); if(!row)return;
+  var el=document.getElementById('mins'), v=parseInt(el&&el.value,10);
+  var mins=(v>0&&v<=180)?v:(row.actual_minutes||10);
   var now=new Date().toISOString(), today=todayKey();
-  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:row.actual_minutes||10,for_date:today,updated_at:now}).eq('id',row.id);
+  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:mins,for_date:today,updated_at:now}).eq('id',row.id);
   if(res.error){toast('Did not save: '+res.error.message);return;}
   ticked=true; habitRow.done=true; habitRow.for_date=today;
-  render();
-  document.getElementById('donecard').classList.remove('hidden');
-  toast('Takeaways → wheel ✓');
-  window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+  toast('Takeaways \u2192 wheel \u2713'+((v>0&&v<=180)?(', '+mins+' min'):''));
+  toBoard();
 }
 
-async function logTime(){
-  var v=parseInt(document.getElementById('mins').value,10);
-  if(!v||v<1){toast('Put a number of minutes in first.');return;}
-  var row=await ensureRow(); if(!row)return;
-  var now=new Date().toISOString(), today=todayKey();
-  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:v,for_date:today,updated_at:now}).eq('id',row.id);
-  if(res.error){toast('Did not log it: '+res.error.message);return;}
-  ticked=true; toast(v+' min logged to the wheel ✓');
-}
+/* The last tile closes the card and goes back to the Cue Cards board — the same
+   silent 550ms bounce the AI Insights family has always done. Every cue card
+   ends the same way now. The board no-ops on ?done= if the habit is already
+   ticked, so arriving twice is harmless. */
+function toBoard(){setTimeout(function(){location.href='habit-modules.html?done=takeaways';},550);}
+/* Enter in the minute box is the same as pressing Finish. */
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&e.target.id==='mins'){e.preventDefault();finish();}});
+
 
 /* ---- boot -------------------------------------------------------------- */
 async function loadAll(){
@@ -458,7 +450,7 @@ function freeMode(msg){
 
 async function boot(){
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  document.getElementById('stamp').textContent='Takeaways v2.1 · artwork from the Gold Standard Master Cue Cards Library · as of '+f+' · all times EST';
+  document.getElementById('stamp').textContent='Takeaways v2.3 · artwork from the Gold Standard Master Cue Cards Library · as of '+f+' · all times EST';
   if(!sb){ freeMode('Could not reach the database — browsing all '+TILES.length+' tiles, nothing recorded. Reload to try again.'); return; }
   var s=await sb.auth.getSession();
   if(s.data.session){
@@ -476,6 +468,7 @@ document.getElementById('btnBack').onclick=function(){if(!this.disabled)step(-1)
 document.getElementById('btnNext').onclick=function(){step(1);};
 document.getElementById('zoom').onclick=function(){this.classList.remove('on');document.getElementById('zoomimg').src='';};
 document.addEventListener('keydown',function(e){
+  if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'))return;
   var z=document.getElementById('zoom');
   if(e.key==='Escape'&&z.classList.contains('on')){z.classList.remove('on');return;}
   if(z.classList.contains('on'))return;

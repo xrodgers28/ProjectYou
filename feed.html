@@ -76,10 +76,9 @@
   .done{max-width:344px;margin:16px auto 0;background:#fff;border:1px solid var(--key);border-radius:14px;padding:15px 16px;text-align:center}
   .done h3{font-size:16px}
   .done p{font-size:12.5px;color:var(--muted);margin-top:5px}
-  .logrow{display:flex;gap:7px;align-items:center;justify-content:center;margin-top:11px;flex-wrap:wrap}
-  .logrow input{width:66px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;text-align:center}
-  .logrow button{padding:9px 15px;border:none;border-radius:9px;background:var(--acc);color:#fff;font-size:13px;font-weight:800;cursor:pointer}
-  .logrow .lab{font-size:12.5px;color:var(--muted)}
+  /* the minute box now lives in the deck footer, on the last tile only, so one
+     press of Finish ticks the habit, logs the minutes and returns to the board. */
+  .minin{width:62px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;text-align:center}
   .back{display:block;text-align:center;font-size:12.5px;font-weight:800;color:var(--accent);text-decoration:none;margin-top:18px}
   .gate{max-width:340px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(31,42,68,.07)}
   .gate h2{font-size:17px;margin-bottom:4px}
@@ -93,6 +92,7 @@
   .stamp{text-align:center;font-size:11px;color:#9aa6b4;margin-top:26px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="py-day.js"></script>
 </head>
 <body>
   <div class="pynav">
@@ -101,7 +101,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.0</span>
+    <span class="pn-ver">v1.2</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -113,16 +113,6 @@
     </div>
 
     <div id="stage"></div>
-
-    <div class="done hidden" id="donecard">
-      <h3>That is today’s feed.</h3>
-      <p>Ticked on the Cue Cards board and sent to the Time Bandit Wheel. Starred items are in your library.</p>
-      <div class="logrow">
-        <span class="lab">How long did that take?</span>
-        <input id="mins" type="number" min="1" max="180" placeholder="min">
-        <button onclick="logTime()">Log it</button>
-      </div>
-    </div>
 
     <a class="back" href="habit-modules.html">&larr; Back to the Cue Cards board</a>
     <div class="stamp" id="stamp"></div>
@@ -159,16 +149,28 @@ const SRCLINE="Farnam Street &middot; Brain Food, Shane Parrish &middot; S15";
 const SECTIONS=["Tiny Thoughts","Insights","Mental Models","The Knowledge Project","Etcetera","P.S."];
 
 let ITEMS=[], TILES=[], STARRED={}, idx=0, signedIn=false, ticked=false, habitRow=null;
+let ISSUE=null, OLDER=0;
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function todayKey(){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}catch(e){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}}
+/* THE DAY IS DEFINED ONCE, in py-day.js: 2am to 2am Eastern, because Scott works
+   past midnight and that work belongs to the day he started. This page used to
+   carry its own Eastern-midnight formatter, so anything ticked between midnight
+   and 2am filed under tomorrow. Never reimplement it here. Twin: public.py_today(). */
+function todayKey(){return PY.today();}
 function fmtDate(d){if(!d)return '';try{return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric'}).format(new Date(d+'T12:00:00Z'));}catch(e){return d;}}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2600);}
 
 async function loadAll(){
   var r=await sb.from('news_queue').select('id,source,section,title,body,url,published_on,status')
         .eq('source',SOURCE).neq('status','hidden').order('published_on',{ascending:false}).order('id');
-  ITEMS=r.data||[];
+  var all=r.data||[];
+  /* ONE ISSUE AT A TIME. The card used to show every row the queue had ever
+     held, so a week after reading an issue it still led with it and read as
+     stale. Brain Food is a weekly, so the card is the newest issue and nothing
+     else; last week's drops off the moment a new one lands. */
+  ISSUE=all.length?all[0].published_on:null;
+  ITEMS=all.filter(function(x){return x.published_on===ISSUE;});
+  OLDER=all.length-ITEMS.length;
   var f=await sb.from('farnam_street').select('id,section,title');
   STARRED={}; (f.data||[]).forEach(function(x){STARRED[keyOf(x)]=x.id;});
   buildTiles();
@@ -233,7 +235,7 @@ function render(){
   document.getElementById('stage').innerHTML=
    '<div class="deck">'+
     '<div class="dots">'+d+'</div>'+
-    '<div class="lockline">'+esc(c.section)+' &middot; '+c.items.length+' item'+(c.items.length===1?'':'s')+
+    '<div class="lockline">'+(ISSUE?esc(fmtDate(ISSUE))+' issue &middot; ':'')+esc(c.section)+' &middot; '+c.items.length+' item'+(c.items.length===1?'':'s')+
       (kept?' &middot; '+kept+' kept':'')+'</div>'+
     '<div class="tile">'+
       '<div class="top">'+
@@ -245,6 +247,7 @@ function render(){
       '<div class="prac"><div class="lab">How this works</div><div class="txt">Star anything worth keeping. It copies into your Farnam Street library, so reading the card is what builds it.</div></div>'+
     '</div>'+
     '<div class="nav2"><button class="bk" id="bk"'+(idx===0?' disabled':'')+'>&larr; Back</button>'+
+      (idx===n-1&&!ticked&&!c.done?'<input class="minin" id="mins" type="number" min="1" max="180" placeholder="min" title="How long did that take?">':'')+
       '<button class="nx" id="nx">'+(idx===n-1?'Finish':'Next')+'</button></div>'+
    '</div>';
 
@@ -258,7 +261,6 @@ function render(){
       if(it)toggleStar(it);
     };
   });
-  document.getElementById('donecard').classList.toggle('hidden',!ticked);
 }
 
 async function toggleStar(it){
@@ -291,26 +293,26 @@ async function ensureRow(){
 
 async function finish(){
   if(!sb||!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
-  if(ticked){document.getElementById('donecard').classList.remove('hidden');window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});return;}
+  if(ticked){toBoard();return;}
   var row=await ensureRow(); if(!row)return;
+  var el=document.getElementById('mins'), v=parseInt(el&&el.value,10);
+  var mins=(v>0&&v<=180)?v:(row.actual_minutes||10);
   var now=new Date().toISOString(), today=todayKey();
-  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:row.actual_minutes||10,for_date:today,updated_at:now}).eq('id',row.id);
+  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:mins,for_date:today,updated_at:now}).eq('id',row.id);
   if(res.error){toast('Did not save: '+res.error.message);return;}
   ticked=true; habitRow.done=true; habitRow.for_date=today;
-  document.getElementById('donecard').classList.remove('hidden');
-  toast('The Feed to the wheel ✓');
-  window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+  toast('The Feed \u2192 wheel \u2713'+((v>0&&v<=180)?(', '+mins+' min'):''));
+  toBoard();
 }
 
-async function logTime(){
-  var v=parseInt(document.getElementById('mins').value,10);
-  if(!v||v<1){toast('Put a number of minutes in first.');return;}
-  var row=await ensureRow(); if(!row)return;
-  var now=new Date().toISOString(), today=todayKey();
-  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:v,for_date:today,updated_at:now}).eq('id',row.id);
-  if(res.error){toast('Did not log it: '+res.error.message);return;}
-  ticked=true; toast(v+' min logged to the wheel ✓');
-}
+/* The last tile closes the card and goes back to the Cue Cards board — the same
+   silent 550ms bounce the AI Insights family has always done. Every cue card
+   ends the same way now. The board no-ops on ?done= if the habit is already
+   ticked, so arriving twice is harmless. */
+function toBoard(){setTimeout(function(){location.href='habit-modules.html?done=feed';},550);}
+/* Enter in the minute box is the same as pressing Finish. */
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&e.target.id==='mins'){e.preventDefault();finish();}});
+
 
 async function signIn(){
   var email=document.getElementById('email').value.trim(), pass=document.getElementById('pass').value;
@@ -322,7 +324,7 @@ async function signIn(){
 
 async function boot(){
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  document.getElementById('stamp').textContent='The Feed v1.0 · '+f+' · all times EST';
+  document.getElementById('stamp').textContent='The Feed v1.2 · '+f+' · all times EST';
   if(!sb){document.getElementById('stage').innerHTML='<div class="done"><h3>Could not reach the database</h3><p>Reload to try again.</p></div>';return;}
   var s=await sb.auth.getSession();
   if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadAll();}
@@ -330,6 +332,7 @@ async function boot(){
 }
 document.addEventListener('keydown',function(e){
   if(!TILES.length)return;
+  if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='SELECT'))return;
   if(e.key==='ArrowLeft'&&idx>0){e.preventDefault();idx--;render();}
   else if(e.key==='ArrowRight'&&idx<TILES.length-1){e.preventDefault();idx++;render();}
 });

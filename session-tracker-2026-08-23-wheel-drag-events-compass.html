@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Summary Page · TEMPLATE</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#20242b;--muted:#6b7280;--line:#e7e9ee;--bg:#fbfbfa;--card:#fff;--accent:#3f6f8f;--hub:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--blue:#3f6f8f;--red:#c0453b;--amber:#c68a2e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.25;padding:18px 16px 210px}
+  .head{max-width:1160px;margin:0 auto}
+  h1{font-size:22px;color:var(--hub);font-weight:800}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 10px;margin-top:7px;background:#eef7f1;color:var(--green);border:1px solid #cfe9db}
+  .chip.off{background:#fbe7e5;color:var(--red);border-color:#f0cfcb}
+  .sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.4;max-width:820px}
+  h2{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--hub);max-width:1160px;margin:18px auto 6px}
+  .tbl{max-width:1160px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .r{display:grid;grid-template-columns:34px 1fr 128px 150px 260px;align-items:flex-start;border-bottom:1px solid var(--line);transition:opacity .25s,max-height .3s,padding .3s;max-height:900px;overflow:hidden}
+  .r:last-child{border-bottom:none}
+  .r.hd{background:#f4f5f7;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);align-items:center}
+  .r.gone{opacity:0;max-height:0;border:none}
+  .c{padding:9px 14px}
+  .c.lt{padding:12px 0 9px 12px}
+  .dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .dot.green{background:var(--green)} .dot.amber{background:#e08b1f} .dot.red{background:var(--red)}
+  .r.hd .c.lt{padding-left:12px}
+  .legend{max-width:1160px;margin:10px auto 0;display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);font-weight:700;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;font-style:normal}
+  .asof{max-width:1160px;margin:14px auto 0;font-size:12.5px;font-style:italic;color:#808080}
+  .c.mid,.c.act,.c.next{padding:9px 12px}
+  .task .tt{color:var(--accent);text-decoration:none;font-size:14px;font-weight:700;line-height:1.2;border-bottom:1px solid #cfdae5}
+  .task .tt:hover{border-bottom-color:var(--accent)}
+  .task .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
+  .pill.green{background:var(--green)} .pill.blue{background:var(--blue)} .pill.red{background:var(--red)} .pill.amber{background:var(--amber)}
+  .act{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .got{font-weight:800;font-size:12.5px;border:1.5px solid var(--green);background:#fff;color:var(--green);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .yn{font-weight:800;font-size:12.5px;border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .yn.yes.on{background:var(--green);border-color:var(--green);color:#fff} .yn.no.on{background:var(--red);border-color:var(--red);color:#fff}
+  .ynrow{display:flex;gap:6px}
+  .notelink{font-size:11.5px;font-weight:700;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:0}
+  .notelink:hover{color:var(--accent)}
+  .nt{width:100%;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:30px;margin-top:2px}
+  .hidden{display:none}
+  .next{font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .next.none{color:#a7adb6}
+  .next.todo{background:#fdf6e9;color:#5c4a24;border-left:3px solid var(--amber)}
+  .next .nh{display:block;font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+  .next ol{margin:0 0 0 16px;padding:0}
+  .next ol li{margin:0 0 5px;line-height:1.4}
+  .next ol li:last-child{margin-bottom:0}
+  .next .lead{display:block;margin-bottom:4px}
+  .next code{background:#fff;border:1px solid #e2d9c2;border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+  .next a{color:var(--accent);font-weight:700}
+  .mins{display:inline-block;font-weight:800;font-size:10.5px;color:var(--muted);background:var(--chip);border-radius:999px;padding:2px 7px;margin-left:4px}
+  .allclear{max-width:1160px;margin:0 auto;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  @media(max-width:900px){
+    .r{grid-template-columns:22px 1fr auto}
+    .c.lt{grid-row:span 2}
+    .c.act,.c.next{grid-column:1/-1;border-top:1px solid var(--line)}
+    .c.act{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .r.hd{display:none}
+  }
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(31,42,68,.10);padding:9px 16px}
+  .dock .bar{max-width:1160px;margin:0 auto}
+  .dock .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:10px;flex-wrap:wrap}
+  .dock .top b{font-size:12.5px;color:var(--hub)}.dock .hint{font-size:11px;color:var(--muted)}
+  #out{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;border:1px solid var(--line);border-radius:10px;padding:8px;height:80px;resize:vertical;background:#fbfcfe;color:var(--ink)}
+  .copybtn{font-weight:700;font-size:12px;border:1px solid var(--line);background:var(--chip);color:var(--accent);border-radius:9px;padding:6px 11px;cursor:pointer;margin-top:5px}
+  /* THE VERSION BADGE. Every page on the site carries one, session trackers included,
+     and the site-wide check reports any page that does not. It lives in the h1 because
+     that is the one place navpatch.js reads as the DECLARATION; the chip in the nav is
+     only a mirror of it. Bump it if you revise a tracker after publishing. */
+  h1 .ver{font-size:11px;font-weight:700;color:var(--muted);vertical-align:middle;
+    margin-left:9px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;
+    background:var(--card);letter-spacing:.02em}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Session Tracker <span class="ver">v1.0</span></h1>
+  <div class="meta">Project YOU OS · Aug 23, 2026 · The wheel learned to be dragged, to take any event you type, and to file that time under a compass area</div>
+  <div id="syncchip" class="chip">connecting...</div>
+  <div class="sub">Three things you asked for tonight: drag a slice of the wheel to a different time, add your own events to the LOG TIME box, and tag those events with one of the seven compass areas so they land in the Core habits list. The first two are live. The third is built and tested and waiting for you to upload one file. Three rows need you, everything green is finished and needs nothing.</div>
+<div class="legend"><span><i style="background:#1e8e5a"></i>Done</span><span><i style="background:#e08b1f"></i>Awaiting your comments</span><span><i style="background:#c0453b"></i>Not started</span></div>
+<div class="asof">As of August 23rd</div>
+
+<h2>Work this session · <span id="leftct"></span></h2>
+<div class="tbl" id="tblWork"><div class="r hd"><div class="c lt"></div><div class="c">Input / Task</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+<div id="allclear" class="allclear hidden"></div>
+
+<h2>Your call · decisions</h2>
+<div class="tbl" id="tblLater"><div class="r hd"><div class="c lt"></div><div class="c">Item</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+
+<div class="dock"><div class="bar">
+  <div class="top"><b>Your responses (live)</b><span class="hint">saved automatically · this box is the fallback</span></div>
+  <textarea id="out" readonly></textarea>
+  <button class="copybtn" onclick="copyOut()">Copy</button>
+</div></div>
+
+<script>
+const SLUG='2026-08-23-wheel-drag-events-compass';  // must match the filename stem
+const SITE='https://xrodgers28.github.io/ProjectYou/';
+const WHEEL=SITE+'index.html#wheel';
+const BOARD=SITE+'index.html';
+const UPLOAD='computer:///Users/scottyex/Documents/SER%20FILES/CoWork/_upload-to-github/index.html';
+const GH='https://github.com/xrodgers28/ProjectYou';
+const TRACKERS=SITE+'session-tracker.html';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+
+/* ===========================================================================
+   SESSION SUMMARY PAGE, THE TEMPLATE
+   Canonical format, adopted Aug 16, 2026. Copy this file, change only the rows,
+   the title, the meta line and the sub line. Never redesign the layout.
+
+   Filename:  session-tracker-YYYY-MM-DD-<topic-slug>.html
+   Saves to:  the project folder, and delivered in chat
+   SLUG:      must match the filename stem, it keys session_content per session
+
+   THE VERSION BADGE in the h1 is REQUIRED, not decoration. Every page on the site
+   carries one and the wrap's site check reports any page missing it. Keep v1.0 on a
+   fresh tracker; bump it only if you revise that tracker after publishing.
+
+   FIVE COLUMNS: traffic light, Input / Task, Status, Your call, What you do next.
+   light:  'green' = done, 'amber' = awaiting Scott's comments, 'red' = not started
+   pill:   'green' Live/Done, 'blue' Built, 'red' Blocked, 'amber' Awaiting you
+   decide:true  gives Yes / No instead of Got It, for a real fork
+   todo:true    plus lead + steps gives the amber Your Move box, click by click
+   mins:   rough minutes for Scott, '' when there is nothing to do
+
+   WORK holds what happened. LATER holds what needs him. Write like a person:
+   lead with the point, no jargon, no em-dashes, dates as "Aug 16, 2026".
+   =========================================================================== */
+const WORK=[
+  {item:SLUG+'::drag', label:'Any slice of today can be dragged round the clock to a different time', url:WHEEL, pill:'green', ptext:'Live', light:'green',
+   desc:'Your example was the date with Asa: it read as finishing at 4.48pm and you wanted it at 3pm. Press and hold a slice on the outer ring and move it, and it snaps to the nearest quarter hour. A hand logged block moves when it started, a ticked task moves when it was done. Today only, and no undo, both your call. A tap still just shows the tooltip, so you cannot move something by accident.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::newevent', label:'The LOG TIME box takes anything you type, not just the eight fixed lines', url:WHEEL, pill:'green', ptext:'Live', light:'green',
+   desc:'There is a name box at the bottom of LOG TIME with an Add an event button. Type a name, press Add, and you get the same hours, minutes and start time boxes as every other line. It is a one off, gone tomorrow, unless you tap the small star beside its name, which keeps it for every day. The colour is worked out from the name, so the same event is always the same colour and starring it never changes how it looks. The kept list lives in the database, not in the page, so adding a permanent line never needs the page rebuilt.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::compass', label:'Every line in LOG TIME now carries a compass tag, and that time shows in the Core habits list', url:UPLOAD, pill:'blue', ptext:'Built, not published', light:'amber',
+   desc:'A small box beside each name holds one of your seven compass areas. I started the eight built in lines off already tagged, so the whole day lands somewhere rather than only the events you type in. Anything with time against it now appears in the Core habits list under its area, marked LOGGED so you can tell it from a ticked habit. Cooking with Carson, tagged Social, lands in the Social group. This is the one thing tonight that is not live: it is version 5.41 and it needs one upload from you.',
+   next:'See the upload row in Your call below.', mins:'2'},
+
+  {item:SLUG+'::centre', label:'The number in the middle of the wheel now counts your whole day', url:WHEEL, pill:'blue', ptext:'Built, not published', light:'amber',
+   desc:'You chose this when I asked. It used to count ticked habits only. It now counts every minute you have accounted for, and it matches the Total at the foot of the Core habits list exactly, so if those two ever disagree something is being counted twice. Because it no longer means habits, I relabelled it TIME BANDIT and segments tracked. You confirmed tonight that you want to keep that name. It ships with the same upload as the row above.',
+   next:'Nothing beyond the upload.', mins:''},
+
+  {item:SLUG+'::sevenareas', label:'Three of your seven compass areas had no colour band, so three real habits were being dumped in OTHER', url:UPLOAD, pill:'blue', ptext:'Built, not published', light:'amber',
+   desc:'Environmental Health, Recreational Health and Sense of Purpose were never given a style in the Core habits list, so anything filed under them fell into the grey OTHER group. Your daily template has two Recreational habits and one Sense of Purpose habit sitting there right now. All seven areas have their own band from this version on. I found this while wiring up the tags, not by looking for it.',
+   next:'Nothing beyond the upload.', mins:''},
+
+  {item:SLUG+'::stalefetch', label:'GitHub handed back a copy three versions old, minutes after your upload landed', url:GH, pill:'green', ptext:'Found and fixed', light:'green',
+   desc:'When you said index committed, the publishing tool asked GitHub for the file and was given version 5.37, from a cache, while the real file on GitHub was already 5.40. If I had trusted it I would have told you your upload had failed and asked you to do it again. Adding a cache buster fixed it on the retry, and I have written the trap down so no session mistakes a stale read for a failed upload. The rule now is to check GitHub directly before ever telling you an upload did not land.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::harness', label:'My own tests had been passing without testing anything, and I did not notice for an hour', url:BOARD, pill:'green', ptext:'Fixed', light:'green',
+   desc:'My side of this. The test copy of the page loads two things from the internet, and the container has no internet, so one of them failed and quietly killed the whole page script. Every test came back empty and looked like a broken wheel rather than a broken test. Separately, the sample data had nothing dated today, so the drag tests were reporting a pass while exercising nothing at all. Both are fixed and both are written down. Everything shipped tonight was tested against a fixed harness, not the broken one.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::sitehealth', label:'Site health sweep came back clean across all 72 pages', url:TRACKERS, pill:'green', ptext:'Done', light:'green',
+   desc:'Every published page was fetched from GitHub and rendered. Zero version badges disagreeing with each other, zero pages with no version at all, zero broken internal links, zero pages missing the shared menu, zero pages that fail to load. The plain text scan flagged five pages as having no version, and all five were false alarms: the shared script fills those in when the page loads, which is exactly why this sweep renders pages instead of reading their source.',
+   next:'Nothing.', mins:''},
+];
+
+const LATER=[
+  {item:SLUG+'::upload541', label:'Upload index.html version 5.41 so the compass tags go live', url:UPLOAD, pill:'amber', ptext:'Awaiting you', light:'amber',
+   desc:'Everything in the three blue rows above is in this one file. Until it goes up, the site still runs version 5.40, which has the dragging and your own events but no compass tags and no logged time in the Core habits list. Tonight\'s tracker page is in the same folder, so one upload ships both.',
+   todo:true, lead:'Four steps, about two minutes',
+   steps:['In Finder, open Documents, then SER FILES, then CoWork, then _upload-to-github. There are two files in it, index.html and session-tracker-2026-08-23-wheel-drag-events-compass.html. Nothing else is in that folder, so take both.',
+          'Open github.com/xrodgers28/ProjectYou in your browser and make sure you are on the main branch.',
+          'Press Add file, choose Upload files, and drag both files in at once. Then press Commit changes.',
+          'Tell me it is committed and I will publish it and check it landed, the same as tonight.'],
+   mins:'2'},
+
+  {item:SLUG+'::tagcalls', label:'Confirm the two compass tags I picked for you', url:WHEEL, pill:'amber', ptext:'Awaiting you', light:'amber', decide:true,
+   desc:'Six of the eight were obvious: Eating to Physical, Family and Seeing People to Social, Amazon and Project You to Purpose. Two were a judgement call and I made them without asking. Personal I tagged Emotional Health, on the reading that Personal time is self care rather than errands. Other tasks I left with no tag at all, so it lands in the grey OTHER group rather than pretending to belong somewhere. Both are changeable from the box beside the name, at any time, and the change saves instantly.',
+   next:'Yes and I leave them alone. No and tell me what each should be, and I will set them for you rather than making you click.', mins:'1'},
+
+  {item:SLUG+'::wrapowner', label:'Two chats wrapped this project ten minutes apart tonight. Should one chat own the wrap?', url:TRACKERS, pill:'amber', ptext:'Awaiting you', light:'amber', decide:true,
+   desc:'This is the fourth time. Tonight another chat wrote your hours and accomplishments at 9.08pm and I wrote mine at 9.20pm. Nothing was lost, because both of us read the file again immediately before writing and added rather than replaced, and both of us landed on 5.5 hours anyway. But that only holds because of a habit, not a rule, and a single careless overwrite would take the day with it. The alternative is that one chat runs the wrap and the others report into it.',
+   next:'Yes and I will write the rule that one chat owns the wrap for a project. No and I will leave it as it is, and keep flagging it each time it happens.', mins:'1'},
+];
+
+const ALL=[...WORK,...LATER];
+const state={}; ALL.forEach(x=>state[x.item]={choice:'',note:'',got:false});
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const TODAY=ymd(new Date());
+let sb=null; try{ sb=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co',KEY); }catch(e){}
+function chip(ok){const c=document.getElementById('syncchip');if(ok){c.textContent='saved. Claude can see it';c.className='chip';}else{c.textContent='offline: copy the box below';c.className='chip off';}}
+function nextCell(x){
+  const mins=x.mins?'<span class="mins">'+x.mins+' min</span>':'';
+  if(x.steps){
+    const lead=x.lead?'<span class="lead">'+x.lead+'</span>':'';
+    return '<div class="c next todo"><span class="nh">Your move</span>'+lead+
+           '<ol>'+x.steps.map(t=>'<li>'+t+'</li>').join('')+'</ol>'+mins+'</div>';
+  }
+  if(x.todo) return '<div class="c next todo"><span class="nh">Your move</span>'+x.next+mins+'</div>';
+  if(x.decide) return '<div class="c next">'+x.next+'</div>';
+  const none=/^Nothing\.?$/i.test((x.next||'').trim());
+  return '<div class="c next'+(none?' none':'')+'">'+(x.next||'')+mins+'</div>';
+}
+function rowNode(x){
+  const d=document.createElement('div'); d.className='r'; d.dataset.i=x.item;
+  const desc=x.desc?'<div class="desc">'+x.desc+'</div>':'';
+  let act='';
+  if(x.decide){
+    act='<div class="ynrow"><button class="yn yes" data-i="'+x.item+'" data-v="Yes">Yes</button><button class="yn no" data-i="'+x.item+'" data-v="No">No</button></div>';
+  } else {
+    act='<button class="got" data-i="'+x.item+'">Got It</button>';
+  }
+  act+='<button class="notelink" data-i="'+x.item+'">＋ note</button><textarea class="nt hidden" data-i="'+x.item+'" placeholder="comment (optional)"></textarea>';
+  const lt=x.light||'amber';
+  d.innerHTML=
+    '<div class="c lt"><span class="dot '+lt+'" title="'+({green:'Done',amber:'Awaiting your comments',red:'Not started'}[lt])+'"></span></div>'+
+    '<div class="c task"><a class="tt" href="'+x.url+'" target="_blank" rel="noopener">'+x.label+'</a>'+desc+'</div>'+
+    '<div class="c mid"><span class="pill '+x.pill+'">'+x.ptext+'</span></div>'+
+    '<div class="c act">'+act+'</div>'+
+    nextCell(x);
+  return d;
+}
+let viewed=new Set();
+function renderWork(){
+  const tw=document.getElementById('tblWork');
+  tw.querySelectorAll('.r:not(.hd)').forEach(n=>n.remove());
+  WORK.filter(x=>!viewed.has(x.item)).forEach(x=>tw.appendChild(rowNode(x)));
+  updateLeft();
+}
+function updateLeft(){
+  const left=WORK.filter(x=>!viewed.has(x.item)).length;
+  document.getElementById('leftct').textContent=left+' left';
+  const ac=document.getElementById('allclear');
+  if(left===0){ ac.textContent='All caught up. '+viewed.size+' filed to today\'s session content.'; ac.classList.remove('hidden'); document.getElementById('tblWork').classList.add('hidden'); }
+  else { ac.classList.add('hidden'); document.getElementById('tblWork').classList.remove('hidden'); }
+}
+const tl=document.getElementById('tblLater'); LATER.forEach(x=>tl.appendChild(rowNode(x)));
+async function saveContent(x){ if(!sb){chip(false);return;} try{ const {error}=await sb.from('session_content').upsert({day:TODAY,item:x.item,label:x.label,session:SLUG,saved_at:new Date().toISOString()},{onConflict:'day,item'}); chip(!error);}catch(e){chip(false);} }
+async function saveTracker(x){ compile(); if(!sb){chip(false);return;} try{ const {error}=await sb.from('tracker').upsert({item:x.item,label:x.label,choice:state[x.item].choice,note:state[x.item].note,session:SLUG,updated_at:new Date().toISOString()},{onConflict:'item'}); chip(!error);}catch(e){chip(false);} }
+document.body.addEventListener('click',e=>{
+  const g=e.target.closest('.got');
+  if(g){ const i=g.dataset.i, x=ALL.find(z=>z.item===i); state[i].got=true; viewed.add(i); saveContent(x);
+    const rowEl=g.closest('.r'); rowEl.classList.add('gone'); setTimeout(()=>{rowEl.remove();updateLeft();},300); compile(); return; }
+  const nl=e.target.closest('.notelink');
+  if(nl){ const ta=nl.parentElement.querySelector('.nt'); ta.classList.toggle('hidden'); if(!ta.classList.contains('hidden')) ta.focus(); return; }
+  const b=e.target.closest('.yn'); if(!b)return;
+  const i=b.dataset.i,v=b.dataset.v; state[i].choice=(state[i].choice===v)?'':v;
+  b.closest('.act').querySelectorAll('.yn').forEach(y=>y.classList.remove('on')); if(state[i].choice)b.classList.add('on');
+  saveTracker(ALL.find(x=>x.item===i));
+});
+let t=null;
+document.body.addEventListener('input',e=>{ const n=e.target.closest('.nt'); if(!n)return; state[n.dataset.i].note=n.value; clearTimeout(t); t=setTimeout(()=>saveTracker(ALL.find(x=>x.item===n.dataset.i)),500); });
+function compile(){
+  const lines=['Session Tracker, Project YOU OS, Aug 23, 2026, wheel drag, your own events, compass tags',''];
+  const got=WORK.filter(x=>state[x.item].got);
+  if(got.length){ lines.push('Filed to today\'s session content ('+got.length+'):'); got.forEach(x=>lines.push('- '+x.label)); lines.push(''); }
+  ALL.forEach(x=>{ const s=state[x.item]; if(!s.choice && !s.note) return; let l='- '+x.label+': '+(s.choice||'(note)'); if(s.note) l+=' , '+s.note; lines.push(l); });
+  if(lines.length===2) lines.push('(tap Got It, or answer the decisions below)');
+  document.getElementById('out').value=lines.join('\n');
+}
+function copyOut(){const o=document.getElementById('out');o.select();try{document.execCommand('copy');}catch(e){}}
+async function boot(){
+  if(!sb){chip(false);renderWork();compile();return;}
+  try{
+    const sc=await sb.from('session_content').select('item').eq('day',TODAY).eq('session',SLUG);
+    viewed=new Set((sc.data||[]).map(r=>r.item).filter(Boolean));
+    viewed.forEach(i=>{ if(state[i]) state[i].got=true; });
+    renderWork();
+    const tr=await sb.from('tracker').select('*').eq('session',SLUG);
+    (tr.data||[]).forEach(r=>{ if(!state[r.item])return; state[r.item].choice=r.choice||''; state[r.item].note=r.note||'';
+      if(r.choice){const b=document.querySelector('.yn[data-i="'+r.item+'"][data-v="'+r.choice+'"]'); if(b)b.classList.add('on');}
+      if(r.note){const n=document.querySelector('.nt[data-i="'+r.item+'"]'); if(n){n.value=r.note;n.classList.remove('hidden');}} });
+    chip(true); compile();
+  }catch(e){ chip(false); renderWork(); compile(); }
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
