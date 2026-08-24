@@ -66,7 +66,7 @@ window.NAV_GROUP_RENAME = {
 window.MAPS_NAV = {
   "label": "\uD83D\uDDFA Maps",
   "hub": "maps.html",
-  "ver": "Maps v1.6",
+  "ver": "Maps v1.7",
   "items": [
     { "label": "\u2190 Overview", "href": "maps.html" },
     { "label": "Knowledge Graph", "href": "blueprint.html" },
@@ -74,7 +74,7 @@ window.MAPS_NAV = {
     { "label": "Data Flow Chart", "href": "dfd.html" },
     { "label": "Data Flow Map", "href": "data-flow-map.html" },
     { "label": "Spider Diagram", "href": "knowledge-graph.html" },
-    { "label": "Adding new content to Knowledge Graph", "href": "kg-ingest-process.html" }
+    { "label": "Adding to Knowledge Graph", "href": "kg-ingest-process.html" }
   ]
 };
 
