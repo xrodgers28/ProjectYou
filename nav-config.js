@@ -184,7 +184,7 @@ window.PAGE_VERSIONS = {
   "habit-worksheets.html": "v1.8",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.4",
-  "qs-dashboard.html": "v2.7",
+  "qs-dashboard.html": "v2.9",
   "reconciliation.html": "v1.0",
   "recreational.html": "v1.2",
   "session-tracker-2026-08-18-compass-sources-shipped.html": "v1.0",
