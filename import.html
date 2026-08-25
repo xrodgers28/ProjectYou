@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Import · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;--amber:#c68a2e;--gold:#d9a400}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:1400px;margin:0 auto;padding:14px 16px 80px}
+  /* Two columns, with the wheel pinned so it stays in view the whole way down a
+     35-row tagging pass. Below 1000px there is no room for a rail, so it moves
+     above the list and stops being sticky. */
+  .cols{display:flex;gap:22px;align-items:flex-start}
+  .colmain{flex:1;min-width:0}
+  .rail{flex:none;width:400px;position:sticky;top:56px}
+  @media(max-width:1120px){
+    .cols{flex-direction:column-reverse}
+    .rail{width:100%;max-width:470px;position:static;margin:0 auto 4px}
+  }
+  .wheelcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 13px 9px;box-shadow:0 6px 16px rgba(31,42,68,.06)}
+  .wheelcard h3{font-size:12.5px;color:var(--accent);margin-bottom:2px}
+  .wheelcard .sub{font-size:11px;color:#9aa6b4;line-height:1.45;margin-bottom:8px}
+  .wheelcard svg{display:block;width:100%;height:auto}
+  /* Each band is a button: tap it to see only that circle. */
+  .wheelcard .band{cursor:pointer}
+  /* Counts live under the wheel, not inside it - a number tucked into a band
+     gets covered by the next circle in and reads as belonging to the wrong one. */
+  .tally{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;padding-top:9px;border-top:1px dashed #eef1f5}
+  .tally .t{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 9px;cursor:pointer}
+  .tally .t:hover{background:#eef2f8}
+  .tally .t.on{border-color:#9fc0da;background:#eef4fb;color:var(--accent2)}
+  .tally .t i{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+  .tally .t b{color:var(--ink);font-variant-numeric:tabular-nums}
+  .wheelcard .band:hover .ring{filter:brightness(1.05)}
+  .wheelcard .band.dim{opacity:.34}
+  .filtstrip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;font-weight:700;color:#8a6218;background:#fdf6e9;border:1px solid #f0dcb4;border-radius:10px;padding:7px 11px;margin-bottom:11px}
+  .filtstrip button{font-family:inherit;font-size:11px;font-weight:700;border:1px solid #e0c68d;background:#fff;color:#8a6218;border-radius:8px;padding:4px 10px;cursor:pointer}
+  .intro{font-size:13px;color:var(--muted);margin:2px 0 14px;line-height:1.55;max-width:760px}
+  .intro b{color:var(--ink)}
+
+  .stat{display:flex;gap:9px;flex-wrap:wrap;margin-bottom:16px}
+  .stat .s{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 13px;font-size:12px;color:var(--muted)}
+  .stat .s b{color:var(--ink);font-size:15px;display:block;line-height:1.25}
+
+  .sec{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:0;margin-bottom:20px;box-shadow:0 6px 16px rgba(31,42,68,.05);overflow:hidden}
+  .sech{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--line);background:#f8fafc}
+  .sech h2{font-size:15px;color:var(--accent2)}
+  .sech .cnt{font-size:11.5px;font-weight:700;color:#9aa6b4}
+  .sech .sp{margin-left:auto;display:flex;gap:7px;flex-wrap:wrap}
+  .sech button{font-family:inherit;font-size:11.5px;font-weight:700;border-radius:8px;padding:6px 11px;cursor:pointer;border:1px solid var(--line);background:#fff;color:var(--accent)}
+  .sech button:hover{background:#eef2f8}
+  .sech button.go{background:var(--green);border-color:var(--green);color:#fff}
+  .sech button.go:hover{background:#17734a}
+  .sech button.go[disabled]{background:#c9d2dc;border-color:#c9d2dc;cursor:not-allowed}
+
+  .rows{padding:4px 0}
+  .r{display:flex;gap:9px;align-items:flex-start;padding:10px 15px;border-top:1px dashed #eef1f5;flex-wrap:wrap}
+  .r:first-child{border-top:none}
+  .r.off{opacity:.42}
+  .r.done{background:#f4faf6;opacity:1}
+  .r .ck{width:17px;height:17px;accent-color:var(--green);cursor:pointer;flex:none;margin-top:8px}
+  .r .dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:12px}
+  .dot.hi{background:#2fbf71}.dot.mid{background:#e2a33c}.dot.lo{background:#d1584d}
+  .r .main{flex:1;min-width:230px;display:flex;flex-direction:column;gap:5px}
+  .r input.nm{font-family:inherit;font-size:14px;font-weight:700;color:var(--ink);padding:6px 8px;border:1px solid var(--line);border-radius:8px;width:100%;background:#fff}
+  .r .raw{font-size:11px;color:#9aa6b4}
+  .r .raw i{font-style:normal;color:#b5bec9}
+  .r .note{font-size:11.5px;color:var(--amber);line-height:1.45}
+  .r .fields{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  /* Tagging has to be one tap, not open-a-menu-and-hunt. Each dimension gets its
+     own row of radio chips: the whole label is the hit target, and the radios stay
+     real radios so a keyboard and a screen reader still understand the group. */
+  .tagrow{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-top:1px}
+  .tagrow .lab{font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#b5bec9;flex:none;width:64px}
+  .chip{display:inline-flex;align-items:center;font-size:11.5px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer;user-select:none;line-height:1.15;transition:background .12s,border-color .12s,color .12s}
+  .chip:hover{background:#eef2f8;border-color:#cdd7e2}
+  .chip input{position:absolute;opacity:0;width:0;height:0}
+  .chip.on{color:#fff;border-color:transparent}
+  .chip.on.k{background:var(--accent)}
+  .chip.on.lb{background:#6f5aa8}
+  .chip.on.c-inner{background:#e0a326}
+  .chip.on.c-middle{background:#8d9f4e}
+  .chip.on.c-affinity{background:#63a46c}
+  .chip.on.c-outer{background:#5b95bd}
+  .chip .n{font-weight:800;opacity:.62;margin-left:4px;font-size:10px}
+  .chip:focus-within{outline:2px solid #9fc0da;outline-offset:1px}
+  .r input.dt,.r select{font-family:inherit;font-size:12px;padding:6px 7px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff}
+  .r .runs{font-size:11px;font-weight:700;color:var(--accent);background:var(--chip);border-radius:999px;padding:3px 9px;white-space:nowrap}
+  .r .to{font-size:11px;color:#9aa6b4;font-weight:700}
+  .r .flag{font-size:10.5px;font-weight:800;letter-spacing:.4px;border-radius:999px;padding:3px 8px;background:#fdf6e9;color:#8a6218;white-space:nowrap}
+  .r .ok{font-size:11.5px;font-weight:800;color:var(--green);white-space:nowrap;margin-top:9px}
+  .r .drop{font-family:inherit;font-size:11px;font-weight:700;color:#b5bec9;background:none;border:none;cursor:pointer;padding:6px 4px}
+  .r .drop:hover{color:var(--hot)}
+
+  .legend{font-size:11.5px;color:var(--muted);line-height:1.6;padding:11px 15px;background:#f8fafc;border-top:1px solid var(--line)}
+  .legend b{color:var(--ink)}
+  .sw{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+
+  .feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:22px}
+  .feat h3{font-size:12.5px;color:var(--accent);margin-bottom:7px}
+  .feat li{list-style:none;font-size:11.5px;color:var(--muted);line-height:1.55;display:flex;gap:8px;padding:2px 0}
+  .feat .fk{font-weight:800;color:var(--ink);flex:none;min-width:118px}
+
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px 14px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50}.toast.show{opacity:1}
+  .hidden{display:none}
+  .secbar-wrap{max-width:1080px;margin:0 auto;padding:10px 16px 0}
+  .secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .secbar h1{font-size:23px;color:var(--accent)}
+  .secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}
+  @media(max-width:560px){.r .main{min-width:100%}}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>Import</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="secbar-wrap"><div class="secbar"><h1>📥 Import</h1><span class="ver">v2.0</span><span class="date"></span></div></div>
+  <div class="wrap">
+   <div class="cols">
+    <div class="colmain">
+    <div class="intro">Everything read out of your <b>2026 calendar sheet</b>, sitting in a holding pen until you say it is right. Fix a name, change a date, switch a row off — nothing moves until you press <b>Send</b>. Rows that go through land on <b>Social</b> and <b>Movies</b> and disappear from here.
+    <br><br>A word of warning about the sheet: <b>its month headings are wrong.</b> The block labelled &ldquo;January 2025&rdquo; has the weekdays of January 2026, and it drifts from there. Every date below was rebuilt from the weekday row instead, which is internally consistent all the way through.</div>
+
+    <div class="stat" id="stat"></div>
+    <div id="secs"></div>
+
+    <div class="feat">
+      <h3>What everything on this page means</h3>
+      <ul>
+        <li><span class="fk">The tick</span><span>Whether this row gets sent. Rows Claude is unsure about, and the 2025 ones, start switched off.</span></li>
+        <li><span class="fk">Confidence dot</span><span><span class="sw" style="background:#2fbf71"></span>green means the sheet said it plainly. <span class="sw" style="background:#e2a33c"></span>amber means Claude expanded shorthand. <span class="sw" style="background:#d1584d"></span>red means Claude is guessing — read the note first.</span></li>
+        <li><span class="fk">From the sheet</span><span>The cell exactly as you typed it, so you can always see what Claude changed.</span></li>
+        <li><span class="fk">Runs of nights</span><span>A series watched over several evenings is one row, not six. The badge says how many nights, and the second date is the night you finished.</span></li>
+        <li><span class="fk">Occasion</span><span>What kind of get-together it was — a meal, a drink, a call. One tap, no menu to open. Only occasions live here; who someone <b>is</b> belongs in Labels.</span></li>
+        <li><span class="fk">Circle</span><span>How close they are, from your four-circle diagram. <b>Inner (5)</b> the 3am friends. <b>Middle (15)</b> good and dependable, seen regularly. <b>Affinity</b> friends and extended circle, seen sometimes. <b>Outer</b> acquaintances and weak ties. Leave it blank if you would rather decide later — it travels through to Social either way.</span></li>
+        <li><span class="fk">Labels</span><span>Who someone is, as opposed to what you did together. Several can be on at once, and they are independent of the other two rows — anyone can be Inner Circle <b>and</b> Family <b>and</b> Industry. Ask for another label any time; adding one is a one-line change.</span></li>
+        <li><span class="fk">Send</span><span>Writes the ticked rows to Social or Movies, then clears them from this page. It will not write the same row twice.</span></li>
+        <li><span class="fk">Drop</span><span>Removes a row from the holding pen for good. It never reaches your lists.</span></li>
+      </ul>
+    </div>
+    </div>
+    <aside class="rail"><div class="wheelcard">
+      <h3>The four circles</h3>
+      <div class="sub">Tap a band to see only those people. Tap it again for all of them.</div>
+      <div id="wheel"></div>
+    </div></aside>
+   </div>
+  </div>
+  <div class="badge">Import v2.0</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange(function(_e,_s){if(!_s){var a=document.getElementById('app'),l=document.getElementById('login');
+  if(a){a.classList.add('hidden');}if(l){l.classList.remove('hidden');var er=document.getElementById('loginErr');if(er)er.textContent='Your session expired. Please sign in again.';}}});
+
+let ROWS=[];
+
+/* Each entry is [what gets stored, what you read]. The stored value stays lower
+   case so it matches every other writer into these tables; only the label is
+   capitalised. Scott, Aug 24 2026: no "meeting", no "group", and the occasions
+   run in the order a day does. */
+const PEOPLE_KINDS=[['breakfast','Breakfast'],['coffee','Coffee'],['lunch','Lunch'],['dinner','Dinner'],['drinks','Drinks'],['party','Party'],['creative event','Creative Event'],['call','Call'],['other','Other']];
+const MOVIE_KINDS=[['movie','Movie'],['tv show','TV show'],['documentary','Documentary']];
+/* The closeness circles, from Scott's diagram. [value, label, the count the
+   diagram puts on it, the hover line]. Outer and Affinity carry no number
+   because the diagram does not put one on them. */
+/* Labels sit alongside kind and circle rather than inside either - anyone can be
+   Inner Circle AND Industry. An array, so adding a second label later is one more
+   entry here and nothing else. */
+/* Labels sit alongside occasion and circle rather than inside either - anyone can
+   be Inner Circle AND Family AND Industry. Scott, Aug 25 2026: Family and Colleague
+   both moved here out of the occasion list, because who someone IS is not an
+   occasion. Ex-Colleague is deliberately its own label, not a past tense of
+   Colleague - both are true of different people at the same time. */
+const LABELS=[['family','Family','Related to you'],
+              ['industry','Industry','Someone from your line of work'],
+              ['colleague','Colleague','You work with them now'],
+              ['ex-colleague','Ex-Colleague','You used to work with them']];
+const CIRCLES=[
+  ['inner','Inner','5','Intimate and loyal friends and family — the 3am friends'],
+  ['middle','Middle','15','Good and dependable friends — you see them regularly'],
+  ['affinity','Affinity','','Friends and extended social circle — you see them sometimes'],
+  ['outer','Outer','','Acquaintances, neighbours, casual community contacts — weak ties']
+];
+
+const SECS=[
+  {key:'people',icon:'👋',title:'People I met',dest:'Social',destPage:'connections.html',
+   blurb:'Each one becomes a dated entry on your Social page.'},
+  {key:'movies',icon:'🎬',title:'Movies and shows',dest:'Movies',destPage:'movies.html',
+   blurb:'Each one lands in the Seen lane on your Movies page, dated.'}
+];
+
+/* The four circles, drawn rather than pictured, so it publishes as text and can
+   carry live counts. Nested with a near-common bottom edge, the way Scott's
+   diagram has it, so each band reads as sitting inside the next one out. */
+const WHEEL=[
+  {k:'outer',   r:250, cy:262, ty:40,  fill:'#a9cde3', ink:'#2b5670', title:'Outer Circle',
+   lines:['Acquaintances, neighbors,','community casual contacts.'], quip:'Faces you recognize, weak ties'},
+  {k:'affinity',r:200, cy:312, ty:142, fill:'#a9d0a0', ink:'#356038', title:'Affinity Circle',
+   lines:['Friends, extended social circle'], quip:'You see sometimes'},
+  {k:'middle',  r:150, cy:362, ty:242, fill:'#a8bb6b', ink:'#4d5a1f', title:'Middle Circle', n:'15',
+   lines:['Good and Dependable Friend'], quip:'You see regularly'},
+  {k:'inner',   r:100, cy:412, ty:348, fill:'#f5c05a', ink:'#71510a', title:'Inner Circle', n:'5',
+   lines:['Intimate and Loyal','Friends & Family'], quip:'The 3 AM Friends'}
+];
+let CFILT='';
+
+/* Circles first, every label second. SVG paints in document order, so drawing
+   all four discs before any text is what stops an inner circle covering the
+   line above it - which is exactly what happened when each band drew its own
+   circle and text together. */
+function bandText(w){
+  var t='<text x="230" y="'+w.ty+'" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="'+w.ink+'">'+w.title+
+        (w.n?'<tspan font-size="15" font-weight="normal" opacity=".68"> ('+w.n+')</tspan>':'')+'</text>';
+  var y=w.ty+21;
+  w.lines.forEach(function(L){
+    t+='<text x="230" y="'+y+'" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="'+w.ink+'" opacity=".92">'+esc(L)+'</text>';
+    y+=17;
+  });
+  t+='<text x="230" y="'+(y+2)+'" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="13.5" font-style="italic" fill="'+w.ink+'" opacity=".78">&#8220;'+esc(w.quip)+'&#8221;</text>';
+  return t;
+}
+
+function renderWheel(){
+  var host=document.getElementById('wheel'); if(!host)return;
+  var people=ROWS.filter(function(r){return r.source==='people';});
+  function cls(w){return 'band'+(CFILT&&CFILT!==w.k?' dim':'');}
+  var discs=WHEEL.map(function(w){
+    return '<circle class="'+cls(w)+' ring" cx="230" cy="'+w.cy+'" r="'+w.r+'" fill="'+w.fill+'" onclick="pickCircleFilter(\''+w.k+'\')"></circle>';
+  }).join('');
+  var labels=WHEEL.map(function(w){
+    return '<g class="'+cls(w)+'" onclick="pickCircleFilter(\''+w.k+'\')">'+bandText(w)+'</g>';
+  }).join('');
+  host.innerHTML='<svg viewBox="0 0 460 524" role="img" aria-label="Four closeness circles">'+discs+labels+'</svg>'+
+    '<div class="tally">'+WHEEL.slice().reverse().map(function(w){
+      var n=people.filter(function(r){return r.proposed_circle===w.k;}).length;
+      return '<span class="t'+(CFILT===w.k?' on':'')+'" style="--c:'+w.fill+'" onclick="pickCircleFilter(\''+w.k+'\')">'+
+        '<i></i>'+w.title.replace(' Circle','')+' <b>'+n+'</b></span>';
+    }).join('')+'</div>';
+}
+
+function pickCircleFilter(k){ CFILT=(CFILT===k)?'':k; render(); }
+function clearCircleFilter(){ CFILT=''; render(); }
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function jq(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2600);}
+
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function fmtDate(ymd){if(!ymd)return '';var p=String(ymd).slice(0,10).split('-');if(p.length!==3)return ymd;return MON[(+p[1])-1]+' '+(+p[2])+', '+p[0];}
+
+async function boot(){var r=await sb.auth.getSession();if(r.data&&r.data.session)onLogin(r.data.session);}
+async function signIn(){
+  var email=document.getElementById('email').value.trim(),pass=document.getElementById('pass').value;
+  var res=await sb.auth.signInWithPassword({email:email,password:pass});
+  if(res.error){document.getElementById('loginErr').textContent=res.error.message;return;}
+  onLogin(res.data.session);
+}
+async function onLogin(session){
+  try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  load();
+}
+
+async function load(){
+  var res=await sb.from('import_2026').select('*').is('imported_at',null);
+  if(res.error){toast('Could not load: '+res.error.message);return;}
+  ROWS=res.data||[];
+  render();
+}
+
+function sortRows(items){
+  return items.slice().sort(function(a,b){
+    var x=a.occurred_on||'9999-99-99',y=b.occurred_on||'9999-99-99';
+    return x.localeCompare(y);
+  });
+}
+
+/* One row of radio chips. The radio group name scopes it to this row and this
+   dimension, so two rows never fight over the same group. A value that is no
+   longer offered still renders, as its own chip, rather than disappearing —
+   losing a choice must never quietly rewrite what is already stored. */
+function chipRow(label,list,cur,id,field){
+  var known=list.some(function(o){return o[0]===cur;});
+  var items=known||!cur?list.slice():[[cur,cur,'','No longer on the list, kept as it was stored']].concat(list);
+  var group='g-'+field+'-'+id;
+  var html=items.map(function(o){
+    var on=o[0]===cur;
+    var tone=field==='proposed_circle'?(' c-'+o[0]):' k';
+    var n=o[2]?'<span class="n">'+esc(o[2])+'</span>':'';
+    return '<label class="chip'+(on?' on':'')+tone+'" title="'+esc(o[3]||o[1])+'">'+
+      '<input type="radio" name="'+esc(group)+'"'+(on?' checked':'')+
+      ' onchange="setField(\''+jq(id)+'\',\''+field+'\',\''+jq(o[0])+'\')">'+
+      esc(o[1])+n+'</label>';
+  }).join('');
+  return '<div class="tagrow"><span class="lab">'+esc(label)+'</span>'+html+'</div>';
+}
+
+/* Toggle chips. Unlike the radio rows above, several can be on at once, so these
+   are checkboxes and the click sends the whole new array rather than one value. */
+function labelRow(label,list,cur,id,field){
+  var have=cur||[];
+  var html=list.map(function(o){
+    var on=have.indexOf(o[0])>=0;
+    return '<label class="chip lb'+(on?' on':'')+'" title="'+esc(o[2]||o[1])+'">'+
+      '<input type="checkbox"'+(on?' checked':'')+
+      ' onchange="toggleLabel(\''+jq(id)+'\',\''+field+'\',\''+jq(o[0])+'\',this.checked)">'+
+      esc(o[1])+'</label>';
+  }).join('');
+  return '<div class="tagrow"><span class="lab">'+esc(label)+'</span>'+html+'</div>';
+}
+function toggleLabel(id,field,val,on){
+  var r=ROWS.find(function(x){return x.id===id;}); if(!r)return;
+  var cur=(r[field]||[]).slice();
+  var i=cur.indexOf(val);
+  if(on&&i<0)cur.push(val);
+  if(!on&&i>=0)cur.splice(i,1);
+  setField(id,field,cur);
+}
+
+function selOpts(list,cur){
+  var known=list.some(function(o){return o[0]===cur;});
+  var head=(cur&&!known)?'<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>':'';
+  return head+list.map(function(o){return '<option value="'+esc(o[0])+'"'+(o[0]===cur?' selected':'')+'>'+esc(o[1])+'</option>';}).join('');
+}
+
+function rowHTML(r,sec){
+  var kinds=sec.key==='people'?PEOPLE_KINDS:MOVIE_KINDS;
+  var cls='r'+(r.include?'':' off');
+  var runword=sec.key==='movies'?(r.occurred_to?' nights':' entries'):' entries';
+  var runs=r.occurrences>1?'<span class="runs">'+r.occurrences+runword+'</span>':'';
+  var to=r.occurred_to?'<span class="to">→</span><input class="dt" type="date" value="'+esc(r.occurred_to)+'" onchange="setField(\''+jq(r.id)+'\',\'occurred_to\',this.value)">':'';
+  var yr=sec.key==='movies'?'<input class="dt" style="width:74px" type="number" placeholder="year" value="'+esc(r.release_year||'')+'" onchange="setField(\''+jq(r.id)+'\',\'release_year\',this.value?+this.value:null)">':'';
+  var flag=r.occurred_on&&r.occurred_on<'2026-01-01'?'<span class="flag">2025</span>':'';
+  return '<div class="'+cls+'" id="row-'+r.id+'">'+
+    '<input class="ck" type="checkbox" '+(r.include?'checked':'')+' onchange="setField(\''+jq(r.id)+'\',\'include\',this.checked)" title="Send this one">'+
+    '<span class="dot '+esc(r.confidence)+'" title="'+(r.confidence==='hi'?'Straight from the sheet':(r.confidence==='mid'?'Claude expanded your shorthand':'Claude is guessing — read the note'))+'"></span>'+
+    '<div class="main">'+
+      '<input class="nm" value="'+esc(r.proposed_name)+'" onchange="setField(\''+jq(r.id)+'\',\'proposed_name\',this.value)">'+
+      '<div class="fields">'+
+        '<input class="dt" type="date" value="'+esc(r.occurred_on||'')+'" onchange="setField(\''+jq(r.id)+'\',\'occurred_on\',this.value||null)">'+to+
+        yr+runs+flag+
+      '</div>'+
+      chipRow(sec.key==='people'?'Occasion':'Kind',kinds,r.proposed_kind,r.id,'proposed_kind')+
+      (sec.key==='people'?chipRow('Circle',CIRCLES,r.proposed_circle,r.id,'proposed_circle'):'')+
+      (sec.key==='people'?labelRow('Labels',LABELS,r.proposed_labels,r.id,'proposed_labels'):'')+
+      '<div class="raw">From the sheet: <i>&ldquo;'+esc((r.raw_value||'').trim())+'&rdquo;</i></div>'+
+      (r.note?'<div class="note">'+esc(r.note)+'</div>':'')+
+    '</div>'+
+    '<button class="drop" onclick="drop(\''+jq(r.id)+'\')" title="Remove from the holding pen">Drop</button>'+
+  '</div>';
+}
+
+function render(){
+  var host=document.getElementById('secs');
+  var strip='';
+  if(CFILT){
+    var w=WHEEL.filter(function(x){return x.k===CFILT;})[0];
+    strip='<div class="filtstrip">Showing only the <b>'+esc(w?w.title:CFILT)+'</b>.'+
+      '<button onclick="clearCircleFilter()">Show everyone</button></div>';
+  }
+  host.innerHTML=strip+SECS.map(function(sec){
+    var items=sortRows(ROWS.filter(function(r){
+      if(r.source!==sec.key)return false;
+      if(CFILT&&sec.key==='people'&&r.proposed_circle!==CFILT)return false;
+      return true;
+    }));
+    var on=items.filter(function(r){return r.include;}).length;
+    var body=items.length?items.map(function(r){return rowHTML(r,sec);}).join('')
+      :'<div class="r"><div class="main"><div class="raw">Nothing left here. Everything has been sent or dropped.</div></div></div>';
+    return '<div class="sec">'+
+      '<div class="sech"><h2>'+sec.icon+' '+esc(sec.title)+'</h2>'+
+        '<span class="cnt">'+on+' of '+items.length+' ticked · '+esc(sec.blurb)+'</span>'+
+        '<span class="sp">'+
+          '<button onclick="setAll(\''+sec.key+'\',true)">Tick all</button>'+
+          '<button onclick="setAll(\''+sec.key+'\',false)">Untick all</button>'+
+          '<button class="go" onclick="send(\''+sec.key+'\')"'+(on?'':' disabled')+'>Send '+on+' to '+esc(sec.dest)+'</button>'+
+        '</span></div>'+
+      '<div class="rows">'+body+'</div>'+
+      '<div class="legend">Sent rows land on <b><a href="'+sec.destPage+'" style="color:var(--accent)">'+esc(sec.dest)+'</a></b> and clear from this page.</div>'+
+    '</div>';
+  }).join('');
+  renderStat();
+  renderWheel();
+}
+
+function renderStat(){
+  var p=ROWS.filter(function(r){return r.source==='people';});
+  var m=ROWS.filter(function(r){return r.source==='movies';});
+  var y2026=ROWS.filter(function(r){return r.occurred_on&&r.occurred_on>='2026-01-01';}).length;
+  var y2025=ROWS.filter(function(r){return r.occurred_on&&r.occurred_on<'2026-01-01';}).length;
+  var check=ROWS.filter(function(r){return r.confidence!=='hi';}).length;
+  var placed=p.filter(function(r){return !!r.proposed_circle;}).length;
+  var ind=p.filter(function(r){return (r.proposed_labels||[]).indexOf('industry')>=0;}).length;
+  document.getElementById('stat').innerHTML=
+    '<div class="s"><b>'+p.length+'</b>people waiting</div>'+
+    (p.length?'<div class="s"><b>'+placed+' of '+p.length+'</b>given a circle</div>':'')+
+    (ind?'<div class="s"><b>'+ind+'</b>labelled Industry</div>':'')+
+    (m.length?'<div class="s"><b>'+m.length+'</b>titles waiting</div>':'')+
+    '<div class="s"><b>'+y2026+'</b>dated in 2026</div>'+
+    '<div class="s"><b>'+y2025+'</b>dated in 2025</div>'+
+    '<div class="s"><b>'+check+'</b>worth a second look</div>';
+}
+
+async function setField(id,field,val){
+  var r=ROWS.find(function(x){return x.id===id;}); if(!r)return;
+  var prev=r[field]; r[field]=val;
+  var patch={}; patch[field]=val;
+  var res=await sb.from('import_2026').update(patch).eq('id',id);
+  if(res.error){r[field]=prev;toast('Did not save: '+res.error.message);render();return;}
+  if(field==='include'){
+    var el=document.getElementById('row-'+id);
+    if(el){if(val)el.classList.remove('off');else el.classList.add('off');}
+    refreshHeads();
+  }
+  /* Repaint only the chips in the group that changed. Re-rendering the whole
+     page on every tap loses your scroll position, and tagging 35 rows is
+     exactly when that hurts most. */
+  if(field==='proposed_labels'){ render(); return; }
+  if(field==='proposed_kind'||field==='proposed_circle'){
+    var row=document.getElementById('row-'+id);
+    if(row){
+      row.querySelectorAll('.chip').forEach(function(c){
+        var inp=c.querySelector('input');
+        if(inp&&inp.name==='g-'+field+'-'+id) c.classList.toggle('on',inp.checked);
+      });
+    }
+    renderStat();
+    renderWheel();
+  }
+}
+
+function refreshHeads(){
+  var heads=document.querySelectorAll('.sech');
+  SECS.forEach(function(sec,i){
+    var items=ROWS.filter(function(r){return r.source===sec.key;});
+    var on=items.filter(function(r){return r.include;}).length;
+    var h=heads[i]; if(!h)return;
+    var c=h.querySelector('.cnt'); if(c)c.textContent=on+' of '+items.length+' ticked · '+sec.blurb;
+    var b=h.querySelector('button.go'); if(b){b.textContent='Send '+on+' to '+sec.dest;b.disabled=!on;}
+  });
+}
+
+async function setAll(key,val){
+  var ids=ROWS.filter(function(r){return r.source===key;}).map(function(r){return r.id;});
+  if(!ids.length)return;
+  var res=await sb.from('import_2026').update({include:val}).in('id',ids);
+  if(res.error){toast(res.error.message);return;}
+  ROWS.forEach(function(r){if(r.source===key)r.include=val;});
+  render();
+}
+
+async function drop(id){
+  var r=ROWS.find(function(x){return x.id===id;});
+  var res=await sb.from('import_2026').delete().eq('id',id);
+  if(res.error){toast(res.error.message);return;}
+  ROWS=ROWS.filter(function(x){return x.id!==id;});
+  toast('Dropped '+((r&&r.proposed_name)||'it')+'.');
+  render();
+}
+
+/* ---- sending ----------------------------------------------------------
+   One row at a time, so a single bad row cannot take the batch down with it,
+   and the holding pen is only cleared for rows that actually landed. */
+async function send(key){
+  var items=ROWS.filter(function(r){return r.source===key&&r.include;});
+  if(!items.length){toast('Nothing ticked.');return;}
+  var done=0,merged=0,failed=[];
+
+  for(var i=0;i<items.length;i++){
+    var r=items[i];
+    if(!r.proposed_name||!r.proposed_name.trim()){failed.push('a row with no name');continue;}
+    try{
+      var newId=null;
+      if(key==='people'){
+        var ins=await sb.from('connections').insert({
+          person:r.proposed_name.trim(),
+          kind:r.proposed_kind||'other',
+          circle:r.proposed_circle||null,
+          labels:r.proposed_labels||[],
+          place:null,
+          notes:noteFor(r),
+          happened_on:r.occurred_on
+        }).select('id').single();
+        if(ins.error)throw ins.error;
+        newId=ins.data.id;
+      }else{
+        var seenOn=r.occurred_to||r.occurred_on;
+        var ex=await sb.from('movies').select('id').ilike('title',r.proposed_name.trim()).limit(1);
+        if(ex.error)throw ex.error;
+        var patch={
+          title:r.proposed_name.trim(),
+          kind:r.proposed_kind||'movie',
+          status:'watched',
+          watched_on:seenOn,
+          release_year:r.release_year,
+          wiki_title:r.wiki_title,
+          notes:noteFor(r),
+          raw_input:(r.raw_value||'').trim(),
+          needs_confirm:r.confidence!=='hi',
+          confirm_note:r.confidence!=='hi'?r.note:null
+        };
+        if(ex.data&&ex.data.length){
+          var up=await sb.from('movies').update(patch).eq('id',ex.data[0].id);
+          if(up.error)throw up.error;
+          newId=ex.data[0].id; merged++;
+        }else{
+          var mi=await sb.from('movies').insert(patch).select('id').single();
+          if(mi.error)throw mi.error;
+          newId=mi.data.id;
+        }
+      }
+      var st=await sb.from('import_2026').update({imported_at:new Date().toISOString(),imported_id:newId}).eq('id',r.id);
+      if(st.error)throw st.error;
+      done++;
+    }catch(e){ failed.push((r.proposed_name||'a row')+' ('+(e.message||e)+')'); }
+  }
+
+  var msg=done+' sent';
+  if(merged)msg+=', '+merged+' merged into a title already on the board';
+  if(failed.length)msg+=' · '+failed.length+' did not go: '+failed[0];
+  toast(msg+'.');
+  load();
+}
+
+/* The note carries the provenance, so a year from now the row still explains
+   where it came from and how many nights it actually took. */
+function noteFor(r){
+  var bits=['From the 2026 calendar sheet: "'+(r.raw_value||'').trim()+'"'];
+  if(r.occurrences>1&&r.occurred_to) bits.push(r.occurrences+' nights, '+fmtDate(r.occurred_on)+' to '+fmtDate(r.occurred_to));
+  else if(r.occurrences>1) bits.push(r.occurrences+' separate entries');
+  if(r.note) bits.push(r.note);
+  return bits.join(' · ');
+}
+
+boot();
+</script>
+<script>(function(){var e=document.querySelector('.secbar .date');if(!e)return;
+ var k=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+ var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],p=k.split('-');
+ e.textContent=M[(+p[1])-1]+' '+(+p[2])+', '+p[0];})();</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>

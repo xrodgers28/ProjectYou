@@ -31,6 +31,7 @@ window.NAV_CONFIG = {
   ],
   "Operating System": [
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
+    { "label": "Import", "href": "import.html" },
     { "label": "Guardrails", "href": "guardrails.html" },
     { "label": "Cheat<br>Sheet", "href": "cheat-sheet.html" },
     { "label": "Maps &amp;<br>Diagrams", "href": "maps.html" },
