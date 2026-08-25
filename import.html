@@ -90,6 +90,7 @@
   .r input.dt,.r select{font-family:inherit;font-size:12px;padding:6px 7px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:#fff}
   .r .runs{font-size:11px;font-weight:700;color:var(--accent);background:var(--chip);border-radius:999px;padding:3px 9px;white-space:nowrap}
   .r .to{font-size:11px;color:#9aa6b4;font-weight:700}
+  .r .already{font-size:10.5px;font-weight:800;letter-spacing:.4px;border-radius:999px;padding:3px 8px;background:#eef7f0;color:#1e8e5a;white-space:nowrap}
   .r .flag{font-size:10.5px;font-weight:800;letter-spacing:.4px;border-radius:999px;padding:3px 8px;background:#fdf6e9;color:#8a6218;white-space:nowrap}
   .r .ok{font-size:11.5px;font-weight:800;color:var(--green);white-space:nowrap;margin-top:9px}
   .r .drop{font-family:inherit;font-size:11px;font-weight:700;color:#b5bec9;background:none;border:none;cursor:pointer;padding:6px 4px}
@@ -128,11 +129,12 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar-wrap"><div class="secbar"><h1>📥 Import</h1><span class="ver">v2.0</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>📥 Import</h1><span class="ver">v2.1</span><span class="date"></span></div></div>
   <div class="wrap">
    <div class="cols">
     <div class="colmain">
     <div class="intro">Everything read out of your <b>2026 calendar sheet</b>, sitting in a holding pen until you say it is right. Fix a name, change a date, switch a row off — nothing moves until you press <b>Send</b>. Rows that go through land on <b>Social</b> and <b>Movies</b> and disappear from here.
+    <br><br><b>Some of these are already on Social.</b> A second import put the calendar entries there by another route, so any row marked <b>on Social</b> is already logged — <b>Send</b> will add your circle and labels to that entry rather than logging the evening twice.
     <br><br>A word of warning about the sheet: <b>its month headings are wrong.</b> The block labelled &ldquo;January 2025&rdquo; has the weekdays of January 2026, and it drifts from there. Every date below was rebuilt from the weekday row instead, which is internally consistent all the way through.</div>
 
     <div class="stat" id="stat"></div>
@@ -160,7 +162,7 @@
     </div></aside>
    </div>
   </div>
-  <div class="badge">Import v2.0</div>
+  <div class="badge">Import v2.1</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -172,6 +174,7 @@ sb.auth.onAuthStateChange(function(_e,_s){if(!_s){var a=document.getElementById(
   if(a){a.classList.add('hidden');}if(l){l.classList.remove('hidden');var er=document.getElementById('loginErr');if(er)er.textContent='Your session expired. Please sign in again.';}}});
 
 let ROWS=[];
+let ONSOCIAL=new Set();   /* person|date of everything already logged on Social */
 
 /* Each entry is [what gets stored, what you read]. The stored value stays lower
    case so it matches every other writer into these tables; only the label is
@@ -285,8 +288,16 @@ async function load(){
   var res=await sb.from('import_2026').select('*').is('imported_at',null);
   if(res.error){toast('Could not load: '+res.error.message);return;}
   ROWS=res.data||[];
+  /* Which of these already exist on Social. A row can reach the board by more
+     than one route, so Send has to be able to recognise its own work and top it
+     up rather than logging the same evening twice. */
+  try{
+    var c=await sb.from('connections').select('person,happened_on');
+    ONSOCIAL=new Set((c.data||[]).map(function(x){return (x.person||'').toLowerCase()+'|'+(x.happened_on||'');}));
+  }catch(e){ ONSOCIAL=new Set(); }
   render();
 }
+function onSocial(r){ return ONSOCIAL.has((r.proposed_name||'').toLowerCase()+'|'+(r.occurred_on||'')); }
 
 function sortRows(items){
   return items.slice().sort(function(a,b){
@@ -351,6 +362,7 @@ function rowHTML(r,sec){
   var to=r.occurred_to?'<span class="to">→</span><input class="dt" type="date" value="'+esc(r.occurred_to)+'" onchange="setField(\''+jq(r.id)+'\',\'occurred_to\',this.value)">':'';
   var yr=sec.key==='movies'?'<input class="dt" style="width:74px" type="number" placeholder="year" value="'+esc(r.release_year||'')+'" onchange="setField(\''+jq(r.id)+'\',\'release_year\',this.value?+this.value:null)">':'';
   var flag=r.occurred_on&&r.occurred_on<'2026-01-01'?'<span class="flag">2025</span>':'';
+  var logged=(sec.key==='people'&&onSocial(r))?'<span class="already" title="Already on Social. Send will add your tagging to that entry rather than logging it twice.">on Social</span>':'';
   return '<div class="'+cls+'" id="row-'+r.id+'">'+
     '<input class="ck" type="checkbox" '+(r.include?'checked':'')+' onchange="setField(\''+jq(r.id)+'\',\'include\',this.checked)" title="Send this one">'+
     '<span class="dot '+esc(r.confidence)+'" title="'+(r.confidence==='hi'?'Straight from the sheet':(r.confidence==='mid'?'Claude expanded your shorthand':'Claude is guessing — read the note'))+'"></span>'+
@@ -358,7 +370,7 @@ function rowHTML(r,sec){
       '<input class="nm" value="'+esc(r.proposed_name)+'" onchange="setField(\''+jq(r.id)+'\',\'proposed_name\',this.value)">'+
       '<div class="fields">'+
         '<input class="dt" type="date" value="'+esc(r.occurred_on||'')+'" onchange="setField(\''+jq(r.id)+'\',\'occurred_on\',this.value||null)">'+to+
-        yr+runs+flag+
+        yr+runs+flag+logged+
       '</div>'+
       chipRow(sec.key==='people'?'Occasion':'Kind',kinds,r.proposed_kind,r.id,'proposed_kind')+
       (sec.key==='people'?chipRow('Circle',CIRCLES,r.proposed_circle,r.id,'proposed_circle'):'')+
@@ -492,6 +504,24 @@ async function send(key){
     try{
       var newId=null;
       if(key==='people'){
+        /* Already logged, by this page or by anything else? Then the only thing
+           missing is the tagging. Add that and leave their kind, date and note
+           alone - overwriting another route's record of the same evening would
+           be worse than doing nothing. */
+        var hit=null;
+        if(r.occurred_on){
+          var look=await sb.from('connections').select('id').ilike('person',r.proposed_name.trim()).eq('happened_on',r.occurred_on).limit(1);
+          if(look.error)throw look.error;
+          if(look.data&&look.data.length)hit=look.data[0].id;
+        }
+        if(hit){
+          var tag=await sb.from('connections').update({
+            circle:r.proposed_circle||null,
+            labels:r.proposed_labels||[]
+          }).eq('id',hit);
+          if(tag.error)throw tag.error;
+          newId=hit; merged++;
+        }else{
         var ins=await sb.from('connections').insert({
           person:r.proposed_name.trim(),
           kind:r.proposed_kind||'other',
@@ -503,6 +533,7 @@ async function send(key){
         }).select('id').single();
         if(ins.error)throw ins.error;
         newId=ins.data.id;
+        }
       }else{
         var seenOn=r.occurred_to||r.occurred_on;
         var ex=await sb.from('movies').select('id').ilike('title',r.proposed_name.trim()).limit(1);
@@ -536,7 +567,7 @@ async function send(key){
   }
 
   var msg=done+' sent';
-  if(merged)msg+=', '+merged+' merged into a title already on the board';
+  if(merged)msg+=', '+merged+' added to an entry already on the board';
   if(failed.length)msg+=' · '+failed.length+' did not go: '+failed[0];
   toast(msg+'.');
   load();
