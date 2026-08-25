@@ -372,12 +372,12 @@ footer{margin-top:20px; font-family:"IBM Plex Mono",monospace; font-size:.71rem;
 .ulbtn:hover{background:var(--soft);border-color:var(--ink-2)}
 </style>
 
-<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v2.4</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v2.5</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
 
 <div class="shell">
   <div class="pillrow">
     <span class="pill">Project YOU</span>
-    <span class="pill">Habit Worksheets v2.4</span>
+    <span class="pill">Habit Worksheets v2.5</span>
     <span class="pill">Aug 24, 2026</span>
     <span class="pill" id="savedPill">Saves to your database</span>
   </div>
@@ -525,7 +525,7 @@ footer{margin-top:20px; font-family:"IBM Plex Mono",monospace; font-size:.71rem;
     </div>
   </details>
 
-  <footer>Project YOU · Habit Worksheets v2.4 · Aug 24, 2026 · live, saves to your Supabase database</footer>
+  <footer>Project YOU · Habit Worksheets v2.5 · Aug 24, 2026 · live, saves to your Supabase database</footer>
 </div>
 
 <script src="py-icons.js"></script>
@@ -1391,9 +1391,16 @@ function loadTodayTodos(){
   return sbFetch('todos?select=id,task,ws_id,done,done_at,actual_minutes,est_minutes,qs_group&is_habit=eq.true&for_date=eq.'+dayStr(today()))
     .then(function(rows){
       TODAY_TODOS = rows||[]; BY_WS = {}; BY_NAME = {};
+      /* If two rows ever share one habit again, the DONE one wins. Last-write
+         is what made the Aug 24 duplicate invisible: the board had ticked its
+         own row and the sheet happened to read the other one, so a habit Scott
+         had just completed showed as still to do and the sync looked broken
+         when it was not. Duplicates are prevented upstream now; this is the
+         belt that makes the failure visible rather than silent. */
       TODAY_TODOS.forEach(function(t){
-        if(t.ws_id!=null) BY_WS[t.ws_id] = t;
-        BY_NAME[baseName(t.task)] = t;
+        if(t.ws_id!=null && better(BY_WS[t.ws_id], t)) BY_WS[t.ws_id] = t;
+        var k = baseName(t.task);
+        if(better(BY_NAME[k], t)) BY_NAME[k] = t;
       });
       paintToday();
     })
@@ -1401,6 +1408,9 @@ function loadTodayTodos(){
 }
 /* today's list writes names like "Elevate (Mental Fitness)" — match on the stem */
 function baseName(s){ return String(s||'').replace(/\s*\([^)]*\)\s*$/,'').trim().toLowerCase(); }
+/* which of two rows for the same habit should the sheet believe: a done one
+   over an untouched one, otherwise whichever arrived first */
+function better(have, t){ return !have || (!!t.done && !have.done); }
 /* ws_id first, the name only as a fallback for a habit not yet linked */
 function todoFor(it){
   if(!it) return null;
