@@ -175,13 +175,13 @@ window.PAGE_VERSIONS = {
      screen. decade.html and the old compass-sources tracker showed nothing at all
      and start at v1.0. reconciliation.html read a bare "v1", which the publish
      guard's regex cannot parse, so it is written properly as v1.0. */
-  "ai.html": "v1.10",
+  "ai.html": "v1.11",
   "bucket-list.html": "v1.3",
   "compass.html": "v1.7",
   "decade.html": "v1.0",
   "environmental.html": "v1.4",
   "feed.html": "v1.3",
-  "habit-modules.html": "v4.3",
+  "habit-modules.html": "v4.5",
   "habit-worksheets.html": "v1.8",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.4",
