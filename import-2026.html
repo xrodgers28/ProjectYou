@@ -83,7 +83,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar-wrap"><div class="secbar"><h1>📥 2026 Import</h1><span class="ver">v1.0</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>📥 2026 Import</h1><span class="ver">v1.1</span><span class="date"></span></div></div>
   <div class="wrap">
     <div class="intro">Everything read out of your <b>2026 calendar sheet</b>, sitting in a holding pen until you say it is right. Fix a name, change a date, switch a row off — nothing moves until you press <b>Send</b>. Rows that go through land on <b>Social</b> and <b>Movies</b> and disappear from here.
     <br><br>A word of warning about the sheet: <b>its month headings are wrong.</b> The block labelled &ldquo;January 2025&rdquo; has the weekdays of January 2026, and it drifts from there. Every date below was rebuilt from the weekday row instead, which is internally consistent all the way through.</div>
@@ -103,7 +103,7 @@
       </ul>
     </div>
   </div>
-  <div class="badge">2026 Import v1.0</div>
+  <div class="badge">2026 Import v1.1</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -116,8 +116,12 @@ sb.auth.onAuthStateChange(function(_e,_s){if(!_s){var a=document.getElementById(
 
 let ROWS=[];
 
-const PEOPLE_KINDS=['meeting','call','lunch','dinner','drinks','family','party','group','other'];
-const MOVIE_KINDS=['movie','tv show','documentary'];
+/* Each entry is [what gets stored, what you read]. The stored value stays lower
+   case so it matches every other writer into these tables; only the label is
+   capitalised. Scott, Aug 24 2026: no "meeting", no "group", and the occasions
+   run in the order a day does. */
+const PEOPLE_KINDS=[['breakfast','Breakfast'],['coffee','Coffee'],['lunch','Lunch'],['dinner','Dinner'],['drinks','Drinks'],['party','Party'],['call','Call'],['family','Family'],['other','Other']];
+const MOVIE_KINDS=[['movie','Movie'],['tv show','TV show'],['documentary','Documentary']];
 
 const SECS=[
   {key:'people',icon:'👋',title:'People I met',dest:'Social',destPage:'connections.html',
@@ -161,8 +165,13 @@ function sortRows(items){
   });
 }
 
+/* A row holding a value the list no longer offers keeps it, shown at the top,
+   rather than silently rendering as whatever happens to be first. Losing a
+   choice must never quietly rewrite what is already stored. */
 function selOpts(list,cur){
-  return list.map(function(o){return '<option value="'+esc(o)+'"'+(o===cur?' selected':'')+'>'+esc(o)+'</option>';}).join('');
+  var known=list.some(function(o){return o[0]===cur;});
+  var head=(cur&&!known)?'<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>':'';
+  return head+list.map(function(o){return '<option value="'+esc(o[0])+'"'+(o[0]===cur?' selected':'')+'>'+esc(o[1])+'</option>';}).join('');
 }
 
 function rowHTML(r,sec){
