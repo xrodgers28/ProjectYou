@@ -82,6 +82,7 @@
   .chip.on{color:#fff;border-color:transparent}
   .chip.on.k{background:var(--accent)}
   .chip.on.lb{background:#6f5aa8}
+  .chip.on.ag{background:#2f8f8a}
   /* A retired value never wears the colour of a live choice. It reads as a leftover
      to be replaced, which is exactly what it is. */
   .chip.retired{border-style:dashed;border-color:#c9a9a4;color:#a2635c;background:#fdf7f6}
@@ -134,7 +135,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar-wrap"><div class="secbar"><h1>📥 Import</h1><span class="ver">v2.6</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>📥 Import</h1><span class="ver">v2.8</span><span class="date"></span></div></div>
   <div class="wrap">
    <div class="cols">
     <div class="colmain">
@@ -154,7 +155,8 @@
         <li><span class="fk">Runs of nights</span><span>A series watched over several evenings is one row, not six. The badge says how many nights, and the second date is the night you finished.</span></li>
         <li><span class="fk">Occasion</span><span>What kind of get-together it was — a meal, a drink, a call. One tap, no menu to open. Only occasions live here; who someone <b>is</b> belongs in Labels.</span></li>
         <li><span class="fk">Circle</span><span>How close they are, from your four-circle diagram. <b>Inner (5)</b> the 3am friends. <b>Middle (15)</b> good and dependable, seen regularly. <b>Affinity</b> friends and extended circle, seen sometimes. <b>Outer</b> acquaintances and weak ties. Leave it blank if you would rather decide later — it travels through to Social either way.</span></li>
-        <li><span class="fk">Labels</span><span>Who someone is, as opposed to what you did together. Several can be on at once, and they are independent of the other two rows — anyone can be Inner Circle <b>and</b> Family <b>and</b> Industry. Choosing <b>Colleague</b> or <b>Ex-Colleague</b> switches Industry on and switches the other one off, since nobody is both. Ask for another label any time; adding one is a one-line change.</span></li>
+        <li><span class="fk">Labels</span><span>Who someone is, as opposed to what you did together. Several can be on at once, and they are independent of the other two rows — anyone can be Inner Circle <b>and</b> Family <b>and</b> Industry. Choosing <b>Colleague</b> or <b>Ex-Colleague</b> switches Industry on and switches the other one off, since nobody is both. <b>Group</b> marks a row that is a gathering rather than one person — Cousins, Colleagues, a party — so those never get counted as a single friend. Ask for another label any time; adding one is a one-line change.</span></li>
+        <li><span class="fk">Age</span><span>Roughly which decade they are in. One tap, one answer, and it is fine to leave blank. For a gathering of several people, <b>Mixed</b>.</span></li>
         <li><span class="fk">Known people</span><span>A few names fill themselves in — Todd and Cousins arrive as <b>Inner</b> and <b>Family</b>. It only ever fills a blank, never overrides something you set, and the row says so in purple. Tell me any other name that is always the same and I will add it.</span></li>
         <li><span class="fk">Send</span><span>Writes the ticked rows to Social or Movies, then clears them from this page. It will not write the same row twice.</span></li>
         <li><span class="fk">Drop</span><span>Removes a row from the holding pen for good. It never reaches your lists.</span></li>
@@ -168,7 +170,7 @@
     </div></aside>
    </div>
   </div>
-  <div class="badge">Import v2.6</div>
+  <div class="badge">Import v2.8</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -202,7 +204,8 @@ const MOVIE_KINDS=[['movie','Movie'],['tv show','TV show'],['documentary','Docum
 const LABELS=[['family','Family','Related to you'],
               ['colleague','Colleague','You work with them now'],
               ['ex-colleague','Ex-Colleague','You used to work with them'],
-              ['industry','Industry','Someone from your line of work']];
+              ['industry','Industry','Someone from your line of work'],
+              ['group','Group','This entry is several people, not one']];
 /* Choosing either colleague label implies Industry, so it comes along on its own.
    It is only ever ADDED, never removed - Industry can be true for reasons that have
    nothing to do with having worked together, and unticking Colleague must not
@@ -225,6 +228,11 @@ const KNOWN={
   'rawle':    {circle:'affinity', labels:['colleague','industry'], why:'always a colleague, affinity'}
 };
 function knownFor(r){ return KNOWN[(r.proposed_name||'').trim().toLowerCase()]||null; }
+/* Roughly which decade someone is in. One per person, so radio chips like Circle
+   rather than toggles like Labels. Short enough that all ten sit on one row. */
+const AGES=[['kids','Kids'],['teens','Teens'],['20s','20s'],['30s','30s'],['40s','40s'],
+            ['50s','50s'],['60s','60s'],['70s','70s'],['80s','80s'],['90s','90s'],
+            ['mixed','Mixed']];   /* several people, a spread of ages */
 const CIRCLES=[
   ['inner','Inner','5','Intimate and loyal friends and family — the 3am friends'],
   ['middle','Middle','15','Good and dependable friends — you see them regularly'],
@@ -367,7 +375,7 @@ function chipRow(label,list,cur,id,field){
   var group='g-'+field+'-'+id;
   var html=items.map(function(o){
     var on=o[0]===cur;
-    var tone=field==='proposed_circle'?(' c-'+o[0]):' k';
+    var tone=field==='proposed_circle'?(' c-'+o[0]):(field==='proposed_age'?' ag':' k');
     if(o[4]) tone+=' retired';
     var n=o[2]?'<span class="n">'+esc(o[2])+'</span>':'';
     return '<label class="chip'+(on?' on':'')+tone+'" title="'+esc(o[3]||o[1])+'">'+
@@ -428,6 +436,7 @@ function rowHTML(r,sec){
       '</div>'+
       chipRow(sec.key==='people'?'Occasion':'Kind',kinds,r.proposed_kind,r.id,'proposed_kind')+
       (sec.key==='people'?chipRow('Circle',CIRCLES,r.proposed_circle,r.id,'proposed_circle'):'')+
+      (sec.key==='people'?chipRow('Age',AGES,r.proposed_age,r.id,'proposed_age'):'')+
       (sec.key==='people'?labelRow('Labels',LABELS,r.proposed_labels,r.id,'proposed_labels'):'')+
       '<div class="raw">From the sheet: <i>&ldquo;'+esc((r.raw_value||'').trim())+'&rdquo;</i></div>'+
       (r.note?'<div class="note">'+esc(r.note)+'</div>':'')+
@@ -503,7 +512,7 @@ async function setField(id,field,val){
      page on every tap loses your scroll position, and tagging 35 rows is
      exactly when that hurts most. */
   if(field==='proposed_labels'){ render(); return; }   /* two chips can move at once */
-  if(field==='proposed_kind'||field==='proposed_circle'){
+  if(field==='proposed_kind'||field==='proposed_circle'||field==='proposed_age'){
     var row=document.getElementById('row-'+id);
     if(row){
       row.querySelectorAll('.chip').forEach(function(c){
@@ -572,6 +581,7 @@ async function send(key){
         if(hit){
           var tag=await sb.from('connections').update({
             circle:r.proposed_circle||null,
+            age_band:r.proposed_age||null,
             labels:r.proposed_labels||[]
           }).eq('id',hit);
           if(tag.error)throw tag.error;
@@ -581,6 +591,7 @@ async function send(key){
           person:r.proposed_name.trim(),
           kind:r.proposed_kind||'other',
           circle:r.proposed_circle||null,
+          age_band:r.proposed_age||null,
           labels:r.proposed_labels||[],
           place:null,
           notes:noteFor(r),
