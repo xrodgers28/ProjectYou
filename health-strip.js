@@ -3,7 +3,13 @@
    each read against Scott's own rolling 30-day baseline rather than a generic target.
    Reads public.py_body_latest(), which reads v_health_daily (one honest row per day).
    No library: plain fetch against PostgREST, so this file can load on any page.
-   v1.0 - Aug 21, 2026
+
+   Mounting: a page can say exactly where the strip goes by putting an empty
+   <div id="bodystrip-mount"></div> (or any element with [data-health-strip])
+   in its markup. If there is no such slot, the strip falls back to guessing an
+   anchor, which is how index.html has always used it.
+
+   v1.1 - Aug 25, 2026 - explicit mount slot, single-fetch guard
 */
 (function () {
   'use strict';
@@ -105,19 +111,39 @@
     host.innerHTML = html + foot;
   }
 
+  function addCSS() {
+    if (document.getElementById('bodystrip-css')) return;
+    var style = document.createElement('style');
+    style.id = 'bodystrip-css';
+    style.textContent = CSS;
+    document.head.appendChild(style);
+  }
+
   function mount() {
     if (document.getElementById('bodystrip')) return true;
-    /* .boardwrap is a flex child of .maincols, so anchoring to it would put the
-       strip beside the board instead of above it. Anchor to the column wrapper. */
+
+    /* A page that knows where it wants the strip declares a slot, and that
+       always wins over the anchor guess below. The page owns the layout in
+       that case, so the strip adds no width or padding of its own. */
+    var slot = document.getElementById('bodystrip-mount')
+            || document.querySelector('[data-health-strip]');
+    if (slot) {
+      addCSS();
+      var mounted = document.createElement('div');
+      mounted.id = 'bodystrip';
+      slot.appendChild(mounted);
+      return true;
+    }
+
+    /* No slot: guess. .boardwrap is a flex child of .maincols, so anchoring to
+       it would put the strip beside the board instead of above it. Anchor to
+       the column wrapper. */
     var anchor = document.querySelector('.maincols')
               || document.querySelector('.boardwrap')
               || document.getElementById('board');
     if (!anchor || !anchor.parentNode) return false;
 
-    var style = document.createElement('style');
-    style.id = 'bodystrip-css';
-    style.textContent = CSS;
-    document.head.appendChild(style);
+    addCSS();
 
     var host = document.createElement('div');
     host.id = 'bodystrip';
@@ -130,8 +156,12 @@
     return true;
   }
 
+  var painted = false;
+
   function load() {
+    if (painted) return;
     if (!mount()) return;
+    painted = true;
     fetch(URL_BASE, {
       method: 'POST',
       headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },
@@ -140,6 +170,8 @@
       .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)); })
       .then(render)
       .catch(function (e) {
+        /* Let the retry below have another go at it. */
+        painted = false;
         var host = document.getElementById('bodystrip');
         if (host) host.innerHTML = '<div class="bs-foot">Body data could not be read just now (' + e.message + ').</div>';
       });

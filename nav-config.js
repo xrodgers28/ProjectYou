@@ -174,21 +174,21 @@ window.PAGE_VERSIONS = {
      screen. decade.html and the old compass-sources tracker showed nothing at all
      and start at v1.0. reconciliation.html read a bare "v1", which the publish
      guard's regex cannot parse, so it is written properly as v1.0. */
-  "ai.html": "v1.9",
-  "bucket-list.html": "v1.0",
-  "compass.html": "v1.6",
+  "ai.html": "v1.10",
+  "bucket-list.html": "v1.3",
+  "compass.html": "v1.7",
   "decade.html": "v1.0",
-  "environmental.html": "v1.2",
-  "feed.html": "v1.0",
+  "environmental.html": "v1.4",
+  "feed.html": "v1.3",
   "habit-modules.html": "v4.3",
   "habit-worksheets.html": "v1.8",
   "life-snapshot.html": "v1.0",
-  "open-mode.html": "v1.2",
-  "qs-dashboard.html": "v2.7",
+  "open-mode.html": "v1.4",
+  "qs-dashboard.html": "v2.8",
   "reconciliation.html": "v1.0",
-  "recreational.html": "v1.0",
+  "recreational.html": "v1.2",
   "session-tracker-2026-08-18-compass-sources-shipped.html": "v1.0",
-  "takeaways.html": "v2.2",
+  "takeaways.html": "v2.4",
   /* how-we-work.html shows its version in a .badge, which navpatch does not read as
      a declaration, so the nav chip sat on a hardcoded v1.5 while the page said v2.0.
      It has NO row in the pages table, so it cannot be republished from here at all,
