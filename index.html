@@ -535,8 +535,12 @@
      There has always been an "Add a section" button with no way to remove one, so an
      empty section sat on the board forever. Nothing is ever deleted: a tucked section
      keeps its tasks and comes straight back from the drawer. */
-  .secbtns{flex:0 0 auto;margin-left:8px;display:inline-flex;align-items:center;gap:2px;opacity:0;transition:opacity .15s}
-  li.domain > .row:hover .secbtns{opacity:1}
+  .secbtns{flex:0 0 auto;margin-left:10px;display:inline-flex;align-items:center;gap:3px;opacity:0;transition:opacity .15s}
+  li.domain > .row:hover .secbtns,li.domain > .row:focus-within .secbtns{opacity:1}
+  /* A section heading's name should not stretch across the whole board, or the controls
+     land hundreds of pixels away from the words they belong to. Section rows only. */
+  li.domain > .row > .text{flex:0 1 auto}
+  li.domain > .row{align-items:center}
   .sec-swatch{width:13px;height:13px;border-radius:50%;cursor:pointer;border:1.5px solid rgba(0,0,0,.14);flex:none}
   .sec-swatch:hover{transform:scale(1.15)}
   .secpal{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:8px 10px;margin:4px 0 2px 22px;background:#f8f9fb;border:1px solid #e4e6ea;border-radius:9px;width:fit-content}
@@ -546,7 +550,11 @@
   .secdel button{font:inherit;font-size:11.5px;font-weight:700;border-radius:7px;padding:4px 11px;cursor:pointer}
   .secdel .yes{border:none;background:#c0492f;color:#fff}
   .secdel .no{border:1px solid #d9dce1;background:#fff;color:#5b6270}
-  .sec-tuck{flex:0 0 auto;font-size:12px;line-height:1;color:#c4c9d0;cursor:pointer;padding:2px 5px;border-radius:5px;opacity:0;transition:opacity .15s,color .15s,background .15s;user-select:none}
+  /* The GROUP (.secbtns) is what fades in and out. These must not carry their own
+     opacity:0 - they did, left over from when each button hid itself, and the rule that
+     turned them back on was replaced by the group rule. Result: the tuck and delete
+     buttons were invisible on hover and every other hover, permanently. */
+  .sec-tuck{flex:0 0 auto;font-size:13px;line-height:1;color:#9aa2ac;cursor:pointer;padding:2px 6px;border-radius:5px;transition:color .15s,background .15s;user-select:none}
   .sec-tuck:hover{color:#3f6f8f;background:#eef2f8}
   .drawer{margin:22px 0 8px;background:#fff;border:1px solid #e3e7ee;border-radius:12px;padding:0 14px;box-shadow:0 2px 12px rgba(31,42,68,.04)}
   .drawer h4{margin:0;font-size:12px;font-weight:800;color:#5b6472;padding:11px 0;display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
@@ -627,6 +635,153 @@
     .boxwrap{margin-left:3px}
     .note{padding-left:26px}
   }
+
+  /* ============================================================================
+     CALENDAR COLUMN  ·  v5.57
+     Ported from /tmp/calendar-drag-prototype.html, the frozen visual spec Scott
+     approved: "everything in the mock you made is exactly as I want it".
+     Every class here is prefixed cx- so nothing can collide with the board,
+     the Habit Bandit column or the wheel. Nothing above this comment changed.
+     THE GAPS ARE THE FEATURE. The grid is true to scale - PX pixels per minute -
+     because the white space between meetings is when Scott does his list. Do not
+     collapse, compress or "tidy" the empty runs.
+     ============================================================================ */
+  .calcol{flex:0 0 236px;min-width:0;position:sticky;top:calc(var(--navh, 62px) + 10px);
+    background:#fff;border:1px solid #e3e7ee;border-radius:14px;padding:11px 11px 9px;
+    box-shadow:0 2px 12px rgba(31,42,68,.05);margin-top:6px;
+    max-height:calc(100vh - var(--navh, 62px) - 24px);overflow-y:auto;overflow-x:hidden;
+    -webkit-user-select:none;user-select:none}
+  .cxwk{display:flex;gap:1px;margin-bottom:7px}
+  .cxwd{flex:1;text-align:center;padding:3px 0 4px;border-radius:6px;cursor:pointer}
+  .cxwd:hover{background:#f2f5f9}
+  .cxwd .cxwdl{display:block;font-size:8.5px;font-weight:800;color:#a9b2bd;letter-spacing:.4px}
+  .cxwd .cxwdn{display:block;font-size:11.5px;font-weight:700;color:#5b6472;margin-top:1px}
+  .cxwd.on{background:#c0453b}
+  .cxwd.on .cxwdl,.cxwd.on .cxwdn{color:#fff}
+  .cxwd.on:hover{background:#b03f36}
+  .cxwd.sel{outline:1.5px solid #7d9ccb;outline-offset:-1.5px}
+  .cxwarr{flex:none;width:15px;text-align:center;font-size:9px;color:#c3cad3;cursor:pointer;
+    padding:5px 0;border-radius:6px;line-height:1}
+  .cxwarr:hover{background:#f2f5f9;color:#5b7fa8}
+  .cxdate{font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#9aa6b4;
+    padding:0 0 6px;border-bottom:1px solid #eef1f6;margin-bottom:6px;display:flex;align-items:baseline}
+  .cxdate .cxfree{margin-left:auto;font-weight:700;letter-spacing:0;text-transform:none;
+    color:#8fa89a;font-size:9px}
+  .cxpull{display:flex;align-items:center;gap:7px;margin:-2px 0 7px}
+  .cxrfr{font-size:9.5px;font-weight:800;color:#5b7fa8;background:#eef2fb;border:1px solid #dbe4f2;
+    border-radius:7px;padding:3px 8px;text-decoration:none;flex:none;cursor:pointer}
+  .cxrfr:hover{background:#e2eaf8;color:#3f6f8f}
+  .cxrfr.spin{opacity:.55}
+  .cxstamp{font-size:8.5px;font-weight:700;color:#b3bcc6;min-width:0;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .cxstamp.stale{color:#b07d1e}
+  .cxchiprow{display:flex;align-items:center;gap:7px;margin:0 0 7px;flex-wrap:wrap}
+  .cxchiplbl{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#c3cad3}
+  .cxchip{display:inline-flex;align-items:center;gap:5px;border:1px solid #f0cfdc;background:#fbeaf1;
+    border-radius:999px;padding:3px 9px 3px 6px;cursor:grab;touch-action:none;user-select:none}
+  .cxchip:hover{border-color:#e8a0b8}
+  .cxchip:active{cursor:grabbing}
+  .cxchip b{font-size:10px;font-weight:800;color:#7a3a52;pointer-events:none}
+  .cxchip svg{pointer-events:none;flex:none}
+
+  #cxgrid{position:relative;margin-bottom:10px;touch-action:none}
+  .cxhrule{position:absolute;left:0;right:0;display:flex;align-items:center;gap:4px;
+    transform:translateY(-50%);pointer-events:none}
+  .cxhrule span{font-size:8px;font-weight:700;color:#c3cad3;width:32px;text-align:right;flex:none}
+  .cxhrule i{flex:1;height:1px;background:#f0f3f7}
+  .cxqrule{position:absolute;left:38px;right:2px;height:1px;background:#f7f9fb;pointer-events:none}
+
+  .cxmt{position:absolute;border-radius:5px;padding:2px 5px;overflow:hidden;z-index:2;
+    border-left:2.5px solid #a9b2bd;background:#f1f3f6;cursor:pointer}
+  .cxmt.amz{border-left-color:#e8912f;background:#fbeeda}
+  .cxmt b{display:block;font-size:9.5px;font-weight:700;color:#39424f;line-height:1.15;overflow:hidden}
+  .cxmt.amz b{color:#6b4a1c}
+  .cxmt i{display:block;font-style:normal;font-size:8px;color:#98a1ad;margin-top:1px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .cxmt.amz i{color:#b08c58}
+  .cxmt .cxdup{display:inline-block;font-style:normal;font-size:7px;font-weight:800;color:#98a1ad;
+    border:1px solid #d8dde4;border-radius:3px;padding:0 3px;margin-left:4px;vertical-align:1px}
+  .cxmt.amz .cxdup{color:#b08c58;border-color:#ecd6b4}
+  .cxmt.skip{opacity:.42}
+  .cxmt.skip b{text-decoration:line-through}
+
+  .cxblk{position:absolute;left:38px;right:2px;border-radius:5px;overflow:hidden;z-index:3;
+    border-left:2.5px solid #6f8fbe;background:#e9eefa;cursor:grab;padding:1px 4px}
+  .cxblk:active{cursor:grabbing}
+  .cxblk b{display:block;font-weight:700;color:#24365a;line-height:1.1;font-size:9px;overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .cxblk i{display:block;font-style:normal;font-size:7.5px;color:#8493ad;line-height:1.1;
+    overflow:hidden;white-space:nowrap}
+  .cxblk.slim{padding:0 4px;display:flex;align-items:center}
+  .cxblk.slim b{font-size:7.5px;line-height:1}
+  .cxblk.slim i{display:none}
+  .cxblk.amz{border-left-color:#e8912f}
+  .cxblk.hab{border-left-color:#1e8e5a;background:#e8f5ee}
+  .cxblk.hab b{color:#1d5a3d}
+  .cxblk.hab i{color:#7fae95}
+  .cxblk.py{border-left-color:#e8a0b8;background:#fbeaf1}
+  .cxblk.py b{color:#7a3a52}
+  .cxblk.py i{color:#c08fa2}
+  .cxblk.over{left:auto;right:2px;width:calc(50% - 20px);border-left-style:dashed;
+    border-left-color:#d69b5a;background:#fbf1e3}
+  .cxblk.over b{color:#6d5220}
+  .cxblk.over i{color:#b09468}
+  .cxblk.done{border-left-color:#6aab86;background:#e7f3ec}
+  .cxblk.done b{color:#2c5a41;text-decoration:line-through;text-decoration-color:#a8cbb7}
+  .cxblk .cxx{position:absolute;top:0;right:2px;font-size:9px;color:#a9b6cc;cursor:pointer;
+    line-height:1.3;padding:0 2px}
+  .cxblk .cxx:hover{color:#c0453b}
+  .cxblk .cxrz{position:absolute;left:0;right:0;bottom:0;height:5px;cursor:ns-resize}
+  .cxblk .cxrz::after{content:'';position:absolute;left:50%;bottom:1px;width:14px;height:2px;
+    margin-left:-7px;border-radius:2px;background:#c3cede;opacity:0}
+  .cxblk:hover .cxrz::after{opacity:1}
+
+  .cxghost{position:fixed;z-index:99;pointer-events:none;background:#dfe7f8;border:1px solid #b9c8e4;
+    border-left:3px solid #6f8fbe;border-radius:5px;padding:3px 7px;font-size:10px;font-weight:700;
+    color:#24365a;box-shadow:0 6px 18px rgba(31,42,68,.18);opacity:.95;max-width:190px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cxprev{position:absolute;left:38px;right:2px;border-radius:5px;z-index:6;pointer-events:none;
+    border:1.5px dashed #7d9ccb;background:rgba(125,156,203,.13)}
+  .cxprev.clash{border-color:#d69b5a;background:rgba(214,155,90,.15)}
+  .cxprev span{position:absolute;left:4px;top:50%;transform:translateY(-50%);font-size:8px;
+    font-weight:800;color:#4f6d99;white-space:nowrap}
+  .cxprev.clash span{color:#9c6a24}
+  .cxnow{position:absolute;left:0;right:0;display:flex;align-items:center;gap:3px;
+    transform:translateY(-50%);z-index:7;pointer-events:none}
+  .cxnow i{flex:1;height:1.5px;background:#d98b84}
+  .cxnow span{font-size:7.5px;font-weight:800;color:#c0453b;width:32px;text-align:right;flex:none}
+
+  .cxtally{border-top:1px solid #eef1f6;padding-top:9px}
+  .cxtally h4{font-size:9px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+    color:#9aa6b4;margin-bottom:7px}
+  .cxtrow{display:flex;align-items:center;gap:9px}
+  .cxtkey{flex:1;min-width:0}
+  .cxtk{display:flex;align-items:center;gap:5px;padding:1.5px 0;font-size:10px;color:#5b6472}
+  .cxtk i{width:8px;height:8px;border-radius:2px;flex:none}
+  .cxtk span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cxtk b{font-weight:800;color:#2a3444;font-variant-numeric:tabular-nums}
+  .cxtk.amzrow b{color:#a86a12}
+  .cxtnote{font-size:8.5px;color:#b3bcc6;line-height:1.35;margin-top:6px}
+  .cxempty{font-size:9.5px;color:#b3bcc6;text-align:center;padding:14px 4px;line-height:1.45}
+
+  /* the little calendar mark that lives to the left of every to-do and habit row */
+  .cxgrab{width:13px;height:13px;flex:none;cursor:grab;display:flex;align-items:center;
+    justify-content:center;border-radius:3px;touch-action:none;margin-right:1px}
+  .cxgrab svg{display:block}
+  .cxgrab:hover{background:#eef2f8}
+  .cxgrab:active{cursor:grabbing}
+  .cxgrab .gs{stroke:#c3ccd6}
+  .cxgrab.on .gs{stroke:#7d9ccb}
+  .cxgrab.on .gf{fill:#dfe7f8}
+  .cxat{font-size:8px;font-weight:800;color:#7d9ccb;background:#eef2fb;border-radius:999px;
+    padding:1px 5px;white-space:nowrap;flex:none;margin-left:3px}
+
+  @media(max-width:1240px){ .calcol{flex-basis:214px} }
+  @media(max-width:1120px){
+    .calcol{position:static;flex-basis:auto;width:100%;order:0;max-height:none;margin-top:12px;
+      overflow:visible}
+  }
+
 </style>
 </head>
 <body>
@@ -643,9 +798,30 @@
 </div>
 
 <div id="app">
-  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v5.55</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1120px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v5.55</span><span class="date"></span></div></div>
+  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v5.57</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
+  <div class="wrap" style="max-width:1120px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v5.57</span><span class="date"></span></div></div>
   <div class="maincols">
+    <aside class="calcol" id="calcol">
+      <div class="cxwk" id="cxwk"></div>
+      <div class="cxdate" id="cxdate">&nbsp;<span class="cxfree" id="cxfree"></span></div>
+      <div class="cxpull">
+        <a class="cxrfr" id="cxrfr" href="shortcuts://run-shortcut?name=Find%20Calendar%20Events%20Where">&#8635; Refresh</a>
+        <span class="cxstamp" id="cxstamp"></span>
+      </div>
+      <div class="cxchiprow">
+        <span class="cxchiplbl">Drag onto the day</span>
+        <span class="cxchip" data-cxcat="py" title="Drag Project You time onto the day"><svg viewBox="0 0 24 24" width="13" height="13"><g transform="translate(12,12)"><path d="M0 0 L0 -10 A10 10 0 0 1 7.8 -6.2 Z" fill="#e8a0b8"/><path d="M0 0 L7.8 -6.2 A10 10 0 0 1 9.7 2.2 Z" fill="#f0b58f"/><path d="M0 0 L9.7 2.2 A10 10 0 0 1 4.3 9 Z" fill="#ead98f"/><path d="M0 0 L4.3 9 A10 10 0 0 1 -4.3 9 Z" fill="#8ec5a0"/><path d="M0 0 L-4.3 9 A10 10 0 0 1 -9.7 2.2 Z" fill="#8fd0c4"/><path d="M0 0 L-9.7 2.2 A10 10 0 0 1 -7.8 -6.2 Z" fill="#a9c8e8"/><path d="M0 0 L-7.8 -6.2 A10 10 0 0 1 0 -10 Z" fill="#cbb0e0"/></g></svg><b>Project You</b></span>
+      </div>
+      <div id="cxgrid"></div>
+      <div class="cxtally">
+        <h4>Where today goes</h4>
+        <div class="cxtrow">
+          <svg id="cxdonut" width="84" height="84" viewBox="0 0 100 100" style="flex:none"></svg>
+          <div class="cxtkey" id="cxtkey"></div>
+        </div>
+        <div class="cxtnote" id="cxtnote"></div>
+      </div>
+    </aside>
     <div class="wrap boardwrap">
       <ul class="list" id="board"></ul>
     </div>
@@ -823,6 +999,7 @@ async function showApp(email, session) {
   if ((location.hash || '').startsWith('#wheel')) { WHEEL_OFFSET = wheelHashOffset(); await loadTimeLog(); setWheelView(true); }
   try { const V = '5.17'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
+  cxInit();
 }
 document.getElementById('signin').onclick = async () => {
   const email = document.getElementById('email').value.trim();
@@ -1507,6 +1684,9 @@ function taskRow(t, kids) {
   }
   row.appendChild(car);
   const bullet = el('span', 'bullet'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
+  /* v5.57: the calendar mark Scott drags onto the day. Additive only - if it ever
+     throws, the row must still build, so it is guarded. */
+  try { row.appendChild(cxGrab(t)); } catch (e) {}
   const check = el('span', 'check');
   check.onclick = () => {
     snapshot();
@@ -2125,6 +2305,7 @@ function render() {
   board.appendChild(addSectionControl());
   initSortables();
   { const wv = document.getElementById('wheelview'); if (wv && wv.style.display !== 'none' && typeof drawWheel === 'function') drawWheel(); }
+  { try { cxAfterRender(); } catch (e) {} }
 }
 function renderTotals() {
   document.querySelectorAll('.section-total').forEach(tot => {
@@ -3579,6 +3760,470 @@ function setWheelView(show){
   window.addEventListener('hashchange', openFromHash);
   // only the live day ticks itself forward; a past day is finished and does not move
   setInterval(() => { const wv=document.getElementById('wheelview'); if (wv && wv.style.display!=='none' && wheelIsToday()) drawWheel(); }, 60000);
+}
+
+
+/* ============================================================================
+   CALENDAR COLUMN  ·  v5.57
+   The visual spec is /tmp/calendar-drag-prototype.html, frozen on Scott's word:
+   "everything in the mock you made is exactly as I want it can we please be
+   careful not to do anything that changes the core functionality you have built".
+   So this section is ADDITIVE. It reads todos, it never writes them. The only
+   table it writes is day_blocks, which nothing else on the site reads, plus the
+   single `skipped` flag on a calendar_events row when he taps a meeting out.
+
+   THREE RULES THAT MUST SURVIVE ANY FUTURE EDIT
+   1. THE GAPS ARE THE FEATURE. The grid is true to scale, CX_PX pixels per
+      minute. The white space between meetings is when he does his list. Never
+      compress an empty run to "save space".
+   2. WALL-CLOCK, NEVER SUM-OF-DURATIONS. attribute() walks the day minute by
+      minute and gives each minute to exactly one bucket, so a double booking
+      can never inflate a total.
+   3. ONE SWAPPABLE TAGGING RULE. Work/Amazon is decided once, at import, by
+      calendar_ingest against calendar_work_names. This file only reads is_work.
+   ============================================================================ */
+const CX_PX = 0.60, CX_SNAP = 15, CX_PAD = 30;
+const CX_AMZ = "#e8912f", CX_OTHER = "#a9b2bd", CX_TODO = "#6f8fbe",
+      CX_OPEN = "#e6eaf0", CX_PYC = "#e8a0b8", CX_HAB = "#1e8e5a";
+const CX_PY_MINS = 60, CX_HAB_MINS = 10;
+
+let cxDay = null;            /* YYYY-MM-DD currently shown */
+let cxWeek0 = null;          /* Monday of the strip currently shown */
+let cxMeet = [];             /* de-duplicated meetings for cxDay */
+let cxBlocks = [];           /* day_blocks rows for cxDay */
+let cxPulled = null;         /* max(pulled_at) seen, as a Date */
+let cxD0 = 420, cxD1 = 1140; /* the trimmed window, recomputed every draw */
+let cxReady = false;
+
+const CX_GRABSVG = '<svg width="11" height="11" viewBox="0 0 14 14">' +
+  '<rect class="gf" x="1" y="2.5" width="12" height="10.5" rx="2" fill="none"/>' +
+  '<rect class="gs" x="1" y="2.5" width="12" height="10.5" rx="2" fill="none" stroke-width="1.2"/>' +
+  '<path class="gs" d="M1 6h12" stroke-width="1.2"/>' +
+  '<path class="gs" d="M4.5 1v2.6M9.5 1v2.6" stroke-width="1.2" stroke-linecap="round"/></svg>';
+
+function cxHHMM(m) {
+  const h = Math.floor(m / 60), mm = m % 60, ap = h < 12 ? 'am' : 'pm', hh = h % 12 || 12;
+  return mm ? hh + ':' + String(mm).padStart(2, '0') + ap : hh + ap;
+}
+function cxDur(m) {
+  const h = Math.floor(m / 60), mm = m % 60;
+  return h && mm ? h + 'h ' + mm + 'm' : h ? h + 'h' : mm + 'm';
+}
+function cxY(m) { return (m - cxD0) * CX_PX; }
+function cxToMin(t) { if (!t) return null; const p = String(t).split(':'); return (+p[0]) * 60 + (+p[1]); }
+function cxNowMin() {
+  const s = new Intl.DateTimeFormat('en-GB', { timeZone: ET_TZ, hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+  const p = s.split(':'); return (+p[0]) * 60 + (+p[1]);
+}
+function cxIsToday() { return cxDay === localDate(); }
+function cxClash(s, e) { return cxMeet.some(m => !m.skipped && s < m.e && e > m.s); }
+
+/* The day trims to what is actually in it, plus half an hour of room at each end
+   so there is always somewhere to drop something earlier or later. */
+function cxWindow() {
+  const starts = [], ends = [];
+  if (cxIsToday()) { const n = cxNowMin(); starts.push(n); ends.push(n + CX_PAD); }
+  /* Every meeting, skipped ones included. A skipped meeting is still DRAWN - it just
+     stops counting - so if the window ignored it the block rendered above the top of
+     the grid and sat on top of the Project You chip. */
+  cxMeet.forEach(m => { starts.push(m.s - CX_PAD); ends.push(m.e + CX_PAD); });
+  cxBlocks.forEach(b => { starts.push(b.start_min - CX_PAD); ends.push(b.start_min + b.mins + CX_PAD); });
+  if (!starts.length) { starts.push(540); ends.push(1020); }
+  let a = Math.min.apply(null, starts), b = Math.max.apply(null, ends);
+  a = Math.max(300, Math.floor(a / 30) * 30);
+  b = Math.min(1380, Math.ceil(b / 30) * 30);
+  if (b - a < 240) b = Math.min(1380, a + 240);
+  if (b - a < 240) a = Math.max(300, b - 240);
+  return [a, b];
+}
+
+/* ---------------------------------------------------------------- loading -- */
+async function cxLoadDay(d) {
+  cxDay = d || cxDay || localDate();
+  const { data: ev } = await sb.from('calendar_events')
+    .select('id,title,start_time,end_time,loc,sub,is_work,skipped,hidden,pulled_at,source_calendar')
+    .eq('date', cxDay).order('start_time');
+  const rows = (ev || []).filter(r => !r.hidden && r.start_time && r.end_time);
+  const seen = new Map();
+  cxPulled = null;
+  rows.forEach(r => {
+    if (r.pulled_at) { const t = new Date(r.pulled_at); if (!cxPulled || t > cxPulled) cxPulled = t; }
+    const s = cxToMin(r.start_time), e = cxToMin(r.end_time);
+    const k = (r.title || '') + '|' + s + '|' + e;
+    if (seen.has(k)) { const g = seen.get(k); g.dup++; g.ids.push(r.id); }
+    else seen.set(k, { ids: [r.id], t: r.title || '(untitled)', s: s, e: Math.max(e, s + 5),
+                       sub: r.sub || r.loc || '', amz: !!r.is_work, skipped: !!r.skipped, dup: 1 });
+  });
+  cxMeet = Array.from(seen.values()).sort((a, b) => a.s - b.s);
+
+  const { data: bl } = await sb.from('day_blocks').select('*').eq('day', cxDay).order('start_min');
+  cxBlocks = bl || [];
+  cxSyncDone();
+}
+/* a block wears the strike-through of its own to-do, read fresh, never written back */
+function cxSyncDone() {
+  cxBlocks.forEach(b => {
+    if (!b.todo_id) return;
+    const t = (typeof todos !== 'undefined' && todos) ? todos.find(x => x.id === b.todo_id) : null;
+    if (t) b.done = !!t.done;
+  });
+}
+
+/* ------------------------------------------------------------ attribution -- */
+/* Every minute of the window belongs to exactly one bucket, so overlapping
+   bookings can never be counted twice. Rule 2 above. */
+function cxAttribute() {
+  const own = new Array(Math.max(0, cxD1 - cxD0)).fill('open');
+  const mark = (s, e, tag) => {
+    for (let m = Math.max(s, cxD0); m < Math.min(e, cxD1); m++) own[m - cxD0] = tag;
+  };
+  cxBlocks.forEach(b => mark(b.start_min, b.start_min + b.mins,
+    b.cat === 'py' ? 'py' : (b.cat === 'hab' ? 'hab' : (b.amz ? 'amz' : 'todo'))));
+  cxMeet.forEach(m => { if (!m.skipped) mark(m.s, m.e, m.amz ? 'amz' : 'other'); });
+  const c = { amz: 0, other: 0, py: 0, hab: 0, todo: 0, open: 0 };
+  own.forEach(t => c[t]++);
+  return c;
+}
+
+/* ---------------------------------------------------------------- drawing -- */
+function cxDrawWeek() {
+  const sel = ymdToDay(cxDay);
+  if (!cxWeek0) {
+    const mon = new Date(sel.getTime());
+    const dow = (mon.getUTCDay() + 6) % 7;          /* Monday = 0 */
+    mon.setUTCDate(mon.getUTCDate() - dow);
+    cxWeek0 = dayKey(mon);
+  }
+  const today = localDate();
+  let h = '<span class="cxwarr" data-cxwk="-1" title="Previous week">&#9664;</span>';
+  for (let i = 0; i < 7; i++) {
+    const d = ymdToDay(cxWeek0); d.setUTCDate(d.getUTCDate() + i);
+    const k = dayKey(d);
+    const lbl = d.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'narrow' });
+    h += '<div class="cxwd' + (k === today ? ' on' : '') + (k === cxDay && k !== today ? ' sel' : '') +
+         '" data-cxday="' + k + '"><span class="cxwdl">' + lbl + '</span>' +
+         '<span class="cxwdn">' + d.getUTCDate() + '</span></div>';
+  }
+  h += '<span class="cxwarr" data-cxwk="1" title="Next week">&#9654;</span>';
+  document.getElementById('cxwk').innerHTML = h;
+}
+
+function cxDrawGrid() {
+  const grid = document.getElementById('cxgrid');
+  if (!cxMeet.length && !cxBlocks.length) {
+    grid.innerHTML = '<div class="cxempty">Nothing on the calendar for this day yet.<br>' +
+      'Tap Refresh on your iPhone to pull it in.</div>';
+    return;
+  }
+  let h = '<div style="height:' + ((cxD1 - cxD0) * CX_PX) + 'px;position:relative" id="cxgridinner">';
+  for (let m = Math.ceil(cxD0 / 15) * 15; m <= cxD1; m += 15) {
+    if (m % 60 === 0) h += '<div class="cxhrule" style="top:' + cxY(m) + 'px"><span>' + cxHHMM(m) + '</span><i></i></div>';
+    else if (m % 30 === 0) h += '<div class="cxqrule" style="top:' + cxY(m) + 'px"></div>';
+  }
+  cxMeet.forEach((m, i) => {
+    const ht = Math.max(11, (m.e - m.s) * CX_PX);
+    const cls = (m.amz ? ' amz' : '') + (m.skipped ? ' skip' : '');
+    const line2 = m.sub || (cxHHMM(m.s) + ' to ' + cxHHMM(m.e));
+    const dup = m.dup > 1 ? '<span class="cxdup">' + m.dup + ' bookings</span>' : '';
+    h += '<div class="cxmt' + cls + '" data-cxmt="' + i + '" title="' +
+         (m.skipped ? 'Click to count this again' : 'Click to take this out of the count') + '"' +
+         ' style="top:' + cxY(m.s) + 'px;height:' + ht + 'px;left:38px;right:2px">' +
+         '<b>' + cxEsc(m.t) + dup + '</b>' +
+         ((m.e - m.s) * CX_PX >= 24 ? '<i>' + cxEsc(line2) + '</i>' : '') + '</div>';
+  });
+  cxBlocks.forEach(b => {
+    const ht = Math.max(8, b.mins * CX_PX), slim = ht < 26 ? ' slim' : '', done = b.done ? ' done' : '';
+    const over = cxClash(b.start_min, b.start_min + b.mins) ? ' over' : '';
+    const az = b.cat === 'py' ? ' py' : (b.cat === 'hab' ? ' hab' : (b.amz ? ' amz' : ''));
+    h += '<div class="cxblk' + slim + az + done + over + '" data-cxb="' + b.id + '"' +
+         ' style="top:' + cxY(b.start_min) + 'px;height:' + ht + 'px">' +
+         '<b>' + cxEsc(b.title) + '</b><i>' + cxHHMM(b.start_min) + ' &middot; ' + cxDur(b.mins) + '</i>' +
+         '<span class="cxx" data-cxx="' + b.id + '">&times;</span>' +
+         '<span class="cxrz" data-cxrz="' + b.id + '"></span></div>';
+  });
+  if (cxIsToday()) {
+    const n = cxNowMin();
+    if (n >= cxD0 && n <= cxD1)
+      h += '<div class="cxnow" style="top:' + cxY(n) + 'px"><span>' + cxHHMM(n) + '</span><i></i></div>';
+  }
+  grid.innerHTML = h + '</div>';
+}
+function cxEsc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function cxDrawTally() {
+  const c = cxAttribute(), total = Math.max(1, cxD1 - cxD0);
+  /* Scott, Aug 25: "I want green = habits blue are todos" */
+  const rows = [['Amazon', c.amz, CX_AMZ, 'amzrow'], ['Habits', c.hab, CX_HAB, ''],
+                ['Your to-dos', c.todo, CX_TODO, ''], ['Project You', c.py, CX_PYC, ''],
+                ['Meetings', c.other, CX_OTHER, ''], ['Still open', c.open, CX_OPEN, '']];
+  document.getElementById('cxtkey').innerHTML = rows.map(r =>
+    '<div class="cxtk ' + r[3] + '"><i style="background:' + r[2] + '"></i><span>' + r[0] + '</span>' +
+    '<b>' + (r[1] ? cxDur(r[1]) : '0m') + '</b></div>').join('');
+  const R = 42, ri = 25, cx = 50, cy = 50; let a0 = -Math.PI / 2, d = '';
+  rows.forEach(r => {
+    const v = r[1]; if (!v) return;
+    const a1 = a0 + (v / total) * Math.PI * 2, big = (a1 - a0) > Math.PI ? 1 : 0;
+    const p = (rad, ang) => [cx + rad * Math.cos(ang), cy + rad * Math.sin(ang)];
+    const A = p(R, a0), B = p(R, a1), C = p(ri, a1), D = p(ri, a0);
+    d += '<path d="M' + A[0] + ' ' + A[1] + ' A' + R + ' ' + R + ' 0 ' + big + ' 1 ' + B[0] + ' ' + B[1] +
+         ' L' + C[0] + ' ' + C[1] + ' A' + ri + ' ' + ri + ' 0 ' + big + ' 0 ' + D[0] + ' ' + D[1] +
+         ' Z" fill="' + r[2] + '" stroke="#fff" stroke-width="1"/>';
+    a0 = a1;
+  });
+  document.getElementById('cxdonut').innerHTML = d +
+    '<text x="50" y="47" text-anchor="middle" font-size="15" font-family="Arial" font-weight="800" fill="#a86a12">' +
+    (c.amz / 60).toFixed(1) + 'h</text>' +
+    '<text x="50" y="59" text-anchor="middle" font-size="8" font-family="Arial" font-weight="800" fill="#c3a06a" letter-spacing="0.5">AMAZON</text>';
+  const sk = cxMeet.filter(m => m.skipped).length;
+  const dups = cxMeet.filter(m => m.dup > 1).length;
+  document.getElementById('cxtnote').textContent =
+    (dups ? dups + (dups === 1 ? ' double booking folded into one block. ' : ' double bookings folded into one block each. ') : '') +
+    'Counts wall-clock time across ' + cxHHMM(cxD0) + ' to ' + cxHHMM(cxD1) +
+    '. Amazon, Habits and Project You go to the wheel.' +
+    (sk ? '  ' + sk + ' taken out of the count.' : '');
+  document.getElementById('cxfree').textContent = cxDur(c.open) + ' free';
+}
+
+function cxStamp() {
+  const el2 = document.getElementById('cxstamp'); if (!el2) return;
+  if (!cxPulled) { el2.textContent = 'never pulled'; el2.classList.add('stale'); return; }
+  const mins = Math.round((Date.now() - cxPulled.getTime()) / 60000);
+  const t = new Intl.DateTimeFormat('en-US', { timeZone: ET_TZ, hour: 'numeric', minute: '2-digit' }).format(cxPulled);
+  const stale = mins >= 120;
+  el2.textContent = 'as of ' + t + (stale ? '  ·  more than 2h old' : '');
+  el2.classList.toggle('stale', stale);
+}
+
+function cxDraw() {
+  if (!document.getElementById('calcol')) return;
+  const w = cxWindow(); cxD0 = w[0]; cxD1 = w[1];
+  const d = ymdToDay(cxDay);
+  document.getElementById('cxdate').firstChild.textContent =
+    d.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'short', day: 'numeric' }) + ' ';
+  cxDrawWeek(); cxDrawGrid(); cxDrawTally(); cxStamp(); cxDecorate();
+}
+
+/* ------------------------------------------------- the mark on every row --- */
+function cxGrab(t) {
+  const s = el('span', 'cxgrab');
+  s.dataset.cxgrab = t.id;
+  s.dataset.cxmins = String(t.est_minutes || (t.is_habit ? CX_HAB_MINS : 15));
+  s.dataset.cxhab = t.is_habit ? '1' : '';
+  s.title = 'Drag onto the day';
+  s.innerHTML = CX_GRABSVG;
+  return s;
+}
+/* after every board render: light the marks that are scheduled, and hang the
+   time chip on their rows. Reads the DOM only - it never re-renders the board. */
+function cxDecorate() {
+  try {
+    document.querySelectorAll('.cxat').forEach(n => n.remove());
+    document.querySelectorAll('.cxgrab').forEach(n => n.classList.remove('on'));
+    cxBlocks.forEach(b => {
+      if (!b.todo_id) return;
+      document.querySelectorAll('.cxgrab[data-cxgrab="' + b.todo_id + '"]').forEach(g => {
+        g.classList.add('on');
+        const chip = el('span', 'cxat', cxHHMM(b.start_min));
+        chip.title = 'On the day at ' + cxHHMM(b.start_min);
+        g.parentNode.insertBefore(chip, g.nextSibling);
+      });
+    });
+  } catch (e) { /* decoration must never take the board down */ }
+}
+function cxAfterRender() { if (cxReady) { cxSyncDone(); cxDraw(); } }
+
+/* ------------------------------------------------------------ persistence -- */
+async function cxSaveNew(b) {
+  const row = { day: cxDay, todo_id: b.todo_id || null, hab_key: b.hab_key || null,
+                title: b.title, start_min: b.start_min, mins: b.mins,
+                cat: b.cat || 'todo', amz: !!b.amz, done: !!b.done };
+  const { data, error } = await sb.from('day_blocks').insert(row).select().single();
+  if (error) { toast('Could not save that block'); await cxLoadDay(); cxDraw(); return; }
+  const i = cxBlocks.findIndex(x => x.id === b.id);
+  if (i >= 0) cxBlocks[i] = data; else cxBlocks.push(data);
+  cxDraw();
+}
+async function cxSaveMove(b) {
+  const { error } = await sb.from('day_blocks')
+    .update({ start_min: b.start_min, mins: b.mins, updated_at: new Date().toISOString() })
+    .eq('id', b.id);
+  if (error) { toast('Could not move that block'); await cxLoadDay(); cxDraw(); }
+}
+async function cxRemove(id) {
+  cxBlocks = cxBlocks.filter(b => b.id !== id);
+  cxDraw();
+  await sb.from('day_blocks').delete().eq('id', id);
+}
+
+/* ---------------------------------------------------------------- dragging - */
+let cxDrag = null, cxGhost = null, cxPrev = null;
+function cxGridMinute(cy) {
+  const inn = document.getElementById('cxgridinner'); if (!inn) return null;
+  const r = inn.getBoundingClientRect();
+  return Math.round((cxD0 + (cy - r.top) / CX_PX) / CX_SNAP) * CX_SNAP;
+}
+function cxOverGrid(x, y) {
+  const g = document.getElementById('cxgrid'); if (!g) return false;
+  const r = g.getBoundingClientRect();
+  return x >= r.left - 30 && x <= r.right + 30 && y >= r.top - 10 && y <= r.bottom + 10;
+}
+function cxShowPrev(start, mins) {
+  const inn = document.getElementById('cxgridinner'); if (!inn) return;
+  if (!cxPrev) { cxPrev = document.createElement('div'); cxPrev.className = 'cxprev';
+    cxPrev.innerHTML = '<span></span>'; inn.appendChild(cxPrev); }
+  const bad = cxClash(start, start + mins);
+  cxPrev.className = 'cxprev' + (bad ? ' clash' : '');
+  cxPrev.style.top = cxY(start) + 'px';
+  cxPrev.style.height = Math.max(9, mins * CX_PX) + 'px';
+  cxPrev.querySelector('span').textContent = cxHHMM(start) + (bad ? '  on a meeting' : '');
+}
+function cxKillPrev() { if (cxPrev) { cxPrev.remove(); cxPrev = null; } }
+
+function cxStartDrag(e, kind, id, opts) {
+  e.preventDefault();
+  opts = opts || {};
+  if (kind === 'chip') {
+    cxDrag = { kind: 'chip', mins: CX_PY_MINS, title: 'Project You' };
+  } else if (kind === 'new') {
+    cxDrag = { kind: 'new', id: id, mins: opts.mins || 15, title: opts.title || 'To-do',
+               hab: !!opts.hab, amz: !!opts.amz };
+  } else {
+    const src = cxBlocks.find(b => b.id === id); if (!src) return;
+    cxDrag = { kind: kind, id: id, mins: src.mins, title: src.title };
+  }
+  if (kind !== 'resize') {
+    cxGhost = document.createElement('div'); cxGhost.className = 'cxghost';
+    cxGhost.textContent = cxDrag.title + '  ·  ' + cxDur(cxDrag.mins);
+    document.body.appendChild(cxGhost);
+    cxGhost.style.left = (e.clientX + 12) + 'px';
+    cxGhost.style.top = (e.clientY - 10) + 'px';
+  }
+  window.addEventListener('pointermove', cxOnMove);
+  window.addEventListener('pointerup', cxOnUp, { once: true });
+}
+function cxOnMove(e) {
+  if (!cxDrag) return;
+  if (cxDrag.kind === 'resize') {
+    const src = cxBlocks.find(b => b.id === cxDrag.id); if (!src) return;
+    const m = cxGridMinute(e.clientY) - src.start_min;
+    src.mins = Math.max(CX_SNAP, Math.min(240, Math.round(m / CX_SNAP) * CX_SNAP || CX_SNAP));
+    cxDraw(); return;
+  }
+  if (cxGhost) { cxGhost.style.left = (e.clientX + 12) + 'px'; cxGhost.style.top = (e.clientY - 10) + 'px'; }
+  if (cxOverGrid(e.clientX, e.clientY)) {
+    /* Clamp the START to the window, not the END. The window trims itself to the
+       day's content, so its bottom edge sits just after the last thing on it -
+       clamping the end there made a 60-minute drop slide back up onto the last
+       meeting and there was no way to schedule anything late. The window
+       re-trims to include the new block on the very next draw. */
+    const s = Math.max(cxD0, Math.min(Math.min(cxD1, 1380 - cxDrag.mins), cxGridMinute(e.clientY)));
+    cxDrag.pending = s; cxShowPrev(s, cxDrag.mins);
+  } else { cxDrag.pending = null; cxKillPrev(); }
+}
+function cxOnUp() {
+  window.removeEventListener('pointermove', cxOnMove);
+  if (!cxDrag) return;
+  const d = cxDrag; cxDrag = null;
+  if (cxGhost) { cxGhost.remove(); cxGhost = null; }
+  cxKillPrev();
+  if (d.kind === 'resize') { const b = cxBlocks.find(x => x.id === d.id); if (b) cxSaveMove(b); cxDraw(); return; }
+  if (d.pending == null) {
+    /* dragged an existing block off the day = take it off the day */
+    if (d.kind === 'move') { cxRemove(d.id); return; }
+    cxDraw(); return;
+  }
+  if (d.kind === 'chip') {
+    /* Project You time. Not a to-do, so it makes its own block and nothing on
+       the list changes. Counted the moment it is in the past, same as a meeting. */
+    cxSaveNew({ id: -1, todo_id: null, title: 'Project You', mins: d.mins,
+                start_min: d.pending, cat: 'py', amz: false, done: false });
+    return;
+  }
+  if (d.kind === 'new') {
+    const t = (typeof todos !== 'undefined' && todos) ? todos.find(x => x.id === d.id) : null;
+    const old = cxBlocks.find(b => b.todo_id === d.id);
+    /* His rule: the to-do stays on the list exactly as it is. Only the block moves. */
+    if (old) {
+      old.start_min = d.pending; cxSaveMove(old); cxDraw(); return;
+    }
+    cxSaveNew({ id: -1, todo_id: d.id, title: d.title, mins: d.mins, start_min: d.pending,
+                cat: d.hab ? 'hab' : 'todo', amz: !!d.amz, done: t ? !!t.done : false });
+    return;
+  }
+  const b = cxBlocks.find(x => x.id === d.id);
+  if (b) { b.start_min = d.pending; cxSaveMove(b); }
+  cxDraw();
+}
+
+/* ------------------------------------------------------------------ input -- */
+function cxWire() {
+  document.addEventListener('pointerdown', e => {
+    if (!cxReady) return;
+    const ch = e.target.closest('[data-cxcat]'); if (ch) { cxStartDrag(e, 'chip'); return; }
+    const g = e.target.closest('[data-cxgrab]');
+    if (g) {
+      const row = g.closest('li.task');
+      const txt = row ? (row.querySelector('.text') || {}) : {};
+      cxStartDrag(e, 'new', g.dataset.cxgrab, {
+        mins: +g.dataset.cxmins || 15,
+        title: (txt.textContent || 'To-do').trim().slice(0, 60),
+        hab: g.dataset.cxhab === '1',
+        amz: /amazon|work/i.test((row && row.closest('li.node') ? '' : '')) });
+      return;
+    }
+    const rz = e.target.closest('[data-cxrz]'); if (rz) { cxStartDrag(e, 'resize', +rz.dataset.cxrz); return; }
+    const x = e.target.closest('[data-cxx]'); if (x) { cxRemove(+x.dataset.cxx); return; }
+    const bl = e.target.closest('[data-cxb]'); if (bl) { cxStartDrag(e, 'move', +bl.dataset.cxb); return; }
+    const mt = e.target.closest('[data-cxmt]');
+    if (mt) {
+      const m = cxMeet[+mt.dataset.cxmt]; if (!m) return;
+      m.skipped = !m.skipped; cxDraw();
+      sb.from('calendar_events').update({ skipped: m.skipped }).in('id', m.ids);
+      return;
+    }
+    const wd = e.target.closest('[data-cxday]');
+    if (wd) { cxDay = wd.dataset.cxday; cxLoadDay(cxDay).then(cxDraw); return; }
+    const wk = e.target.closest('[data-cxwk]');
+    if (wk) {
+      const d = ymdToDay(cxWeek0); d.setUTCDate(d.getUTCDate() + 7 * (+wk.dataset.cxwk));
+      cxWeek0 = dayKey(d); cxDrawWeek(); return;
+    }
+  });
+
+  const rfr = document.getElementById('cxrfr');
+  if (rfr) rfr.addEventListener('click', e => {
+    const apple = /iPhone|iPad|Macintosh/.test(navigator.userAgent);
+    rfr.classList.add('spin');
+    /* On an Apple device the href runs the shortcut on the machine in your hand.
+       Everywhere else we just re-read what the last pull left in the database
+       rather than pretending we reached the phone. */
+    if (!apple) e.preventDefault();
+    setTimeout(async () => {
+      await cxLoadDay(cxDay); cxDraw(); rfr.classList.remove('spin');
+      if (!apple) {
+        const s = document.getElementById('cxstamp');
+        const was = s.textContent;
+        s.textContent = 'Re-read. The pull itself runs on your iPhone.';
+        setTimeout(() => { cxStamp(); }, 3200);
+      }
+    }, apple ? 2500 : 400);
+  });
+}
+
+async function cxInit() {
+  if (!document.getElementById('calcol')) return;
+  try {
+    cxDay = localDate();
+    await cxLoadDay(cxDay);
+    cxReady = true;
+    cxWire();
+    cxDraw();
+    setInterval(() => { if (cxReady && cxIsToday()) cxDraw(); }, 60000);
+  } catch (e) {
+    cxReady = false;
+    const g = document.getElementById('cxgrid');
+    if (g) g.innerHTML = '<div class="cxempty">The calendar could not load just now.<br>The rest of the page is unaffected.</div>';
+  }
 }
 
 refreshAuth();
