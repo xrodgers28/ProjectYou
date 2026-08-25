@@ -63,10 +63,6 @@
   li.has-children > .row:hover .caret{opacity:1}
   li.collapsed > .row .caret{transform:rotate(-90deg)}
   li.collapsed > ul.list{display:none}
-  /* An indented row folded away by its parent. It stays in the DOM on purpose:
-     onDragEnd renumbers every position from the DOM, so a row that is merely
-     hidden keeps its place, while a row that was never rendered would lose it. */
-  li.node.foldhide{display:none}
 
   /* bullet */
   .bullet{
@@ -1092,26 +1088,13 @@ async function maybeClearHabits(){
 }
 
 /* ---------- row builders ---------- */
-function taskRow(t, kids) {
+function taskRow(t) {
   const li = el('li', 'node task' + (t.done ? ' done' : '') + (t.skipped ? ' skipped' : ''));
   li.dataset.id = t.id;
   const _lvl = Math.max(0, Math.min(6, t.indent || 0));
   if (_lvl) li.style.marginLeft = (_lvl * 22) + 'px';
   const row = el('div', 'row');
-  /* Every row has always drawn this caret and none of them did anything. Scott
-     built his own headings with Tab (Calendar Items, TONIGHT, Weekly Tasks) and
-     reasonably expected the triangle above them to fold. Sections and
-     subsections nest as real lists so the tree's own collapse reaches them;
-     indented rows are flat siblings with a left margin, so it never could. */
-  const car = el('span', 'caret', '▾');
-  const foldKey = 'ind:' + t.id;
-  if (kids) {
-    li.classList.add('has-children');
-    if (collapsed[foldKey]) li.classList.add('collapsed');
-    car.onclick = () => { collapsed[foldKey] = !collapsed[foldKey]; render(); };
-    car.title = collapsed[foldKey] ? ('show the ' + kids + ' below') : ('fold the ' + kids + ' below');
-  }
-  row.appendChild(car);
+  row.appendChild(el('span', 'caret', '▾'));
   const bullet = el('span', 'bullet'); bullet.appendChild(el('span', 'dot')); row.appendChild(bullet);
   const check = el('span', 'check');
   check.onclick = () => {
@@ -1238,38 +1221,8 @@ function taskRow(t, kids) {
     const del = el('span', 'skip-btn', '×'); del.title = 'delete'; del.onclick = () => removeTask(t.id);
     row.appendChild(del);
   }
-  if (kids && collapsed[foldKey]) row.appendChild(el('span', 'count', String(kids)));
   li.appendChild(row);
   return li;
-}
-
-/* ONE definition of what a row's children are, shared with descendantIds(),
-   which drag-and-drop already uses: the contiguous run of following rows in the
-   same list whose indent is deeper. Two definitions would drift, and folding
-   and dragging would disagree about the same group. */
-function kidsBelow(list, i) {
-  let n = 0;
-  for (let j = i + 1; j < list.length; j++) {
-    if ((list[j].indent || 0) > (list[i].indent || 0)) n++; else break;
-  }
-  return n;
-}
-function foldedIds(list) {
-  const out = new Set();
-  for (let i = 0; i < list.length; i++) {
-    if (!collapsed['ind:' + list[i].id]) continue;
-    const n = kidsBelow(list, i);
-    for (let j = i + 1; j <= i + n; j++) out.add(list[j].id);
-  }
-  return out;
-}
-function appendFoldable(host, list) {
-  const hid = foldedIds(list);
-  list.forEach((t, i) => {
-    const li = taskRow(t, kidsBelow(list, i));
-    if (hid.has(t.id)) li.classList.add('foldhide');
-    host.appendChild(li);
-  });
 }
 
 function subHeader(name, count) {
@@ -1462,12 +1415,12 @@ function render() {
         if (sub) {
           const subLi = subHeader(sub, subItems.length);
           const subList = el('ul', 'list'); subList.dataset.section = sec; subList.dataset.sub = sub;
-          appendFoldable(subList, subItems);
+          subItems.forEach(t => subList.appendChild(taskRow(t)));
           subList.appendChild(addRow(sec, sub));
           subLi.appendChild(subList);
           secList.appendChild(subLi);
         } else {
-          appendFoldable(secList, subItems);
+          subItems.forEach(t => secList.appendChild(taskRow(t)));
         }
       }
       secList.appendChild(addRow(sec, null));
@@ -1908,7 +1861,7 @@ function dayCatData(){
 async function loadHabitTemplate(){
   try {
     const { data, error } = await sb.from('daily_template')
-      .select('task,section,position,est_minutes,is_habit,live').eq('is_habit', true);
+      .select('task,section,position,est_minutes,is_habit,live,cadence').eq('is_habit', true);
     if (error) throw error;
     HABIT_TMPL = (data || []).filter(r => r.live !== false)
                              .sort((a,b) => (a.position || 999) - (b.position || 999));
@@ -1985,10 +1938,28 @@ function habitEstimatedSet(){
    not treated as missing - "Lights out by 11pm" and "Three full water bottles" are yes/no
    habits that cost no time, and they must not quietly add 10 minutes each to the bar they
    are measured against. Returns 0 when the template has not loaded, and the counter shows
-   an em dash rather than a number it cannot stand behind. */
+   an em dash rather than a number it cannot stand behind.
+
+   ONLY DAILY HABITS SET THE BAR. Scott, Aug 24 2026: "movie habit means 2 hours on one
+   day". The 120 minutes on "Watch a film or show each month" is not a monthly total to be
+   spread thin, it is a real two hours on the one day he watches something - so the
+   estimate is right and it simply is not part of what today asks of him. Counting it made
+   the bar 4h53m, of which 41% was a once-a-month habit, and every ordinary day read as
+   failure. The template already carries cadence (Daily 19, Weekly 2, Monthly 1), so the
+   bar is the Daily rows only: 2h08m, 13 segments.
+   The NUMERATOR still counts everything ticked, weekly and monthly habits included, so
+   the day he does watch the film it shows as going past the bar. That is the right way
+   round. Adding it to the denominator on the day he earns it would RAISE the bar for
+   doing more, which would punish the very thing the counter is meant to encourage.
+   A row with no cadence is treated as Daily, so nothing disappears from the bar by
+   accident if the field is ever left blank. */
 function habitTargetMinutes(){
   if (!HABIT_TMPL || !HABIT_TMPL.length) return 0;
-  return HABIT_TMPL.reduce((a, r) => a + (r.est_minutes == null ? 10 : (+r.est_minutes || 0)), 0);
+  return HABIT_TMPL.reduce((a, r) => {
+    const cad = String(r.cadence == null ? 'daily' : r.cadence).trim().toLowerCase();
+    if (cad && cad !== 'daily') return a;
+    return a + (r.est_minutes == null ? 10 : (+r.est_minutes || 0));
+  }, 0);
 }
 function habitMinutesToday(){
   const m = habitMinutesMap();
