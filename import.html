@@ -97,6 +97,7 @@
   .r .runs{font-size:11px;font-weight:700;color:var(--accent);background:var(--chip);border-radius:999px;padding:3px 9px;white-space:nowrap}
   .r .to{font-size:11px;color:#9aa6b4;font-weight:700}
   .r .already{font-size:10.5px;font-weight:800;letter-spacing:.4px;border-radius:999px;padding:3px 8px;background:#eef7f0;color:#1e8e5a;white-space:nowrap}
+  .r .spread{background:#fdf1dc;color:#9a6b12}
   .r .flag{font-size:10.5px;font-weight:800;letter-spacing:.4px;border-radius:999px;padding:3px 8px;background:#fdf6e9;color:#8a6218;white-space:nowrap}
   .r .ok{font-size:11.5px;font-weight:800;color:var(--green);white-space:nowrap;margin-top:9px}
   .r .drop{font-family:inherit;font-size:11px;font-weight:700;color:#b5bec9;background:none;border:none;cursor:pointer;padding:6px 4px}
@@ -135,7 +136,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar-wrap"><div class="secbar"><h1>📥 Import</h1><span class="ver">v2.8</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>📥 Import</h1><span class="ver">v3.1</span><span class="date"></span></div></div>
   <div class="wrap">
    <div class="cols">
     <div class="colmain">
@@ -170,7 +171,7 @@
     </div></aside>
    </div>
   </div>
-  <div class="badge">Import v2.8</div>
+  <div class="badge">Import v3.1</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -188,8 +189,8 @@ let ONSOCIAL=new Set();   /* person|date of everything already logged on Social 
    case so it matches every other writer into these tables; only the label is
    capitalised. Scott, Aug 24 2026: no "meeting", no "group", and the occasions
    run in the order a day does. */
-const PEOPLE_KINDS=[['breakfast','Breakfast'],['coffee','Coffee'],['lunch','Lunch'],['dinner','Dinner'],['drinks','Drinks'],['party','Party'],['get together','Get Together'],['creative event','Creative Event'],['call','Call'],['other','Other']];
-const MOVIE_KINDS=[['movie','Movie'],['tv show','TV show'],['documentary','Documentary']];
+let PEOPLE_KINDS=[['breakfast','Breakfast'],['coffee','Coffee'],['lunch','Lunch'],['dinner','Dinner'],['drinks','Drinks'],['party','Party'],['get together','Get Together'],['creative event','Creative Event'],['call','Call'],['other','Other']];
+let MOVIE_KINDS=[['movie','Movie'],['tv show','TV show'],['documentary','Documentary']];
 /* The closeness circles, from Scott's diagram. [value, label, the count the
    diagram puts on it, the hover line]. Outer and Affinity carry no number
    because the diagram does not put one on them. */
@@ -201,7 +202,7 @@ const MOVIE_KINDS=[['movie','Movie'],['tv show','TV show'],['documentary','Docum
    both moved here out of the occasion list, because who someone IS is not an
    occasion. Ex-Colleague is deliberately its own label, not a past tense of
    Colleague - both are true of different people at the same time. */
-const LABELS=[['family','Family','Related to you'],
+let LABELS=[['family','Family','Related to you'],
               ['colleague','Colleague','You work with them now'],
               ['ex-colleague','Ex-Colleague','You used to work with them'],
               ['industry','Industry','Someone from your line of work'],
@@ -210,18 +211,18 @@ const LABELS=[['family','Family','Related to you'],
    It is only ever ADDED, never removed - Industry can be true for reasons that have
    nothing to do with having worked together, and unticking Colleague must not
    quietly throw that away. */
-const IMPLIES={'colleague':'industry','ex-colleague':'industry'};
+let IMPLIES={'colleague':'industry','ex-colleague':'industry'};
 /* Colleague and Ex-Colleague contradict each other - one has to clear the other,
    or a person ends up being both, which is what happened to Rawle on Aug 25 2026
    when a rule only ever added and never removed. Mutually exclusive pairs are the
    one case where removing is right. */
-const EXCLUDES={'colleague':'ex-colleague','ex-colleague':'colleague'};
+let EXCLUDES={'colleague':'ex-colleague','ex-colleague':'colleague'};
 
 /* People whose circle and labels are already settled, so they never have to be
    tagged by hand again. Matched on the whole name, lower case - a substring match
    would sweep up "Todd's family", which is a different entry. Applied only where a
    row is still blank, so anything Scott has set himself always wins. */
-const KNOWN={
+let KNOWN={
   'todd':     {circle:'inner',    labels:['family'],               why:'your brother'},
   'cousins':  {circle:'inner',    labels:['family'],               why:'family'},
   'mike cann':{circle:'inner',    labels:[],                       why:'always inner'},
@@ -230,10 +231,10 @@ const KNOWN={
 function knownFor(r){ return KNOWN[(r.proposed_name||'').trim().toLowerCase()]||null; }
 /* Roughly which decade someone is in. One per person, so radio chips like Circle
    rather than toggles like Labels. Short enough that all ten sit on one row. */
-const AGES=[['kids','Kids'],['teens','Teens'],['20s','20s'],['30s','30s'],['40s','40s'],
+let AGES=[['kids','Kids'],['teens','Teens'],['20s','20s'],['30s','30s'],['40s','40s'],
             ['50s','50s'],['60s','60s'],['70s','70s'],['80s','80s'],['90s','90s'],
             ['mixed','Mixed']];   /* several people, a spread of ages */
-const CIRCLES=[
+let CIRCLES=[
   ['inner','Inner','5','Intimate and loyal friends and family — the 3am friends'],
   ['middle','Middle','15','Good and dependable friends — you see them regularly'],
   ['affinity','Affinity','','Friends and extended social circle — you see them sometimes'],
@@ -250,7 +251,7 @@ const SECS=[
 /* The four circles, drawn rather than pictured, so it publishes as text and can
    carry live counts. Nested with a near-common bottom edge, the way Scott's
    diagram has it, so each band reads as sitting inside the next one out. */
-const WHEEL=[
+let WHEEL=[
   {k:'outer',   r:250, cy:262, ty:40,  fill:'#a9cde3', ink:'#2b5670', title:'Outer Circle',
    lines:['Acquaintances, neighbors,','community casual contacts.'], quip:'Faces you recognize, weak ties'},
   {k:'affinity',r:200, cy:312, ty:142, fill:'#a9d0a0', ink:'#356038', title:'Affinity Circle',
@@ -320,7 +321,64 @@ async function onLogin(session){
   load();
 }
 
+/* Everything below is a FALLBACK. The truth lives in people_vocab, people_vocab_rules
+   and people_known, and is read once at load. connections.html reads the same three
+   tables the same way - if you change one loader, change the other, or better, do not
+   have two. Adding an occasion should be one database row and no page edit at all. */
+async function loadVocab(){
+  try{
+    var v=await sb.from('v_people_vocab').select('*').eq('active',true).order('sort_order');
+    var rows=(v&&v.data)||[];
+    var by=function(d){return rows.filter(function(r){return r.dimension===d;});};
+    var occ=by('occasion'), cir=by('circle'), lab=by('label'), age=by('age');
+    if(occ.length) PEOPLE_KINDS=occ.map(function(r){return [r.value,r.label];});
+    if(age.length) AGES=age.map(function(r){return [r.value,r.label];});
+    if(lab.length) LABELS=lab.map(function(r){
+      var m=r.meta||{};
+      var fb=LABELS.filter(function(o){return o[0]===r.value;})[0];
+      return [r.value,r.label,m.hint||(fb&&fb[2])||''];
+    });
+    if(cir.length){
+      CIRCLES=cir.map(function(r){
+        var m=r.meta||{};
+        var fb=CIRCLES.filter(function(o){return o[0]===r.value;})[0];
+        return [r.value,r.label,(m.n!==undefined?m.n:(fb&&fb[2])||''),(m.quip||(fb&&fb[3])||'')];
+      });
+      /* The circle rows carry the wheel's geometry too, so the diagram is data.
+         Drawn largest first, hence sorting by radius rather than sort_order. */
+      var w=cir.filter(function(r){return r.meta&&r.meta.r;});
+      if(w.length===cir.length){
+        WHEEL=w.map(function(r){
+          var m=r.meta;
+          return {k:r.value,r:m.r,cy:m.cy,ty:m.ty,fill:m.fill,ink:m.ink,
+                  title:r.label+' Circle',n:m.n,lines:m.lines||[],quip:m.quip||''};
+        }).sort(function(a,b){return b.r-a.r;});
+      }
+    }
+  }catch(e){}
+  try{
+    var rl=await sb.from('people_vocab_rules').select('*');
+    if(rl&&rl.data&&rl.data.length){
+      IMPLIES={}; EXCLUDES={};
+      rl.data.forEach(function(r){
+        if(r.rule==='implies')  IMPLIES[r.from_value]=r.to_value;
+        if(r.rule==='excludes') EXCLUDES[r.from_value]=r.to_value;
+      });
+    }
+  }catch(e){}
+  try{
+    var kn=await sb.from('people_known').select('*');
+    if(kn&&kn.data&&kn.data.length){
+      KNOWN={};
+      kn.data.forEach(function(k){
+        KNOWN[k.name_key]={circle:k.circle,labels:k.labels||[],why:k.why||'known'};
+      });
+    }
+  }catch(e){}
+}
+
 async function load(){
+  await loadVocab();
   var res=await sb.from('import_2026').select('*').is('imported_at',null);
   if(res.error){toast('Could not load: '+res.error.message);return;}
   ROWS=res.data||[];
@@ -425,6 +483,7 @@ function rowHTML(r,sec){
   var yr=sec.key==='movies'?'<input class="dt" style="width:74px" type="number" placeholder="year" value="'+esc(r.release_year||'')+'" onchange="setField(\''+jq(r.id)+'\',\'release_year\',this.value?+this.value:null)">':'';
   var flag=r.occurred_on&&r.occurred_on<'2026-01-01'?'<span class="flag">2025</span>':'';
   var logged=(sec.key==='people'&&onSocial(r))?'<span class="already" title="Already on Social. Send will add your tagging to that entry rather than logging it twice.">on Social</span>':'';
+  var everyone=(sec.key==='people'&&!r.occurred_on)?'<span class="already spread" title="No date, so this row is the person rather than one evening. Send writes your tagging onto every entry on Social with this name, and never creates a new one.">tags every entry</span>':'';
   return '<div class="'+cls+'" id="row-'+r.id+'">'+
     '<input class="ck" type="checkbox" '+(r.include?'checked':'')+' onchange="setField(\''+jq(r.id)+'\',\'include\',this.checked)" title="Send this one">'+
     '<span class="dot '+esc(r.confidence)+'" title="'+(r.confidence==='hi'?'Straight from the sheet':(r.confidence==='mid'?'Claude expanded your shorthand':'Claude is guessing — read the note'))+'"></span>'+
@@ -432,7 +491,7 @@ function rowHTML(r,sec){
       '<input class="nm" value="'+esc(r.proposed_name)+'" onchange="setField(\''+jq(r.id)+'\',\'proposed_name\',this.value)">'+
       '<div class="fields">'+
         '<input class="dt" type="date" value="'+esc(r.occurred_on||'')+'" onchange="setField(\''+jq(r.id)+'\',\'occurred_on\',this.value||null)">'+to+
-        yr+runs+flag+logged+
+        yr+runs+flag+everyone+logged+
       '</div>'+
       chipRow(sec.key==='people'?'Occasion':'Kind',kinds,r.proposed_kind,r.id,'proposed_kind')+
       (sec.key==='people'?chipRow('Circle',CIRCLES,r.proposed_circle,r.id,'proposed_circle'):'')+
@@ -578,7 +637,24 @@ async function send(key){
           if(look.error)throw look.error;
           if(look.data&&look.data.length)hit=look.data[0].id;
         }
-        if(hit){
+        /* A row with no date is not one evening, it is a person. Tagging it
+           writes the same circle, age and labels onto every entry already on
+           Social for that name - so someone you have seen fifty times is
+           tagged once. It never creates a new entry. */
+        var spread=null;
+        if(!r.occurred_on){
+          var every=await sb.from('connections').select('id').ilike('person',r.proposed_name.trim());
+          if(every.error)throw every.error;
+          if(every.data&&every.data.length)spread=every.data.map(function(x){return x.id;});
+        }
+        if(spread){
+          var patch={labels:r.proposed_labels||[]};
+          if(r.proposed_circle)patch.circle=r.proposed_circle;
+          if(r.proposed_age)patch.age_band=r.proposed_age;
+          var sp=await sb.from('connections').update(patch).in('id',spread);
+          if(sp.error)throw sp.error;
+          newId=spread[0]; merged+=spread.length;
+        }else if(hit){
           var tag=await sb.from('connections').update({
             circle:r.proposed_circle||null,
             age_band:r.proposed_age||null,
