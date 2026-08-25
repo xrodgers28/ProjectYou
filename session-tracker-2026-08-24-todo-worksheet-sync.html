@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Tracker · Aug 24 · Project YOU OS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#20242b;--muted:#6b7280;--line:#e7e9ee;--bg:#fbfbfa;--card:#fff;--accent:#3f6f8f;--hub:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--blue:#3f6f8f;--red:#c0453b;--amber:#c68a2e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.25;padding:18px 16px 210px}
+  .head{max-width:1160px;margin:0 auto}
+  h1{font-size:22px;color:var(--hub);font-weight:800}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 10px;margin-top:7px;background:#eef7f1;color:var(--green);border:1px solid #cfe9db}
+  .chip.off{background:#fbe7e5;color:var(--red);border-color:#f0cfcb}
+  .sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.4;max-width:820px}
+  h2{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--hub);max-width:1160px;margin:18px auto 6px}
+  .tbl{max-width:1160px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .r{display:grid;grid-template-columns:34px 1fr 128px 150px 260px;align-items:flex-start;border-bottom:1px solid var(--line);transition:opacity .25s,max-height .3s,padding .3s;max-height:900px;overflow:hidden}
+  .r:last-child{border-bottom:none}
+  .r.hd{background:#f4f5f7;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);align-items:center}
+  .r.gone{opacity:0;max-height:0;border:none}
+  .c{padding:9px 14px}
+  .c.lt{padding:12px 0 9px 12px}
+  .dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .dot.green{background:var(--green)} .dot.amber{background:#e08b1f} .dot.red{background:var(--red)}
+  .r.hd .c.lt{padding-left:12px}
+  .legend{max-width:1160px;margin:10px auto 0;display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);font-weight:700;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;font-style:normal}
+  .asof{max-width:1160px;margin:14px auto 0;font-size:12.5px;font-style:italic;color:#808080}
+  .c.mid,.c.act,.c.next{padding:9px 12px}
+  .task .tt{color:var(--accent);text-decoration:none;font-size:14px;font-weight:700;line-height:1.2;border-bottom:1px solid #cfdae5}
+  .task .tt:hover{border-bottom-color:var(--accent)}
+  .task .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
+  .pill.green{background:var(--green)} .pill.blue{background:var(--blue)} .pill.red{background:var(--red)} .pill.amber{background:var(--amber)}
+  .act{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .got{font-weight:800;font-size:12.5px;border:1.5px solid var(--green);background:#fff;color:var(--green);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .yn{font-weight:800;font-size:12.5px;border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .yn.yes.on{background:var(--green);border-color:var(--green);color:#fff} .yn.no.on{background:var(--red);border-color:var(--red);color:#fff}
+  .ynrow{display:flex;gap:6px}
+  .notelink{font-size:11.5px;font-weight:700;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:0}
+  .notelink:hover{color:var(--accent)}
+  .nt{width:100%;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:30px;margin-top:2px}
+  .hidden{display:none}
+  .next{font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .next.none{color:#a7adb6}
+  .next.todo{background:#fdf6e9;color:#5c4a24;border-left:3px solid var(--amber)}
+  .next .nh{display:block;font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+  .next ol{margin:0 0 0 16px;padding:0}
+  .next ol li{margin:0 0 5px;line-height:1.4}
+  .next ol li:last-child{margin-bottom:0}
+  .next .lead{display:block;margin-bottom:4px}
+  .next code{background:#fff;border:1px solid #e2d9c2;border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+  .next a{color:var(--accent);font-weight:700}
+  .mins{display:inline-block;font-weight:800;font-size:10.5px;color:var(--muted);background:var(--chip);border-radius:999px;padding:2px 7px;margin-left:4px}
+  .allclear{max-width:1160px;margin:0 auto;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  @media(max-width:900px){
+    .r{grid-template-columns:22px 1fr auto}
+    .c.lt{grid-row:span 2}
+    .c.act,.c.next{grid-column:1/-1;border-top:1px solid var(--line)}
+    .c.act{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .r.hd{display:none}
+  }
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(31,42,68,.10);padding:9px 16px}
+  .dock .bar{max-width:1160px;margin:0 auto}
+  .dock .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:10px;flex-wrap:wrap}
+  .dock .top b{font-size:12.5px;color:var(--hub)}.dock .hint{font-size:11px;color:var(--muted)}
+  #out{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;border:1px solid var(--line);border-radius:10px;padding:8px;height:80px;resize:vertical;background:#fbfcfe;color:var(--ink)}
+  .copybtn{font-weight:700;font-size:12px;border:1px solid var(--line);background:var(--chip);color:var(--accent);border-radius:9px;padding:6px 11px;cursor:pointer;margin-top:5px}
+  h1 .ver{display:inline-block;margin-left:9px;font-size:11px;font-weight:800;color:#9aa6b4;background:none;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;vertical-align:middle;letter-spacing:0}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Session Tracker<span class="ver">v1.0</span></h1>
+  <div class="meta">Project YOU OS · Aug 24, 2026 · Ticking a habit anywhere now ticks it everywhere, and the duplicate factory behind it is closed</div>
+  <div id="syncchip" class="chip">connecting...</div>
+  <div class="sub">The light on the left is the fastest read: green is finished, amber is waiting on you, red is not started. Nine things shipped today and one is genuinely stuck waiting on you. Tap Got It on anything you have taken in and it drops off the list. The two decisions at the bottom keep Yes and No, and everything saves to the database so I read it back with no copy-paste.</div>
+<div class="legend"><span><i style="background:#1e8e5a"></i>Done</span><span><i style="background:#e08b1f"></i>Awaiting your comments</span><span><i style="background:#c0453b"></i>Not started</span></div>
+<div class="asof">As of August 24th</div>
+
+<h2>Work this session · <span id="leftct"></span></h2>
+<div class="tbl" id="tblWork"><div class="r hd"><div class="c lt"></div><div class="c">Input / Task</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+<div id="allclear" class="allclear hidden"></div>
+
+<h2>Your call · decisions</h2>
+<div class="tbl" id="tblLater"><div class="r hd"><div class="c lt"></div><div class="c">Item</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+
+<div class="dock"><div class="bar">
+  <div class="top"><b>Your responses (live)</b><span class="hint">saved automatically · this box is the fallback</span></div>
+  <textarea id="out" readonly></textarea>
+  <button class="copybtn" onclick="copyOut()">Copy</button>
+</div></div>
+
+<script>
+const SLUG='2026-08-24-todo-worksheet-sync';
+const SITE='https://xrodgers28.github.io/ProjectYou/';
+const SHEET=SITE+'habit-worksheets.html';
+const BOARD=SITE+'habit-modules.html';
+const TIDY=SITE+'worksheet-tidy.html';
+const TASKS=SITE+'index.html';
+const WHEEL=SITE+'index.html#wheel';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+
+const WORK=[
+  {item:SLUG+'::sync', label:'Ticking a habit anywhere now ticks it everywhere', url:SHEET, pill:'green', ptext:'Live', light:'green',
+   desc:'Habit Worksheets v2.4. Cross a habit off Todays Tasks and it reads DONE TODAY on its worksheet, with the minutes it took. Tick it on the worksheet and it crosses off your to-do list. Both write the same row, which is the row the wheel and the streak already read, so the wheel needed no work at all. Undo works from either side.',
+   next:'Nothing. You have already tested it.', mins:''},
+
+  {item:SLUG+'::wsid', label:'The link is an ID now, not a name', url:SHEET, pill:'green', ptext:'Live', light:'green',
+   desc:'The two lists used to be matched on the habit’s name, and it was already broken without showing it: your to-do said AI insight and the worksheet said Read today’s AI insight, so that habit could never have synced in either direction. Every habit row now names its worksheet row outright, filled in by the database on every path that can create one.',
+   next:'Nothing. A rename on either side can no longer break it.', mins:''},
+
+  {item:SLUG+'::dupes', label:'The Cue Cards board was quietly making duplicate habits', url:BOARD, pill:'green', ptext:'Closed', light:'green',
+   desc:'This is what your Atomic Habits test caught. The board kept its own list of habit names and created a second to-do whenever it could not find one, so you had two rows for one habit and the worksheet was reading the untouched one. Two had already happened today and two more were primed. Merged, and the board can no longer invent an orphan.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::names', label:'Four habits had two names each, now one, with Compass YIR', url:BOARD, pill:'green', ptext:'Done, your call', light:'green',
+   desc:'You chose the cue card names and renamed Compass yourself. Applied across the worksheet, the daily template, your to-do list and tomorrow’s queued list in one pass. Compass YIR still files its history under Compass, so the nine day run did not break.',
+   next:'Nothing. Habits can be renamed freely from here without forking a streak.', mins:''},
+
+  {item:SLUG+'::merge', label:'Medicine and Meditate merged', url:SHEET, pill:'green', ptext:'Done, your call', light:'green',
+   desc:'Take Medicine is now only the pill version. Meditate lives only in Emotional Health, under a Practice Mindfulness section that moved across with it, and kept its Aug 15 and 16 history.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::tencards', label:'All ten cue cards have a home on a worksheet', url:SHEET, pill:'green', ptext:'Live', light:'green',
+   desc:'Six of them had none, so each created a stray to-do with no life area the first time you used it. Two arrived live while you were testing. Each is now placed in the area your worksheet already associated with that card. Daily habits went from 13 to 19.',
+   next:'Open the worksheets and glance down the six new rows. Move any that sit wrong.', mins:'3'},
+
+  {item:SLUG+'::moves', label:'Open Mode and The Feed moved where you wanted them', url:SHEET, pill:'green', ptext:'Live', light:'green',
+   desc:'Open Mode is in Sense of Purpose under Sharpening my creativity. The Feed is in Mental Fitness under Engage in Life Long Learning, which is the Clarity Compass section you asked about, alongside Takeaways, AI Insights, Atomic Habits and Clever Phrases.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::tidy', label:'Worksheet Tidy, built and all twenty settled', url:TIDY, pill:'green', ptext:'Live, v1.1', light:'green',
+   desc:'One tap per row. You unlinked twelve, kept four, retired none, and cleared two empty headings. I had recommended retiring fifteen of them and you were right not to: you kept everything you had written and only dropped the card links. That is now a standing rule for how I pitch clean-up work.',
+   next:'Nothing, unless you want the page taken down. That is the first decision below.', mins:''},
+
+  {item:SLUG+'::untick', label:'Unticking works properly, and a bad bug got caught before it bit', url:WHEEL, pill:'green', ptext:'Live', light:'green',
+   desc:'Taking a tick back used to leave the habit logged in your history. Fixed in the database so every surface undoes the same way. My first version of that rule would have deleted a whole day of history if the nightly reset was ever run by hand at midday. I proved it in a throwaway transaction, 112 rows down to 108, and fixed it properly.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::calendar', label:'The calendar section that will not collapse', url:TASKS, pill:'red', ptext:'Stuck on me', light:'red',
+   desc:'I could not find it. There is no calendar panel anywhere in the published Todays Tasks page, and when I opened the live page in your Chrome to look, the tab froze three times before finishing, most likely because it was not signed in. I would rather ask than guess at this one.',
+   lead:'One of these two, whichever is quicker for you.',
+   steps:[
+     'Send me a screenshot of the section in chat, or',
+     'Tell me the exact heading text on it, word for word.',
+     'I go straight at it from there.'
+   ], mins:'1', todo:true}
+];
+
+const LATER=[
+  {item:SLUG+'::dec-tidydown', label:'Take the Worksheet Tidy page down?', url:TIDY, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'Its job is done, all twenty settled. It is not in the nav, so it costs nothing to leave, but it is a chore page sitting on your site. The list will never reach zero on its own because four rows are kept on purpose.',
+   next:'Yes and I remove it. No and it stays at that address for whenever a stray row turns up.', mins:''},
+
+  {item:SLUG+'::dec-harden', label:'Harden the worksheet against a repeat of today?', url:SHEET, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'If two to-do rows ever share one worksheet habit again, the worksheet shows whichever loaded last rather than whichever is done. That is exactly what made today’s bug invisible. Duplicates are prevented now, so this is a belt to go with the braces rather than a fix.',
+   next:'Yes and I publish v2.5 with it, about 30 minutes. No and it waits until something actually needs it.', mins:''}
+];
+
+const ALL=[...WORK,...LATER];
+const state={}; ALL.forEach(x=>state[x.item]={choice:'',note:'',got:false});
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const TODAY=ymd(new Date());
+let sb=null; try{ sb=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co',KEY); }catch(e){}
+function chip(ok){const c=document.getElementById('syncchip');if(ok){c.textContent='saved. Claude can see it';c.className='chip';}else{c.textContent='offline: copy the box below';c.className='chip off';}}
+function nextCell(x){
+  const mins=x.mins?'<span class="mins">'+x.mins+' min</span>':'';
+  if(x.steps){
+    const lead=x.lead?'<span class="lead">'+x.lead+'</span>':'';
+    return '<div class="c next todo"><span class="nh">Your move</span>'+lead+
+           '<ol>'+x.steps.map(t=>'<li>'+t+'</li>').join('')+'</ol>'+mins+'</div>';
+  }
+  if(x.todo) return '<div class="c next todo"><span class="nh">Your move</span>'+x.next+mins+'</div>';
+  if(x.decide) return '<div class="c next">'+x.next+'</div>';
+  const none=/^Nothing\.?$/i.test((x.next||'').trim());
+  return '<div class="c next'+(none?' none':'')+'">'+(x.next||'')+mins+'</div>';
+}
+function rowNode(x){
+  const d=document.createElement('div'); d.className='r'; d.dataset.i=x.item;
+  const desc=x.desc?'<div class="desc">'+x.desc+'</div>':'';
+  let act='';
+  if(x.decide){
+    act='<div class="ynrow"><button class="yn yes" data-i="'+x.item+'" data-v="Yes">Yes</button><button class="yn no" data-i="'+x.item+'" data-v="No">No</button></div>';
+  } else {
+    act='<button class="got" data-i="'+x.item+'">Got It</button>';
+  }
+  act+='<button class="notelink" data-i="'+x.item+'">＋ note</button><textarea class="nt hidden" data-i="'+x.item+'" placeholder="comment (optional)"></textarea>';
+  const lt=x.light||'amber';
+  d.innerHTML=
+    '<div class="c lt"><span class="dot '+lt+'" title="'+({green:'Done',amber:'Awaiting your comments',red:'Not started'}[lt])+'"></span></div>'+
+    '<div class="c task"><a class="tt" href="'+x.url+'" target="_blank" rel="noopener">'+x.label+'</a>'+desc+'</div>'+
+    '<div class="c mid"><span class="pill '+x.pill+'">'+x.ptext+'</span></div>'+
+    '<div class="c act">'+act+'</div>'+
+    nextCell(x);
+  return d;
+}
+let viewed=new Set();
+function renderWork(){
+  const tw=document.getElementById('tblWork');
+  tw.querySelectorAll('.r:not(.hd)').forEach(n=>n.remove());
+  WORK.filter(x=>!viewed.has(x.item)).forEach(x=>tw.appendChild(rowNode(x)));
+  updateLeft();
+}
+function updateLeft(){
+  const left=WORK.filter(x=>!viewed.has(x.item)).length;
+  document.getElementById('leftct').textContent=left+' left';
+  const ac=document.getElementById('allclear');
+  if(left===0){ ac.textContent='All caught up. '+viewed.size+' filed to today\'s session content.'; ac.classList.remove('hidden'); document.getElementById('tblWork').classList.add('hidden'); }
+  else { ac.classList.add('hidden'); document.getElementById('tblWork').classList.remove('hidden'); }
+}
+const tl=document.getElementById('tblLater'); LATER.forEach(x=>tl.appendChild(rowNode(x)));
+async function saveContent(x){ if(!sb){chip(false);return;} try{ const {error}=await sb.from('session_content').upsert({day:TODAY,item:x.item,label:x.label,session:SLUG,saved_at:new Date().toISOString()},{onConflict:'day,item'}); chip(!error);}catch(e){chip(false);} }
+async function saveTracker(x){ compile(); if(!sb){chip(false);return;} try{ const {error}=await sb.from('tracker').upsert({item:x.item,label:x.label,choice:state[x.item].choice,note:state[x.item].note,session:SLUG,updated_at:new Date().toISOString()},{onConflict:'item'}); chip(!error);}catch(e){chip(false);} }
+document.body.addEventListener('click',e=>{
+  const g=e.target.closest('.got');
+  if(g){ const i=g.dataset.i, x=ALL.find(z=>z.item===i); state[i].got=true; viewed.add(i); saveContent(x);
+    const rowEl=g.closest('.r'); rowEl.classList.add('gone'); setTimeout(()=>{rowEl.remove();updateLeft();},300); compile(); return; }
+  const nl=e.target.closest('.notelink');
+  if(nl){ const ta=nl.parentElement.querySelector('.nt'); ta.classList.toggle('hidden'); if(!ta.classList.contains('hidden')) ta.focus(); return; }
+  const b=e.target.closest('.yn'); if(!b)return;
+  const i=b.dataset.i,v=b.dataset.v; state[i].choice=(state[i].choice===v)?'':v;
+  b.closest('.act').querySelectorAll('.yn').forEach(y=>y.classList.remove('on')); if(state[i].choice)b.classList.add('on');
+  saveTracker(ALL.find(x=>x.item===i));
+});
+let t=null;
+document.body.addEventListener('input',e=>{ const n=e.target.closest('.nt'); if(!n)return; state[n.dataset.i].note=n.value; clearTimeout(t); t=setTimeout(()=>saveTracker(ALL.find(x=>x.item===n.dataset.i)),500); });
+function compile(){
+  const lines=['Session Tracker, Project YOU OS, Aug 24, 2026',''];
+  const got=WORK.filter(x=>state[x.item].got);
+  if(got.length){ lines.push('Filed to today\'s session content ('+got.length+'):'); got.forEach(x=>lines.push('- '+x.label)); lines.push(''); }
+  ALL.forEach(x=>{ const s=state[x.item]; if(!s.choice && !s.note) return; let l='- '+x.label+': '+(s.choice||'(note)'); if(s.note) l+=' , '+s.note; lines.push(l); });
+  if(lines.length===2) lines.push('(tap Got It, or answer the two decisions)');
+  document.getElementById('out').value=lines.join('\n');
+}
+function copyOut(){const o=document.getElementById('out');o.select();try{document.execCommand('copy');}catch(e){}}
+async function boot(){
+  if(!sb){chip(false);renderWork();compile();return;}
+  try{
+    /* every read is filtered to THIS conversation's slug, so one chat's answers
+       can never show up on another chat's tracker */
+    const sc=await sb.from('session_content').select('item').eq('day',TODAY).eq('session',SLUG);
+    viewed=new Set((sc.data||[]).map(r=>r.item).filter(Boolean));
+    viewed.forEach(i=>{ if(state[i]) state[i].got=true; });
+    renderWork();
+    const tr=await sb.from('tracker').select('*').eq('session',SLUG);
+    (tr.data||[]).forEach(r=>{ if(!state[r.item])return; state[r.item].choice=r.choice||''; state[r.item].note=r.note||'';
+      if(r.choice){const b=document.querySelector('.yn[data-i="'+r.item+'"][data-v="'+r.choice+'"]'); if(b)b.classList.add('on');}
+      if(r.note){const n=document.querySelector('.nt[data-i="'+r.item+'"]'); if(n){n.value=r.note;n.classList.remove('hidden');}} });
+    chip(true); compile();
+  }catch(e){ chip(false); renderWork(); compile(); }
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
