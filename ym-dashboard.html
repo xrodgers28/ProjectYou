@@ -110,6 +110,24 @@
   .foot{font-size:11.5px; color:#8a8f99; margin-top:16px; line-height:1.6}
   .foot b{color:#1f2a44}
 
+  /* ---------- where the days go ---------- */
+  .segbar{display:inline-flex;background:#eef1f6;border-radius:10px;padding:3px;gap:2px}
+  .segbar button{font-family:inherit;font-size:11.5px;font-weight:800;letter-spacing:.2px;
+    color:#7a828d;background:none;border:none;padding:6px 13px;border-radius:8px;cursor:pointer}
+  .segbar button.on{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(31,42,68,.10)}
+  .dayhead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;
+    flex-wrap:wrap;margin-bottom:14px}
+  .daybig{font-size:24px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+  .daysub{font-size:11px;color:#8a8f99;font-weight:700;margin-top:3px}
+  .daywrap{overflow-x:auto}
+  .daywrap svg{display:block}
+  .daykey{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}
+  .daykey span{font-size:11.5px;color:#5b6472;display:inline-flex;align-items:center;gap:6px;
+    font-variant-numeric:tabular-nums}
+  .daykey b{width:9px;height:9px;border-radius:3px;display:inline-block}
+  .daynote{font-size:11.5px;color:#8a8f99;line-height:1.6;margin-top:13px;
+    border-top:1px solid #f0f3f7;padding-top:11px}
+  .daynote b{color:#1f2a44}
   @media(max-width:860px){ .trends{grid-template-columns:repeat(2,1fr)} }
   @media(max-width:560px){ .trends{grid-template-columns:1fr} .pagehead h1{font-size:24px} }
 </style>
@@ -122,7 +140,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link on">YouMatics</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.0</span>
+    <span class="pn-ver">v1.1</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -151,6 +169,20 @@
     <button class="tabtoggle" id="tabtoggle" aria-expanded="false" aria-controls="tabwrap">Show the numbers</button>
     <div class="tabwrap" id="tabwrap"><table id="numtable"></table></div>
 
+    <div class="sechead"><h2>Where the days go</h2><span class="note" id="daynote2">loading…</span></div>
+    <div class="panel">
+      <div class="dayhead">
+        <div><div class="daybig" id="daybig">&mdash;</div><div class="daysub" id="daysub">&nbsp;</div></div>
+        <div class="segbar" id="dayseg">
+          <button data-dayview="week" class="on">Your week</button>
+          <button data-dayview="balance">The balance</button>
+        </div>
+      </div>
+      <div class="daywrap" id="daychart"></div>
+      <div class="daykey" id="daykey"></div>
+      <p class="daynote" id="daycov"></p>
+    </div>
+
     <p class="foot" id="foot"></p>
   </div>
 
@@ -162,7 +194,7 @@
    the top is drawn by the shared health-strip.js, which mounts into the empty
    #bodystrip-mount div above and makes its own py_body_latest call.
    No library, no CDN: plain fetch against PostgREST.
-   v1.0 - Aug 25, 2026
+   v1.1 - Aug 25, 2026
 --------------------------------------------------------------------------- */
 (function () {
   'use strict';
@@ -409,6 +441,248 @@
 })();
 </script>
 
+<script>
+/* ---------------------------------------------------------------------------
+   Where the days go.  v1.0, Aug 25 2026.
+
+   Two views of one set of numbers, toggled:
+     "Your week"    - seven columns, what a typical Monday, Tuesday, Wednesday
+                      looks like. Averaged only over days that actually have a
+                      record, never over days we know nothing about, because
+                      counting a missing day as an empty one would quietly halve
+                      every number on the chart.
+     "The balance"  - one column a day, his own time growing up from the middle
+                      and Amazon growing down, with a seven-day line through it.
+
+   ONE data call: public.py_day_time(days), SECURITY DEFINER, because day_tally
+   is not granted to anon and this page is public. Same pattern as the body
+   trends above it. No library, no CDN.
+
+   THE SIX BUCKETS ARE NOT INVENTED HERE. They are worked out on Todays Tasks by
+   the calendar column, minute by minute, and stored in day_tally. Days before
+   Aug 25 2026 were rebuilt once from the primary records and are marked
+   "rebuilt" rather than passed off as a live record.
+--------------------------------------------------------------------------- */
+(function () {
+  'use strict';
+  var RPC = 'https://arnjntspmrhigodlssbn.supabase.co/rest/v1/rpc/py_day_time';
+  var KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+
+  /* Scott's colours, the same six the calendar column draws with. */
+  var B = [
+    { k:'amz',   name:'Amazon',      c:'#e8912f' },
+    { k:'hab',   name:'Habits',      c:'#1e8e5a' },
+    { k:'todo',  name:'Your to-dos', c:'#6f8fbe' },
+    { k:'py',    name:'Project You', c:'#e8a0b8' },
+    { k:'other', name:'Personal',    c:'#3f8fa0' },
+    { k:'open',  name:'Still open',  c:'#e6eaf0' }
+  ];
+  var MINE = ['hab', 'todo', 'py', 'other'];
+  var SPAN = 1020;                      /* 6am to 11pm, the counted window */
+  var THIN = 120;                       /* under two hours accounted for is not a day */
+  var DAYNAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+  var rows = [], view = 'week';
+  try { view = localStorage.getItem('py_dayview') || 'week'; } catch (e) {}
+  if (view !== 'week' && view !== 'balance') view = 'week';
+
+  function hlab(m) {
+    m = Math.round(m);
+    var h = Math.floor(m / 60), mm = m % 60;
+    if (h && mm) return h + 'h ' + (mm < 10 ? '0' : '') + mm;
+    return h ? h + 'h' : mm + 'm';
+  }
+  function accounted(r) { return r.amz + r.other + r.py + r.hab + r.todo; }
+  function mineOf(r) { var t = 0; MINE.forEach(function (k) { t += r[k]; }); return t; }
+  /* parsed as UTC, so a date never slides a day either way */
+  function dow(r) { var p = r.day.split('-'); return (new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay() + 6) % 7; }
+  function dlabel(r) { var p = r.day.split('-'); return (+p[2]) + '/' + (+p[1]); }
+  function el(tag, attrs, inner) {
+    var a = '';
+    for (var k in attrs) a += ' ' + k + '="' + attrs[k] + '"';
+    return '<' + tag + a + '>' + (inner == null ? '' : inner) + '</' + tag + '>';
+  }
+  function txt(x, y, size, colour, anchor, weight, str) {
+    return '<text x="' + x + '" y="' + y + '" font-size="' + size + '" font-family="Arial" ' +
+           'font-weight="' + weight + '" fill="' + colour + '" text-anchor="' + anchor + '">' + str + '</text>';
+  }
+
+  /* ------------------------------------------------------- A2, your week ---- */
+  function drawWeek(real) {
+    var W = 900, H = 300, PAD = 34, TOP = 12, base = H - 48, cw = (W - PAD) / 7;
+    var by = [[], [], [], [], [], [], []];
+    real.forEach(function (r) { by[dow(r)].push(r); });
+    var avg = by.map(function (list) {
+      var a = {}; B.forEach(function (b) {
+        a[b.k] = list.length ? list.reduce(function (s, r) { return s + r[b.k]; }, 0) / list.length : 0;
+      });
+      a.n = list.length; return a;
+    });
+    var out = ['<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;min-width:520px;height:300px">'];
+    [4, 8, 12, 16].forEach(function (hh) {
+      var y = TOP + base - (hh * 60 / SPAN) * base;
+      out.push('<line x1="' + PAD + '" y1="' + y + '" x2="' + W + '" y2="' + y + '" stroke="#eef1f6"/>');
+      out.push(txt(PAD - 5, y + 3, 8.5, '#c3cad3', 'end', 700, hh + 'h'));
+    });
+    for (var w = 0; w < 7; w++) {
+      var x = PAD + w * cw, y = TOP + base, a = avg[w];
+      if (!a.n) {
+        out.push('<rect x="' + (x + 7) + '" y="' + TOP + '" width="' + (cw - 14) + '" height="' + base +
+                 '" rx="4" fill="#f6f8fb"/>');
+        out.push(txt(x + cw / 2, TOP + base / 2, 9.5, '#c3cad3', 'middle', 700, 'no record yet'));
+      } else {
+        for (var i = 0; i < B.length; i++) {
+          var h = (a[B[i].k] / SPAN) * base;
+          if (h <= 0) continue;
+          y -= h;
+          out.push('<rect x="' + (x + 7) + '" y="' + y.toFixed(1) + '" width="' + (cw - 14) +
+                   '" height="' + h.toFixed(1) + '" rx="2" fill="' + B[i].c + '"/>');
+          if (B[i].k === 'amz' && h > 20)
+            out.push(txt(x + cw / 2, y + h / 2 + 4, 11.5, '#fff', 'middle', 800, hlab(a.amz)));
+        }
+      }
+      out.push(txt(x + cw / 2, H - 24, 12, '#1f2a44', 'middle', 800, DAYNAMES[w]));
+      out.push(txt(x + cw / 2, H - 10, 9.5, '#8a8f99', 'middle', 700,
+        a.n ? (hlab(MINE.reduce(function (s, k) { return s + a[k]; }, 0)) + ' yours') :
+              ('&#183;')));
+    }
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  /* -------------------------------------------------------- A3, the balance - */
+  function drawBalance(real) {
+    var W = 900, H = 268, PAD = 34, MID = 132;
+    var top = MID - 12, bot = H - 30 - MID;
+    var hi = 60;
+    real.forEach(function (r) { hi = Math.max(hi, mineOf(r), r.amz); });
+    var bw = (W - PAD) / Math.max(real.length, 1);
+    function up(m) { return (m / hi) * top; }
+    function dn(m) { return (m / hi) * bot; }
+    var out = ['<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;min-width:520px;height:268px">'];
+    [2, 4, 6, 8, 10].forEach(function (hh) {
+      if (hh * 60 > hi) return;
+      out.push('<line x1="' + PAD + '" y1="' + (MID - up(hh * 60)) + '" x2="' + W + '" y2="' + (MID - up(hh * 60)) + '" stroke="#f0f3f7"/>');
+      out.push('<line x1="' + PAD + '" y1="' + (MID + dn(hh * 60)) + '" x2="' + W + '" y2="' + (MID + dn(hh * 60)) + '" stroke="#f0f3f7"/>');
+      out.push(txt(PAD - 5, MID - up(hh * 60) + 3, 8, '#c3cad3', 'end', 700, hh + 'h'));
+      out.push(txt(PAD - 5, MID + dn(hh * 60) + 3, 8, '#c3cad3', 'end', 700, hh + 'h'));
+    });
+    real.forEach(function (r, i) {
+      var x = PAD + i * bw, y = MID;
+      MINE.forEach(function (k) {
+        var h = up(r[k]); if (h <= 0) return;
+        y -= h;
+        out.push('<rect x="' + (x + 1.5) + '" y="' + y.toFixed(1) + '" width="' + (bw - 3) +
+                 '" height="' + h.toFixed(1) + '" rx="1" fill="' + (B.filter(function (b) { return b.k === k; })[0].c) + '"/>');
+      });
+      var ha = dn(r.amz);
+      if (ha > 0) out.push('<rect x="' + (x + 1.5) + '" y="' + MID + '" width="' + (bw - 3) +
+                           '" height="' + ha.toFixed(1) + '" rx="1" fill="#e8912f"/>');
+      if (i === 0 || i === real.length - 1 || i === Math.floor(real.length / 2))
+        out.push(txt(x + bw / 2, H - 8, 8.5, '#aab2bd', 'middle', 700, dlabel(r)));
+    });
+    /* the running balance, haloed so it reads over the bars it crosses */
+    var pts = real.map(function (r, i) {
+      var w = real.slice(Math.max(0, i - 6), i + 1);
+      var v = w.reduce(function (s, q) { return s + mineOf(q) - q.amz; }, 0) / w.length;
+      return (PAD + i * bw + bw / 2).toFixed(1) + ' ' + (MID - up(v)).toFixed(1);
+    }).join(' L');
+    if (real.length > 1) {
+      out.push('<path d="M' + pts + '" fill="none" stroke="#fff" stroke-width="4.5" opacity=".9" stroke-linejoin="round"/>');
+      out.push('<path d="M' + pts + '" fill="none" stroke="#1f2a44" stroke-width="2" stroke-linejoin="round"/>');
+    }
+    out.push('<line x1="' + PAD + '" y1="' + MID + '" x2="' + W + '" y2="' + MID + '" stroke="#1f2a44" stroke-width="1.5"/>');
+    out.push(txt(PAD + 4, 13, 9, '#3f8fa0', 'start', 800, 'YOURS'));
+    out.push(txt(PAD + 4, H - 20, 9, '#c07a1a', 'start', 800, 'AMAZON'));
+    out.push('</svg>');
+    return out.join('');
+  }
+
+  /* ------------------------------------------------------------- render ----- */
+  function render() {
+    var real = rows.filter(function (r) { return accounted(r) >= THIN; });
+    var chart = document.getElementById('daychart');
+    var key = document.getElementById('daykey');
+    var big = document.getElementById('daybig');
+    var sub = document.getElementById('daysub');
+
+    if (!real.length) {
+      chart.innerHTML = '<p style="font-size:12.5px;color:#8a8f99;padding:18px 2px">' +
+        'No day has enough on it yet. Open Todays Tasks and the record starts filling itself in.</p>';
+      key.innerHTML = ''; big.textContent = '\u2014'; sub.textContent = 'nothing on record yet';
+      return;
+    }
+
+    if (view === 'week') {
+      chart.innerHTML = drawWeek(real);
+      var heavy = null, light = null;
+      for (var w = 0; w < 7; w++) {
+        var list = real.filter(function (r) { return dow(r) === w; });
+        if (!list.length) continue;
+        var a = list.reduce(function (s, r) { return s + r.amz; }, 0) / list.length;
+        if (!heavy || a > heavy.v) heavy = { w: w, v: a };
+        if (!light || a < light.v) light = { w: w, v: a };
+      }
+      big.textContent = heavy ? (DAYNAMES[heavy.w] + ', ' + hlab(heavy.v)) : '\u2014';
+      sub.textContent = 'your heaviest Amazon day so far' +
+        (light && light.w !== heavy.w ? '.  Lightest: ' + DAYNAMES[light.w] + ', ' + hlab(light.v) : '');
+      key.innerHTML = B.map(function (b) {
+        return el('span', {}, '<b style="background:' + b.c + '"></b>' + b.name);
+      }).join('');
+    } else {
+      chart.innerHTML = drawBalance(real);
+      var won = real.filter(function (r) { return mineOf(r) > r.amz; }).length;
+      big.textContent = won + ' of ' + real.length;
+      sub.textContent = 'days where your own time beat Amazon';
+      key.innerHTML = B.filter(function (b) { return b.k !== 'open'; }).map(function (b) {
+        return el('span', {}, '<b style="background:' + b.c + '"></b>' + b.name);
+      }).join('') +
+        el('span', {}, '<b style="background:#1f2a44"></b>the seven-day balance');
+    }
+
+    var thin = rows.length - real.length;
+    var live = rows.filter(function (r) { return r.source === 'page'; }).length;
+    document.getElementById('daycov').innerHTML =
+      '<b>' + real.length + ' day' + (real.length === 1 ? '' : 's') + ' with a real record</b>, out of ' +
+      rows.length + ' that have anything on them at all' +
+      (thin ? '.  The other ' + thin + ' hold less than two hours between them and are left out, ' +
+              'because averaging them in would quietly halve every number here' : '') + '.  ' +
+      (live ? live + ' of them were written by Todays Tasks as the day happened; the rest were rebuilt ' +
+              'once from your calendar, your logged time and your ticked tasks.'
+            : 'All of these were rebuilt from your calendar, your logged time and your ticked tasks. ' +
+              'From now on Todays Tasks writes the day down as it happens.');
+    document.getElementById('daynote2').textContent =
+      view === 'week' ? 'averaged over the days that have a record' : 'one column a day, most recent on the right';
+  }
+
+  document.getElementById('dayseg').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-dayview]'); if (!b) return;
+    view = b.dataset.dayview;
+    try { localStorage.setItem('py_dayview', view); } catch (err) {}
+    Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) {
+      x.classList.toggle('on', x.dataset.dayview === view);
+    });
+    render();
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('#dayseg button'), function (x) {
+    x.classList.toggle('on', x.dataset.dayview === view);
+  });
+
+  fetch(RPC, {
+    method: 'POST',
+    headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ p_days: 120 })
+  }).then(function (r) { return r.json(); }).then(function (d) {
+    rows = (d || []).filter(function (r) { return r && r.day; });
+    render();
+  }).catch(function (e) {
+    document.getElementById('daychart').innerHTML =
+      '<p style="font-size:12.5px;color:#c0453b;padding:18px 2px">Could not load your days just now. ' +
+      'The rest of the page is unaffected.</p>';
+    document.getElementById('daynote2').textContent = '';
+  });
+})();
+</script>
 <script src="health-strip.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script>
 </body>
 </html>
