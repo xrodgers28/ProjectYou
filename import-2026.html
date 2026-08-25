@@ -80,6 +80,7 @@
   .chip input{position:absolute;opacity:0;width:0;height:0}
   .chip.on{color:#fff;border-color:transparent}
   .chip.on.k{background:var(--accent)}
+  .chip.on.lb{background:#6f5aa8}
   .chip.on.c-inner{background:#e0a326}
   .chip.on.c-middle{background:#8d9f4e}
   .chip.on.c-affinity{background:#63a46c}
@@ -127,7 +128,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar-wrap"><div class="secbar"><h1>📥 2026 Import</h1><span class="ver">v1.6</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>📥 2026 Import</h1><span class="ver">v1.7</span><span class="date"></span></div></div>
   <div class="wrap">
    <div class="cols">
     <div class="colmain">
@@ -146,6 +147,7 @@
         <li><span class="fk">Runs of nights</span><span>A series watched over several evenings is one row, not six. The badge says how many nights, and the second date is the night you finished.</span></li>
         <li><span class="fk">Occasion</span><span>What kind of get-together it was. One tap, no menu to open.</span></li>
         <li><span class="fk">Circle</span><span>How close they are, from your four-circle diagram. <b>Inner (5)</b> the 3am friends. <b>Middle (15)</b> good and dependable, seen regularly. <b>Affinity</b> friends and extended circle, seen sometimes. <b>Outer</b> acquaintances and weak ties. Leave it blank if you would rather decide later — it travels through to Social either way.</span></li>
+        <li><span class="fk">Labels</span><span>Free-standing tags that sit alongside the other two — anyone can be Inner Circle <b>and</b> Industry. Several can be on at once. Ask for another label any time; adding one is a one-line change.</span></li>
         <li><span class="fk">Send</span><span>Writes the ticked rows to Social or Movies, then clears them from this page. It will not write the same row twice.</span></li>
         <li><span class="fk">Drop</span><span>Removes a row from the holding pen for good. It never reaches your lists.</span></li>
       </ul>
@@ -158,7 +160,7 @@
     </div></aside>
    </div>
   </div>
-  <div class="badge">2026 Import v1.6</div>
+  <div class="badge">2026 Import v1.7</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -180,6 +182,10 @@ const MOVIE_KINDS=[['movie','Movie'],['tv show','TV show'],['documentary','Docum
 /* The closeness circles, from Scott's diagram. [value, label, the count the
    diagram puts on it, the hover line]. Outer and Affinity carry no number
    because the diagram does not put one on them. */
+/* Labels sit alongside kind and circle rather than inside either - anyone can be
+   Inner Circle AND Industry. An array, so adding a second label later is one more
+   entry here and nothing else. */
+const LABELS=[['industry','Industry','Someone from your line of work']];
 const CIRCLES=[
   ['inner','Inner','5','Intimate and loyal friends and family — the 3am friends'],
   ['middle','Middle','15','Good and dependable friends — you see them regularly'],
@@ -301,6 +307,28 @@ function chipRow(label,list,cur,id,field){
   return '<div class="tagrow"><span class="lab">'+esc(label)+'</span>'+html+'</div>';
 }
 
+/* Toggle chips. Unlike the radio rows above, several can be on at once, so these
+   are checkboxes and the click sends the whole new array rather than one value. */
+function labelRow(label,list,cur,id,field){
+  var have=cur||[];
+  var html=list.map(function(o){
+    var on=have.indexOf(o[0])>=0;
+    return '<label class="chip lb'+(on?' on':'')+'" title="'+esc(o[2]||o[1])+'">'+
+      '<input type="checkbox"'+(on?' checked':'')+
+      ' onchange="toggleLabel(\''+jq(id)+'\',\''+field+'\',\''+jq(o[0])+'\',this.checked)">'+
+      esc(o[1])+'</label>';
+  }).join('');
+  return '<div class="tagrow"><span class="lab">'+esc(label)+'</span>'+html+'</div>';
+}
+function toggleLabel(id,field,val,on){
+  var r=ROWS.find(function(x){return x.id===id;}); if(!r)return;
+  var cur=(r[field]||[]).slice();
+  var i=cur.indexOf(val);
+  if(on&&i<0)cur.push(val);
+  if(!on&&i>=0)cur.splice(i,1);
+  setField(id,field,cur);
+}
+
 function selOpts(list,cur){
   var known=list.some(function(o){return o[0]===cur;});
   var head=(cur&&!known)?'<option value="'+esc(cur)+'" selected>'+esc(cur)+'</option>':'';
@@ -326,6 +354,7 @@ function rowHTML(r,sec){
       '</div>'+
       chipRow(sec.key==='people'?'Occasion':'Kind',kinds,r.proposed_kind,r.id,'proposed_kind')+
       (sec.key==='people'?chipRow('Circle',CIRCLES,r.proposed_circle,r.id,'proposed_circle'):'')+
+      (sec.key==='people'?labelRow('Labels',LABELS,r.proposed_labels,r.id,'proposed_labels'):'')+
       '<div class="raw">From the sheet: <i>&ldquo;'+esc((r.raw_value||'').trim())+'&rdquo;</i></div>'+
       (r.note?'<div class="note">'+esc(r.note)+'</div>':'')+
     '</div>'+
@@ -373,9 +402,11 @@ function renderStat(){
   var y2025=ROWS.filter(function(r){return r.occurred_on&&r.occurred_on<'2026-01-01';}).length;
   var check=ROWS.filter(function(r){return r.confidence!=='hi';}).length;
   var placed=p.filter(function(r){return !!r.proposed_circle;}).length;
+  var ind=p.filter(function(r){return (r.proposed_labels||[]).indexOf('industry')>=0;}).length;
   document.getElementById('stat').innerHTML=
     '<div class="s"><b>'+p.length+'</b>people waiting</div>'+
     (p.length?'<div class="s"><b>'+placed+' of '+p.length+'</b>given a circle</div>':'')+
+    (ind?'<div class="s"><b>'+ind+'</b>labelled Industry</div>':'')+
     (m.length?'<div class="s"><b>'+m.length+'</b>titles waiting</div>':'')+
     '<div class="s"><b>'+y2026+'</b>dated in 2026</div>'+
     '<div class="s"><b>'+y2025+'</b>dated in 2025</div>'+
@@ -396,6 +427,7 @@ async function setField(id,field,val){
   /* Repaint only the chips in the group that changed. Re-rendering the whole
      page on every tap loses your scroll position, and tagging 35 rows is
      exactly when that hurts most. */
+  if(field==='proposed_labels'){ render(); return; }
   if(field==='proposed_kind'||field==='proposed_circle'){
     var row=document.getElementById('row-'+id);
     if(row){
@@ -456,6 +488,7 @@ async function send(key){
           person:r.proposed_name.trim(),
           kind:r.proposed_kind||'other',
           circle:r.proposed_circle||null,
+          labels:r.proposed_labels||[],
           place:null,
           notes:noteFor(r),
           happened_on:r.occurred_on
