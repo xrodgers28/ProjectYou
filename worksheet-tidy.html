@@ -87,7 +87,7 @@ footer{margin-top:30px; color:var(--muted); font-size:.72rem; border-top:1px sol
 <div class="wrap">
 
   <div class="secbar">
-    <h1>Worksheet Tidy<span class="ver">v1.0</span></h1>
+    <h1>Worksheet Tidy<span class="ver">v1.1</span></h1>
     <span class="date"></span>
   </div>
   <p class="sub">Every cue card now owns a habit on a worksheet. These are the <b>older rows that still point at the same card pages</b> under different names. Nothing here is switched on except where it says so, but each one is a second door to the same card, and a second door is how the duplicates started. Tap a verdict on each. Everything is reversible.</p>
@@ -107,7 +107,7 @@ footer{margin-top:30px; color:var(--muted); font-size:.72rem; border-top:1px sol
 
   <p class="note" id="authnote"></p>
 
-  <footer>Project YOU · Worksheet Tidy v1.0 · live, writes straight to your database</footer>
+  <footer>Project YOU · Worksheet Tidy v1.1 · live, writes straight to your database</footer>
 </div>
 <div class="pill" id="pill"></div>
 
@@ -118,7 +118,10 @@ var SB_REF = 'arnjntspmrhigodlssbn';
 var token = null;
 
 /* The ten cue cards and the habit that owns each one since Aug 24 2026.
-   Anything else pointing at these pages is what this page is here to settle. */
+   Anything else pointing at these pages is what this page is here to settle.
+   A row Scott chose to KEEP stays in this list on purpose: the link is real and
+   he wants it. It shows as settled rather than disappearing, so the list stays
+   a complete picture of what points where. */
 var OWNER = {
   'takeaways.html':'Takeaways',
   'ai.html':'AI (Learning/Mental Fitness)',
@@ -170,10 +173,21 @@ var ROWS = [], SECTIONS = [], ALLROWS = [], CHOICES = {};
 function load(){
   return Promise.all([
     api('worksheet_rows?select=id,area,section,habit,card,is_active,retired&order=area,position'),
-    api('worksheet_sections?select=area,label,sort&order=area,sort')
+    api('worksheet_sections?select=area,label,sort&order=area,sort'),
+    api('tracker?select=item,choice&session=eq.worksheet-tidy').catch(function(){ return []; })
   ]).then(function(res){
     ALLROWS = res[0] || [];
     var secs = res[1] || [];
+
+    /* Verdicts already given are read back, so reopening the page shows what was
+       settled rather than asking again. Without this, "Leave it alone" looked
+       like it had not saved: the row is unchanged by design, so it came back
+       every time and read as an unanswered question. */
+    (res[2] || []).forEach(function(t){
+      if(!t.item || t.choice === 'undone') return;
+      var k = String(t.item).replace(/^worksheet-tidy::/, '');
+      if(k !== t.item) CHOICES[k] = t.choice;
+    });
 
     ROWS = ALLROWS.filter(function(r){
       if(r.retired) return false;
