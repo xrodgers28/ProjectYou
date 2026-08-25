@@ -46,8 +46,8 @@
   .dot.lock{background:transparent;border:1px solid #d3d9e2;cursor:default}
   .item{border-top:1px solid var(--line);padding:13px 0 12px;position:relative;padding-right:30px}
   .item:first-of-type{border-top:none;padding-top:4px}
-  .item .t{font-size:14.5px;font-weight:700;line-height:1.4}
-  .item .b{font-size:13.5px;color:#46516a;line-height:1.55;margin-top:5px}
+  .item .t{font-size:14.5px;font-weight:700;line-height:1.3}
+  .item .b{font-size:13.5px;color:#46516a;line-height:1.38;margin-top:5px}
   .item .src{font-size:10.5px;color:#a8b0bb;font-style:normal;padding:0;margin-top:7px;letter-spacing:.1px}
   .item .src a{color:#a8b0bb}
   .item .st{position:absolute;top:10px;right:0;font-size:17px;color:#c8cfd9;background:none;border:none;cursor:pointer;line-height:1;padding:2px 3px}
@@ -62,12 +62,12 @@
   .chip.area{color:#fff}
   .step{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc);margin-top:14px}
   .tile h2{font-size:22px;line-height:1.22;margin-top:7px}
-  .tile .body{font-size:14.5px;color:#46516a;line-height:1.55;margin-top:11px}
+  .tile .body{font-size:14.5px;color:#46516a;line-height:1.38;margin-top:11px}
   .star{position:absolute;top:12px;right:12px;font-size:19px;color:#c8cfd9;background:none;border:none;cursor:pointer;line-height:1;padding:2px 4px}
   .star.on{color:#e0a52e}
   .prac{background:#f6f8fb;border-top:1px solid var(--line);padding:13px 20px 15px}
   .prac .lab{font-size:9.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--acc)}
-  .prac .txt{font-size:14px;font-weight:700;margin-top:4px}
+  .prac .txt{font-size:14px;font-weight:700;line-height:1.32;margin-top:4px}
   .src{font-size:11px;color:#8a93a0;padding:9px 20px 14px;font-style:italic}
   .nav2{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:10px}
   .bk{font-size:13px;font-weight:800;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:9px 4px}
@@ -101,7 +101,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.2</span>
+    <span class="pn-ver">v1.3</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -109,7 +109,7 @@
     <div class="head">
       <div class="kick">Today’s reading, bucketed</div>
       <h1>The Feed</h1>
-      <div class="sub">Farnam Street’s Brain Food, kept in his own sections. Star anything worth keeping and it lands in your Farnam Street library — reading the card is how the library gets built.</div>
+      <div class="sub">Farnam Street’s Brain Food, kept in his own sections. Two items a day, newest issue first, then back through the archive — nothing you have already been dealt comes round again. Star anything worth keeping and it lands in your Farnam Street library.</div>
     </div>
 
     <div id="stage"></div>
@@ -129,7 +129,7 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ===== The Feed v1.0 =====
+/* ===== The Feed v1.3 =====
    A news source you read INTO your library. Items arrive in public.news_queue
    from Farnam Street's Brain Food and are shown in Shane Parrish's own sections,
    in his order, not re-bucketed into our vocabulary, because the whole point is
@@ -146,10 +146,18 @@ const SRCLINE="Farnam Street &middot; Brain Food, Shane Parrish &middot; S15";
 /* Farnam Street's own section headers, in the order he runs them. Anything that
    arrives under a heading we do not know about is appended rather than dropped,
    so a new section in the newsletter shows up here instead of disappearing. */
-const SECTIONS=["Tiny Thoughts","Insights","Mental Models","The Knowledge Project","Etcetera","P.S."];
+const SECTIONS=["Tiny Thoughts","Insights","Mental Models","Outliers","The Knowledge Project","Etcetera","P.S."];
+
+/* ===== HOW MANY ITEMS A DAY =====
+   Brain Food is a WEEKLY. The card is DAILY. Showing the whole issue at once
+   meant every day after Sunday was a re-read of Sunday — Scott reported it as
+   stale twice, on Aug 24 and again Aug 25. So the card now deals a small,
+   fixed slice each day and never re-deals it. Change this one number to make
+   the card longer or shorter; nothing else needs to move. */
+const PER_DAY=2;
 
 let ITEMS=[], TILES=[], STARRED={}, idx=0, signedIn=false, ticked=false, habitRow=null;
-let ISSUE=null, OLDER=0;
+let ISSUE=null, LEFT=0, DEALT_ISSUES=[];
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 /* THE DAY IS DEFINED ONCE, in py-day.js: 2am to 2am Eastern, because Scott works
@@ -160,23 +168,52 @@ function todayKey(){return PY.today();}
 function fmtDate(d){if(!d)return '';try{return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric'}).format(new Date(d+'T12:00:00Z'));}catch(e){return d;}}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2600);}
 
+/* ===== THE DAILY DEAL =====
+   Two rules, in this order:
+     1. NEWEST ISSUE FIRST. The queue is ordered published_on desc, so this
+        week's Brain Food is always dealt before anything older.
+     2. THEN THE ARCHIVE. When the current issue is used up before the next
+        one lands (8 items, 7 days), the deal falls through to unseen items
+        from older issues instead of showing a re-read.
+
+   seen_on IS THE LEDGER. An item dealt today carries seen_on = today, so
+   re-opening the page mid-day re-renders the same slice rather than burning
+   two more. An item with seen_on set is never dealt again. That is the whole
+   no-repeat mechanism — there is no deck table and no client-side state. */
 async function loadAll(){
-  var r=await sb.from('news_queue').select('id,source,section,title,body,url,published_on,status')
+  var r=await sb.from('news_queue').select('id,source,section,title,body,url,published_on,status,seen_on')
         .eq('source',SOURCE).neq('status','hidden').order('published_on',{ascending:false}).order('id');
   var all=r.data||[];
-  /* ONE ISSUE AT A TIME. The card used to show every row the queue had ever
-     held, so a week after reading an issue it still led with it and read as
-     stale. Brain Food is a weekly, so the card is the newest issue and nothing
-     else; last week's drops off the moment a new one lands. */
-  ISSUE=all.length?all[0].published_on:null;
-  ITEMS=all.filter(function(x){return x.published_on===ISSUE;});
-  OLDER=all.length-ITEMS.length;
+  var today=todayKey();
+  var dealt=all.filter(function(x){return x.seen_on===today;});
+  var pool =all.filter(function(x){return !x.seen_on;});
+
+  if(dealt.length<PER_DAY&&pool.length){
+    var take=pool.slice(0,PER_DAY-dealt.length);
+    var ids=take.map(function(x){return x.id;});
+    var up=await sb.from('news_queue').update({status:'seen',seen_on:today}).in('id',ids);
+    /* If the stamp fails the deal is not stable, so show nothing rather than
+       something that changes on the next reload. */
+    if(!up.error){
+      take.forEach(function(x){x.seen_on=today;x.status='seen';});
+      dealt=dealt.concat(take);
+      pool=pool.slice(take.length);
+    }
+  }
+  dealt.sort(function(a,b){
+    if(a.published_on!==b.published_on)return a.published_on<b.published_on?1:-1;
+    return a.id-b.id;
+  });
+  ITEMS=dealt; LEFT=pool.length;
+  DEALT_ISSUES=[];
+  ITEMS.forEach(function(x){if(DEALT_ISSUES.indexOf(x.published_on)<0)DEALT_ISSUES.push(x.published_on);});
+  ISSUE=DEALT_ISSUES.length?DEALT_ISSUES[0]:null;
+
   var f=await sb.from('farnam_street').select('id,section,title');
   STARRED={}; (f.data||[]).forEach(function(x){STARRED[keyOf(x)]=x.id;});
   buildTiles();
   await loadHabit();
   render();
-  markSeen();
 }
 
 function keyOf(x){return (x.section||'')+' · '+(x.title||'');}
@@ -202,13 +239,10 @@ async function loadHabit(){
   ticked=!!(habitRow&&habitRow.done&&habitRow.for_date===todayKey());
 }
 
-/* reading the card is what marks the queue read */
-async function markSeen(){
-  var ids=ITEMS.filter(function(i){return i.status==='new';}).map(function(i){return i.id;});
-  if(!ids.length)return;
-  await sb.from('news_queue').update({status:'seen',seen_on:todayKey()}).in('id',ids);
-  ITEMS.forEach(function(i){if(i.status==='new')i.status='seen';});
-}
+/* markSeen() used to run here, stamping the whole issue on load. The stamp is
+   now part of the deal itself in loadAll(), because "seen" and "dealt today"
+   have to be the same act — otherwise the queue can hand out an item without
+   recording it and the same slice comes round again. Do not reintroduce it. */
 
 function itemHTML(it){
   var k=keyOf(it), on=!!STARRED[k];
@@ -224,27 +258,34 @@ function itemHTML(it){
 
 function render(){
   if(!TILES.length){
-    document.getElementById('stage').innerHTML='<div class="done"><h3>Nothing in the feed yet</h3><p>Nothing is queued from '+esc(SOURCE)+'. New issues land in news_queue and appear here.</p></div>';
+    /* THE STANDING NOTICE, not a cheerful empty state — a card that has run out
+       of content says so in dark red. See PY.needMore in py-day.js. */
+    document.getElementById('stage').innerHTML=
+      PY.needMore('The Brain Food queue is empty. Load an issue into news_queue and the card starts dealing again.');
     return;
   }
   var c=TILES[idx], n=TILES.length;
   var d='';
   for(var j=0;j<n;j++) d+='<button class="dot'+(j===idx?' on':'')+'" data-i="'+j+'" aria-label="'+esc(TILES[j].section)+'"></button>';
   var kept=c.items.filter(function(it){return STARRED[keyOf(it)];}).length;
+  var stamp=DEALT_ISSUES.length>1
+    ? DEALT_ISSUES.map(fmtDate).join(' + ')+' issues'
+    : (ISSUE?fmtDate(ISSUE)+' issue':'');
 
   document.getElementById('stage').innerHTML=
    '<div class="deck">'+
     '<div class="dots">'+d+'</div>'+
-    '<div class="lockline">'+(ISSUE?esc(fmtDate(ISSUE))+' issue &middot; ':'')+esc(c.section)+' &middot; '+c.items.length+' item'+(c.items.length===1?'':'s')+
-      (kept?' &middot; '+kept+' kept':'')+'</div>'+
+    '<div class="lockline">'+(stamp?esc(stamp)+' &middot; ':'')+esc(c.section)+
+      (kept?' &middot; '+kept+' kept':'')+
+      ' &middot; '+LEFT+' left in the queue</div>'+
     '<div class="tile">'+
       '<div class="top">'+
         '<div class="chiprow"><span class="chip area" style="background:#6b7f9c">Farnam Street</span><span class="chip">Brain Food</span></div>'+
         '<div class="step">Section '+(idx+1)+' of '+n+'</div>'+
         '<h2>'+esc(c.section)+'</h2>'+
-        '<div class="feedlist">'+(c.items.length?c.items.map(itemHTML).join(''):'<div class="empty">Nothing under this heading this week.</div>')+'</div>'+
+        '<div class="feedlist">'+(c.items.length?c.items.map(itemHTML).join(''):'<div class="empty">Nothing under this heading today.</div>')+'</div>'+
       '</div>'+
-      '<div class="prac"><div class="lab">How this works</div><div class="txt">Star anything worth keeping. It copies into your Farnam Street library, so reading the card is what builds it.</div></div>'+
+      '<div class="prac"><div class="lab">How this works</div><div class="txt">Two items a day, never repeated. Star anything worth keeping and it copies into your Farnam Street library.</div></div>'+
     '</div>'+
     '<div class="nav2"><button class="bk" id="bk"'+(idx===0?' disabled':'')+'>&larr; Back</button>'+
       (idx===n-1&&!ticked&&!c.done?'<input class="minin" id="mins" type="number" min="1" max="180" placeholder="min" title="How long did that take?">':'')+
@@ -324,7 +365,7 @@ async function signIn(){
 
 async function boot(){
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  document.getElementById('stamp').textContent='The Feed v1.2 · '+f+' · all times EST';
+  document.getElementById('stamp').textContent='The Feed v1.3 · '+f+' · all times EST';
   if(!sb){document.getElementById('stage').innerHTML='<div class="done"><h3>Could not reach the database</h3><p>Reload to try again.</p></div>';return;}
   var s=await sb.auth.getSession();
   if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadAll();}
