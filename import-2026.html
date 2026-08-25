@@ -9,16 +9,16 @@
   :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;--amber:#c68a2e;--gold:#d9a400}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
-  .wrap{max-width:1320px;margin:0 auto;padding:14px 16px 80px}
+  .wrap{max-width:1400px;margin:0 auto;padding:14px 16px 80px}
   /* Two columns, with the wheel pinned so it stays in view the whole way down a
      35-row tagging pass. Below 1000px there is no room for a rail, so it moves
      above the list and stops being sticky. */
   .cols{display:flex;gap:22px;align-items:flex-start}
   .colmain{flex:1;min-width:0}
-  .rail{flex:none;width:300px;position:sticky;top:56px}
-  @media(max-width:1000px){
+  .rail{flex:none;width:400px;position:sticky;top:56px}
+  @media(max-width:1120px){
     .cols{flex-direction:column-reverse}
-    .rail{width:100%;max-width:420px;position:static;margin:0 auto 4px}
+    .rail{width:100%;max-width:470px;position:static;margin:0 auto 4px}
   }
   .wheelcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 13px 9px;box-shadow:0 6px 16px rgba(31,42,68,.06)}
   .wheelcard h3{font-size:12.5px;color:var(--accent);margin-bottom:2px}
@@ -26,6 +26,14 @@
   .wheelcard svg{display:block;width:100%;height:auto}
   /* Each band is a button: tap it to see only that circle. */
   .wheelcard .band{cursor:pointer}
+  /* Counts live under the wheel, not inside it - a number tucked into a band
+     gets covered by the next circle in and reads as belonging to the wrong one. */
+  .tally{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px;padding-top:9px;border-top:1px dashed #eef1f5}
+  .tally .t{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 9px;cursor:pointer}
+  .tally .t:hover{background:#eef2f8}
+  .tally .t.on{border-color:#9fc0da;background:#eef4fb;color:var(--accent2)}
+  .tally .t i{width:9px;height:9px;border-radius:50%;background:var(--c);flex:none}
+  .tally .t b{color:var(--ink);font-variant-numeric:tabular-nums}
   .wheelcard .band:hover .ring{filter:brightness(1.05)}
   .wheelcard .band.dim{opacity:.34}
   .filtstrip{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;font-weight:700;color:#8a6218;background:#fdf6e9;border:1px solid #f0dcb4;border-radius:10px;padding:7px 11px;margin-bottom:11px}
@@ -119,7 +127,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar-wrap"><div class="secbar"><h1>📥 2026 Import</h1><span class="ver">v1.4</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>📥 2026 Import</h1><span class="ver">v1.6</span><span class="date"></span></div></div>
   <div class="wrap">
    <div class="cols">
     <div class="colmain">
@@ -150,7 +158,7 @@
     </div></aside>
    </div>
   </div>
-  <div class="badge">2026 Import v1.4</div>
+  <div class="badge">2026 Import v1.6</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -190,27 +198,49 @@ const SECS=[
    carry live counts. Nested with a near-common bottom edge, the way Scott's
    diagram has it, so each band reads as sitting inside the next one out. */
 const WHEEL=[
-  {k:'outer',   r:195, cy:200, ly:30,  fill:'#a9cde3', ink:'#2b5670', lab:'Outer',    note:'weak ties'},
-  {k:'affinity',r:155, cy:232, ly:100, fill:'#a9d0a0', ink:'#356038', lab:'Affinity', note:'sometimes'},
-  {k:'middle',  r:115, cy:265, ly:170, fill:'#a8bb6b', ink:'#4d5a1f', lab:'Middle',   note:'regularly', n:'15'},
-  {k:'inner',   r:78,  cy:295, ly:252, fill:'#f5c05a', ink:'#71510a', lab:'Inner',    note:'the 3am friends', n:'5'}
+  {k:'outer',   r:250, cy:262, ty:40,  fill:'#a9cde3', ink:'#2b5670', title:'Outer Circle',
+   lines:['Acquaintances, neighbors,','community casual contacts.'], quip:'Faces you recognize, weak ties'},
+  {k:'affinity',r:200, cy:312, ty:142, fill:'#a9d0a0', ink:'#356038', title:'Affinity Circle',
+   lines:['Friends, extended social circle'], quip:'You see sometimes'},
+  {k:'middle',  r:150, cy:362, ty:242, fill:'#a8bb6b', ink:'#4d5a1f', title:'Middle Circle', n:'15',
+   lines:['Good and Dependable Friend'], quip:'You see regularly'},
+  {k:'inner',   r:100, cy:412, ty:348, fill:'#f5c05a', ink:'#71510a', title:'Inner Circle', n:'5',
+   lines:['Intimate and Loyal','Friends & Family'], quip:'The 3 AM Friends'}
 ];
 let CFILT='';
+
+/* Circles first, every label second. SVG paints in document order, so drawing
+   all four discs before any text is what stops an inner circle covering the
+   line above it - which is exactly what happened when each band drew its own
+   circle and text together. */
+function bandText(w){
+  var t='<text x="230" y="'+w.ty+'" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="17" font-weight="bold" fill="'+w.ink+'">'+w.title+
+        (w.n?'<tspan font-size="15" font-weight="normal" opacity=".68"> ('+w.n+')</tspan>':'')+'</text>';
+  var y=w.ty+21;
+  w.lines.forEach(function(L){
+    t+='<text x="230" y="'+y+'" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="'+w.ink+'" opacity=".92">'+esc(L)+'</text>';
+    y+=17;
+  });
+  t+='<text x="230" y="'+(y+2)+'" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="13.5" font-style="italic" fill="'+w.ink+'" opacity=".78">&#8220;'+esc(w.quip)+'&#8221;</text>';
+  return t;
+}
 
 function renderWheel(){
   var host=document.getElementById('wheel'); if(!host)return;
   var people=ROWS.filter(function(r){return r.source==='people';});
-  var body=WHEEL.map(function(w){
-    var n=people.filter(function(r){return r.proposed_circle===w.k;}).length;
-    var dim=CFILT&&CFILT!==w.k?' dim':'';
-    var num=w.n?'<tspan font-size="14" opacity=".62"> ('+w.n+')</tspan>':'';
-    return '<g class="band'+dim+'" onclick="pickCircleFilter(\''+w.k+'\')">'+
-      '<circle class="ring" cx="220" cy="'+w.cy+'" r="'+w.r+'" fill="'+w.fill+'"></circle>'+
-      '<text x="220" y="'+w.ly+'" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="18" font-weight="bold" fill="'+w.ink+'">'+w.lab+num+'</text>'+
-      '<text x="220" y="'+(w.ly+18)+'" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="13" fill="'+w.ink+'" opacity=".8">'+n+' tagged &#183; '+w.note+'</text>'+
-    '</g>';
+  function cls(w){return 'band'+(CFILT&&CFILT!==w.k?' dim':'');}
+  var discs=WHEEL.map(function(w){
+    return '<circle class="'+cls(w)+' ring" cx="230" cy="'+w.cy+'" r="'+w.r+'" fill="'+w.fill+'" onclick="pickCircleFilter(\''+w.k+'\')"></circle>';
   }).join('');
-  host.innerHTML='<svg viewBox="0 0 440 400" role="img" aria-label="Four closeness circles">'+body+'</svg>';
+  var labels=WHEEL.map(function(w){
+    return '<g class="'+cls(w)+'" onclick="pickCircleFilter(\''+w.k+'\')">'+bandText(w)+'</g>';
+  }).join('');
+  host.innerHTML='<svg viewBox="0 0 460 524" role="img" aria-label="Four closeness circles">'+discs+labels+'</svg>'+
+    '<div class="tally">'+WHEEL.slice().reverse().map(function(w){
+      var n=people.filter(function(r){return r.proposed_circle===w.k;}).length;
+      return '<span class="t'+(CFILT===w.k?' on':'')+'" style="--c:'+w.fill+'" onclick="pickCircleFilter(\''+w.k+'\')">'+
+        '<i></i>'+w.title.replace(' Circle','')+' <b>'+n+'</b></span>';
+    }).join('')+'</div>';
 }
 
 function pickCircleFilter(k){ CFILT=(CFILT===k)?'':k; render(); }
@@ -308,7 +338,7 @@ function render(){
   var strip='';
   if(CFILT){
     var w=WHEEL.filter(function(x){return x.k===CFILT;})[0];
-    strip='<div class="filtstrip">Showing only the <b>'+esc(w?w.lab:CFILT)+'</b> circle.'+
+    strip='<div class="filtstrip">Showing only the <b>'+esc(w?w.title:CFILT)+'</b>.'+
       '<button onclick="clearCircleFilter()">Show everyone</button></div>';
   }
   host.innerHTML=strip+SECS.map(function(sec){
