@@ -10,7 +10,7 @@
 (function(){try{
   if(window.self===window.top)return;
   var st=document.createElement('style'); st.id='pn-embed-css';
-  st.textContent='.pynav,.msub,.pn-back,.pn-backwrap{display:none!important}';
+  st.textContent='.pynav,.msub,.lsub,.pn-back,.pn-backwrap{display:none!important}';
   (document.head||document.documentElement).appendChild(st);
 }catch(e){}})();
 
@@ -165,6 +165,120 @@ window.__pnNavCss=function(){
   if(nav&&nav.parentNode) nav.parentNode.insertBefore(bar,nav.nextSibling);
   else document.body.insertBefore(bar,document.body.firstChild);
 }catch(e){}})();
+
+/* ONE NAV PER SUBSECTION — LISTS (Aug 24 2026, Scott).
+   Same contract as the Maps strip above, different shape. The top nav used to
+   carry six separate list links; it now carries one, and the four list pages
+   share the segmented tab bar built below from window.LISTS_NAV.
+
+   Two things Scott set explicitly and neither should be "improved":
+     1. ORDER IS FIXED. The active tab lights up where it stands. It never
+        moves to the front, and the list never re-sorts by count or by recency.
+     2. LANDING ON LISTS LANDS ON CONNECTIONS. The top-nav item points at
+        items[0], and that item stays lit on all four pages.
+
+   Counts come from ONE fetch of the v_list_counts view, and only on these four
+   pages - navpatch runs on all 72 and must not add a network call to the other
+   68. If the fetch fails the tabs simply carry no number; nothing else changes.
+   The strip renders first and the counts arrive after, so a slow or dead
+   endpoint can never delay the nav. */
+(function(){try{
+  var CFG=window.LISTS_NAV;
+  if(!CFG||!CFG.items||!CFG.items.length) return;
+  var cur=(location.pathname.split('/').pop()||'index.html');
+  var here=-1;
+  CFG.items.forEach(function(it,i){ if(it.href===cur) here=i; });
+  if(here<0) return;                       /* not a list page - do nothing */
+  if(document.querySelector('.lsub')) return;
+
+  /* Keep the single top-nav item lit on every page in the subsection. */
+  document.querySelectorAll('.pynav a.pn-link').forEach(function(a){
+    if(a.getAttribute('href')===CFG.items[0].href) a.classList.add('on');
+  });
+
+  if(!document.getElementById('lsub-css')){
+    var st=document.createElement('style'); st.id='lsub-css';
+    st.textContent='.lsub{display:flex;align-items:flex-end;gap:2px;max-width:1180px;margin:14px auto 0;padding:0 4px;border-bottom:2px solid #e3e7ee;font-family:Arial,Helvetica,sans-serif;overflow-x:auto}'
+      +'.lsub::-webkit-scrollbar{height:0}'
+      +'.lsub-lbl{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#aab2bd;padding:0 12px 11px 2px;white-space:nowrap;flex:none}'
+      +'.lsub a{position:relative;font-size:14px;font-weight:800;color:#8d96a3;text-decoration:none;padding:9px 15px 10px;border-radius:9px 9px 0 0;white-space:nowrap;flex:none}'
+      +'.lsub a:hover{color:#3f6f8f;background:#f4f7fb}'
+      +'.lsub a .lsub-n{font-size:10.5px;font-weight:800;color:#b3bcc7;margin-left:6px;font-variant-numeric:tabular-nums}'
+      +'.lsub a.on{color:#2f5a74;background:#fff;box-shadow:0 -2px 10px rgba(31,42,68,.05)}'
+      +'.lsub a.on:after{content:"";position:absolute;left:8px;right:8px;bottom:-2px;height:3px;border-radius:2px;background:#3f6f8f}'
+      +'.lsub a.on .lsub-n{color:#3f6f8f}'
+      +'.lsub-ver{margin-left:auto;font-size:10.5px;font-weight:800;color:#9aa6b4;padding:0 4px 11px;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums}'
+      +'@media(max-width:820px){.lsub{margin:10px 12px 0;padding:0}.lsub a{font-size:13px;padding:8px 11px 9px}.lsub-lbl{display:none}}';
+    document.head.appendChild(st);
+  }
+
+  var bar=document.createElement('nav');
+  bar.className='lsub';
+  bar.setAttribute('aria-label','Lists');
+
+  var lbl=document.createElement('span');
+  lbl.className='lsub-lbl'; lbl.textContent=CFG.label||'Lists';
+  bar.appendChild(lbl);
+
+  CFG.items.forEach(function(it,i){
+    var a=document.createElement('a');
+    a.setAttribute('href',it.href);
+    a.appendChild(document.createTextNode(it.label));
+    if(it.count){
+      a.setAttribute('data-count',it.count);
+      var n=document.createElement('span');
+      n.className='lsub-n'; n.textContent='';
+      a.appendChild(n);
+    }
+    if(i===here){ a.className='on'; a.setAttribute('aria-current','page'); }
+    bar.appendChild(a);
+  });
+
+  if(CFG.ver){
+    var v=document.createElement('span');
+    v.className='lsub-ver'; v.textContent=CFG.ver; bar.appendChild(v);
+  }
+
+  var nav=document.querySelector('.pynav');
+  if(nav&&nav.parentNode) nav.parentNode.insertBefore(bar,nav.nextSibling);
+  else document.body.insertBefore(bar,document.body.firstChild);
+
+  /* Match the page's own content column. The four list pages are not all the
+     same width (Connections and Asa Activities are 820px, others wider), and a
+     tab bar that does not line up with the h1 beneath it reads as a mistake.
+     Copy the width and side padding off whatever wrapper the page actually
+     uses; if it has none, the 1180px default in the stylesheet stands. */
+  try{
+    var probe=document.querySelector('.secbar-wrap')||document.querySelector('.wrap');
+    if(probe){
+      var cs=getComputedStyle(probe);
+      if(cs.maxWidth&&cs.maxWidth!=='none'){
+        bar.style.maxWidth=cs.maxWidth;
+        bar.style.paddingLeft=cs.paddingLeft;
+        bar.style.paddingRight=cs.paddingRight;
+      }
+    }
+  }catch(_w){}
+
+  /* Counts, best effort. Never blocks the bar, never throws. */
+  var R=window.PY_REST;
+  if(R&&R.url&&R.anon&&CFG.counts&&window.fetch){
+    fetch(R.url+'/rest/v1/'+CFG.counts+'?select=list,n',
+          {headers:{apikey:R.anon,Authorization:'Bearer '+R.anon}})
+      .then(function(r){ return r.ok?r.json():null; })
+      .then(function(rows){
+        if(!rows||!rows.length) return;
+        var m={}; rows.forEach(function(x){ m[x.list]=x.n; });
+        bar.querySelectorAll('a[data-count]').forEach(function(a){
+          var v=m[a.getAttribute('data-count')];
+          if(v===undefined||v===null) return;
+          var s=a.querySelector('.lsub-n');
+          if(s) s.textContent=v;
+        });
+      })
+      .catch(function(){});
+  }
+}catch(e){ if(window.console) console.log('navpatch lists strip',e); }})();
 
 /* Version chip parity. A page carries its version in two places: the chip in the
    nav bar (.pn-ver) and the chip beside the page heading (.secbar .ver, and the

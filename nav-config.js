@@ -18,13 +18,11 @@ window.NAV_CONFIG = {
     { "label": "YouMatics", "href": "qs-dashboard.html" },
     { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" }
   ],
+  /* Displayed as LISTS - see NAV_GROUP_RENAME below. The key stays "Parking Lot"
+     because that string is baked into every page's markup and is what navpatch
+     matches on. Aug 24 2026, Scott. */
   "Parking Lot": [
-    { "label": "Bucket<br>List", "href": "my-bucket-list.html" },
-    { "label": "Future<br>Travel", "href": "future-travel.html" },
-    { "label": "Social", "href": "connections.html" },
-    { "label": "Movies", "href": "movies.html" },
-    { "label": "Cheat<br>Sheet", "href": "cheat-sheet.html" },
-    { "label": "AI<br>Tools", "href": "ai-tools.html" }
+    { "label": "All Lists", "href": "connections.html" }
   ],
   "Editors": [
     { "label": "Daily<br>Habits", "href": "daily-template.html" },
@@ -34,6 +32,7 @@ window.NAV_CONFIG = {
   "Operating System": [
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
     { "label": "Guardrails", "href": "guardrails.html" },
+    { "label": "Cheat<br>Sheet", "href": "cheat-sheet.html" },
     { "label": "Maps &amp;<br>Diagrams", "href": "maps.html" },
     { "label": "Mission<br>Control", "href": "mission.html" },
     { "label": "Docs<br>Library", "href": "library.html" }
@@ -44,7 +43,8 @@ window.NAV_CONFIG = {
    When a group name here has a URL, navpatch.js renders its grey label as a
    clickable link (and marks it active on that page). */
 window.NAV_GROUP_LINKS = {
-  "Habit Modules": "habit-modules.html"
+  "Habit Modules": "habit-modules.html",
+  "Parking Lot": "connections.html"
 };
 
 /* Rename a group WITHOUT touching a single page.
@@ -56,6 +56,7 @@ window.NAV_GROUP_LINKS = {
    Example:  "Habit Modules": "Cue Cards",
    Delete a line to go back to the original name. */
 window.NAV_GROUP_RENAME = {
+  "Parking Lot": "LISTS"
 };
 
 /* Maps & Diagrams subsection.
@@ -76,6 +77,41 @@ window.MAPS_NAV = {
     { "label": "Spider Diagram", "href": "knowledge-graph.html" },
     { "label": "Adding to Knowledge Graph", "href": "kg-ingest-process.html" }
   ]
+};
+
+/* LISTS subsection (Aug 24 2026, Scott).
+   Same idea as MAPS_NAV above, different shape: navpatch.js renders THIS list
+   as a segmented tab bar across the four list pages, so the top nav needs one
+   slot instead of six. The top-nav item points at the first list, which is why
+   landing on LISTS puts you on Connections.
+
+   ORDER IS FIXED (Scott, Aug 24: "dont have the items in the list change
+   order"). The active tab lights up where it stands; it never moves to the
+   front. Add a list here and it appears on every list page automatically.
+
+   `count` is the key in the public.v_list_counts view, which returns one row
+   per list. navpatch fetches that view ONCE, and only on these four pages, to
+   fill the number beside each tab. A list with no `count` key simply shows no
+   number - nothing breaks. */
+window.LISTS_NAV = {
+  "label": "Lists",
+  "ver": "Lists v1.0",
+  "counts": "v_list_counts",
+  "items": [
+    { "label": "Connections",    "href": "connections.html",    "count": "connections" },
+    { "label": "Movies",         "href": "movies.html",         "count": "movies" },
+    { "label": "Bucket List",    "href": "my-bucket-list.html", "count": "bucket_list" },
+    { "label": "Asa Activities", "href": "asa-activities.html", "count": "asa_activities" }
+  ]
+};
+
+/* Read-only PostgREST endpoint used by the LISTS tab counts above. The anon key
+   is already public in the source of every page on this site; it is lifted here
+   so navpatch.js stays config-driven and no credential is typed into the shared
+   script itself. */
+window.PY_REST = {
+  "url": "https://arnjntspmrhigodlssbn.supabase.co",
+  "anon": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM"
 };
 
 /* ============================================================
@@ -148,7 +184,7 @@ window.PAGE_VERSIONS = {
   "habit-worksheets.html": "v1.8",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.2",
-  "qs-dashboard.html": "v2.6",
+  "qs-dashboard.html": "v2.7",
   "reconciliation.html": "v1.0",
   "recreational.html": "v1.0",
   "session-tracker-2026-08-18-compass-sources-shipped.html": "v1.0",

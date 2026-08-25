@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asa Activities · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--warm:#a35a4e;--warm2:#c07a6a;--green:#1e8e5a;--hot:#c0453b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:820px;margin:0 auto;padding:14px 16px 60px}
+  .intro{font-size:13px;color:var(--muted);margin:2px 0 14px;line-height:1.55}
+  .intro b{color:var(--ink)}
+
+  .addbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:18px;box-shadow:0 4px 12px rgba(31,42,68,.05)}
+  .addbar input,.addbar select{font-family:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;color:var(--ink)}
+  .addbar #it{flex:3;min-width:200px}
+  .addbar #pl{flex:1;min-width:130px}
+  .addbar button{font-family:inherit;font-size:13px;font-weight:700;padding:9px 15px;border:none;border-radius:9px;background:var(--warm);color:#fff;cursor:pointer}
+  .addbar button:hover{background:#8f4d43}
+
+  .sect{margin-bottom:26px}
+  .secthead{display:flex;align-items:baseline;gap:10px;margin:0 0 3px}
+  .secthead h2{font-size:17px;font-weight:800;color:var(--accent2)}
+  .secthead .cnt{font-size:11.5px;font-weight:800;color:#9aa6b4}
+  .sectsub{font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+
+  /* date ideas: one card each */
+  .idea{position:relative;display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--warm);border-radius:12px;padding:12px 40px 12px 14px;margin-bottom:9px;box-shadow:0 5px 14px rgba(31,42,68,.05)}
+  .idea.done{opacity:.55;border-left-color:var(--green)}
+  .idea.done .t{text-decoration:line-through}
+  .tick{flex:none;width:20px;height:20px;border:2px solid #cfd6df;border-radius:6px;cursor:pointer;margin-top:1px}
+  .tick:hover{border-color:var(--warm)}
+  .idea.done .tick{background:var(--green);border-color:var(--green)}
+  .idea .t{font-size:14.5px;font-weight:700;line-height:1.35}
+  .idea .m{font-size:12px;color:var(--muted);margin-top:3px}
+  .idea .m .pl{font-weight:700;color:#7d8794}
+  .del{position:absolute;top:10px;right:11px;font-size:14px;color:#c9cfd6;cursor:pointer;line-height:1}
+  .del:hover{color:var(--hot)}
+
+  /* things we like: compact chips */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{position:relative;display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 13px;font-size:13.5px;font-weight:700;box-shadow:0 3px 10px rgba(31,42,68,.05)}
+  .chip .x{font-size:13px;color:#c9cfd6;cursor:pointer}
+  .chip .x:hover{color:var(--hot)}
+
+  /* suggestions tray */
+  .sug{background:#fbfcfe;border:1px dashed #cfd8e3;border-radius:12px;padding:12px 14px;margin-top:12px}
+  .sugh{font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:#9aa6b4;margin-bottom:9px}
+  .sugrow{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid #edf1f6;font-size:13.5px}
+  .sugrow:last-child{border-bottom:none}
+  .sugrow .st{flex:1;min-width:0}
+  .sugrow .sm{display:block;font-size:11.5px;color:#9aa6b4;margin-top:2px}
+  .keep,.drop{font-family:inherit;font-size:11.5px;font-weight:800;border:none;border-radius:8px;padding:6px 11px;cursor:pointer;flex:none}
+  .keep{background:var(--warm);color:#fff}
+  .drop{background:var(--chip);color:#8d96a3}
+  .drop:hover{background:#e2e7ef}
+
+  .empty{color:var(--muted);font-size:13.5px;padding:12px 2px}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px 14px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}.toast.show{opacity:1}
+  .hidden{display:none}
+</style>
+<style>.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:2px 0 2px}.secbar h1{font-size:23px;color:var(--accent,#3f6f8f)}.secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line,#e3e7ee);border-radius:999px;padding:2px 8px}.secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}.secbar-wrap{max-width:820px;margin:0 auto;padding:10px 16px 0}</style>
+</head>
+<body>
+<div id="login">
+  <h1>Asa Activities</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+<div class="pynav"></div>
+
+<div class="secbar-wrap"><div class="secbar"><h1>💛 Asa Activities</h1><span class="ver">v1.0</span><span class="date"></span></div></div>
+
+<div class="wrap">
+  <div class="intro">Two lists you and Åsa are building together. <b>Date Ideas</b> is the actionable one &mdash; things to go and do, ticked off as you do them. <b>Things we like to do together</b> is the reference list the ideas come from.</div>
+
+  <div class="addbar">
+    <input id="it" placeholder="Add something...">
+    <select id="g"><option value="date_idea">Date idea</option><option value="like">Thing we like</option></select>
+    <input id="pl" placeholder="Where (optional)">
+    <button onclick="addItem()">Add</button>
+  </div>
+
+  <div class="sect">
+    <div class="secthead"><h2>Date Ideas</h2><span class="cnt" id="cDate"></span></div>
+    <div class="sectsub">Things to go and do. Tick one when it happens.</div>
+    <div id="listDate"></div>
+    <div id="sugDate"></div>
+  </div>
+
+  <div class="sect">
+    <div class="secthead"><h2>Things we like to do together</h2><span class="cnt" id="cLike"></span></div>
+    <div class="sectsub">The shared ground. Aiming for fifteen.</div>
+    <div class="chips" id="listLike"></div>
+    <div id="sugLike"></div>
+  </div>
+</div>
+<div class="badge">Asa Activities v1.0</div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');_a.style.display='none';}if(_l){_l.classList.remove('hidden');_l.style.display='';var _e=document.getElementById('loginErr');if(_e)_e.textContent='Your session expired. Please sign in again.';}}});
+
+let ROWS=[];
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)onLogin(session);}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}onLogin(data.session);}
+async function onLogin(session){try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  load();}
+
+async function load(){
+  const {data,error}=await sb.from('asa_activities').select('*')
+    .in('status',['active','suggested','done'])
+    .order('position',{ascending:true}).order('created_at',{ascending:true});
+  if(error){toast('Could not load: '+error.message);return;}
+  ROWS=data||[]; render();
+}
+
+/* An idea that has been done stays on the list, ticked, rather than vanishing.
+   Scott ticks things to see what they have actually managed, not to clear them. */
+function render(){
+  const mine=g=>ROWS.filter(r=>r.grp===g&&r.status!=='suggested'&&r.status!=='dropped');
+  const sug =g=>ROWS.filter(r=>r.grp===g&&r.status==='suggested');
+
+  const dates=mine('date_idea'), likes=mine('like');
+  const doneN=dates.filter(r=>r.status==='done').length;
+  document.getElementById('cDate').textContent=dates.length+(doneN?' · '+doneN+' done':'');
+  document.getElementById('cLike').textContent=likes.length+' of 15';
+
+  const dh=document.getElementById('listDate');
+  dh.innerHTML = dates.length ? dates.map(r=>{
+    const done=r.status==='done';
+    return '<div class="idea'+(done?' done':'')+'">'+
+      '<span class="tick" onclick="toggle(\''+r.id+'\','+(done?'true':'false')+')" title="'+(done?'Mark not done':'Mark done')+'"></span>'+
+      '<div><div class="t">'+esc(r.item)+'</div>'+
+      ((r.place||r.notes||r.done_on)?'<div class="m">'+
+        (r.place?'<span class="pl">'+esc(r.place)+'</span>':'')+
+        (r.place&&r.notes?' · ':'')+(r.notes?esc(r.notes):'')+
+        (r.done_on?(r.place||r.notes?' · ':'')+'done '+r.done_on:'')+
+      '</div>':'')+
+      '</div><span class="del" title="Remove" onclick="del(\''+r.id+'\')">✕</span></div>';
+  }).join('') : '<div class="empty">Nothing here yet. Add the first idea above.</div>';
+
+  const lh=document.getElementById('listLike');
+  lh.innerHTML = likes.length ? likes.map(r=>
+    '<span class="chip">'+esc(r.item)+'<span class="x" title="Remove" onclick="del(\''+r.id+'\')">✕</span></span>'
+  ).join('') : '<div class="empty">Nothing here yet.</div>';
+
+  drawSug('sugDate', sug('date_idea'), 'date ideas');
+  drawSug('sugLike', sug('like'), 'things you might both like');
+}
+
+function drawSug(hostId, rows, what){
+  const host=document.getElementById(hostId);
+  if(!rows.length){host.innerHTML='';return;}
+  host.innerHTML='<div class="sug"><div class="sugh">Suggested '+what+' &mdash; '+rows.length+' waiting</div>'+
+    rows.map(r=>'<div class="sugrow"><span class="st">'+esc(r.item)+
+      ((r.place||r.notes)?'<span class="sm">'+esc([r.place,r.notes].filter(Boolean).join(' · '))+'</span>':'')+
+      '</span>'+
+      '<button class="keep" onclick="keep(\''+r.id+'\')">Keep</button>'+
+      '<button class="drop" onclick="drop(\''+r.id+'\')">No</button></div>').join('')+
+    '</div>';
+}
+
+async function addItem(){
+  const item=document.getElementById('it').value.trim();
+  if(!item){toast('What would you like to add?');return;}
+  const grp=document.getElementById('g').value;
+  const place=document.getElementById('pl').value.trim();
+  const {error}=await sb.from('asa_activities').insert({item,grp,place:place||null,status:'active',source:'scott'});
+  if(error){toast('Could not add: '+error.message);return;}
+  document.getElementById('it').value='';document.getElementById('pl').value='';
+  toast('Added.'); load();
+}
+async function toggle(id,done){
+  const patch = done ? {status:'active',done_on:null} : {status:'done',done_on:ymd(new Date())};
+  const {error}=await sb.from('asa_activities').update(patch).eq('id',id);
+  if(error){toast(error.message);return;}
+  toast(done?'Back on the list.':'Nice one 💛'); load();
+}
+async function keep(id){
+  const {error}=await sb.from('asa_activities').update({status:'active',source:'scott'}).eq('id',id);
+  if(error){toast(error.message);return;} load();
+}
+async function drop(id){
+  const {error}=await sb.from('asa_activities').update({status:'dropped'}).eq('id',id);
+  if(error){toast(error.message);return;} load();
+}
+async function del(id){
+  const {error}=await sb.from('asa_activities').delete().eq('id',id);
+  if(error){toast(error.message);return;} toast('Removed.'); load();
+}
+boot();
+</script>
+<script>(function(){var e=document.querySelector('.secbar .date');if(e){var d=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];e.textContent=M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();}})();</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
