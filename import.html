@@ -136,7 +136,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar-wrap"><div class="secbar"><h1>📥 Import</h1><span class="ver">v3.1</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>📥 Import</h1><span class="ver">v3.2</span><span class="date"></span></div></div>
   <div class="wrap">
    <div class="cols">
     <div class="colmain">
@@ -171,7 +171,7 @@
     </div></aside>
    </div>
   </div>
-  <div class="badge">Import v3.1</div>
+  <div class="badge">Import v3.2</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -403,8 +403,14 @@ async function applyKnown(){
     var k=knownFor(r); if(!k)return;
     var patch={}, filled=[];
     if(!r.proposed_circle){ patch.proposed_circle=k.circle; filled.push(k.circle); }
+    /* Auto-fill obeys the same exclusions a tap does. Adding "colleague" without
+       removing "ex-colleague" is what made Rawle both at once, twice. */
     var cur=(r.proposed_labels||[]).slice(), added=false;
-    k.labels.forEach(function(L){ if(cur.indexOf(L)<0){cur.push(L);added=true;filled.push(L);} });
+    k.labels.forEach(function(L){
+      if(cur.indexOf(L)<0){cur.push(L);added=true;filled.push(L);}
+      var x=EXCLUDES[L]?cur.indexOf(EXCLUDES[L]):-1;
+      if(x>=0){ cur.splice(x,1); added=true; }
+    });
     if(added) patch.proposed_labels=cur;
     if(!filled.length){ r.autoFilled=r.autoFilled||null; return; }
     Object.assign(r,patch);
