@@ -155,6 +155,8 @@ window.PY_REST = {
    would sit empty forever. Declaring it here means one edit, not a page publish.
    Bump the number here when you ship a change to one of these pages. */
 window.PAGE_VERSIONS = {
+  "social-orbit.html": "v1.0",
+  "social-sky.html": "v1.0",
   "qs-health.html": "v0.1",
   "tracker.html": "v1.0",
   "midnight-run.html": "v3.0",
