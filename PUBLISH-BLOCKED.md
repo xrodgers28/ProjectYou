@@ -4,7 +4,6 @@ The version guard refused to overwrite newer published pages with older ones.
 
 - import.html: incoming v2.8 is OLDER than published v3.2
 - index.html: incoming v5.62 is OLDER than published v5.69
-- habit-worksheets.html: incoming v2.5 is OLDER than published v2.7
 - ym-dashboard.html: incoming v1.0 is OLDER than published v1.1
 
 This usually means something published from a stale copy. Republish from the current version to clear this file.
