@@ -6,6 +6,8 @@
 
 **Last verified:** 2026-08-16, against three live sources: `nav-config.js` in the read-only site clone at `/tmp/py`, the file list of that clone, and the `pages` table plus feed tables in Supabase project `arnjntspmrhigodlssbn`. Every "Live" in the page inventory means a file that actually exists and renders, not a file a document once promised. Row counts in the connector table are query results from the same date. Re-verification commands are at the bottom.
 
+**Updated 2026-08-25:** section 6 gained the iPhone calendar feed and its operating conditions, written from the live behaviour of the shortcut and the ingest function on the day the feed first worked. The row count is a query against `calendar_events` filtered on `source = 'phone'`.
+
 **Supersedes:** `CoWork Operating System - Feature Set.md`, `CoWork-Project-Brief.md`, `CoWork-Project-Instructions.md`, `Project YOU - Description.md`, `Project YOU - Project Brief.md`, `Project YOU - Project Instructions.md`, `Project YOU - Knowledge Base.md`, `Habit Building Cue Cards - Name Options.md`, `Todays-Tasks-Project-Brief.md`, `Todays-Tasks-Project-Instructions.md`, `Todays-Tasks-Feature-Set.md`, `Todays-Tasks-TimeWheel-How-It-Works.md`, `Social Well-Being - Overview.md`, `AI-Intelligence-How-It-Works.md`, `AI-Intelligence-Scan-2026-08-09.md`, `Atomic-Habits-Module-Handoff.md`
 
 ---
@@ -59,7 +61,7 @@ These are the spine of the system, kept in their original order. The "Today" col
 | 3 | **Standing working standards.** One master skill, `how-we-work-rules`, holds the universal standards. Always on, every project. | Live, plus a web mirror at `how-we-work.html`. Design work now follows mock or prototype first, then build (set Aug 12). No em-dashes is a global writing rule. |
 | 4 | **Session commands and rituals.** `[wrap]`, `[SC]`, `/morning`, `[new project]`. | All live, plus `hardpull` for an instant Drafts sweep. `[wrap]` now also publishes a session tracker page as step 2. See section 8 and 06-How-We-Work.md. |
 | 5 | **Session-start safeguards.** Each new chat confirms which project it is in, tags the first reply, and stamps the location as work goes. | Unchanged. Concurrent sessions are now the bigger hazard: several chats write the same file and the same memory, so merge, never overwrite. |
-| 6 | **Time and measurement (the Quantified Self layer).** A global time tracker rolls hours up by project; per-project hours settle at wrap. | Split in two. Project hours still settle at wrap into the xlsx tracker. Life measurement moved into Supabase and grew far past the original plan: `qs_log`, `health_metrics`, `checkins`, `time_log`, YouMatics and four connectors. |
+| 6 | **Time and measurement (the Quantified Self layer).** A global time tracker rolls hours up by project; per-project hours settle at wrap. | Split in two. Project hours still settle at wrap into the xlsx tracker. Life measurement moved into Supabase and grew far past the original plan: `qs_log`, `health_metrics`, `checkins`, `time_log`, the QS Dashboard and four connectors. |
 | 7 | **To-do system.** Global and per-project to-do lists are the record of truth, click not type, every task carries a time estimate, estimate versus actual is tracked, duplicates flagged not silently added. | The record of truth for the board is now Supabase `public.todos`, not any file on disk. The xlsx lists survive for CoWork-level and per-project work. Estimate versus actual is live: `est_minutes` and `actual_minutes` on the board, on the Staging Area, and as accuracy scoring in `staging_events`. |
 | 8 | **Accomplishment logging.** Dated accomplishments per project, one row per real change, separate from hours. | Live, via the `log-accomplishments` skill. |
 | 9 | **Habit and coaching layer.** Identity-based habits, the four laws, habit stacking, the two-minute rule, habit tracking, plus the time wheel. | The methodology is still the frame. What shipped is concrete: the Cue Cards board with a daily meter and a streak, four ticking habit modules, a nightly habit reset, and the Time Bandit Wheel. Note that "Atomic Habits" now names three different things (see section 6). |
@@ -134,9 +136,9 @@ Most of these are deliberate: they hang off a hub page rather than the top nav.
 | `quotes.html` | Things Worth Knowing, also called Clever Phrases. v1.4. | Cue Cards board | Not in nav |
 | `compass.html` | Compass. One reflection question a day, tagged by category and minutes. This is the Year Compass daily-questions design, built. v1.4. | Cue Cards board | Not in nav |
 | `takeaways.html` | Takeaways. 12 cards, 58 tiles, one tile at a time. Browse only, no tick. v1.3. | Cue Cards board (first card) | Not in nav |
-| `qs-log.html` | Habits Tracker. The year-in-habits dot grid. v1.1 delivered, v1.0 in repo. **No `pages` row.** | YouMatics | Not in nav |
-| `qs-wheel.html` | Clarity Compass. Static seven-section wheel image plus the daily template. Its interactive `draw()` is dead code. Empty `pages` row. v1.3. | YouMatics | Not in nav |
-| `life-snapshot.html` | Life Snapshot. A life in weeks, 52 across, one year per row. v1.0. | YouMatics | Not in nav |
+| `qs-log.html` | Habits Tracker. The year-in-habits dot grid. v1.1 delivered, v1.0 in repo. **No `pages` row.** | QS Dashboard | Not in nav |
+| `qs-wheel.html` | Clarity Compass. Static seven-section wheel image plus the daily template. Its interactive `draw()` is dead code. Empty `pages` row. v1.3. | QS Dashboard | Not in nav |
+| `life-snapshot.html` | Life Snapshot. A life in weeks, 52 across, one year per row. v1.0. | QS Dashboard | Not in nav |
 | `movies.html` | Movie List. Empty `pages` row. v1.0. | Staging Area, Mission Control | Not in nav |
 | `connections.html` | Social. People logged or planned to see. Also the Friends Visit destination. v1.0. | Staging Area, Mission Control | Not in nav |
 | `future-travel.html` | Future Travel. Destinations and bucket list, mirrored by the Where I've Been Someday tab. v1.1. | Staging Area, Mission Control | Not in nav |
@@ -202,7 +204,7 @@ The travel page, four panels. **Countries** is a world map driven by `visited_co
 
 Built end to end in one session from the question "can I sync my credit card statements or Monarch to count coffee days?" The answer, worth keeping because it generalizes: a card charge is not a consumption day, and Monarch has no public API. The tracker is check-in data only, zero financial records touched. A single SQL function, `is_coffee_checkin()`, defines coffee-ness once and every view and trigger calls it. 588 distinct coffee days from Aug 2009 to Aug 2026, 622 check-ins, 175 venues, longest run 5 days, Friday is the coffee day. A day can hold both a `swarm` row and a `habit-bandit` row in `qs_log`, so `v_coffee_days` is the canonical answer and `qs_log` must never be counted directly. Stated limit: Swarm caught roughly 18 days in the last 90, so the history is excellent and the completeness is poor.
 
-### YouMatics
+### The QS Dashboard
 
 Six tiles: Time Bandit Wheel, Habits Tracker, Clarity Compass, Life Snapshot, Where I've Been, Coffee Days. It is a launcher, and **every statistic on its tiles is hardcoded**, including a "142-day streak" and "41 / 193 countries" that the database now contradicts (the streak reads 6 and `visited_countries` holds 51). Wiring the tiles live is an open decision in 08-Roadmap-and-Open-Decisions.md.
 
@@ -255,9 +257,57 @@ Green means the source writes rows into Supabase on a schedule. A device that fe
 | **Habit ticks** (`habit-bandit`) | Internal, not an app | `qs_log` 33 | The streak, the Habits Tracker, the wheel. |
 | **Waking Up** (mindful minutes) | Arriving, 1 reading | 1 | Nothing yet. The Meditation bridge is unbuilt. |
 | **FITINDEX** (weight, body fat, lean mass) | No, allow-listed but silent | 0 | Nothing. One of six allow-listed metrics with zero rows ever; the likely cause is a Health Auto Export read permission. |
-| **Google Calendar, Gmail, Google Drive, Supabase, 1Password, Claude in Chrome** | Authenticated, no data feed | 0 | Blue dots on the Automated Tracking page. Useful capabilities, not trackers. |
+| **Your iPhone's Calendar app** (Shortcuts automation) | Yes, since Aug 25 2026 | `calendar_events`, 25 meetings across the first two days | The calendar column on Todays Tasks, the six-bucket day tally, and through it the Time Bandit Wheel and the YouMatics day history. Four pulls a day at 7, 11, 2 and 5. What has to be true for it to run is below. |
+| **Google Calendar, Gmail, Google Drive, Supabase, 1Password, Claude in Chrome** | Authenticated, no data feed | 0 | Blue dots on the Automated Tracking page. Useful capabilities, not trackers. Note that Scott's Amazon and Google meetings DO reach the system, but through his iPhone's Calendar app above, not through this connector. |
 
 Two facts that put live feeds at risk: **Strava standard API access now requires an active paid Strava subscription** (changed June 2026), so if the subscription lapses the 2-hourly sync stops, and the base URL moves to `api-v3.strava.com` in January 2027. And Apple forbids reading health data while the phone is locked, so the Apple pipe is reliable over a week and never to the minute. Design anything downstream as "latest known value."
+
+### What has to be true for the calendar to feed itself
+
+Four things, and only four.
+
+1. **Your iPhone is on.** Not your Mac. The Mac has nothing to do with it and never did; it was only ever a comfortable place to edit the shortcut. The Mac can be shut in a bag in another country.
+2. **Your phone has internet.** Wifi or cellular, either is fine. This is the one that matters on a plane.
+3. **The Calendar app on your phone has the meetings in it.** Not the Calendar app being open, just the meetings having arrived. The phone quietly syncs with Amazon and Google in the background all day, and the shortcut reads whatever the phone has already downloaded. Outlook does not need to be installed or open. Nothing needs to be on screen.
+4. **The phone is awake enough to run an automation.** This is the one that is not yet proven. Some iPhone automations run happily with the phone locked in a pocket, others want it unlocked. See the open item in `08-Roadmap-and-Open-Decisions.md`, section 4.
+
+That is the whole list. Nothing needs to be open and Scott does not need to be at his desk.
+
+**Flying without wifi.** The automation still fires and still reads the calendar perfectly. The send fails, because there is nowhere to send it. Nothing lands, and nothing breaks. The last good pull stays exactly as it was, and the "as of" stamp on the page turns amber once it is more than two hours old, so a glance tells you that you are looking at this morning rather than now. The next pull after landing catches up on its own, or Scott taps Refresh.
+
+That protection is real and it was tested on Aug 25 2026. A pull came back nearly empty and the old code would have wiped the whole day. It no longer can.
+
+**Flying with wifi.** Works normally, no difference.
+
+**Looking at the page while offline.** That does not work. The page reads the day from the database every time it opens, so with no connection the column is empty. The to-do list has the same limitation, so this is nothing new.
+
+<details>
+<summary>The technical detail behind those four conditions</summary>
+
+**Condition 1 and 3, why the Mac is irrelevant.** The feed is an iOS Shortcuts automation running `Find Calendar Events Where`, which reads EventKit on the device. EventKit returns whatever the device's own calendar database holds, which CalDAV and Exchange sync populate in the background. There is no desktop step anywhere in the chain, so nothing about macOS, iCal or Outlook affects it. The Mac appeared in the story only because the shortcut was edited there, and at one point that misled us: the desktop Calendar app did not hold all of Scott's calendars, which made the shortcut look broken when it was reading a different device.
+
+**Condition 2, where the send goes.** The shortcut posts the assembled text to the `calpull` edge function at `https://arnjntspmrhigodlssbn.supabase.co/functions/v1/calpull`, which calls `calendar_ingest`. `calpull` is deployed with `verify_jwt` false and accepts the event lines as a raw request body, deliberately with no JSON key to pick, because that slot is what broke the shortcut twice. A GET on the same URL in any browser returns a plain-English pull status, which is the right way to check a pull rather than the stale result box inside Shortcuts.
+
+**Condition 4, and what the 7am run is testing.** Four `Time of Day` automations exist, at 7, 11, 2 and 5. iOS decides on its own whether a given automation may run unattended. The Aug 26 2026 7am run is the first unattended test and the result belongs in 08.
+
+**Why a failed send cannot damage a good day.** `calendar_ingest` used to hide every phone-sourced meeting on the day that was not in the incoming batch, so a partial pull declared the morning cancelled. It now tracks the earliest and latest time the pull actually covers, per day, and hides only inside that span:
+
+```sql
+update public.calendar_events e
+   set hidden = true, updated_at = now()
+ where e.source='phone' and e.hidden is not true
+   and not (e.external_id = any(v_seen))
+   and exists (select 1 from unnest(v_days, v_mins, v_maxs) as w(d, mn, mx)
+                where w.d = e.date and e.start_time >= w.mn and e.start_time <= w.mx);
+```
+
+A pull that returns nothing covers no span, so it hides nothing.
+
+**The two-hour amber stamp** is drawn by the calendar column from the newest `pulled_at` on the day's rows, so it measures when the phone last succeeded, not when the page last loaded.
+
+**One known inefficiency, harmless today.** The shortcut sends each meeting roughly thirteen times, because the loop rebuilds the accumulating text on every pass. The database de-duplicates, so nothing is wrong in the data, but it must be tidied before the window is widened much past three days.
+
+</details>
 
 ### Confirmed dead ends, verified Aug 15 to 16 2026
 
@@ -357,7 +407,7 @@ select table_name from information_schema.tables where table_schema = 'public';
 
 Also check `max(created_at)` as well as the data's own date column: a decade-deep backfill running oldest-first looks like a dead feed if you judge it by the data's dates alone.
 
-**When the old docs and the live system disagree, the live system wins.** Three cases resolved that way in this document: the Year Compass daily questions are described as unbuilt and are live at `compass.html`; the Staging Area is described as a mock and shipped at v0.5; and the YouMatics tile statistics are hardcoded and contradict the database they claim to summarize.
+**When the old docs and the live system disagree, the live system wins.** Three cases resolved that way in this document: the Year Compass daily questions are described as unbuilt and are live at `compass.html`; the Staging Area is described as a mock and shipped at v0.5; and the QS Dashboard's tile statistics are hardcoded and contradict the database they claim to summarize.
 
 ---
 

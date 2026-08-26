@@ -178,7 +178,7 @@ This has since become a live experiment rather than a settled fact. The System M
 
 ### 2.9 Seven `pages` rows are empty shells, and one of them is in the nav
 
-**The question.** Seven rows in `pages` have zero bytes in both `html` and `gzb64`: `daily-template.html`, `mission.html`, `morning-update.html`, `movies.html`, `qs-wheel.html`, `quotes.html`, `style-guide.html`. Three of these are live nav targets: `mission.html` (Operating System group), `daily-template.html` and `style-guide.html` (Editors group). `qs-wheel.html` is referenced by `navpatch.js`, which inserts a "back to YouMatics" link into it. An empty row is not automatically a dead link, because `publish.yml` skips empty rows rather than blanking the repo file, so the repo copy may still be serving. But nothing in the pipeline will ever update these pages again.
+**The question.** Seven rows in `pages` have zero bytes in both `html` and `gzb64`: `daily-template.html`, `mission.html`, `morning-update.html`, `movies.html`, `qs-wheel.html`, `quotes.html`, `style-guide.html`. Three of these are live nav targets: `mission.html` (Operating System group), `daily-template.html` and `style-guide.html` (Editors group). `qs-wheel.html` is referenced by `navpatch.js`, which inserts a "back to the QS Dashboard" link into it. An empty row is not automatically a dead link, because `publish.yml` skips empty rows rather than blanking the repo file, so the repo copy may still be serving. But nothing in the pipeline will ever update these pages again.
 
 **Options.** For each page: rebuild it, delete the row so the repo file is the only copy and the confusion ends, or leave it.
 
@@ -278,6 +278,17 @@ Ranked by **severity of consequence**, which is the only ranking used here: what
 ---
 
 ## 4. Gaps and unbuilt things
+
+### Does an iPhone automation run with the phone locked
+
+**Open since Aug 25 2026.** The calendar feed depends on four things being true, three of which are certain and documented in `01-Product-Overview.md`, section 6. The fourth is not: iOS decides for itself whether a given `Time of Day` automation may run while the phone is locked in a pocket, and it does not decide the same way for every automation.
+
+**Why it matters.** If it needs an unlocked phone, the four daily pulls become four occasions when Scott has to notice, which is not a feed at all. The page would still be correct, just often stale, and the amber "as of" stamp would be doing more work than it should.
+
+**How it gets answered.** The 7am run on Aug 26 2026 is the first unattended test. A scheduled check at 7:15 the same morning reports whether anything landed. Nothing needs building until that answer exists.
+
+**If the answer is no**, the fallback is already in place and needs no work: the Refresh control on the calendar column runs the shortcut on demand from either device.
+
 
 Described in the old docs as if it existed, or specified and then never shipped. None of these is broken. They simply are not there.
 
