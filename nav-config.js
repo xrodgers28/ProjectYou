@@ -182,7 +182,7 @@ window.PAGE_VERSIONS = {
   "environmental.html": "v1.5",
   "feed.html": "v1.5",
   "habit-modules.html": "v4.6",
-  "habit-worksheets.html": "v2.7",
+  "habit-worksheets.html": "v2.8",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
   "qs-dashboard.html": "v3.0",
