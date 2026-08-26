@@ -1,0 +1,777 @@
+<title>Social Orbit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* ---- Project You house shell -------------------------------------------
+   One frame for all four mocks: mono pills, H1, one paragraph, eyebrow
+   sections, mono footer. Each mock overrides only the map's own palette. */
+
+:root{
+  --ground:#f1f0ed; --card:#ffffff; --inset:#e8e7e2; --sunk:#dedcd6;
+  --ink:#1b1c1f; --ink2:#585c64; --ink3:#8a9099;
+  --rule:#dcdad4; --rule2:#c8c5bd;
+  --good:#3f8f66; --warn:#c48a1e; --bad:#c8524e; --note:#3a6fc4;
+  --shadow:0 1px 2px rgba(20,20,25,.06), 0 8px 24px rgba(20,20,25,.05);
+  --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans:Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#131417; --card:#1b1d21; --inset:#232529; --sunk:#2b2e33;
+    --ink:#eceef1; --ink2:#a5aab3; --ink3:#71767f;
+    --rule:#2d3036; --rule2:#3a3e45;
+    --good:#5cb98a; --warn:#e0aa42; --bad:#e0736e; --note:#6d9ce8;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131417; --card:#1b1d21; --inset:#232529; --sunk:#2b2e33;
+  --ink:#eceef1; --ink2:#a5aab3; --ink3:#71767f;
+  --rule:#2d3036; --rule2:#3a3e45;
+  --good:#5cb98a; --warn:#e0aa42; --bad:#e0736e; --note:#6d9ce8;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px; margin:0 auto; padding:28px 22px 60px; display:flex; flex-direction:column; gap:22px}
+
+/* pills ------------------------------------------------------------------ */
+.pills{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.pill{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+  padding:4px 9px; border:1px solid var(--rule2); border-radius:3px;
+  color:var(--ink2); background:var(--card); white-space:nowrap;
+}
+.pill.on{background:var(--ink); color:var(--ground); border-color:var(--ink)}
+.pill.mark{border-color:var(--note); color:var(--note)}
+
+/* head ------------------------------------------------------------------- */
+h1{
+  font-size:clamp(30px,4.4vw,46px); line-height:1.06; margin:0; letter-spacing:-.022em;
+  text-wrap:balance; font-weight:700;
+}
+h1 .num{
+  display:block; font-family:var(--mono); font-size:11px; font-weight:400;
+  letter-spacing:.16em; color:var(--ink3); text-transform:uppercase; margin-bottom:10px;
+}
+.lede{margin:0; max-width:66ch; color:var(--ink2); font-size:16.5px; line-height:1.62}
+.lede b{color:var(--ink); font-weight:700}
+
+/* sections --------------------------------------------------------------- */
+.eyebrow{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink3); margin:0 0 6px;
+}
+h2{font-size:19px; margin:0 0 10px; letter-spacing:-.012em}
+section{margin:0}
+
+/* the map frame ---------------------------------------------------------- */
+.stage{
+  background:var(--card); border:1px solid var(--rule); border-radius:6px;
+  box-shadow:var(--shadow); overflow:hidden;
+}
+.stage-bar{
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+  padding:10px 14px; border-bottom:1px solid var(--rule); background:var(--inset);
+}
+.stage-bar .grp{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.scroller{overflow-x:auto; overflow-y:hidden}
+svg{display:block; max-width:100%}
+
+/* controls --------------------------------------------------------------- */
+button.ctl{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+  padding:5px 10px; border:1px solid var(--rule2); border-radius:3px;
+  background:var(--card); color:var(--ink2); cursor:pointer;
+}
+button.ctl:hover{border-color:var(--ink3); color:var(--ink)}
+button.ctl[aria-pressed="true"]{background:var(--ink); color:var(--ground); border-color:var(--ink)}
+button.ctl:focus-visible, a:focus-visible, [tabindex]:focus-visible{outline:2px solid var(--note); outline-offset:2px}
+label.ctl{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink2); display:inline-flex; gap:6px; align-items:center; cursor:pointer;
+}
+
+/* cards ------------------------------------------------------------------ */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px}
+.card{
+  background:var(--card); border:1px solid var(--rule); border-left:3px solid var(--rule2);
+  border-radius:5px; padding:13px 15px;
+}
+.card.good{border-left-color:var(--good)} .card.warn{border-left-color:var(--warn)}
+.card.bad{border-left-color:var(--bad)}   .card.note{border-left-color:var(--note)}
+.card h3{margin:0 0 5px; font-size:15px; letter-spacing:-.008em}
+.card p{margin:0; color:var(--ink2); font-size:13.5px; line-height:1.5}
+.card .fig{
+  font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:26px;
+  line-height:1; color:var(--ink); display:block; margin-bottom:5px;
+}
+.card .capt{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink3)}
+
+.two{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+@media (max-width:800px){.two{grid-template-columns:1fr}}
+
+ul.tight{margin:0; padding-left:18px; color:var(--ink2); font-size:14px; line-height:1.6}
+ul.tight li{margin-bottom:5px}
+ul.tight b{color:var(--ink)}
+
+/* legend ----------------------------------------------------------------- */
+.key{display:flex; flex-wrap:wrap; gap:4px}
+.key button{
+  display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+  font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+  padding:4px 8px; border:1px solid var(--rule); border-radius:3px;
+  background:var(--card); color:var(--ink2);
+}
+.key button .sw{width:9px; height:9px; border-radius:2px; flex:none}
+.key button[aria-pressed="false"]{opacity:.4}
+.key button:hover{border-color:var(--ink3)}
+
+/* hover card ------------------------------------------------------------- */
+.pop{
+  position:fixed; z-index:40; pointer-events:none; opacity:0; transform:translateY(3px);
+  transition:opacity .1s ease, transform .1s ease;
+  background:var(--card); color:var(--ink); border:1px solid var(--rule2);
+  border-radius:5px; box-shadow:var(--shadow); padding:11px 13px; max-width:270px;
+}
+.pop.show{opacity:1; transform:translateY(0)}
+.pop .nm{font-size:15px; font-weight:700; letter-spacing:-.01em; margin-bottom:2px}
+.pop .sub{font-family:var(--mono); font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink3); margin-bottom:8px}
+.pop dl{margin:0; display:grid; grid-template-columns:auto 1fr; gap:2px 12px; font-size:12.5px}
+.pop dt{font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink3); padding-top:2px}
+.pop dd{margin:0; color:var(--ink2); font-variant-numeric:tabular-nums}
+.pop .flag{margin-top:8px; font-size:11.5px; color:var(--warn); font-style:italic}
+
+/* footer ----------------------------------------------------------------- */
+footer{
+  font-family:var(--mono); font-size:10.5px; line-height:1.8; color:var(--ink3);
+  border-top:1px solid var(--rule); padding-top:14px; letter-spacing:.02em;
+}
+footer b{color:var(--ink2); font-weight:400}
+.sibs{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+.sibs a{
+  font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+  padding:4px 9px; border:1px solid var(--rule2); border-radius:3px; color:var(--ink2); text-decoration:none;
+}
+.sibs a:hover{border-color:var(--ink); color:var(--ink)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+</style>
+<style>
+  .dome-bg{fill:var(--card)}
+  .ring-line{fill:none; stroke:var(--rule); stroke-width:1}
+  .ring-line.edge{stroke:var(--rule2)}
+  .band-fill{fill:var(--ink); opacity:.022}
+  .spoke{stroke:var(--rule); stroke-width:1; stroke-dasharray:2 4}
+  .ring-label{font-family:var(--mono); font-size:9.5px; letter-spacing:.18em; fill:var(--ink3); text-transform:uppercase; paint-order:stroke; stroke:var(--card); stroke-width:4px; stroke-linejoin:round}
+  .axis-label{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; fill:var(--ink2); text-transform:uppercase; paint-order:stroke; stroke:var(--card); stroke-width:3.5px; stroke-linejoin:round}
+  .axis-label.dim{fill:var(--ink3)}
+  .name{font-family:var(--sans); font-size:11.5px; fill:var(--ink); paint-order:stroke; stroke:var(--card); stroke-width:3px; stroke-linejoin:round}
+  .name.small{font-size:10.5px; fill:var(--ink2)}
+  .leader{stroke:var(--rule2); stroke-width:.75}
+  .you{font-family:var(--mono); font-size:10px; letter-spacing:.2em; fill:var(--ink3); text-transform:uppercase}
+  .node{cursor:pointer}
+  .node circle{transition:transform .12s ease}
+  .node:hover circle.dot{stroke:var(--ink); stroke-width:2}
+  .tray-line{stroke:var(--rule2); stroke-width:1; stroke-dasharray:3 3}
+  .drift{display:grid; grid-template-columns:1fr auto auto; gap:2px 14px; font-size:13.5px; align-items:baseline}
+  .drift .d-name{color:var(--ink)}
+  .drift .d-num{font-family:var(--mono); font-variant-numeric:tabular-nums; color:var(--ink2); font-size:12px}
+  .drift .d-grp{font-family:var(--mono); font-size:9.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink3)}
+  .drift .hd{font-family:var(--mono); font-size:9.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink3); border-bottom:1px solid var(--rule); padding-bottom:4px; margin-bottom:4px}
+  @keyframes rise{from{opacity:0; transform:scale(.2)} to{opacity:1; transform:scale(1)}}
+  .node.anim{animation:rise .5s cubic-bezier(.2,.8,.3,1) both}
+</style>
+
+<div class="wrap">
+
+  <div class="pills">
+    <span class="pill on">Project You</span>
+    <span class="pill">Social</span>
+    <span class="pill mark">Orbit v1.0</span>
+    <span class="pill">Live · reads the connections table</span>
+    <span class="pill"><span data-fig="asOfPretty">–</span></span>
+  </div>
+
+  <div>
+    <h1><span class="num">Social</span>Orbit</h1>
+  </div>
+
+  <p class="lede">Everyone in your connections record, arranged by how close you have said they are. <b>The ring is what you say, the brightness is what you actually did.</b> Someone filed in the inner circle who you have not seen in months fades out where they sit, so the gap between intention and record shows up as light rather than as a date in a column. Live: it re-reads the table every time you open it.</p>
+
+  <section class="stage">
+    <div class="stage-bar">
+      <div class="grp">
+        <button class="ctl" id="mode-group" aria-pressed="true">Fan by group</button>
+        <button class="ctl" id="mode-age" aria-pressed="false">Fan by age</button>
+      </div>
+      <div class="grp">
+        <label class="ctl"><input type="checkbox" id="show-occ"> Show occasions</label>
+        <label class="ctl"><input type="checkbox" id="show-all-names"> All names</label>
+      </div>
+    </div>
+    <div class="stage-bar" style="background:var(--card)">
+      <div class="key" id="key"></div>
+    </div>
+    <div class="scroller">
+      <svg id="dome" viewBox="0 0 1200 760" width="1200" height="760" role="img" aria-label="Half dome chart. Rings are closeness, the fan is social group or age band, each circle is a person sized by how many times you have seen them and faded by how long ago."></svg>
+    </div>
+  </section>
+
+  <div class="cards">
+    <div class="card note"><span class="fig" id="s-people">–</span><span class="capt">People and households</span><p>From <span data-fig="events">–</span> logged interactions since <span data-fig="firstPretty">–</span>.</p></div>
+    <div class="card warn"><span class="fig" id="s-inferred">–</span><span class="capt">Rings we guessed</span><p>Only <span data-fig="stated">–</span> of <span data-fig="nodes">–</span> entries carry a closeness you set yourself. The rest fall back to their group and draw with a dashed edge.</p></div>
+    <div class="card bad"><span class="fig" id="s-cold">–</span><span class="capt">Inner circle, gone quiet</span><p>Filed as close, nothing logged in over four months.</p></div>
+    <div class="card good"><span class="fig" id="s-fresh">–</span><span class="capt">Seen in the last 90 days</span><p>The lit part of the dome.</p></div>
+  </div>
+
+  <div class="two">
+    <section>
+      <p class="eyebrow">Reading it</p>
+      <h2>Four things carry meaning</h2>
+      <ul class="tight">
+        <li><b>Distance from you</b> is the ring you put them in. Inside the ring band, a recent visit pulls them toward the inner edge, so the band itself has a slope.</li>
+        <li><b>Size</b> is how many times they appear in the record. The biggest circle on the map is <b><span data-fig="top">–</span></b>, at <span data-fig="topcount">–</span> logged, last on <span data-fig="toplastPretty">–</span>.</li>
+        <li><b>Brightness</b> is recency. Full colour means the last three months, a ghost outline means over a year.</li>
+        <li><b>A dashed edge</b> means nobody has said how close this person is. The map guessed from their group and is telling you so.</li>
+      </ul>
+    </section>
+    <section>
+      <p class="eyebrow">What it is not</p>
+      <h2>The honest limits</h2>
+      <ul class="tight">
+        <li>Age is recorded for <b><span data-fig="aged">–</span> of <span data-fig="nodes">–</span></b> entries, so the age fan parks the rest in a tray under the horizon rather than pretending.</li>
+        <li><span data-fig="occasions">–</span> entries are occasions, not people. Christmas is not a person. They are off by default.</li>
+        <li><span data-fig="nogroup">–</span> entries have no group set and draw grey. Fixing one is a single edit on the Social log.</li>
+        <li>Everything here comes from what got logged. A quiet ring may mean a quiet friendship or a month you forgot to write anything down.</li>
+      </ul>
+    </section>
+  </div>
+
+  <section>
+    <p class="eyebrow">The list the dome produces</p>
+    <h2>Who is drifting</h2>
+    <p class="lede" style="font-size:14.5px; margin-bottom:12px">Inner and middle circle, longest silence first. This is the working output of the whole map: not a picture, a short list of people to call.</p>
+    <div class="card"><div class="drift" id="drift"></div></div>
+  </section>
+
+  <footer>
+    <b>Project You</b> · Social · Orbit v1.0<br>
+    Data: <b>v_connection_people</b> and <b>v_connection_events</b>, read live, <span data-fig="events">–</span> interactions from <span data-fig="firstPretty">–</span> to <span data-fig="lastPretty">–</span>. Those two views are the one place the tidy-up lives: canonical names, duplicate events excluded, and person, household or occasion decided once.<br>
+    A closeness nobody has set falls back to the group's default and is drawn with a dashed edge, never silently. Ring colours are the nine groups from the 2025 Keynote wall chart. Nothing on this page writes to the database.
+    <div class="sibs">
+      <a href="connections.html">Social · year grid and log</a>
+      <a href="social-sky.html">Social · night sky</a>
+    </div>
+  </footer>
+</div>
+
+<div class="pop" id="pop" role="status" aria-live="polite"></div>
+
+<script>
+/* Live data loader for the Social maps.
+   Reads two views, never the connections table directly:
+     v_connection_people  one row per person, household or occasion
+     v_connection_events  one row per logged contact, duplicates already excluded
+   Builds the same window.RELMAP shape the concept mocks used, then boots the page. */
+(function(){
+  var REST = (window.PY_REST && window.PY_REST.url) ? window.PY_REST : {
+    url: 'https://arnjntspmrhigodlssbn.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM'
+  };
+
+  var GROUPS = [
+    { key:'my family',       label:'My Family',       color:'#7c74f0' },
+    { key:'extended family', label:'Extended Family', color:'#5b7cf5' },
+    { key:'mom',             label:'Mom',             color:'#8a93a6' },
+    { key:'personal friend', label:'Personal Friend', color:'#2aa7d8' },
+    { key:'old greenwich',   label:'Old Greenwich',   color:'#c9a227' },
+    { key:'creative social', label:'Creative Social', color:'#b569c4' },
+    { key:'work related',    label:'Work Related',    color:'#e08a3c' },
+    { key:'ex work',         label:'Ex Work',         color:'#3f9e6a' },
+    { key:'tribe',           label:'Tribe',           color:'#00a3e0' },
+    { key:'unfiled',         label:'Not filed yet',   color:'#9aa3ad' }
+  ];
+
+  // The Project You day runs 2am to 2am Eastern. py_today() in SQL is the other half of this.
+  function pyToday(){
+    if (window.PY && typeof PY.today === 'function') return PY.today();
+    var now = new Date();
+    var et = new Date(now.toLocaleString('en-US', { timeZone:'America/New_York' }));
+    if (et.getHours() < 2) et.setDate(et.getDate() - 1);
+    return et.getFullYear() + '-' + String(et.getMonth()+1).padStart(2,'0') + '-' + String(et.getDate()).padStart(2,'0');
+  }
+  function days(a, b){ return Math.round((Date.parse(b) - Date.parse(a)) / 86400000); }
+
+  function get(view, cols){
+    return fetch(REST.url + '/rest/v1/' + view + '?select=' + cols, {
+      headers: { apikey: REST.key, Authorization: 'Bearer ' + REST.key }
+    }).then(function(r){
+      if (!r.ok) throw new Error(view + ' returned ' + r.status);
+      return r.json();
+    });
+  }
+
+  function build(people, events){
+    var byKey = {};
+    events.forEach(function(e){ (byKey[e.person_key] = byKey[e.person_key] || []).push(e); });
+
+    var out = people.map(function(p){
+      var evs = (byKey[p.person_key] || []).slice().sort(function(a,b){ return a.happened_on < b.happened_on ? -1 : 1; });
+      var kinds = {};
+      evs.forEach(function(e){ var k = e.kind || 'other'; kinds[k] = (kinds[k] || 0) + 1; });
+      var gaps = [];
+      for (var i = 1; i < evs.length; i++) gaps.push(days(evs[i-1].happened_on, evs[i].happened_on));
+      gaps.sort(function(a,b){ return a - b; });
+      return {
+        name: p.person_key,
+        type: p.entity_type || 'person',
+        group: p.social_group || 'unfiled',
+        circle: p.circle || 'outer',
+        circleStated: !!p.circle_stated,
+        age: p.age_band || null,
+        count: p.n,
+        first: p.first_on,
+        last: p.last_on,
+        lastKind: evs.length ? evs[evs.length-1].kind : null,
+        since: p.days_since,
+        span: days(p.first_on, p.last_on),
+        typical: gaps.length ? gaps[Math.floor(gaps.length/2)] : null,
+        kinds: kinds,
+        dates: evs.map(function(e){ return e.happened_on; }),
+        sources: evs.map(function(e){ return e.source; }).filter(function(v, i, a){ return v && a.indexOf(v) === i; }),
+        multi: !!p.multi_group
+      };
+    }).sort(function(a,b){ return b.count - a.count || (a.name < b.name ? -1 : 1); });
+
+    return {
+      asOf: pyToday(),
+      rings: ['inner','middle','affinity','outer'],
+      groups: GROUPS,
+      people: out,
+      events: events.map(function(e){
+        return { on:e.happened_on, ends:e.ends_on, name:e.person_key, kind:e.kind,
+                 group:e.social_group, circle:e.circle, age:e.age_band,
+                 source:e.source, type:e.entity_type || 'person' };
+      }).sort(function(a,b){ return a.on < b.on ? -1 : 1; })
+    };
+  }
+
+  // Numbers written into the prose, filled from the live data so the page can never
+  // quote a figure that has gone stale.
+  function figures(D){
+    var ppl = D.people.filter(function(p){ return p.type !== 'occasion'; });
+    var f = {
+      events: D.events.length,
+      nodes: D.people.length,
+      people: ppl.length,
+      occasions: D.people.length - ppl.length,
+      stated: D.people.filter(function(p){ return p.circleStated; }).length,
+      guessed: D.people.filter(function(p){ return !p.circleStated; }).length,
+      aged: D.people.filter(function(p){ return p.age; }).length,
+      nogroup: D.people.filter(function(p){ return p.group === 'unfiled'; }).length,
+      first: D.events.length ? D.events[0].on : '',
+      last: D.events.length ? D.events[D.events.length-1].on : '',
+      top: D.people.length ? D.people[0].name : '',
+      topcount: D.people.length ? D.people[0].count : 0,
+      toplast: D.people.length ? D.people[0].last : ''
+    };
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function pretty(iso){ if (!iso) return ''; var p = iso.split('-'); return m[+p[1]-1] + ' ' + (+p[2]) + ', ' + p[0]; }
+    f.firstPretty = pretty(f.first); f.lastPretty = pretty(f.last);
+    f.toplastPretty = pretty(f.toplast); f.asOfPretty = pretty(D.asOf);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-fig]'), function(el){
+      var k = el.getAttribute('data-fig');
+      if (f[k] !== undefined) el.textContent = f[k];
+    });
+  }
+
+  function fail(msg){
+    var s = document.querySelector('.stage');
+    if (s) s.insertAdjacentHTML('afterbegin',
+      '<div style="padding:14px 16px;border-bottom:1px solid var(--rule);color:var(--bad);font-size:14px">' +
+      'Could not load the connections data (' + msg + '). The page is fine, the data did not arrive. Reload to try again.</div>');
+  }
+
+  Promise.all([
+    get('v_connection_people', 'person_key,entity_type,n,first_on,last_on,days_since,social_group,circle,circle_stated,age_band,multi_group'),
+    get('v_connection_events', 'person_key,kind,happened_on,ends_on,social_group,circle,age_band,source,entity_type')
+  ]).then(function(res){
+    window.RELMAP = build(res[0], res[1]);
+    if (typeof window.RELMAP_BOOT === 'function') window.RELMAP_BOOT();
+    figures(window.RELMAP);
+  }).catch(function(e){ fail(e.message || e); });
+})();
+</script>
+<script>
+window.RELMAP_BOOT = function(){
+  var D = window.RELMAP, NS = 'http://www.w3.org/2000/svg';
+  var svg = document.getElementById('dome'), pop = document.getElementById('pop');
+  var CX = 620, CY = 660, R0 = 58, RMAX = 512;
+  var BANDS = { inner:[R0,242], middle:[242,332], affinity:[332,426], outer:[426,RMAX] };
+  var RING_LABEL = { inner:'Inner', middle:'Middle', affinity:'Affinity', outer:'Outer' };
+  var AGE_STOPS = [['40s',45],['50s',55],['60s',65],['90s',95]];
+  var mode = 'group', showOcc = false, showAllNames = false;
+  var off = {};
+
+  var colOf = {}; D.groups.forEach(function(g){ colOf[g.key] = g.color; });
+  var label = {}; D.groups.forEach(function(g){ label[g.key] = g.label; });
+
+  function fade(since){
+    if (since <= 30) return 1;
+    if (since <= 90) return .84;
+    if (since <= 180) return .6;
+    if (since <= 365) return .36;
+    return .14;
+  }
+  function radiusOf(count){ return 6.5 + Math.sqrt(count) * 3.4; }
+  function ago(d){
+    if (d < 45) return d + ' days ago';
+    if (d < 400) return Math.round(d/30.4) + ' months ago';
+    return (d/365).toFixed(1) + ' years ago';
+  }
+  function pretty(iso){
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var p = iso.split('-'); return m[+p[1]-1] + ' ' + (+p[2]) + ', ' + p[0];
+  }
+  function el(n, a){ var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); return e; }
+  function pt(ang, r){ return [CX + Math.cos(ang) * r, CY - Math.sin(ang) * r]; }
+  function arc(r, a0, a1){
+    var p0 = pt(a0, r), p1 = pt(a1, r);
+    return 'M' + p0[0].toFixed(1) + ',' + p0[1].toFixed(1) + ' A' + r + ',' + r + ' 0 0 1 ' + p1[0].toFixed(1) + ',' + p1[1].toFixed(1);
+  }
+
+  // ---- legend -------------------------------------------------------------
+  var key = document.getElementById('key');
+  D.groups.forEach(function(g){
+    var b = document.createElement('button');
+    b.setAttribute('aria-pressed','true');
+    b.innerHTML = '<span class="sw" style="background:' + g.color + '"></span>' + g.label;
+    b.onclick = function(){
+      off[g.key] = !off[g.key];
+      b.setAttribute('aria-pressed', off[g.key] ? 'false' : 'true');
+      draw();
+    };
+    key.appendChild(b);
+  });
+
+  // ---- who is on the map --------------------------------------------------
+  function live(){
+    return D.people.filter(function(p){
+      if (p.type === 'occasion' && !showOcc) return false;
+      return !off[p.group];
+    });
+  }
+
+  // ---- layout -------------------------------------------------------------
+  function layout(){
+    var list = live(), placed = [], trayed = [];
+    var PAD = 0.05; // radians kept clear at each end of the dome
+
+    if (mode === 'group'){
+      var keys = D.groups.map(function(g){ return g.key; }).filter(function(k){ return !off[k]; });
+      var counts = {}, total = 0;
+      keys.forEach(function(k){
+        counts[k] = list.filter(function(p){ return p.group === k; }).length;
+        total += Math.max(counts[k], 0.9); // an empty group still gets a sliver
+      });
+      var free = Math.PI - PAD * 2, cursor = Math.PI - PAD, axis = [];
+      keys.forEach(function(k){
+        var span = free * Math.max(counts[k], 0.9) / total;
+        var a0 = cursor, a1 = cursor - span;
+        var mine = list.filter(function(p){ return p.group === k; })
+                       .sort(function(a,b){ return b.count - a.count; });
+        // biggest in the middle of its sector, the rest alternating out from it
+        var order = [];
+        mine.forEach(function(p, j){ order[Math.floor(mine.length/2) + (j % 2 ? 1 : -1) * Math.ceil(j/2)] = p; });
+        order.filter(Boolean).forEach(function(p, j){
+          var t = (j + 1) / (order.filter(Boolean).length + 1);
+          placed.push(place(p, a0 - span * (0.10 + t * 0.80), a1 + span * 0.06, a0 - span * 0.06));
+        });
+        axis.push({ key:k, text:label[k], a0:a0, a1:a1, mid:a0 - span/2, count:counts[k] });
+        cursor = a1;
+      });
+      placed.axis = axis;
+      relax(placed);
+    } else {
+      // age 20 on the left, 100 on the right, exactly as you drew it
+      var lo = 20, hi = 100;
+      var toAng = function(age){ return Math.PI - PAD - (age - lo) / (hi - lo) * (Math.PI - PAD*2); };
+      var buckets = {};
+      list.forEach(function(p){
+        var st = AGE_STOPS.filter(function(s){ return s[0] === p.age; })[0];
+        if (!st) { trayed.push(p); return; }
+        (buckets[st[0]] = buckets[st[0]] || []).push(p);
+      });
+      AGE_STOPS.forEach(function(st){
+        var mine = (buckets[st[0]] || []).sort(function(a,b){ return b.count - a.count; });
+        var w = (Math.PI - PAD*2) / (hi - lo) * 9; // one decade wide
+        mine.forEach(function(p, j){
+          var t = mine.length === 1 ? 0.5 : j / (mine.length - 1);
+          var c = toAng(st[1]);
+          placed.push(place(p, c + (t - 0.5) * w * 0.72, c - w/2, c + w/2));
+        });
+      });
+      relax(placed);
+      placed.axis = [];
+      for (var a = 20; a <= 100; a += 10){
+        placed.axis.push({ key:'age'+a, text:String(a), a0:toAng(a), a1:toAng(a), mid:toAng(a), tick:true,
+          count:(buckets[(Math.floor(a/10)*10)+'s'] || []).length });
+      }
+    }
+    placed.tray = trayed.sort(function(a,b){ return b.count - a.count; });
+    return placed;
+  }
+
+  function place(p, ang, aMin, aMax){
+    var b = BANDS[p.circle], rr = radiusOf(p.count);
+    var lo = b[0] + rr + 6, hi = b[1] - rr - 6;
+    if (hi < lo) { lo = hi = (b[0] + b[1]) / 2; }
+    // inside the band, recent pulls you toward the inner edge
+    var t = Math.min(1, Math.max(0, Math.log10(Math.max(p.since, 1)) / Math.log10(700)));
+    var r = lo + (hi - lo) * t;
+    var xy = pt(ang, r);
+    return { p:p, ang:ang, r:r, rr:rr, lo:lo, hi:hi, aMin:Math.min(aMin, aMax), aMax:Math.max(aMin, aMax), x:xy[0], y:xy[1] };
+  }
+
+  // nudge circles apart, but never out of their own ring or their own sector
+  function relax(ns){
+    for (var it = 0; it < 90; it++){
+      var moved = 0;
+      for (var i = 0; i < ns.length; i++){
+        for (var j = i + 1; j < ns.length; j++){
+          var a = ns[i], b = ns[j];
+          var dx = b.x - a.x, dy = b.y - a.y;
+          var d = Math.sqrt(dx*dx + dy*dy) || 0.01;
+          var need = a.rr + b.rr + 4;
+          if (d >= need) continue;
+          var push = (need - d) / 2 / d;
+          a.x -= dx * push; a.y -= dy * push;
+          b.x += dx * push; b.y += dy * push;
+          moved++;
+        }
+      }
+      for (var k = 0; k < ns.length; k++) clampNode(ns[k]);
+      if (!moved) break;
+    }
+  }
+  function clampNode(n){
+    var dx = n.x - CX, dy = CY - n.y;
+    var r = Math.sqrt(dx*dx + dy*dy) || 0.01;
+    var ang = Math.atan2(Math.max(dy, 0.001), dx);
+    r = Math.min(n.hi, Math.max(n.lo, r));
+    ang = Math.min(n.aMax, Math.max(n.aMin, ang));
+    ang = Math.min(Math.PI - 0.02, Math.max(0.02, ang));
+    n.ang = ang; n.r = r;
+    var xy = pt(ang, r); n.x = xy[0]; n.y = xy[1];
+  }
+
+  // ---- draw ---------------------------------------------------------------
+  function draw(first){
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var g = layout();
+    var TOP = 104, H = mode === 'age' ? 700 : 600;
+    svg.setAttribute('viewBox', '0 ' + TOP + ' 1240 ' + H);
+    svg.setAttribute('height', H);
+
+    var gBands = el('g'), gGrid = el('g'), gNodes = el('g'), gLabels = el('g');
+
+    // a whisper of each group's colour across its own slice of the fan
+    if (mode === 'group'){
+      (g.axis || []).forEach(function(a){
+        var p0 = pt(a.a0, R0), p1 = pt(a.a0, RMAX), p2 = pt(a.a1, RMAX), p3 = pt(a.a1, R0);
+        gBands.appendChild(el('path', {
+          fill: colOf[a.key] || colOf.unfiled, 'fill-opacity': a.count ? .05 : .015,
+          d:'M' + p0[0] + ',' + p0[1] + ' L' + p1[0] + ',' + p1[1] +
+            ' A' + RMAX + ',' + RMAX + ' 0 0 1 ' + p2[0] + ',' + p2[1] +
+            ' L' + p3[0] + ',' + p3[1] +
+            ' A' + R0 + ',' + R0 + ' 0 0 0 ' + p0[0] + ',' + p0[1] + ' Z'
+        }));
+      });
+    }
+
+    ['outer','affinity','middle','inner'].forEach(function(k){
+      var b = BANDS[k];
+      gGrid.appendChild(el('path', { class:'ring-line' + (k === 'inner' ? ' edge' : ''), d: arc(b[1], Math.PI, 0) }));
+    });
+    gGrid.appendChild(el('path', { class:'ring-line edge', d: arc(R0, Math.PI, 0) }));
+    gGrid.appendChild(el('line', { class:'ring-line edge', x1:CX-RMAX, y1:CY, x2:CX+RMAX, y2:CY }));
+
+    // ring names, once, up the twelve o'clock radius as the research suggests
+    Object.keys(BANDS).forEach(function(k){
+      var b = BANDS[k], r = (b[0] + b[1]) / 2;
+      var t = el('text', { class:'ring-label', x:CX + 7, y:CY - r + 4 });
+      t.textContent = RING_LABEL[k];
+      gGrid.appendChild(t);
+    });
+    var you = el('text', { class:'you', x:CX, y:CY + 20, 'text-anchor':'middle' });
+    you.textContent = 'You'; gGrid.appendChild(you);
+
+    // fan axis
+    (g.axis || []).forEach(function(a){
+      if (a.tick){
+        var p1 = pt(a.mid, RMAX), p0 = pt(a.mid, R0);
+        gGrid.appendChild(el('line', { class:'spoke', x1:p0[0], y1:p0[1], x2:p1[0], y2:p1[1] }));
+        var lp = pt(a.mid, RMAX + 22);
+        var t = el('text', { class:'axis-label', x:lp[0], y:lp[1] + 4, 'text-anchor':'middle' });
+        t.textContent = a.text; gGrid.appendChild(t);
+      } else {
+        var e = pt(a.a1, RMAX), s = pt(a.a1, R0);
+        gGrid.appendChild(el('line', { class:'spoke', x1:s[0], y1:s[1], x2:e[0], y2:e[1] }));
+        var txt = a.text.toUpperCase() + (a.count ? '  ' + a.count : '');
+        var rLab = RMAX + 15, arcLen = Math.abs(a.a0 - a.a1) * rLab, wide = txt.length * 6.6;
+        if (arcLen > wide + 14){
+          // the label rides the rim, like a name along a coastline
+          var id = 'rim-' + a.key.replace(/[^a-z]/g, '');
+          var defs = el('defs');
+          defs.appendChild(el('path', { id:id, d:arc(rLab, a.a0, a.a1), fill:'none' }));
+          gGrid.appendChild(defs);
+          var t2 = el('text', { class:'axis-label' + (a.count ? '' : ' dim') });
+          var tp = el('textPath', { href:'#' + id, startOffset:'50%', 'text-anchor':'middle' });
+          tp.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#' + id);
+          tp.textContent = txt;
+          t2.appendChild(tp);
+          gGrid.appendChild(t2);
+        } else {
+          // too narrow a slice for its own name, so the name steps outside
+          var lp2 = pt(a.mid, RMAX + 32);
+          var x = Math.min(1180, Math.max(60, lp2[0]));
+          gGrid.appendChild(el('line', { class:'leader', x1:pt(a.mid, RMAX)[0], y1:pt(a.mid, RMAX)[1], x2:x, y2:lp2[1] + 4 }));
+          var t3 = el('text', { class:'axis-label' + (a.count ? '' : ' dim'), x:x, y:lp2[1], 'text-anchor':'middle' });
+          t3.textContent = txt;
+          gGrid.appendChild(t3);
+        }
+      }
+    });
+
+    // nodes
+    var labelBoxes = [];
+    g.sort(function(a, b){ return b.p.count - a.p.count; });
+    g.forEach(function(n, i){
+      var p = n.p, col = colOf[p.group] || colOf.unfiled, rr = n.rr || radiusOf(p.count), o = fade(p.since);
+      var node = el('g', { class:'node' + (first ? ' anim' : ''), tabindex:'0', role:'button',
+        'aria-label': p.name + ', ' + p.count + ' logged, last ' + ago(p.since) });
+      if (first) node.style.animationDelay = (i * 9) + 'ms';
+      node.style.transformOrigin = n.x + 'px ' + n.y + 'px';
+      if (o < .3){
+        node.appendChild(el('circle', { class:'dot', cx:n.x, cy:n.y, r:rr, fill:'none',
+          stroke:col, 'stroke-width':1.2, 'stroke-opacity':.55, 'stroke-dasharray': p.circleStated ? 'none' : '2 2.5' }));
+      } else {
+        node.appendChild(el('circle', { class:'dot', cx:n.x, cy:n.y, r:rr, fill:col, 'fill-opacity':o,
+          stroke: p.circleStated ? col : 'var(--ink3)', 'stroke-width': p.circleStated ? 0 : 1,
+          'stroke-dasharray': p.circleStated ? 'none' : '2 2.5' }));
+      }
+      if (p.since <= 45) node.appendChild(el('circle', { cx:n.x, cy:n.y, r:rr + 3.5, fill:'none', stroke:col, 'stroke-width':1, 'stroke-opacity':.5 }));
+      bindPop(node, p);
+      gNodes.appendChild(node);
+
+      var worth = showAllNames || p.count >= 2 || p.since <= 120;
+      if (!worth) return;
+      var right = n.x >= CX;
+      var lx = n.x + (right ? rr + 6 : -(rr + 6)), ly = n.y + 4;
+      var w = p.name.length * 6.2 + 8, h = 14;
+      var box = [right ? lx : lx - w, ly - h, w, h];
+      var clash = labelBoxes.some(function(b){
+        return !(box[0] + box[2] < b[0] || b[0] + b[2] < box[0] || box[1] + box[3] < b[1] || b[1] + b[3] < box[1]);
+      });
+      if (clash && !showAllNames) return;
+      labelBoxes.push(box);
+      var t3 = el('text', { class:'name' + (p.count >= 3 ? '' : ' small'), x:lx, y:ly, 'text-anchor': right ? 'start' : 'end' });
+      t3.textContent = p.name;
+      gLabels.appendChild(t3);
+    });
+
+    // the tray under the horizon, for entries with no age on file
+    if (mode === 'age' && g.tray.length){
+      var ty = CY + 60;
+      gGrid.appendChild(el('line', { class:'tray-line', x1:CX - RMAX, y1:CY + 34, x2:CX + RMAX, y2:CY + 34 }));
+      var lt = el('text', { class:'axis-label dim', x:CX - RMAX, y:CY + 26 });
+      lt.textContent = 'No age recorded · ' + g.tray.length + ' of ' + (g.tray.length + g.length);
+      gGrid.appendChild(lt);
+      var perRow = 26, x0 = CX - RMAX;
+      g.tray.forEach(function(p, i){
+        var col = colOf[p.group] || colOf.unfiled;
+        var x = x0 + (i % perRow) * (2 * RMAX / perRow) + 10;
+        var y = ty + Math.floor(i / perRow) * 30;
+        var node2 = el('g', { class:'node', tabindex:'0', role:'button', 'aria-label': p.name + ', no age recorded' });
+        node2.appendChild(el('circle', { class:'dot', cx:x, cy:y, r:radiusOf(p.count) * .8, fill:col, 'fill-opacity':fade(p.since) * .7,
+          stroke:'var(--ink3)', 'stroke-width':1, 'stroke-dasharray':'2 2.5' }));
+        bindPop(node2, p);
+        gNodes.appendChild(node2);
+      });
+    }
+
+    svg.appendChild(gBands); svg.appendChild(gGrid); svg.appendChild(gNodes); svg.appendChild(gLabels);
+  }
+
+  // ---- hover card ---------------------------------------------------------
+  function bindPop(node, p){
+    function show(ev){
+      var r = ev.currentTarget.getBoundingClientRect();
+      var groups = Object.keys(p.kinds).map(function(k){ return p.kinds[k] + ' ' + k + (p.kinds[k] > 1 ? 's' : ''); }).join(', ');
+      pop.innerHTML =
+        '<div class="nm">' + p.name + '</div>' +
+        '<div class="sub">' + (label[p.group] || 'Not filed') + ' · ' + p.circle + ' circle' + (p.circleStated ? '' : ' (guessed)') + '</div>' +
+        '<dl>' +
+        '<dt>Last</dt><dd>' + pretty(p.last) + ' · ' + ago(p.since) + '</dd>' +
+        '<dt>Logged</dt><dd>' + p.count + ' time' + (p.count > 1 ? 's' : '') + '</dd>' +
+        '<dt>Made of</dt><dd>' + groups + '</dd>' +
+        (p.age ? '<dt>Age</dt><dd>' + p.age + '</dd>' : '') +
+        (p.typical ? '<dt>Usual gap</dt><dd>about ' + (p.typical > 60 ? Math.round(p.typical/30.4) + ' months' : p.typical + ' days') + '</dd>' : '') +
+        '</dl>' +
+        (p.circleStated ? '' : '<div class="flag">No closeness set for ' + p.name + '. This ring is a guess from their group.</div>') +
+        (p.type === 'occasion' ? '<div class="flag">This is an occasion, not a person.</div>' : '');
+      pop.classList.add('show');
+      var w = pop.offsetWidth, h = pop.offsetHeight;
+      var x = Math.min(window.innerWidth - w - 12, Math.max(12, r.left + r.width / 2 - w / 2));
+      var y = r.top - h - 10; if (y < 12) y = r.bottom + 10;
+      pop.style.left = x + 'px'; pop.style.top = y + 'px';
+    }
+    function hide(){ pop.classList.remove('show'); }
+    node.addEventListener('mouseenter', show);
+    node.addEventListener('mouseleave', hide);
+    node.addEventListener('focus', show);
+    node.addEventListener('blur', hide);
+  }
+
+  // ---- the drift list -----------------------------------------------------
+  function drift(){
+    var box = document.getElementById('drift');
+    var rows = D.people.filter(function(p){
+      return p.type !== 'occasion' && (p.circle === 'inner' || p.circle === 'middle') && p.since > 100;
+    }).sort(function(a,b){ return b.since - a.since; });
+    box.innerHTML = '<div class="hd">Person</div><div class="hd">Last seen</div><div class="hd">Group</div>' +
+      rows.map(function(p){
+        return '<div class="d-name">' + p.name + '</div>' +
+               '<div class="d-num">' + pretty(p.last) + ' · ' + p.since + 'd</div>' +
+               '<div class="d-grp">' + (label[p.group] || 'unfiled') + '</div>';
+      }).join('');
+  }
+
+  // ---- stats --------------------------------------------------------------
+  function stats(){
+    var ppl = D.people.filter(function(p){ return p.type !== 'occasion'; });
+    document.getElementById('s-people').textContent = ppl.length;
+    document.getElementById('s-inferred').textContent = ppl.filter(function(p){ return !p.circleStated; }).length;
+    document.getElementById('s-cold').textContent = ppl.filter(function(p){ return p.circle === 'inner' && p.since > 120; }).length;
+    document.getElementById('s-fresh').textContent = ppl.filter(function(p){ return p.since <= 90; }).length;
+  }
+
+  // ---- controls -----------------------------------------------------------
+  var bG = document.getElementById('mode-group'), bA = document.getElementById('mode-age');
+  bG.onclick = function(){ mode = 'group'; bG.setAttribute('aria-pressed','true'); bA.setAttribute('aria-pressed','false'); draw(true); };
+  bA.onclick = function(){ mode = 'age';  bA.setAttribute('aria-pressed','true'); bG.setAttribute('aria-pressed','false'); draw(true); };
+  document.getElementById('show-occ').onchange = function(e){ showOcc = e.target.checked; draw(); };
+  document.getElementById('show-all-names').onchange = function(e){ showAllNames = e.target.checked; draw(); };
+
+  stats(); drift(); draw(true);
+};
+if (window.RELMAP) window.RELMAP_BOOT();
+</script>
+
