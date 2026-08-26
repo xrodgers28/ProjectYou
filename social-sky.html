@@ -1,0 +1,668 @@
+<title>Social Night Sky</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* ---- Project You house shell -------------------------------------------
+   One frame for all four mocks: mono pills, H1, one paragraph, eyebrow
+   sections, mono footer. Each mock overrides only the map's own palette. */
+
+:root{
+  --ground:#f1f0ed; --card:#ffffff; --inset:#e8e7e2; --sunk:#dedcd6;
+  --ink:#1b1c1f; --ink2:#585c64; --ink3:#8a9099;
+  --rule:#dcdad4; --rule2:#c8c5bd;
+  --good:#3f8f66; --warn:#c48a1e; --bad:#c8524e; --note:#3a6fc4;
+  --shadow:0 1px 2px rgba(20,20,25,.06), 0 8px 24px rgba(20,20,25,.05);
+  --mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans:Arial, "Helvetica Neue", Helvetica, sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#131417; --card:#1b1d21; --inset:#232529; --sunk:#2b2e33;
+    --ink:#eceef1; --ink2:#a5aab3; --ink3:#71767f;
+    --rule:#2d3036; --rule2:#3a3e45;
+    --good:#5cb98a; --warn:#e0aa42; --bad:#e0736e; --note:#6d9ce8;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131417; --card:#1b1d21; --inset:#232529; --sunk:#2b2e33;
+  --ink:#eceef1; --ink2:#a5aab3; --ink3:#71767f;
+  --rule:#2d3036; --rule2:#3a3e45;
+  --good:#5cb98a; --warn:#e0aa42; --bad:#e0736e; --note:#6d9ce8;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1240px; margin:0 auto; padding:28px 22px 60px; display:flex; flex-direction:column; gap:22px}
+
+/* pills ------------------------------------------------------------------ */
+.pills{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.pill{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+  padding:4px 9px; border:1px solid var(--rule2); border-radius:3px;
+  color:var(--ink2); background:var(--card); white-space:nowrap;
+}
+.pill.on{background:var(--ink); color:var(--ground); border-color:var(--ink)}
+.pill.mark{border-color:var(--note); color:var(--note)}
+
+/* head ------------------------------------------------------------------- */
+h1{
+  font-size:clamp(30px,4.4vw,46px); line-height:1.06; margin:0; letter-spacing:-.022em;
+  text-wrap:balance; font-weight:700;
+}
+h1 .num{
+  display:block; font-family:var(--mono); font-size:11px; font-weight:400;
+  letter-spacing:.16em; color:var(--ink3); text-transform:uppercase; margin-bottom:10px;
+}
+.lede{margin:0; max-width:66ch; color:var(--ink2); font-size:16.5px; line-height:1.62}
+.lede b{color:var(--ink); font-weight:700}
+
+/* sections --------------------------------------------------------------- */
+.eyebrow{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink3); margin:0 0 6px;
+}
+h2{font-size:19px; margin:0 0 10px; letter-spacing:-.012em}
+section{margin:0}
+
+/* the map frame ---------------------------------------------------------- */
+.stage{
+  background:var(--card); border:1px solid var(--rule); border-radius:6px;
+  box-shadow:var(--shadow); overflow:hidden;
+}
+.stage-bar{
+  display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between;
+  padding:10px 14px; border-bottom:1px solid var(--rule); background:var(--inset);
+}
+.stage-bar .grp{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.scroller{overflow-x:auto; overflow-y:hidden}
+svg{display:block; max-width:100%}
+
+/* controls --------------------------------------------------------------- */
+button.ctl{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+  padding:5px 10px; border:1px solid var(--rule2); border-radius:3px;
+  background:var(--card); color:var(--ink2); cursor:pointer;
+}
+button.ctl:hover{border-color:var(--ink3); color:var(--ink)}
+button.ctl[aria-pressed="true"]{background:var(--ink); color:var(--ground); border-color:var(--ink)}
+button.ctl:focus-visible, a:focus-visible, [tabindex]:focus-visible{outline:2px solid var(--note); outline-offset:2px}
+label.ctl{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink2); display:inline-flex; gap:6px; align-items:center; cursor:pointer;
+}
+
+/* cards ------------------------------------------------------------------ */
+.cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px}
+.card{
+  background:var(--card); border:1px solid var(--rule); border-left:3px solid var(--rule2);
+  border-radius:5px; padding:13px 15px;
+}
+.card.good{border-left-color:var(--good)} .card.warn{border-left-color:var(--warn)}
+.card.bad{border-left-color:var(--bad)}   .card.note{border-left-color:var(--note)}
+.card h3{margin:0 0 5px; font-size:15px; letter-spacing:-.008em}
+.card p{margin:0; color:var(--ink2); font-size:13.5px; line-height:1.5}
+.card .fig{
+  font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:26px;
+  line-height:1; color:var(--ink); display:block; margin-bottom:5px;
+}
+.card .capt{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink3)}
+
+.two{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+@media (max-width:800px){.two{grid-template-columns:1fr}}
+
+ul.tight{margin:0; padding-left:18px; color:var(--ink2); font-size:14px; line-height:1.6}
+ul.tight li{margin-bottom:5px}
+ul.tight b{color:var(--ink)}
+
+/* legend ----------------------------------------------------------------- */
+.key{display:flex; flex-wrap:wrap; gap:4px}
+.key button{
+  display:inline-flex; align-items:center; gap:6px; cursor:pointer;
+  font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase;
+  padding:4px 8px; border:1px solid var(--rule); border-radius:3px;
+  background:var(--card); color:var(--ink2);
+}
+.key button .sw{width:9px; height:9px; border-radius:2px; flex:none}
+.key button[aria-pressed="false"]{opacity:.4}
+.key button:hover{border-color:var(--ink3)}
+
+/* hover card ------------------------------------------------------------- */
+.pop{
+  position:fixed; z-index:40; pointer-events:none; opacity:0; transform:translateY(3px);
+  transition:opacity .1s ease, transform .1s ease;
+  background:var(--card); color:var(--ink); border:1px solid var(--rule2);
+  border-radius:5px; box-shadow:var(--shadow); padding:11px 13px; max-width:270px;
+}
+.pop.show{opacity:1; transform:translateY(0)}
+.pop .nm{font-size:15px; font-weight:700; letter-spacing:-.01em; margin-bottom:2px}
+.pop .sub{font-family:var(--mono); font-size:10px; letter-spacing:.09em; text-transform:uppercase; color:var(--ink3); margin-bottom:8px}
+.pop dl{margin:0; display:grid; grid-template-columns:auto 1fr; gap:2px 12px; font-size:12.5px}
+.pop dt{font-family:var(--mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink3); padding-top:2px}
+.pop dd{margin:0; color:var(--ink2); font-variant-numeric:tabular-nums}
+.pop .flag{margin-top:8px; font-size:11.5px; color:var(--warn); font-style:italic}
+
+/* footer ----------------------------------------------------------------- */
+footer{
+  font-family:var(--mono); font-size:10.5px; line-height:1.8; color:var(--ink3);
+  border-top:1px solid var(--rule); padding-top:14px; letter-spacing:.02em;
+}
+footer b{color:var(--ink2); font-weight:400}
+.sibs{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+.sibs a{
+  font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+  padding:4px 9px; border:1px solid var(--rule2); border-radius:3px; color:var(--ink2); text-decoration:none;
+}
+.sibs a:hover{border-color:var(--ink); color:var(--ink)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none !important; transition:none !important}}
+</style>
+<style>
+  /* the sky is its own plate: one committed palette, both page themes */
+  .sky{ --deep:#070a14; --mid:#0d1426; --haze:#1b2740; --star:#f4f7ff; --faint:#8794b4; --fainter:#4d5a7a; }
+  .sky .scroller{background:var(--deep)}
+  .starname{font-family:var(--sans); font-size:10.5px; fill:#c4cde6; opacity:.85}
+  .starname.big{font-size:12px; fill:#eef2ff; opacity:1}
+  .starname.dark{fill:#6f7c9c; opacity:.85}
+  .connm{font-family:var(--mono); font-size:9px; letter-spacing:.42em; fill:#7d8cb0; opacity:.55; text-transform:uppercase}
+  .cline{stroke:#a8b8de; stroke-width:.9; fill:none; opacity:.34}
+  .cline.dim{opacity:.09; stroke-dasharray:2 4}
+  .star{cursor:pointer}
+  .star:focus-visible{outline:none}
+  .star:focus-visible .core{stroke:#fff; stroke-width:1.5}
+  @keyframes tw{0%,100%{opacity:1} 50%{opacity:.55}}
+  .twinkle{animation:tw 4.5s ease-in-out infinite}
+  .skybar{
+    display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between;
+    padding:11px 16px; background:#0b101d; border-top:1px solid #1a2237;
+  }
+  .skybar .lab{font-family:var(--mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:#7d8cb0}
+  .skybar .date{font-family:var(--mono); font-size:13px; color:#e8edfb; font-variant-numeric:tabular-nums}
+  .skybar input[type=range]{width:min(560px,52vw); accent-color:#8ea8e8}
+  .skybar button{
+    font-family:var(--mono); font-size:10.5px; letter-spacing:.08em; text-transform:uppercase;
+    padding:5px 12px; border:1px solid #2b3550; border-radius:3px; background:#141c31; color:#c8d3ee; cursor:pointer;
+  }
+  .skybar button:hover{border-color:#5a6b96; color:#fff}
+  .mag{display:flex; gap:16px; align-items:center; flex-wrap:wrap}
+  .mag span{font-family:var(--mono); font-size:9.5px; letter-spacing:.1em; text-transform:uppercase; color:#7d8cb0; display:inline-flex; gap:6px; align-items:center}
+  .mag i{display:inline-block; border-radius:50%; background:#e9eefc}
+</style>
+
+<div class="wrap">
+
+  <div class="pills">
+    <span class="pill on">Project You</span>
+    <span class="pill">Social</span>
+    <span class="pill mark">Night Sky v1.0</span>
+    <span class="pill">Live · reads the connections table</span>
+    <span class="pill"><span data-fig="asOfPretty">–</span></span>
+  </div>
+
+  <div><h1><span class="num">Social</span>Night Sky</h1></div>
+
+  <p class="lede">The same people as the Orbit, read as a night sky. Each group of your life is its own constellation in its own quarter of the sky, and every person is a star. <b>Size is how often, light is how recently.</b> Pull the slider and the sky runs from <span data-fig="firstPretty">–</span> to today: stars flare on the night you saw someone, then slowly go dark. Nobody is ever removed; a friendship that faded is a faint outline, still in its constellation.</p>
+
+  <section class="stage sky">
+    <div class="scroller">
+      <svg id="sky" viewBox="0 0 1240 700" width="1240" height="700" role="img" aria-label="Star chart. Each social group is a constellation, each person a star sized by how often you see them and lit by how recently."></svg>
+    </div>
+    <div class="skybar">
+      <div class="mag">
+        <span class="lab">Tonight</span>
+        <span class="date" id="skydate">Aug 25, 2026</span>
+      </div>
+      <input type="range" id="scrub" min="0" max="601" value="601" aria-label="Date">
+      <div class="mag">
+        <button id="play">Run the year</button>
+        <button id="now">Tonight</button>
+      </div>
+    </div>
+    <div class="skybar" style="justify-content:flex-start; gap:24px">
+      <div class="mag">
+        <span><i style="width:4px;height:4px"></i> 1 meeting</span>
+        <span><i style="width:8px;height:8px"></i> 4</span>
+        <span><i style="width:15px;height:15px"></i> <span data-fig="topcount">–</span></span>
+      </div>
+      <div class="mag">
+        <span><i style="width:9px;height:9px;background:#e9eefc"></i> This month</span>
+        <span><i style="width:9px;height:9px;background:#e9eefc;opacity:.4"></i> This year</span>
+        <span><i style="width:9px;height:9px;background:transparent;border:1px dashed #6f7c9c"></i> Gone dark</span>
+      </div>
+      <div class="mag"><span id="skycount"></span></div>
+    </div>
+  </section>
+
+  <div class="cards">
+    <div class="card note"><span class="fig" id="c-cons">–</span><span class="capt">Constellations</span><p>One for each group on the 2025 wall chart, plus a loose cluster for the <span data-fig="nogroup">–</span> entries with no group set.</p></div>
+    <div class="card good"><span class="fig" id="c-bright">–</span><span class="capt">Lit tonight</span><p>Seen or spoken to in the last 90 days.</p></div>
+    <div class="card bad"><span class="fig" id="c-dark">–</span><span class="capt">Gone dark</span><p>Nothing logged for over a year. They stay on the map as outlines.</p></div>
+    <div class="card warn"><span class="fig" data-fig="topcount">–</span><span class="capt">Brightest star: <span data-fig="top">–</span></span><p>Last logged <span data-fig="toplastPretty">–</span>. A star going dark is a gap in the record, not proof of a gap in the year.</p></div>
+  </div>
+
+  <div class="two">
+    <section>
+      <p class="eyebrow">Why a sky</p>
+      <h2>It handles the thing the rings cannot</h2>
+      <ul class="tight">
+        <li><b>Time is the whole interaction.</b> A ring chart shows one moment. A sky can be run forward, so you watch friendships light up and fade instead of reading a date column.</li>
+        <li><b>Nobody is ever deleted.</b> A person you have not seen in two years is a faint outline, still in their constellation. That is a kinder and more truthful model than dropping them off the chart.</li>
+        <li><b>Groups keep their shape</b> without needing a ring. Constellation lines only join people inside the same group, drawn as a chain, never a hub.</li>
+        <li><b>It survives a thin record.</b> <span data-fig="nodes">–</span> stars is a sparse sky, which is fine. The same number of dots in a bubble chart looks broken.</li>
+      </ul>
+    </section>
+    <section>
+      <p class="eyebrow">What it would take</p>
+      <h2>To make this real</h2>
+      <ul class="tight">
+        <li><b>Nothing new in the database.</b> Every value on screen comes from rows you already have, read through the two connection views.</li>
+        <li>Star positions are fixed by a seeded shuffle inside each constellation, so <b>a person keeps their place</b> between visits. New people appear at the edge of their group.</li>
+        <li>The one thing worth adding is <b>who else was there</b>. A party with six named people would draw six stars, not one, and the constellations would start to mean something.</li>
+        <li>A star is only as true as the log behind it. A quiet corner of the sky may be a quiet season or a month you forgot to write anything down.</li>
+      </ul>
+    </section>
+  </div>
+
+  <footer>
+    <b>Project You</b> · Social · Night Sky v1.0<br>
+    Data: <b>v_connection_people</b> and <b>v_connection_events</b>, read live, <span data-fig="events">–</span> interactions from <span data-fig="firstPretty">–</span> to <span data-fig="lastPretty">–</span>. Occasions such as Christmas and Thanksgiving are drawn as small open crosses, not stars.<br>
+    Star colour is the group colour from the 2025 Keynote wall chart. Nothing on this page writes to the database.
+    <div class="sibs">
+      <a href="connections.html">Social · year grid and log</a>
+      <a href="social-orbit.html">Social · orbit</a>
+    </div>
+  </footer>
+</div>
+
+<div class="pop" id="pop" role="status" aria-live="polite"></div>
+
+<script>
+/* Live data loader for the Social maps.
+   Reads two views, never the connections table directly:
+     v_connection_people  one row per person, household or occasion
+     v_connection_events  one row per logged contact, duplicates already excluded
+   Builds the same window.RELMAP shape the concept mocks used, then boots the page. */
+(function(){
+  var REST = (window.PY_REST && window.PY_REST.url) ? window.PY_REST : {
+    url: 'https://arnjntspmrhigodlssbn.supabase.co',
+    key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM'
+  };
+
+  var GROUPS = [
+    { key:'my family',       label:'My Family',       color:'#7c74f0' },
+    { key:'extended family', label:'Extended Family', color:'#5b7cf5' },
+    { key:'mom',             label:'Mom',             color:'#8a93a6' },
+    { key:'personal friend', label:'Personal Friend', color:'#2aa7d8' },
+    { key:'old greenwich',   label:'Old Greenwich',   color:'#c9a227' },
+    { key:'creative social', label:'Creative Social', color:'#b569c4' },
+    { key:'work related',    label:'Work Related',    color:'#e08a3c' },
+    { key:'ex work',         label:'Ex Work',         color:'#3f9e6a' },
+    { key:'tribe',           label:'Tribe',           color:'#00a3e0' },
+    { key:'unfiled',         label:'Not filed yet',   color:'#9aa3ad' }
+  ];
+
+  // The Project You day runs 2am to 2am Eastern. py_today() in SQL is the other half of this.
+  function pyToday(){
+    if (window.PY && typeof PY.today === 'function') return PY.today();
+    var now = new Date();
+    var et = new Date(now.toLocaleString('en-US', { timeZone:'America/New_York' }));
+    if (et.getHours() < 2) et.setDate(et.getDate() - 1);
+    return et.getFullYear() + '-' + String(et.getMonth()+1).padStart(2,'0') + '-' + String(et.getDate()).padStart(2,'0');
+  }
+  function days(a, b){ return Math.round((Date.parse(b) - Date.parse(a)) / 86400000); }
+
+  function get(view, cols){
+    return fetch(REST.url + '/rest/v1/' + view + '?select=' + cols, {
+      headers: { apikey: REST.key, Authorization: 'Bearer ' + REST.key }
+    }).then(function(r){
+      if (!r.ok) throw new Error(view + ' returned ' + r.status);
+      return r.json();
+    });
+  }
+
+  function build(people, events){
+    var byKey = {};
+    events.forEach(function(e){ (byKey[e.person_key] = byKey[e.person_key] || []).push(e); });
+
+    var out = people.map(function(p){
+      var evs = (byKey[p.person_key] || []).slice().sort(function(a,b){ return a.happened_on < b.happened_on ? -1 : 1; });
+      var kinds = {};
+      evs.forEach(function(e){ var k = e.kind || 'other'; kinds[k] = (kinds[k] || 0) + 1; });
+      var gaps = [];
+      for (var i = 1; i < evs.length; i++) gaps.push(days(evs[i-1].happened_on, evs[i].happened_on));
+      gaps.sort(function(a,b){ return a - b; });
+      return {
+        name: p.person_key,
+        type: p.entity_type || 'person',
+        group: p.social_group || 'unfiled',
+        circle: p.circle || 'outer',
+        circleStated: !!p.circle_stated,
+        age: p.age_band || null,
+        count: p.n,
+        first: p.first_on,
+        last: p.last_on,
+        lastKind: evs.length ? evs[evs.length-1].kind : null,
+        since: p.days_since,
+        span: days(p.first_on, p.last_on),
+        typical: gaps.length ? gaps[Math.floor(gaps.length/2)] : null,
+        kinds: kinds,
+        dates: evs.map(function(e){ return e.happened_on; }),
+        sources: evs.map(function(e){ return e.source; }).filter(function(v, i, a){ return v && a.indexOf(v) === i; }),
+        multi: !!p.multi_group
+      };
+    }).sort(function(a,b){ return b.count - a.count || (a.name < b.name ? -1 : 1); });
+
+    return {
+      asOf: pyToday(),
+      rings: ['inner','middle','affinity','outer'],
+      groups: GROUPS,
+      people: out,
+      events: events.map(function(e){
+        return { on:e.happened_on, ends:e.ends_on, name:e.person_key, kind:e.kind,
+                 group:e.social_group, circle:e.circle, age:e.age_band,
+                 source:e.source, type:e.entity_type || 'person' };
+      }).sort(function(a,b){ return a.on < b.on ? -1 : 1; })
+    };
+  }
+
+  // Numbers written into the prose, filled from the live data so the page can never
+  // quote a figure that has gone stale.
+  function figures(D){
+    var ppl = D.people.filter(function(p){ return p.type !== 'occasion'; });
+    var f = {
+      events: D.events.length,
+      nodes: D.people.length,
+      people: ppl.length,
+      occasions: D.people.length - ppl.length,
+      stated: D.people.filter(function(p){ return p.circleStated; }).length,
+      guessed: D.people.filter(function(p){ return !p.circleStated; }).length,
+      aged: D.people.filter(function(p){ return p.age; }).length,
+      nogroup: D.people.filter(function(p){ return p.group === 'unfiled'; }).length,
+      first: D.events.length ? D.events[0].on : '',
+      last: D.events.length ? D.events[D.events.length-1].on : '',
+      top: D.people.length ? D.people[0].name : '',
+      topcount: D.people.length ? D.people[0].count : 0,
+      toplast: D.people.length ? D.people[0].last : ''
+    };
+    var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function pretty(iso){ if (!iso) return ''; var p = iso.split('-'); return m[+p[1]-1] + ' ' + (+p[2]) + ', ' + p[0]; }
+    f.firstPretty = pretty(f.first); f.lastPretty = pretty(f.last);
+    f.toplastPretty = pretty(f.toplast); f.asOfPretty = pretty(D.asOf);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-fig]'), function(el){
+      var k = el.getAttribute('data-fig');
+      if (f[k] !== undefined) el.textContent = f[k];
+    });
+  }
+
+  function fail(msg){
+    var s = document.querySelector('.stage');
+    if (s) s.insertAdjacentHTML('afterbegin',
+      '<div style="padding:14px 16px;border-bottom:1px solid var(--rule);color:var(--bad);font-size:14px">' +
+      'Could not load the connections data (' + msg + '). The page is fine, the data did not arrive. Reload to try again.</div>');
+  }
+
+  Promise.all([
+    get('v_connection_people', 'person_key,entity_type,n,first_on,last_on,days_since,social_group,circle,circle_stated,age_band,multi_group'),
+    get('v_connection_events', 'person_key,kind,happened_on,ends_on,social_group,circle,age_band,source,entity_type')
+  ]).then(function(res){
+    window.RELMAP = build(res[0], res[1]);
+    if (typeof window.RELMAP_BOOT === 'function') window.RELMAP_BOOT();
+    figures(window.RELMAP);
+  }).catch(function(e){ fail(e.message || e); });
+})();
+</script>
+<script>
+window.RELMAP_BOOT = function(){
+  var D = window.RELMAP, NS = 'http://www.w3.org/2000/svg';
+  var svg = document.getElementById('sky'), pop = document.getElementById('pop');
+  var W = 1240, H = 700, T0 = Date.parse('2025-01-01'), DAY = 86400000;
+  var SPAN = Math.round((Date.parse(D.asOf) - T0) / DAY);
+  var colOf = {}, label = {};
+  D.groups.forEach(function(g){ colOf[g.key] = g.color; label[g.key] = g.label; });
+
+  // each constellation gets its own quarter of sky, roughly sized to its crowd
+  var REGION = {
+    'extended family':[ 60, 70, 340, 215],
+    'my family':      [ 55, 330, 250, 175],
+    'mom':            [ 90, 545, 190,  95],
+    'personal friend':[440,  55, 330, 235],
+    'old greenwich':  [355, 360, 300, 195],
+    'creative social':[705, 315, 265, 190],
+    'work related':   [830,  60, 250, 190],
+    'ex work':        [690, 545, 320, 115],
+    'tribe':          [1055, 285, 125,  85],
+    'unfiled':        [1035, 400, 175, 250]
+  };
+
+  function rng(seed){ return function(){ seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    var t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  function hash(s){ var h = 2166136261; for (var i = 0; i < s.length; i++){ h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  function el(n, a){ var e = document.createElementNS(NS, n); for (var k in a) e.setAttribute(k, a[k]); return e; }
+  function pretty(iso){ var m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var p = iso.split('-'); return m[+p[1]-1] + ' ' + (+p[2]) + ', ' + p[0]; }
+  function dayOf(iso){ return Math.round((Date.parse(iso) - T0) / DAY); }
+  function magnitude(count){ return 2.2 + Math.sqrt(count) * 1.75; }
+
+  // ---- place the stars ----------------------------------------------------
+  var stars = [];
+  D.people.forEach(function(p){
+    var box = REGION[p.group] || REGION.unfiled;
+    var r = rng(hash(p.name));
+    stars.push({
+      p:p, box:box, m:magnitude(p.count),
+      x: box[0] + 16 + r() * (box[2] - 32),
+      y: box[1] + 16 + r() * (box[3] - 32),
+      days: p.dates.map(dayOf),
+      col: colOf[p.group] || colOf.unfiled
+    });
+  });
+  // keep stars off each other without leaving their own constellation
+  for (var it = 0; it < 140; it++){
+    for (var i = 0; i < stars.length; i++){
+      for (var j = i + 1; j < stars.length; j++){
+        var a = stars[i], b = stars[j];
+        var dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx*dx + dy*dy) || .01;
+        var need = a.m + b.m + 30;
+        if (d >= need) continue;
+        var k = (need - d) / 2 / d;
+        a.x -= dx * k; a.y -= dy * k; b.x += dx * k; b.y += dy * k;
+      }
+    }
+    stars.forEach(function(s){
+      s.x = Math.min(s.box[0] + s.box[2] - 12, Math.max(s.box[0] + 12, s.x));
+      s.y = Math.min(s.box[1] + s.box[3] - 12, Math.max(s.box[1] + 12, s.y));
+    });
+  }
+
+  // ---- constellation chains: nearest neighbour, never a hub ---------------
+  var chains = [];
+  Object.keys(REGION).forEach(function(k){
+    var mine = stars.filter(function(s){ return (REGION[s.p.group] ? s.p.group : 'unfiled') === k; });
+    if (mine.length < 2) return;
+    var left = mine.slice().sort(function(a,b){ return b.p.count - a.p.count; });
+    var path = [left.shift()];
+    while (left.length){
+      var last = path[path.length - 1], best = 0, bd = Infinity;
+      left.forEach(function(s, idx){
+        var d = (s.x - last.x) * (s.x - last.x) + (s.y - last.y) * (s.y - last.y);
+        if (d < bd){ bd = d; best = idx; }
+      });
+      path.push(left.splice(best, 1)[0]);
+    }
+    chains.push({ key:k, path:path });
+  });
+
+  // ---- static sky ---------------------------------------------------------
+  var defs = el('defs');
+  D.groups.forEach(function(g){
+    var grad = el('radialGradient', { id:'glow-' + g.key.replace(/[^a-z]/g, '') });
+    grad.appendChild(el('stop', { offset:'0%',   'stop-color':g.color, 'stop-opacity':'.55' }));
+    grad.appendChild(el('stop', { offset:'45%',  'stop-color':g.color, 'stop-opacity':'.18' }));
+    grad.appendChild(el('stop', { offset:'100%', 'stop-color':g.color, 'stop-opacity':'0' }));
+    defs.appendChild(grad);
+  });
+  var sky = el('linearGradient', { id:'skyfade', x1:'0', y1:'0', x2:'.3', y2:'1' });
+  sky.appendChild(el('stop', { offset:'0%', 'stop-color':'#0a0f1e' }));
+  sky.appendChild(el('stop', { offset:'55%', 'stop-color':'#0d1426' }));
+  sky.appendChild(el('stop', { offset:'100%', 'stop-color':'#070a14' }));
+  defs.appendChild(sky);
+  var blur = el('filter', { id:'soft', x:'-30%', y:'-30%', width:'160%', height:'160%' });
+  blur.appendChild(el('feGaussianBlur', { stdDeviation:'26' }));
+  defs.appendChild(blur);
+  svg.appendChild(defs);
+
+  svg.appendChild(el('rect', { x:0, y:0, width:W, height:H, fill:'url(#skyfade)' }));
+  // a haze across the sky, blurred so it never competes with the stars
+  svg.appendChild(el('path', {
+    d:'M-40,600 C 260,470 380,330 700,250 C 900,200 1080,120 1300,60 L1300,-40 L-40,-40 Z',
+    fill:'#1a2440', opacity:'.5', filter:'url(#soft)' }));
+
+  // scattered background stars, part of the sky and not of the data
+  var bg = rng(20260825);
+  for (var s = 0; s < 190; s++){
+    var bx = bg() * W, by = bg() * H, br = bg() * 0.9 + 0.25;
+    svg.appendChild(el('circle', { cx:bx.toFixed(1), cy:by.toFixed(1), r:br.toFixed(2), fill:'#cfd8f0', opacity:(bg() * .32 + .06).toFixed(2) }));
+  }
+
+  var gLines = el('g'), gNames = el('g'), gStars = el('g'), gLabels = el('g');
+  chains.forEach(function(c){
+    var d = c.path.map(function(s, i){ return (i ? 'L' : 'M') + s.x.toFixed(1) + ',' + s.y.toFixed(1); }).join(' ');
+    gLines.appendChild(el('path', { class:'cline', d:d, 'data-key':c.key }));
+  });
+  Object.keys(REGION).forEach(function(k){
+    var b = REGION[k], t = el('text', { class:'connm', x:b[0] + b[2] / 2, y:b[1] + b[3] + 4, 'text-anchor':'middle' });
+    t.textContent = label[k] || k;
+    gNames.appendChild(t);
+  });
+  svg.appendChild(gLines); svg.appendChild(gNames); svg.appendChild(gStars); svg.appendChild(gLabels);
+
+  // ---- the stars themselves ----------------------------------------------
+  stars.forEach(function(s, i){
+    var g = el('g', { class:'star', tabindex:'0', role:'button',
+      'aria-label':s.p.name + ', ' + s.p.count + ' logged, last ' + pretty(s.p.last) });
+    s.halo = el('circle', { cx:s.x, cy:s.y, r:s.m * 4.2, fill:'url(#glow-' + s.p.group.replace(/[^a-z]/g, '') + ')' });
+    s.flare = el('circle', { cx:s.x, cy:s.y, r:s.m + 5, fill:'none', stroke:'#ffffff', 'stroke-width':1, opacity:0 });
+    if (s.p.type === 'occasion'){
+      var k = Math.max(3.2, s.m);
+      s.core = el('path', { class:'core', fill:'none', stroke:'#cfd9f5', 'stroke-width':1,
+        d:'M' + (s.x - k) + ',' + s.y + ' H' + (s.x + k) + ' M' + s.x + ',' + (s.y - k) + ' V' + (s.y + k) });
+    } else {
+      s.core = el('circle', { class:'core', cx:s.x, cy:s.y, r:s.m, fill:'#eef2ff', stroke:s.col, 'stroke-width':1.2 });
+    }
+    if (i % 5 === 2) s.core.setAttribute('class', 'core twinkle');
+    if (s.core.style) s.core.style.animationDelay = (i * 137 % 4000) + 'ms';
+    g.appendChild(s.halo); g.appendChild(s.core); g.appendChild(s.flare);
+    bindPop(g, s);
+    gStars.appendChild(g);
+    var wName = s.p.name.length * 6 + 8, flip = s.x + s.m + 8 + wName > W - 10;
+    s.flip = flip;
+    s.text = el('text', { class:'starname' + (s.p.count >= 3 ? ' big' : ''),
+      x: flip ? s.x - s.m - 6 : s.x + s.m + 6, y:s.y + 4, 'text-anchor': flip ? 'end' : 'start' });
+    s.text.textContent = s.p.name;
+    gLabels.appendChild(s.text);
+  });
+  // hide a name that would sit on top of another
+  (function(){
+    var boxes = stars.map(function(s){ return [s.x - s.m - 2, s.y - s.m - 2, s.m * 2 + 4, s.m * 2 + 4]; });
+    stars.slice().sort(function(a,b){ return b.p.count - a.p.count; }).forEach(function(s){
+      var w = s.p.name.length * 6 + 6, h = 13;
+      var box = [s.flip ? s.x - s.m - 6 - w : s.x + s.m + 6, s.y - 9, w, h];
+      var clash = boxes.some(function(b){
+        return !(box[0] + box[2] < b[0] || b[0] + b[2] < box[0] || box[1] + box[3] < b[1] || b[1] + b[3] < box[1]);
+      });
+      if (clash){ s.text.setAttribute('opacity', 0); s.hidden = true; }
+      else boxes.push(box);
+    });
+  })();
+
+  // ---- time ---------------------------------------------------------------
+  var scrub = document.getElementById('scrub'), out = document.getElementById('skydate');
+  scrub.max = SPAN;
+  function light(day){
+    var lit = 0, dark = 0;
+    stars.forEach(function(s){
+      var last = -1, hits = 0;
+      for (var i = 0; i < s.days.length; i++){ if (s.days[i] <= day){ last = s.days[i]; hits++; } }
+      if (last < 0){ // not met yet, as far as the record goes
+        s.core.setAttribute('opacity', 0); s.halo.setAttribute('opacity', 0);
+        s.flare.setAttribute('opacity', 0);
+        if (s.text) s.text.setAttribute('opacity', 0);
+        return;
+      }
+      var since = day - last;
+      var b = since <= 30 ? 1 : since <= 90 ? .78 : since <= 180 ? .5 : since <= 365 ? .28 : .1;
+      if (since <= 90) lit++; else if (since > 365) dark++;
+      if (since > 365){
+        if (s.p.type !== 'occasion') s.core.setAttribute('fill', 'none');
+        s.core.setAttribute('stroke-dasharray', '1.6 2.2');
+        s.core.setAttribute('opacity', .5);
+        s.halo.setAttribute('opacity', .08);
+      } else {
+        if (s.p.type !== 'occasion') s.core.setAttribute('fill', '#eef2ff');
+        s.core.setAttribute('stroke-dasharray', 'none');
+        s.core.setAttribute('opacity', b);
+        s.halo.setAttribute('opacity', s.p.type === 'occasion' ? b * .5 : b);
+      }
+      if (s.p.type !== 'occasion') s.core.setAttribute('r', s.m * (0.72 + 0.28 * b));
+      s.flare.setAttribute('opacity', since <= 4 ? (1 - since / 5) * .9 : 0);
+      s.flare.setAttribute('r', s.m + 5 + (since <= 4 ? (4 - since) * 2.5 : 0));
+      if (s.text && !s.hidden){
+        s.text.setAttribute('opacity', since > 365 ? .38 : Math.max(.5, b));
+        s.text.setAttribute('class', 'starname' + (s.p.count >= 3 ? ' big' : '') + (since > 365 ? ' dark' : ''));
+      }
+    });
+    var dt = new Date(T0 + day * DAY);
+    out.textContent = pretty(dt.toISOString().slice(0, 10));
+    document.getElementById('skycount').textContent = lit + ' lit  ·  ' + dark + ' gone dark';
+    document.getElementById('c-bright').textContent = lit;
+    document.getElementById('c-dark').textContent = dark;
+  }
+  scrub.oninput = function(){ stop(); light(+scrub.value); };
+
+  var timer = null;
+  function stop(){ if (timer){ clearInterval(timer); timer = null; document.getElementById('play').textContent = 'Run the year'; } }
+  document.getElementById('play').onclick = function(){
+    if (timer) return stop();
+    this.textContent = 'Stop';
+    var d = 0;
+    timer = setInterval(function(){
+      d += 3; if (d > SPAN){ d = SPAN; stop(); }
+      scrub.value = d; light(d);
+    }, 26);
+  };
+  document.getElementById('now').onclick = function(){ stop(); scrub.value = SPAN; light(SPAN); };
+
+  function bindPop(node, s){
+    var p = s.p;
+    function show(ev){
+      var r = ev.currentTarget.getBoundingClientRect();
+      var kinds = Object.keys(p.kinds).map(function(k){ return p.kinds[k] + ' ' + k + (p.kinds[k] > 1 ? 's' : ''); }).join(', ');
+      pop.innerHTML = '<div class="nm">' + p.name + '</div>' +
+        '<div class="sub">' + (label[p.group] || 'No group') + (p.type === 'occasion' ? ' · occasion' : '') + '</div>' +
+        '<dl><dt>Last</dt><dd>' + pretty(p.last) + '</dd>' +
+        '<dt>Logged</dt><dd>' + p.count + '</dd>' +
+        '<dt>Made of</dt><dd>' + kinds + '</dd>' +
+        '<dt>First</dt><dd>' + pretty(p.first) + '</dd></dl>';
+      pop.classList.add('show');
+      var w = pop.offsetWidth, h = pop.offsetHeight;
+      pop.style.left = Math.min(window.innerWidth - w - 12, Math.max(12, r.left + r.width / 2 - w / 2)) + 'px';
+      var y = r.top - h - 10; pop.style.top = (y < 12 ? r.bottom + 10 : y) + 'px';
+    }
+    function hide(){ pop.classList.remove('show'); }
+    node.addEventListener('mouseenter', show); node.addEventListener('mouseleave', hide);
+    node.addEventListener('focus', show); node.addEventListener('blur', hide);
+  }
+
+  document.getElementById('c-cons').textContent = chains.length + 2;
+  light(SPAN);
+};
+if (window.RELMAP) window.RELMAP_BOOT();
+</script>
+
