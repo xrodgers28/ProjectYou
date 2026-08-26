@@ -87,7 +87,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v2.9</span>
+    <span class="pn-ver">v3.0</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -115,6 +115,60 @@ function tCompass(){
     <g transform="rotate(38)"><polygon points="0,-26 5.5,0 0,4" fill="#C0392B"/><polygon points="0,26 -5.5,0 0,-4" fill="#9aa6b4"/></g>
     <circle r="3.2" fill="#c68a2e"/></g></svg>`;
 }
+/* ===== Cue Cards streak, live, Aug 26 2026 =====
+   The number and the squares are read from the database every time this page
+   loads. Nothing here is typed in: if the read fails the card says so rather
+   than showing a figure that might be wrong.
+   The day runs 2am to 2am Eastern, the same definition the rest of the site uses. */
+const CUE_SB='https://arnjntspmrhigodlssbn.supabase.co';
+const CUE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+let CUE_DAYS={}, CUE_STREAK=null, CUE_STATE='loading';
+function cueToday(){
+  const d=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));
+  d.setHours(d.getHours()-2);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function cueKeys(){
+  const p=cueToday().split('-');
+  const end=Date.UTC(+p[0],+p[1]-1,+p[2]);
+  const out=[];
+  for(let i=27;i>=0;i--){ out.push(new Date(end-i*864e5).toISOString().slice(0,10)); }
+  return out;
+}
+function tCue(){
+  const cols=14, rows=2, cell=5.4, gap=2.2;
+  const w=cols*cell+(cols-1)*gap, h=rows*cell+(rows-1)*gap, x0=(100-w)/2, y0=(100-h)/2;
+  const keys=cueKeys(); let cells='';
+  for(let i=0;i<cols*rows;i++){
+    const r=Math.floor(i/cols), c=i%cols, x=x0+c*(cell+gap), y=y0+r*(cell+gap);
+    const on=CUE_DAYS[keys[i]];
+    const last=(i===cols*rows-1);
+    cells+=`<rect x="${x}" y="${y}" width="${cell}" height="${cell}" rx="1.5" fill="${on?'#2f8f7a':'#d9e5e1'}"${last&&!on?' stroke="#2f8f7a" stroke-width="1"':''}/>`;
+  }
+  return `<svg viewBox="0 0 100 100">${cells}</svg>`;
+}
+async function loadCue(){
+  try{
+    const H={apikey:CUE_KEY,Authorization:'Bearer '+CUE_KEY};
+    const since=cueKeys()[0];
+    const [a,b]=await Promise.all([
+      fetch(CUE_SB+'/rest/v1/v_cue_streak?select=streak',{headers:H}).then(r=>r.json()),
+      fetch(CUE_SB+'/rest/v1/v_cue_card_day?select=day,cards&day=gte.'+since,{headers:H}).then(r=>r.json())
+    ]);
+    CUE_STREAK=(a&&a[0]&&typeof a[0].streak==='number')?a[0].streak:0;
+    CUE_DAYS={}; (b||[]).forEach(r=>{CUE_DAYS[r.day]=r.cards;});
+    CUE_STATE='ok';
+  }catch(e){ CUE_STATE='err'; }
+  const v=VIEWS.find(x=>x.id==='cuecards');
+  if(v){
+    v.thumb=tCue();
+    v.stat = CUE_STATE==='ok'
+      ? (CUE_STREAK===1?'1-day streak':CUE_STREAK+'-day streak')
+      : 'Could not read the streak';
+  }
+  render();
+}
+
 function tWeeks(){
   const cols=16, rows=10, cell=4.2, gap=1.4, w=cols*cell+(cols-1)*gap, h=rows*cell+(rows-1)*gap, x0=(100-w)/2, y0=(100-h)/2, cur=Math.floor(cols*rows*0.54); let cells='';
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){ const i=r*cols+c; const x=x0+c*(cell+gap), y=y0+r*(cell+gap);
@@ -191,6 +245,8 @@ const VIEWS = [
    opens:'index.html#wheel', tag:'Where the day actually went, in 10-minute blocks.', stat:'41 / 96 blocks'},
   {id:'habits', name:'Habits Tracker', kick:'The year in habits', color:'#4E6E2E', bg:'#eef3e6', thumb:tHabits(),
    opens:'qs-log.html', tag:'The master daily habit grid, one dot a day.', stat:'142-day streak'},
+  {id:'cuecards', name:'Cue Cards', kick:'Daily decks', color:'#2f8f7a', bg:'#e6f2ef', thumb:tCue(),
+   opens:'habit-modules.html', tag:'One card a day from each deck, and the run of days you have kept it up.', stat:'Reading your streak…'},
   {id:'compass', name:'Clarity Compass', kick:'Reflection', color:'#c68a2e', bg:'#faf3e4', thumb:tCompass(),
    opens:'qs-wheel.html', tag:'Your daily question and captured energy.', stat:'Answered today ✓'},
   {id:'snapshot', name:'Life Snapshot', kick:'The big picture', color:'#C0392B', bg:'#f8ebe9', thumb:tWeeks(),
@@ -227,6 +283,7 @@ function render(){
     <div class="grid">${cards}${add}</div>`;
 }
 render();
+loadCue();
 </script>
 
 <script src="nav-config.js"></script><script src="navpatch.js"></script>
