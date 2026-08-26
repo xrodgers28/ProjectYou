@@ -91,10 +91,10 @@ h1{font-family:"EB Garamond",Georgia,serif; font-weight:400; font-size:clamp(1.6
 .titem{display:flex; align-items:center; gap:9px; border:1px solid var(--grid); border-radius:8px; padding:8px 10px; margin-bottom:7px}
 .titem img{width:30px; height:30px; object-fit:contain; flex:none}
 .titem.doneit{opacity:.62; border-color:var(--seg); background:var(--segTint)}
-.dchip{display:none; font-family:"IBM Plex Mono",monospace; font-size:.55rem; letter-spacing:.07em;
-  text-transform:uppercase; font-weight:700; border-radius:99px; padding:3px 7px; margin-top:4px;
-  background:var(--seg); color:#fff; white-space:nowrap}
-.dchip.on{display:inline-block}
+/* The DONE TODAY pill that used to sit in the status column is gone (v2.8,
+   Scott's call). The tick circle beside it already says the same thing, and
+   two badges for one fact is one too many. The minutes are still recorded —
+   they are on the tick's tooltip, and on the wheel. */
 .donetag{font-family:"IBM Plex Mono",monospace; font-size:.57rem; letter-spacing:.08em; color:var(--seg);
   font-weight:700; white-space:nowrap}
 .mini.undo{background:transparent; border-color:var(--seg); color:var(--seg)}
@@ -479,12 +479,12 @@ footer{margin-top:20px; font-family:"IBM Plex Mono",monospace; font-size:.71rem;
 .ulbtn:hover{background:var(--soft);border-color:var(--ink-2)}
 </style>
 
-<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v2.7</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v2.8</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
 
 <div class="shell">
   <div class="pillrow">
     <span class="pill">Project YOU</span>
-    <span class="pill">Habit Worksheets v2.7</span>
+    <span class="pill">Habit Worksheets v2.8</span>
     <span class="pill">Aug 25, 2026</span>
     <span class="pill" id="savedPill">Saves to your database</span>
   </div>
@@ -658,7 +658,7 @@ footer{margin-top:20px; font-family:"IBM Plex Mono",monospace; font-size:.71rem;
     </div>
   </details>
 
-  <footer>Project YOU · Habit Worksheets v2.7 · Aug 25, 2026 · live, saves to your Supabase database</footer>
+  <footer>Project YOU · Habit Worksheets v2.8 · Aug 26, 2026 · live, saves to your Supabase database</footer>
 </div>
 
 <script src="py-icons.js"></script>
@@ -1145,7 +1145,7 @@ function render(){
     tr.innerHTML=
       '<td class="gripc"><span class="grip" data-i="'+i+'">⠿</span>'+
         '<button class="rowmore" onclick="openRowMenu(event,'+i+')" title="Park or delete this habit">⋯</button></td>'+
-      '<td class="status">'+star+pill+dchip(it)+donebtn+tickBtn(it)+'</td>'+
+      '<td class="status">'+star+pill+donebtn+tickBtn(it)+'</td>'+
       '<td class="icon">'+ico(it.ic)+'</td>'+
       '<td class="tag">'+(it.tag?'<span class="tagbox" contenteditable data-f="tag">'+esc(it.tag)+'</span>':'')+'</td>'+
       '<td class="proc" contenteditable data-f="proc">'+esc(it.proc)+'</td>'+
@@ -1705,12 +1705,6 @@ function minsToday(it){ var t=todoFor(it); return t && t.done ? t.actual_minutes
    itself. render() is wrapped to queue a save, so it must not be called here. */
 function paintToday(){
   if(view==='summary') renderToday();
-  document.querySelectorAll('[data-dc]').forEach(function(el){
-    var it = itemById(el.getAttribute('data-dc'));
-    var on = it && doneToday(it);
-    el.classList.toggle('on', !!on);
-    if(on){ var m = minsToday(it); el.textContent = 'DONE TODAY' + (m ? ' · '+m+'M' : ''); }
-  });
   /* the Done ticks, wherever they are drawn — table, cards, summary */
   document.querySelectorAll('[data-dt]').forEach(function(el){
     var it = itemById(el.getAttribute('data-dt'));
@@ -1727,10 +1721,6 @@ function itemById(id){
     DATA[k].forEach(function(it){ if(it.t!=='group' && String(it._id)===want) hit=it; });
   });
   return hit;
-}
-function dchip(it){
-  if(!it._id) return '';
-  return '<span class="dchip" data-dc="'+esc(it._id)+'"></span>';
 }
 
 /* ---------- THE DONE TICK (v2.7) ----------
