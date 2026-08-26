@@ -321,6 +321,26 @@ On the Aug 18 run the local and server fingerprints matched first time, the writ
 
 For anything in the `library.html` size class that is a genuinely new page rather than an edit, the recipe has nothing to fetch, so weigh the chunked run against handing Scott the file.
 
+### 5.3a Two things that look like a failed publish and are not
+
+Both of these have cost real time by looking like something broke. Neither is a fault. Read this before re-uploading anything or telling anyone a publish did not work.
+
+**The site keeps showing the old version for a few minutes after you upload.**
+
+The service that serves the pages rebuilds a minute or two behind the upload itself, and sometimes longer. During that gap the old page is what everyone sees, and a hard refresh does not help. Neither does adding something to the end of the address to dodge the cache. Both were tried on Aug 24, on a file that had already arrived correctly, and both still showed the previous version for about four minutes.
+
+So: check that the file actually arrived before you conclude anything. The repository is the truth; the website is a copy of it that lags. If the file is there and correct, wait and check again.
+
+The worst possible move here is telling Scott to upload a file that is already uploaded. Say "it usually takes a minute or two" before he refreshes, not after.
+
+**Uploading a file by hand leaves the system's own copy behind, and it complains about it.**
+
+Every page exists twice: the copy on the website, and a copy held in the database that the automatic publishing uses. Uploading by hand updates only the first one. The system then sees its own copy carrying an older version number, refuses to publish it over the newer one, and writes a note saying so. It rewrites that note every few minutes, so it looks like a page is stuck or broken when it is perfectly fine.
+
+So: straight after any upload done by hand, bring the database copy back into line. That is one call and it takes seconds. Skip it and the complaints continue until someone works out what they mean.
+
+The tool for it is `syncgh`, called with the file name, first to compare and then to write. It only ever copies from the website into the database, which is why it is safe to run at any time: it cannot introduce anything that is not already published.
+
 ### 5.4 Binary assets, ever
 
 `publish.yml` skips any row whose path contains `/` or `..`, starts with `__`, or does not match `^[A-Za-z0-9._-]+$`, and it treats every payload as UTF-8 text. **A binary asset can never be published from the `pages` table.** It reaches the repo one way only: Scott drags it onto `https://github.com/xrodgers28/ProjectYou/upload/main/assets`, **the inner folder, not the wrapper folder around it.**
