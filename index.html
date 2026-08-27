@@ -161,6 +161,12 @@
   .toast button{background:none;border:none;color:#8fc9ff;font-size:12.5px;font-weight:600;cursor:pointer;padding:0}
   li.date-group > .row .text{font-weight:600;color:#8a8f98}
   .count{color:#b0b4bb;font-weight:400;font-size:11px}
+  /* HOW LONG YOU MOVED, sat on the Walk row itself rather than in a panel
+     somewhere else, because a number is only useful next to the thing it is
+     evidence for. Narrow on purpose - the Habit Bandit column is 292px, so the
+     duration is abbreviated and the full sentence lives in the tooltip. */
+  .walkchip{flex:0 0 auto;margin-left:5px;padding:0 5px;border-radius:8px;background:#e3efec;color:#2f6b5e;font-size:9.5px;font-weight:700;line-height:14px;white-space:nowrap;font-variant-numeric:tabular-nums;cursor:default}
+  .walkchip.ride{background:#e6edf3;color:#3f6f8f}
   .star{
     flex:0 0 auto;width:12px;height:18px;margin-top:1px;cursor:pointer;user-select:none;
     display:flex;align-items:center;justify-content:center;font-size:12px;color:#d3d6db;
@@ -1307,6 +1313,7 @@ async function load() {
     loadBoardOrder(),
     loadHabitTemplate(),
     loadTimeLog(),
+    loadAppleActs(),
   ]);
   if (tRes.error) { console.error(tRes.error); return; }
   todos = tRes.data || [];
@@ -1321,7 +1328,132 @@ async function load() {
   render();
   loadWaitingCount();
   await maybeClearHabits(); checkHabitConfetti();
+  autoTickWalk();          // after maybeClearHabits, or a fresh day's reset would wipe the tick
   archiveOldCompleted();   // fire and forget, never blocks a paint
+}
+
+/* ── HOW LONG YOU ACTUALLY MOVED ──────────────────────────────────────────────
+   Scott's ask, Aug 26 2026: "I just need to know how much time I spent walking
+   and nothing else (unless you can easily pull in distance)", then "and cycling
+   time too!". So: minutes, distance alongside it, walking and cycling.
+
+   ★ WHY THIS READS TWO SOURCES AND NOT ONE.
+   Strava only holds an outing he remembered to press record for - 4 days out of
+   the 14 to Aug 26, while his watch recorded real walking on all 14. Apple's own
+   WORKOUT records hold the rest, each with its own start, end and distance.
+   Neither source alone answers the question, so both are read and one outing is
+   counted once however many places saw it.
+
+   ★ IT MUST BE WORKOUT RECORDS, NOT THE DAILY FIGURES. The daily numbers the
+   phone has been sending for weeks cannot answer this: step_count is a count,
+   not a duration, and apple_exercise_time is TOTAL exercise - the bike rides are
+   inside it (Aug 26: 64 exercise minutes covering a walk AND a ride), which is
+   exactly why one number cannot be split back into two. A workout record is the
+   only place Apple keeps an outing's own length. Do not go looking for a
+   walking-minutes or cycling-minutes figure among the daily metrics; there isn't
+   one, and this file exists because that dead end was walked down once already.
+
+   ★ WALL CLOCK, NEVER THE SUM. Overlapping records are merged into one stretch
+   of time before being counted, the same rule the Amazon tally uses, so an
+   outing that Apple and Strava both recorded cannot show as twice the time. */
+const ACT_LOOKBACK_DAYS = 60;
+const ACT_KINDS = ['walking', 'cycling'];
+/* How a Strava row's title is read. Strava writes "🚶 Walk · New York" and
+   "🚴 Ride · Outdoor Cycling", so the word is reliable - but a RIDE IS NOT A
+   WALK, and the code this replaces treated every Strava activity as walking. */
+const ACT_FROM_TITLE = [[/walk|hike/i, 'walking'], [/ride|cycl|bike/i, 'cycling']];
+let APPLE_ACTS = [];   // [{ kind, day, startMin, endMin, minutes, miles, startIso }]
+
+async function loadAppleActs() {
+  APPLE_ACTS = [];
+  try {
+    const from = dayKey(effectiveDate(-ACT_LOOKBACK_DAYS));
+    const { data, error } = await sb.from('health_workouts')
+      .select('kind,day,start_ts,minutes,distance,distance_unit')
+      .in('kind', ACT_KINDS)
+      .gte('day', from);
+    if (error || !data) return;
+    APPLE_ACTS = data.map(w => {
+      const mins = +w.minutes || 0;
+      const startMin = etMinutesOf(w.start_ts);
+      return {
+        kind: w.kind,
+        /* effDateOf, not the stored calendar date: a walk at half past midnight
+           belongs to the day Scott is still working through. See py-day.js. */
+        day: dayKey(effDateOf(w.start_ts)),
+        startIso: w.start_ts,
+        startMin,
+        endMin: startMin + mins,
+        minutes: mins,
+        /* Localize Units is ON in Health Auto Export so this arrives in miles.
+           Anything else is stored but not shown rather than silently converted. */
+        miles: (w.distance_unit && /^mi/i.test(w.distance_unit)) ? (+w.distance || 0) : 0,
+      };
+    }).filter(w => w.minutes > 0);
+  } catch (e) { /* never allowed to stop the board painting */ }
+}
+
+function actKindOfTitle(title) {
+  for (const [re, k] of ACT_FROM_TITLE) if (re.test(title || '')) return k;
+  return null;
+}
+
+/* Every stretch of one kind recorded for a day, from either source, earliest first. */
+function actIntervalsFor(day, kind) {
+  const out = [];
+  for (const w of APPLE_ACTS) {
+    if (w.kind === kind && w.day === day) out.push({ s: w.startMin, e: w.endMin, miles: w.miles });
+  }
+  for (const t of (todos || [])) {
+    if (t.source_project !== 'strava' || actKindOfTitle(t.task) !== kind) continue;
+    if (!t.done_at || dayKey(effDateOf(t.done_at)) !== day) continue;
+    const e = etMinutesOf(t.done_at);
+    const s = t.started_at ? etMinutesOf(t.started_at) : e - (+t.actual_minutes || 0);
+    out.push({ s, e, miles: (t.unit === 'miles' ? (+t.value || 0) : 0) });
+  }
+  return out.sort((a, b) => a.s - b.s || a.e - b.e);
+}
+
+function actTimeFor(day, kind) {
+  const iv = actIntervalsFor(day, kind);
+  let minutes = 0, miles = 0, s = null, e = 0, m = 0;
+  for (const w of iv) {
+    if (s === null) { s = w.s; e = w.e; m = w.miles; continue; }
+    if (w.s <= e) { e = Math.max(e, w.e); m = Math.max(m, w.miles); }   // one outing, seen twice
+    else { minutes += e - s; miles += m; s = w.s; e = w.e; m = w.miles; }
+  }
+  if (s !== null) { minutes += e - s; miles += m; }
+  return { minutes: Math.max(0, Math.round(minutes)), miles: Math.round(miles * 100) / 100, count: iv.length };
+}
+
+/* Short enough for a 292px column: 47m, 1h5. The full sentence is the tooltip. */
+function actDur(n) { return n < 60 ? n + 'm' : Math.floor(n / 60) + 'h' + (n % 60 || ''); }
+
+/* ── TICKING WALK OFF BY ITSELF ────────────────────────────────────────────────
+   Scott's rule: any recorded walk counts as a walking day. WALKING ONLY - a bike
+   ride must never tick the Walk habit.
+
+   ★ IT RUNS ONCE A DAY AND AN UNTICK IS FINAL. The day it last fired is written
+   to app_meta, so unticking Walk yourself sticks instead of being quietly
+   re-ticked on the next refresh. Without that marker this would be a guard that
+   hides its own operation, and those get reported as bugs - correctly, because
+   from the outside a box that will not stay unticked looks broken.
+
+   It writes no actual_minutes. The minutes come from the measured records above,
+   through habitMinutesMap(), which is the one place that knows how to merge the
+   two sources. A number typed onto the row here would be a second opinion. */
+async function autoTickWalk() {
+  try {
+    const day = localDate();
+    if (!actTimeFor(day, 'walking').minutes) return;
+    const row = (todos || []).find(t => t.is_habit === true && t.task === 'Walk');
+    if (!row || row.done || row.skipped) return;
+    const mark = await sb.from('app_meta').select('value').eq('key', 'walk_autotick_day').maybeSingle();
+    if (mark && mark.data && mark.data.value === day) return;
+    await sb.from('app_meta').upsert({ key: 'walk_autotick_day', value: day, updated_at: new Date().toISOString() });
+    await patch(row.id, { done: true, status: 'done', done_at: new Date().toISOString() });
+    render(); checkHabitConfetti();
+  } catch (e) { /* same rule: never allowed to break the board */ }
 }
 
 /* HOW MANY CAPTURES ARE WAITING FOR APPROVAL.
@@ -1832,15 +1964,11 @@ function sendToIdeas(t) {
    group follows the group again instead of remembering an old opinion. */
 const AMZ_GROUP = 'Amazon Work';
 const AMZ_ORANGE = '#e8912f';          /* the same hex as CX_AMZ and DAY_CATS Amazon */
-/* THE WORD TEST, WRITTEN ONCE. A to-do's name, a meeting's title and the name Scott
-   types on his own block all ask this same expression, so the three can never start
-   disagreeing about what the word Amazon looks like. */
-const AMZ_WORD = /amazon/i;
 function amzByRule(t) {
   if (!t) return false;
   const g = t.subsection || t.origin_subsection || '';
   if (g === AMZ_GROUP) return true;
-  return AMZ_WORD.test(String(t.task || ''));
+  return /amazon/i.test(String(t.task || ''));
 }
 function isAmazonTask(t) {
   if (!t) return false;
@@ -1943,6 +2071,31 @@ function taskRow(t, kids) {
     }
   };
   row.appendChild(text);
+  /* HOW LONG YOU MOVED TODAY, on the Walk row. Scott's call, Aug 26 2026: cycling
+     rides beside the walk rather than as a habit of its own, because he does not
+     ride every day and an untouched row on the daily list every morning is worse
+     than no row. The ride chip therefore appears ONLY on a day he rode.
+     Guarded like the calendar grab above: an additive feature must never be able
+     to stop a row building. */
+  if (t.is_habit === true && t.task === 'Walk') {
+    try {
+      const day = localDate();
+      for (const [kind, icon, cls, word] of [
+        ['walking', '\uD83D\uDEB6', '', 'walked'],
+        ['cycling', '\uD83D\uDEB4', ' ride', 'cycled'],
+      ]) {
+        const a = actTimeFor(day, kind);
+        if (!a.minutes) continue;
+        const chip = el('span', 'walkchip' + cls,
+          icon + ' ' + actDur(a.minutes) + (a.miles ? ' \u00b7 ' + a.miles.toFixed(1) + 'mi' : ''));
+        chip.title = 'You ' + word + ' ' + a.minutes + ' minutes'
+          + (a.miles ? ' and ' + a.miles.toFixed(2) + ' miles' : '')
+          + ' today, across ' + a.count + (a.count === 1 ? ' recorded outing' : ' recorded outings')
+          + '. Measured by your watch and Strava, counted once each.';
+        row.appendChild(chip);
+      }
+    } catch (e) {}
+  }
   // Send to All ToDos board (non-habit, not-yet-completed tasks). Moves the task, folding nested children into the note.
   if (SHOW_S2B && !t.is_habit && t.section !== COMPLETED) { row.appendChild(sendBoxNode(t)); }
   if (t.link) { const lk = el('a', 'tasklink', '↗'); lk.href = t.link; lk.target = '_blank'; lk.rel = 'noopener'; lk.title = 'Open to do it'; lk.onmousedown = e => e.stopPropagation(); lk.onclick = e => e.stopPropagation(); row.appendChild(lk); }
@@ -3365,17 +3518,21 @@ function habitRows(){
    only when you ticked Walk and the watch recorded nothing (walked without it). */
 function habitMinutesMap(){
   const today = wheelDay();
-  const m = {}; let strava = 0, walkCard = 0;
+  const m = {}; let walkCard = 0;
   for (const t of (todos || [])){
     if (!t.done || !t.done_at) continue;
     if (effDateKey(t.done_at) !== today) continue;
     const mins = (+t.actual_minutes || 0);
-    if (t.source_project === 'strava'){ strava += (+t.actual_minutes || 0); continue; }
+    if (t.source_project === 'strava') continue;   // measured outings are counted below, once each
     if (t.is_habit !== true) continue;
     if (t.task === 'Walk') walkCard += mins;
     else m[t.task] = (m[t.task] || 0) + mins;
   }
-  m['Walk'] = strava || walkCard;
+  /* Measured walking beats the card, and the card's estimate still applies only on
+     a day nothing recorded one (walked without the watch). actTimeFor() merges
+     Apple's workout records with Strava's, so one walk is one number - and a bike
+     ride is no longer part of it, which it wrongly was until Aug 26 2026. */
+  m['Walk'] = actTimeFor(today, 'walking').minutes || walkCard;
   return m;
 }
 /* Which habits were ticked today with no time typed against them. They count as zero
@@ -4052,6 +4209,33 @@ function drawWheel(){
     const aEnd = Math.min(Math.max(etMinutesOf(t.done_at), DIAL_START), DIAL_END);
     acts.push({ t, act, aEnd, aStart: Math.max(aEnd - act, DIAL_START) });
   }
+  /* THE OUTINGS STRAVA NEVER SAW. Apple's workout records carry a real start and
+     end, so they can be drawn where they happened rather than estimated backwards
+     from a tick. One already on the ring from a Strava row is skipped - OVERLAPPING
+     THE DRAWN ARC IS THE TEST, not matching names - so one outing is always one arc.
+     Not draggable: there is no row behind it to rewrite. */
+  for (const w of APPLE_ACTS){
+    if (w.day !== wheelDay()) continue;
+    if (acts.some(a => a.t && a.t.source_project === 'strava'
+                    && actKindOfTitle(a.t.task) === w.kind
+                    && w.startMin < a.aEnd && a.aStart < w.endMin)) continue;
+    const aStart = Math.max(w.startMin, DIAL_START), aEnd = Math.min(w.endMin, DIAL_END);
+    if (aEnd <= aStart) continue;
+    const walking = w.kind === 'walking';
+    const label = walking ? 'Walk' : 'Cycle';
+    acts.push({
+      /* A walk carries the Walk habit's own key and colour so hovering the habit
+         lights up its arcs. Cycling has no habit row by Scott's choice, so it takes
+         a name-derived colour from the same mechanism a typed-in event uses - same
+         name, same colour, every day. */
+      t: { id: 'aw' + w.startIso, task: label, is_habit: walking, logged: true },
+      nodrag: true, act: w.minutes, aStart, aEnd,
+      color: walking ? undefined : catColorOf(label),
+      hl: walking ? undefined : 'cat:' + hlk(label),
+      tip: (walking ? '\uD83D\uDEB6 Walk' : '\uD83D\uDEB4 Cycle') + ' \u00b7 ' + hhmm(aStart) + '\u2013' + hhmm(aEnd)
+           + (w.miles ? ' \u00b7 ' + w.miles.toFixed(2) + ' mi' : '') + ' \u00b7 from your watch',
+    });
+  }
   /* Lane packing, PER OVERLAP CLUSTER. Actual arcs are drawn backwards from done_at,
      so a burst of ticks a minute apart produces arcs stacked on each other that read
      as one wedge - the 11:47-11:58pm pile-up. Splitting the ring into lanes fixes it,
@@ -4090,7 +4274,7 @@ function drawWheel(){
        that is what Scott thinks in: "it finished at 3". A logged block is anchored on
        its START, because start_min is what the box stores. dur keeps the slice the
        same length, so a drag MOVES it and never resizes it. */
-    const drag = wheelIsToday()
+    const drag = (wheelIsToday() && !a.nodrag)
       ? ` data-drag="${a.logId != null ? 'log:'+a.logId : 'task:'+t.id}" data-dur="${Math.round(a.aEnd-a.aStart)}" data-anchor="${Math.round(a.logId != null ? a.aStart : a.aEnd)}" style="cursor:grab"`
       : '';
     const cf = a.cat ? ` data-catfill="${escA(a.cat)}"` : '';   // repaintable when you recolour it
@@ -4429,7 +4613,7 @@ function cxIsWorkEvent(r) {
   if (r.work_override === true)  return true;
   if (r.work_override === false) return false;
   if (r.is_work) return true;
-  return AMZ_WORD.test(String(r.title || ''));
+  return /amazon/i.test(String(r.title || ''));
 }
 
 /* ---------------------------------------------------------------- loading -- */
@@ -4485,10 +4669,7 @@ function cxSyncDone() {
 function cxBlockTag(b) {
   if (b.cat === 'py')  return 'py';
   if (b.cat === 'hab') return 'hab';
-  /* His own named activity is Personal time, UNLESS he called it Amazon. Aug 26 2026:
-     he made his own blocks named Amazon and they drew in the plain blue and counted as
-     Personal, because 'own' short-circuited before the Amazon test could run. */
-  if (b.cat === 'own') return b.amz ? 'amz' : 'other';
+  if (b.cat === 'own') return 'other';   /* his own named activity is Personal time */
   return b.amz ? 'amz' : 'todo';
 }
 
@@ -4560,7 +4741,7 @@ function cxDrawGrid() {
     const ht = Math.max(8, b.mins * CX_PX), slim = ht < 26 ? ' slim' : '', done = b.done ? ' done' : '';
     const over = cxClash(b.start_min, b.start_min + b.mins) ? ' over' : '';
     const az = b.cat === 'py' ? ' py' : (b.cat === 'hab' ? ' hab' :
-               (b.amz ? ' amz' : (b.cat === 'own' ? ' own' : '')));
+               (b.cat === 'own' ? ' own' : (b.amz ? ' amz' : '')));
     h += '<div class="cxblk' + slim + az + done + over + '" data-cxb="' + b.id + '"' +
          ' style="top:' + cxY(b.start_min) + 'px;height:' + ht + 'px">' +
          '<b>' + cxEsc(b.title) + '</b><i>' + cxHHMM(b.start_min) + ' &middot; ' + cxDur(b.mins) + '</i>' +
@@ -5001,10 +5182,7 @@ function cxOnUp() {
     /* His own named activity. Not a to-do, so nothing on the list changes, and it
        counts as Personal time rather than as a task. */
     cxSaveNew({ id: -1, todo_id: null, title: d.title, mins: d.mins,
-                start_min: d.pending, cat: 'own',
-                /* Name it Amazon and it is Amazon time, same rule as a to-do or a
-                   meeting. Scott, Aug 26 2026. */
-                amz: AMZ_WORD.test(String(d.title || '')), done: false });
+                start_min: d.pending, cat: 'own', amz: false, done: false });
     return;
   }
   if (d.kind === 'new') {
