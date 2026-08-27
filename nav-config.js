@@ -16,7 +16,8 @@ window.NAV_CONFIG = {
   ],
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
-    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" }
+    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
+    { "label": "Intrinsic<br>Capacity", "href": "intrinsic-capacity.html" }
   ],
   /* Displayed as LISTS - see NAV_GROUP_RENAME below. The key stays "Parking Lot"
      because that string is baked into every page's markup and is what navpatch
