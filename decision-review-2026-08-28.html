@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Decision Review · Fri Aug 28</title>
+<style>
+  :root{
+    --bg:#f7f6f2; --panel:#ffffff; --ink:#23211c; --soft:#6b6a63; --faint:#9a988f;
+    --line:#e7e4dc; --mono-bg:#f0efe8; --mono-ink:#3d3b34;
+    --accent:#b0542f; --accent-hover:#98461f; --on-accent:#ffffff;
+    --amber-bg:#fbf4e0; --amber-line:#e6d59f; --amber-ink:#7a5a10;
+    --tag:#2f7d5b; --pick-bg:#f3ece7; --pick-line:#b0542f;
+  }
+  @media (prefers-color-scheme:dark){
+    :root:not([data-theme="light"]){
+      --bg:#161511; --panel:#201e1a; --ink:#ece9e1; --soft:#a5a29a; --faint:#7c7a71;
+      --line:#312e28; --mono-bg:#26231e; --mono-ink:#cfccc3;
+      --accent:#d06a42; --accent-hover:#e07c53; --on-accent:#1a1712;
+      --amber-bg:#2a2410; --amber-line:#5b4c1f; --amber-ink:#e7ce85;
+      --tag:#5cb98c; --pick-bg:#2b2822; --pick-line:#d06a42;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#161511; --panel:#201e1a; --ink:#ece9e1; --soft:#a5a29a; --faint:#7c7a71;
+    --line:#312e28; --mono-bg:#26231e; --mono-ink:#cfccc3;
+    --accent:#d06a42; --accent-hover:#e07c53; --on-accent:#1a1712;
+    --amber-bg:#2a2410; --amber-line:#5b4c1f; --amber-ink:#e7ce85;
+    --tag:#5cb98c; --pick-bg:#2b2822; --pick-line:#d06a42;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:26px 20px 90px}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);font-weight:700}
+  h1{font-size:30px;line-height:1.15;margin:6px 0 4px;font-weight:800;letter-spacing:-.01em}
+  .lede{color:var(--soft);font-size:16px;margin:0 0 4px}
+  .themebtn{position:fixed;top:14px;right:14px;border:1px solid var(--line);background:var(--panel);
+    color:var(--soft);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;z-index:5}
+  section{margin-top:22px}
+  .kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:700;margin:0 0 10px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:12px}
+  .today-row{display:flex;gap:12px;align-items:baseline;margin:2px 0}
+  .today-time{font-weight:700;font-size:14px;min-width:118px;color:var(--ink)}
+  .today-what{color:var(--soft)}
+  .lines p{margin:6px 0;color:var(--soft)}
+  .lines b{color:var(--ink)}
+  .finding{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 18px 16px;margin-bottom:14px}
+  .fnum{display:inline-block;font-size:12px;font-weight:800;color:var(--accent);letter-spacing:.06em;margin-bottom:2px}
+  .fhead{font-size:18px;font-weight:800;margin:0 0 8px;letter-spacing:-.01em}
+  .fbody{color:var(--soft);margin:0 0 10px}
+  .fbody b{color:var(--ink)}
+  .ev{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;
+    background:var(--mono-bg);color:var(--mono-ink);border-radius:8px;padding:8px 11px;margin:8px 0;white-space:pre-wrap;line-height:1.7}
+  .q{font-weight:700;margin:12px 0 8px}
+  .opts{display:flex;flex-direction:column;gap:8px}
+  .opt{position:relative;text-align:left;border:1px solid var(--line);background:transparent;color:var(--ink);
+    border-radius:9px;padding:10px 12px;font-size:14.5px;cursor:pointer;font-family:inherit;line-height:1.4;
+    transition:border-color .12s,background .12s}
+  .opt:hover{border-color:var(--accent)}
+  .opt.sel{background:var(--pick-bg);border-color:var(--pick-line);font-weight:600}
+  .opt.sel::after{content:"\2713";position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--accent);font-weight:800}
+  .tag{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;
+    color:var(--tag);border:1px solid var(--tag);border-radius:5px;padding:1px 5px;margin-left:8px;vertical-align:1px}
+  .notdo li,.proj li{margin:6px 0}
+  ul{margin:6px 0;padding-left:18px}
+  .proj b{color:var(--ink)}
+  .proj li{color:var(--soft)}
+  .amber{background:var(--amber-bg);border:1px solid var(--amber-line);border-radius:12px;padding:16px 18px}
+  .amber .kicker{color:var(--amber-ink)}
+  .amber li{color:var(--amber-ink);margin:8px 0}
+  .amber b{color:var(--amber-ink)}
+  .habit{font-size:14px;color:var(--soft);border-left:3px solid var(--accent);padding:4px 0 4px 12px;margin:2px 0 0}
+  .copywrap{margin-top:22px;text-align:center}
+  .copybtn{background:var(--accent);color:var(--on-accent);border:none;border-radius:9px;padding:13px 22px;
+    font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+  .copybtn:hover{background:var(--accent-hover)}
+  .copynote{color:var(--faint);font-size:12.5px;margin-top:8px}
+  .proof{margin-top:24px;font-size:11.5px;color:var(--faint);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    line-height:1.6;border-top:1px solid var(--line);padding-top:12px;white-space:pre-wrap}
+  @media (max-width:520px){
+    h1{font-size:25px}
+    .today-time{min-width:0;display:block}
+    .today-row{display:block;margin:10px 0}
+  }
+</style>
+</head>
+<body>
+<button class="themebtn" id="themebtn" type="button">Light / Dark</button>
+<div class="wrap">
+
+  <div class="eyebrow">Morning Brief</div>
+  <h1>Friday, August 28</h1>
+  <p class="lede">The day is wide open, Scott. One thing on the calendar, the rest is yours.</p>
+  <p class="lede" style="font-size:14px">Six things below want a quick call from you. Tap your answer on each, then hit <b>Copy my answers</b> at the bottom and paste it into a new chat.</p>
+
+  <section>
+    <div class="kicker">First, today</div>
+    <div class="panel">
+      <div class="today-row"><span class="today-time">9:00 – 10:30 AM</span><span class="today-what">Ruth (on your calendar)</span></div>
+      <div class="today-row"><span class="today-time">After that</span><span class="today-what">Nothing scheduled. The weekend is clear too.</span></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">What last night's run did</div>
+    <div class="panel lines">
+      <p><b>It ran, and it finished clean.</b> Started 4:07am, done by 4:14am.</p>
+      <p><b>It built nothing.</b> The work lane was empty, so it did its nightly safety sweep only. Everything that could have been built is waiting on a call from you (see decision 1).</p>
+      <p><b>The sweep found two quiet feeds.</b> Your site links and data checked out clean, but your Apple Health sync and your voice-note capture have both gone silent (decisions 2 and 3).</p>
+      <p><b>One honest note.</b> The run did its work but never wrote its own log entry, so the log looks empty even though the night happened. I confirmed the run myself and re-checked its "data is clean" finding against the real data. It holds.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Your decisions</div>
+
+    <div class="finding" data-q="1">
+      <span class="fnum">DECISION 1</span>
+      <div class="fhead">The night shift showed up and had nothing to build.</div>
+      <p class="fbody">Last night's run finished in seven minutes because every job in the queue is stuck waiting on you. Fourteen items are sitting in "waiting on you," and four site fixes are parked. Nothing is cleared to build.</p>
+      <div class="ev">Ready to build: 0     Waiting on you: 14     Parked: 4</div>
+      <p class="habit">Atomic Habits: make it obvious. The lane keeps emptying because loading it depends on you remembering to. The fix is a standing cue, not more willpower.</p>
+      <div class="q">What should tonight's run actually do?</div>
+      <div class="opts">
+        <button class="opt" data-v="Pick the safe ones and queue them for tonight.">Pick the safe ones and queue them for tonight.<span class="tag">suggested</span></button>
+        <button class="opt" data-v="Leave it, I'll go through the list myself.">Leave it, I'll go through the list myself.</button>
+        <button class="opt" data-v="Only queue the site and map fixes.">Only queue the site and map fixes.</button>
+      </div>
+    </div>
+
+    <div class="finding" data-q="2">
+      <span class="fnum">DECISION 2</span>
+      <div class="fhead">Apple Health stopped feeding you two nights ago.</div>
+      <p class="fbody">Your health numbers last landed Monday evening. Nothing since. Your workouts are still arriving, so your watch is fine. It's the all-day health export that stopped, and your Quantified Self numbers are running on stale data until it's back.</p>
+      <div class="ev">Apple Health, last reading Mon Aug 26 - 17,015 that day, 0 since</div>
+      <div class="q">Want me to chase down why Apple Health went quiet?</div>
+      <div class="opts">
+        <button class="opt" data-v="Yes, find the cause and tell me what to tap.">Yes, find the cause and tell me what to tap.<span class="tag">suggested</span></button>
+        <button class="opt" data-v="No, I'll check the phone export myself.">No, I'll check the phone export myself.</button>
+        <button class="opt" data-v="Just keep an eye on it for now.">Just keep an eye on it for now.</button>
+      </div>
+    </div>
+
+    <div class="finding" data-q="3">
+      <span class="fnum">DECISION 3</span>
+      <div class="fhead">Your voice-note capture has been asleep for 42 hours.</div>
+      <p class="fbody">The sweep that turns your dictated notes into to-dos last ran Wednesday morning. Anything you've spoken in since then is still sitting there, uncaptured.</p>
+      <div class="ev">Voice capture last ran Wed Aug 26, 9:02am - expected every 2 hours</div>
+      <div class="q">How do you want to handle the backlog?</div>
+      <div class="opts">
+        <button class="opt" data-v="Find out why the sweep stalled and restart it.">Find out why the sweep stalled and restart it.<span class="tag">suggested</span></button>
+        <button class="opt" data-v="I'll run a hardpull myself later.">I'll run a hardpull myself later.</button>
+        <button class="opt" data-v="Leave it for now.">Leave it for now.</button>
+      </div>
+    </div>
+
+    <div class="finding" data-q="4">
+      <span class="fnum">DECISION 4</span>
+      <div class="fhead">Today's AI cards are ready to keep or toss.</div>
+      <p class="fbody">Six fresh cards are up for today: three tools, a working tip, an insight, and a word. None saved yet.</p>
+      <div class="ev">Tools: NotebookLM  ·  Descript  ·  Midjourney
+Tip: "Ask for the trade-off"     Word: "Resfeber" (Swedish)</div>
+      <div class="q">Which of today's cards do you want to keep?</div>
+      <div class="opts">
+        <button class="opt" data-v="Keep the three tools, drop the rest.">Keep the three tools, drop the rest.<span class="tag">suggested</span></button>
+        <button class="opt" data-v="Keep them all.">Keep them all.</button>
+        <button class="opt" data-v="I'll swipe through them myself.">I'll swipe through them myself.</button>
+      </div>
+    </div>
+
+    <div class="finding" data-q="5">
+      <span class="fnum">DECISION 5</span>
+      <div class="fhead">Your site's map pages are showing the wrong numbers.</div>
+      <p class="fbody">Your tracking page shows counts that were typed in by hand and are now well out of date. Two of your map pages haven't been rebuilt in almost two weeks. This is your reference-and-reconciliation check for the morning: the maps have drifted from the live system.</p>
+      <div class="ev">Page says Apple Health 9,237   ·   actually 17,015
+Page says Drafts 42   ·   actually 53
+Page version reads v1.12 in the body, v1.10 in the menu</div>
+      <div class="q">Do you want the map pages brought back in line?</div>
+      <div class="opts">
+        <button class="opt" data-v="Queue the full map rebuild for tonight.">Queue the full map rebuild for tonight.<span class="tag">suggested</span></button>
+        <button class="opt" data-v="Just fix the wrong numbers for now.">Just fix the wrong numbers for now.</button>
+        <button class="opt" data-v="Leave the maps, not a priority.">Leave the maps, not a priority.</button>
+      </div>
+    </div>
+
+    <div class="finding" data-q="6">
+      <span class="fnum">DECISION 6</span>
+      <div class="fhead">Your community scan has gone three days without a new find.</div>
+      <p class="fbody">The feed that surfaces fresh community and AI finds last added anything last Tuesday. Today's tool cards came from the daily generator, not a live pull, so nothing new is waiting from the wider scan.</p>
+      <div class="ev">Last new find: Tue Aug 25   ·   quiet 3 days</div>
+      <div class="q">Want me to kick off a fresh community and AI scan?</div>
+      <div class="opts">
+        <button class="opt" data-v="Yes, run a fresh scan.">Yes, run a fresh scan.<span class="tag">suggested</span></button>
+        <button class="opt" data-v="No, the daily deck is plenty.">No, the daily deck is plenty.</button>
+        <button class="opt" data-v="Look into why it stopped instead.">Look into why it stopped instead.</button>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">What I did not do</div>
+    <div class="panel notdo">
+      <ul>
+        <li>I did not queue any overnight work on my own. The fourteen waiting items are exactly where you left them.</li>
+        <li>I did not touch the map pages or change any numbers on them.</li>
+        <li>I did not save or discard any of today's AI cards.</li>
+        <li>I could not read your Claude usage from a scheduled run, so the weekly-usage note below is a pointer, not a live figure.</li>
+        <li>I did not open your father's medical form or read what's in it. I only saw that the care facility is asking for it back today.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Where your projects stand</div>
+    <div class="panel proj">
+      <ul>
+        <li><b>TreadWell</b> - your travel give-back platform. Prototype with the Partners page and the TreadPoints give-forward system. Your files live on your Mac, which this run can't reach. Next step: sync the latest saved prototype and fold any new rules into the one Product and Build Spec.</li>
+        <li><b>CrushingIt</b> - your to-do board and Time Bandit Wheel. The wheel now draws your meetings as arcs and is live. Next step: fix the six habits the board still can't count.</li>
+        <li><b>Project YOU / Quantified Self</b> - your personal operating system, live on the web. Habit worksheets and the Clarity Compass are in progress. Next step: get Apple Health feeding again so the numbers stop going stale (decision 2).</li>
+        <li><b>Clever Phrases</b> - your phrase collection. 60 saved, 47 still unreviewed, nothing new since Aug 15. Next step: triage the 47 waiting phrases in one pass.</li>
+        <li><b>AI Intelligence</b> - your daily AI card deck. Generating on schedule; today's six cards are up (decision 4). Next step: verify and publish the four AI tools that have been sitting unpublished.</li>
+        <li><b>2026 Calendar</b> - now living inside Project YOU, syncing with Google every two hours. Next step: fix the iPhone shortcut that sends each meeting a dozen times over. The tap-by-tap fix is already drafted.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Your Claude weekly usage</div>
+    <div class="panel lines">
+      <p>I can't read your usage meter from a scheduled run. To see where you stand this week, open the Claude app, go to Settings, and check the usage section.</p>
+      <p>If you're pushing the weekly limit, the overnight runs are the cheapest thing to trim. Right now they mostly just sweep, so pausing a night or two costs you almost nothing.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Your inbox</div>
+    <div class="panel lines">
+      <p>Two things want you (both in your tasks below). The rest of the inbox is receipts, statements, and newsletters. Nothing there needs a reply.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="amber">
+      <div class="kicker">Your tasks today</div>
+      <ul>
+        <li><b>Sign and scan your father's care-facility form back today.</b> Brookhaven asked for it before your brother visits this weekend, and asked you to copy Vanessa. I stayed out of the medical detail.</li>
+        <li><b>Greenwich high school squash registration is open for 2026-27.</b> Forwarded to you and Åsa. If your son is playing, it needs signing up.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="copywrap">
+    <button class="copybtn" id="copybtn" type="button">Copy my answers</button>
+    <div class="copynote" id="copynote">Answers save as you tap. Copy when you're ready.</div>
+  </div>
+
+  <div class="proof" id="proof">Technical check (for the record):
+Last night's run logged to board_meta 08:07-08:14 UTC but wrote no run_log row; confirmed the run happened and re-verified its data-clean finding (0 blank txt, 0 bad run_status in session_todos). Apple Health stop confirmed in health_feed_status (all apple feeds last_day 2026-08-26). Queue verified: 0 rows lane=queue_run run_status in overnight/queued. Published via gzpage to decision-review-2026-08-28.html.</div>
+
+</div>
+
+<script>
+(function(){
+  var DATEKEY = "dr-2026-08-28";
+  var store = {};
+  try { store = JSON.parse(localStorage.getItem(DATEKEY) || "{}") || {}; } catch(e){ store = {}; }
+
+  function save(){ try { localStorage.setItem(DATEKEY, JSON.stringify(store)); } catch(e){} }
+
+  // theme
+  var tb = document.getElementById("themebtn");
+  try { var t = localStorage.getItem("dr-theme"); if(t) document.documentElement.setAttribute("data-theme", t); } catch(e){}
+  tb.addEventListener("click", function(){
+    var cur = document.documentElement.getAttribute("data-theme");
+    var next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    try { localStorage.setItem("dr-theme", next); } catch(e){}
+  });
+
+  // options
+  var findings = document.querySelectorAll(".finding");
+  findings.forEach(function(f){
+    var q = f.getAttribute("data-q");
+    var opts = f.querySelectorAll(".opt");
+    opts.forEach(function(o){
+      var v = o.getAttribute("data-v");
+      if(store[q] === v) o.classList.add("sel");
+      o.addEventListener("click", function(){
+        if(store[q] === v){ delete store[q]; o.classList.remove("sel"); }
+        else { store[q] = v; opts.forEach(function(x){ x.classList.remove("sel"); }); o.classList.add("sel"); }
+        save();
+      });
+    });
+  });
+
+  // questions text for the copy block
+  var QTEXT = {
+    "1":"1. Empty overnight lane - what should tonight's run do?",
+    "2":"2. Apple Health stopped feeding - chase it down?",
+    "3":"3. Voice capture asleep 42h - handle the backlog?",
+    "4":"4. Today's AI cards - which to keep?",
+    "5":"5. Map pages showing wrong numbers - bring in line?",
+    "6":"6. Community scan quiet 3 days - run a fresh scan?"
+  };
+
+  var copybtn = document.getElementById("copybtn");
+  var copynote = document.getElementById("copynote");
+  copybtn.addEventListener("click", function(){
+    var lines = ["My answers - Decision Review, Fri Aug 28:", ""];
+    ["1","2","3","4","5","6"].forEach(function(q){
+      lines.push(QTEXT[q]);
+      lines.push("   " + (store[q] ? store[q] : "(not answered - leave this one)"));
+      lines.push("");
+    });
+    var text = lines.join("\n");
+    function done(){ copynote.textContent = "Copied. Paste it into a new chat."; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done, function(){ fallback(text); });
+    } else { fallback(text); }
+    function fallback(t){
+      var ta = document.createElement("textarea"); ta.value = t;
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch(e){ copynote.textContent = "Select and copy the text that appears."; }
+      document.body.removeChild(ta);
+    }
+  });
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
