@@ -171,7 +171,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 <div class="pynav"></div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.3</span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.4</span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag an all-day bar from the top band down onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
 </div>
 
@@ -236,7 +236,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Week view v1.3 =====
+/* ===== Project YOU · Week view v1.4 =====
    A second way of looking at the same calendar_events table the list view on
    calendar.html reads. Nothing here has its own store: a block on this grid IS
    a calendar event, so a change made here shows up on the list view and on
@@ -442,7 +442,7 @@ function drawCals(){
         var sb2=el('button','subcal'+(son?'':' off'));
         var sd=el('span','dot'); sd.style.background=catOf(openCat).color; sb2.appendChild(sd);
         sb2.appendChild(document.createTextNode(sname));
-        sb2.onclick=function(){ enabledSub[key]=!son; render(); };
+        sb2.onclick=function(){ enabledSub[key]=!son; render(); setSub(openCat,sname,!son); };
         row.appendChild(sb2);
       });
       box.appendChild(row);
@@ -452,6 +452,15 @@ function drawCals(){
 /* Ticking a calendar here writes the SAME column the Layers list on the
    calendar page writes, so the two pages can never disagree about what is
    switched on. quiet=true skips the repaint when the caller repaints itself. */
+/* Remember one calendar-inside-a-calendar. Stored as two columns rather than the
+   joined "Category|Sub" key it is held under in memory, so any other page can
+   read it without knowing the join character. Same store the list view uses. */
+function setSub(cat,sub,on){
+  if(!sb)return;
+  sb.from('calendar_sub_prefs')
+    .upsert([{cat:cat,sub:sub,enabled:on,updated_at:new Date().toISOString()}],{onConflict:'cat,sub'})
+    .then(function(r){ if(r&&r.error) toast('Could not remember that switch'); });
+}
 function setCat(name,on,quiet){
   enabledCat[name]=on;
   if(!quiet) render();
@@ -817,11 +826,17 @@ function deleteEditor(){
 async function load(){
   var st=document.getElementById('status');
   try{
-    const [rc,re]=await Promise.all([
+    const [rc,re,rs]=await Promise.all([
       sb.from('calendar_categories').select('*').order('sort_order',{ascending:true}),
-      sb.from('calendar_events').select('*').order('date',{ascending:true}).limit(5000)
+      sb.from('calendar_events').select('*').order('date',{ascending:true}).limit(5000),
+      sb.from('calendar_sub_prefs').select('cat,sub,enabled')
     ]);
     if(rc.error)throw rc.error; if(re.error)throw re.error;
+    /* The calendars INSIDE a calendar used to reset to all-on every reload.
+       Scott asked Aug 29 for them to be remembered, here and on the list view,
+       so they are read from the same store both pages write to. A failure to
+       read them is not fatal: everything simply starts switched on. */
+    if(rs&&!rs.error&&rs.data) rs.data.forEach(function(r){ enabledSub[r.cat+'|'+r.sub]=(r.enabled!==false); });
     CATS={}; catOrder=[];
     rc.data.forEach(function(c){
       CATS[c.name]={color:c.color,fill:c.fill}; catOrder.push(c.name);

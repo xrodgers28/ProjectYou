@@ -272,12 +272,12 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v1.5</span>
+  <span class="pn-ver">v1.6</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v1.5</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v1.6</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Live events sit dimmed because they are tour dates you are tracking; star one to say you are going and it comes forward. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
 </div>
 
@@ -338,7 +338,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Calendar v1.5 =====
+/* ===== Project YOU · Calendar v1.6 =====
    Events live in public.calendar_events, layers in public.calendar_categories.
    New in v1.2: sign-in (the Google feed brings personal appointments onto this
    page, so it can no longer be open to anyone with the URL), plain-English add
@@ -540,7 +540,10 @@ function renderRail(){
     enabledCat[el.dataset.cat]=el.checked; renderCal(); renderRail();
     save('calendar_categories',{enabled:el.checked},'name',el.dataset.cat);
   });
-  r.querySelectorAll('input[data-sub]').forEach(el=>el.onchange=()=>{enabledSub[el.dataset.sub]=el.checked;renderCal();renderRail();});
+  r.querySelectorAll('input[data-sub]').forEach(el=>el.onchange=()=>{
+    enabledSub[el.dataset.sub]=el.checked; renderCal(); renderRail();
+    saveSub(el.dataset.sub, el.checked);
+  });
   r.querySelectorAll('[data-hov]').forEach(el=>{
     el.onmouseenter=()=>{el.classList.add('hot');highlight(el.dataset.hov);};
     el.onmouseleave=()=>{el.classList.remove('hot');highlight(null);};
@@ -570,6 +573,17 @@ function wireDrag(r){
   });
 }
 function saveOrder(){catOrder.forEach((c,i)=>save('calendar_categories',{sort_order:i*10},'name',c));}
+/* Remember one layer-inside-a-layer. The key arrives as "Category|Sub", which is
+   how it is held in memory, so it is split back apart here rather than stored
+   joined: two columns can be read by any other page without knowing the join
+   character. */
+function saveSub(key,on){
+  if(!sb)return;
+  const i=key.indexOf('|'); if(i<0)return;
+  sb.from('calendar_sub_prefs')
+    .upsert([{cat:key.slice(0,i),sub:key.slice(i+1),enabled:on,updated_at:new Date().toISOString()}],{onConflict:'cat,sub'})
+    .then(r=>{ if(r&&r.error) toast('Could not remember that switch'); });
+}
 function save(table,patch,col,val){
   if(!sb)return;
   sb.from(table).update(patch).eq(col,val).then(r=>{
@@ -965,11 +979,18 @@ window.addEventListener('resize',setNavVar);
 async function load(scroll){
   const st=document.getElementById('status');
   try{
-    const [rc,re]=await Promise.all([
+    const [rc,re,rs]=await Promise.all([
       sb.from('calendar_categories').select('*').order('sort_order',{ascending:true}),
-      sb.from('calendar_events').select('*').order('date',{ascending:true}).limit(5000)
+      sb.from('calendar_events').select('*').order('date',{ascending:true}).limit(5000),
+      sb.from('calendar_sub_prefs').select('cat,sub,enabled')
     ]);
     if(rc.error)throw rc.error; if(re.error)throw re.error;
+    /* The layers INSIDE a layer used to reset to all-on every reload. Scott asked
+       Aug 29 for them to be remembered, on this page and the week grid, so they
+       are stored the same way the top-level ones are and read back here. A
+       failure to read them is not fatal: everything simply starts switched on. */
+    const SUBSAVED={};
+    if(rs&&!rs.error&&rs.data) rs.data.forEach(r=>{ SUBSAVED[r.cat+"|"+r.sub]=(r.enabled!==false); });
     CATS={}; catOrder=[];
     rc.data.forEach(c=>{CATS[c.name]={color:c.color,fill:c.fill}; catOrder.push(c.name);
       if(enabledCat[c.name]===undefined)enabledCat[c.name]=c.enabled!==false;
@@ -977,7 +998,8 @@ async function load(scroll){
     EVENTS=re.data.map(e=>({id:e.id,date:e.date,end:e.end_date,start_time:e.start_time,end_time:e.end_time,
       title:e.title,loc:e.loc,cat:e.cat,sub:e.sub,link:e.link,notes:e.notes,icon:e.icon,logo:e.logo,
       hidden:!!e.hidden,attending:!!e.attending,readonly:!!e.readonly,gcal_status:e.gcal_status,gcal_calendar_id:e.gcal_calendar_id,gcal_error:e.gcal_error}));
-    EVENTS.forEach(e=>{if(e.sub&&enabledSub[e.cat+"|"+e.sub]===undefined)enabledSub[e.cat+"|"+e.sub]=true;});
+    EVENTS.forEach(e=>{const k=e.cat+"|"+e.sub;
+      if(e.sub&&enabledSub[k]===undefined)enabledSub[k]=(SUBSAVED[k]!==undefined?SUBSAVED[k]:true);});
     const yrs=EVENTS.map(e=>+String(e.date).slice(0,4));
     const ty=+todayET().slice(0,4);
     Y0=Math.min(ty,yrs.length?Math.min.apply(null,yrs):ty);
