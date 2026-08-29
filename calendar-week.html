@@ -21,18 +21,25 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 .secbar .status.bad{color:#a3372b;background:#fbeae7;border-color:#f0cec8}
 .sub{max-width:900px;margin:6px 0 0;font-size:12.5px;color:var(--muted);line-height:1.55}
 
-/* ---------- week toolbar ---------- */
-.wkbar{max-width:1360px;margin:12px auto 0;padding:0 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.wkbar button{font:inherit;font-size:12.5px;font-weight:700;color:#5b6472;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
-.wkbar button:hover{border-color:var(--accent);color:var(--accent)}
-.wkbar .wklab{font-size:15px;font-weight:800;color:var(--ink);margin:0 6px}
-.wkbar .spacer{flex:1}
-.wkbar .hint{font-size:11.5px;color:var(--faint)}
+/* ---------- the pinned header ----------
+   The week buttons, the day-and-date row and the all-day band are ONE sticky
+   block. They were above the grid and scrolled away the moment Scott looked at
+   the calendar, which is why he asked for a way to step weeks that he already
+   had. Everything you steer with stays put; only the hours scroll. */
+.stickhead{position:sticky;top:var(--navh,60px);z-index:15;background:#fff;
+  margin:0 -16px;padding:10px 16px 0;border-radius:12px 12px 0 0;
+  box-shadow:0 6px 10px -10px rgba(31,42,68,.5)}
+.hrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 0 8px}
+.hrow button{font:inherit;font-size:12.5px;font-weight:700;color:#5b6472;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
+.hrow button:hover{border-color:var(--accent);color:var(--accent)}
+.hrow .wklab{font-size:15px;font-weight:800;color:var(--ink);margin:0 4px}
+.hrow .spacer{flex:1}
+.hrow .hint{font-size:11.5px;color:var(--faint)}
+.tzmark{font-size:10px;font-weight:800;letter-spacing:.5px;color:#333;padding:0 0 3px 2px}
 
 /* ---------- the grid ---------- */
 .sheet{max-width:1360px;margin:12px auto 40px;padding:0 16px}
-.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px 18px;box-shadow:0 2px 10px rgba(31,42,68,.05)}
-.tzmark{font-size:10px;font-weight:800;letter-spacing:.5px;color:#333;padding:0 0 3px 2px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px 18px;box-shadow:0 2px 10px rgba(31,42,68,.05);overflow:visible}
 
 .wkhead{display:grid;grid-template-columns:52px 1fr}
 .wkhead .corner{}
@@ -78,18 +85,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 .blk .lockdot{position:absolute;top:3px;right:4px;font-size:8px;opacity:.5}
 .ghost{position:absolute;z-index:19;border:1.5px dashed var(--accent);background:rgba(63,111,143,.10);border-radius:2px;pointer-events:none}
 
-/* tray */
-.tray{max-width:1360px;margin:14px auto 0;padding:0 16px}
-.tray .tcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px}
-.tray h3{margin:0 0 4px;font-size:13px;color:var(--ink)}
-.tray p{margin:0 0 9px;font-size:11.5px;color:var(--muted)}
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;border-radius:999px;padding:5px 12px;cursor:grab;border:1px solid transparent}
-.chip.dragging{opacity:.6}
-.chip .sw{width:8px;height:8px;border-radius:50%;flex:none}
-.chip.newblk{background:#fff;border:1px dashed #c4c8ce;color:#5b6270;font-weight:800}
-.chip.newblk:hover{border-color:var(--accent);color:var(--accent)}
-.emptytray{font-size:11.5px;color:var(--faint)}
+
 
 /* ---------- the calendar switches ----------
    Same job as the Layers list on the calendar page, and deliberately the same
@@ -146,7 +142,12 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
 @media(max-width:900px){
-  .sheet,.wkbar,.pagehead,.tray{padding:0 10px}
+  .sheet,.pagehead{padding:0 10px}
+  .stickhead{margin:0 -8px;padding:8px 8px 0}
+  .hrow{gap:6px;padding-bottom:6px}
+  .hrow button{font-size:11.5px;padding:4px 9px}
+  .hrow .wklab{font-size:13px;margin:0 2px}
+  .hrow .hint{display:none}
   .card{padding:10px 8px 14px}
   .dayrow .dh{font-size:9.5px;padding:3px 1px}
   .bodywrap,.wkhead,.bandwrap{grid-template-columns:34px 1fr}
@@ -170,26 +171,27 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 <div class="pynav"></div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.2</span><span class="status" id="status">Loading…</span></div>
-  <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag anything out of the tray underneath onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
-</div>
-
-<div class="wkbar">
-  <button id="prev">&#8249; Previous</button>
-  <button id="today">This week</button>
-  <button id="next">Next &#8250;</button>
-  <span class="wklab" id="wklab"></span>
-  <span class="spacer"></span>
-  <span class="hint" id="hint">Click an empty slot to add something</span>
+  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.3</span><span class="status" id="status">Loading…</span></div>
+  <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag an all-day bar from the top band down onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
 </div>
 
 <div class="cals" id="cals"></div>
 
 <div class="sheet">
   <div class="card">
-    <div class="tzmark">EST</div>
-    <div class="wkhead"><div class="corner"></div><div class="dayrow" id="dayrow"></div></div>
-    <div class="bandwrap"><div class="corner"></div><div class="band" id="band"><div class="bcols"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div>
+    <div class="stickhead">
+      <div class="hrow">
+        <button id="prev">&#8249; Previous</button>
+        <button id="today">This week</button>
+        <button id="next">Next &#8250;</button>
+        <span class="wklab" id="wklab"></span>
+        <span class="spacer"></span>
+        <span class="hint" id="hint">Tap an empty slot to add something</span>
+      </div>
+      <div class="tzmark">EST</div>
+      <div class="wkhead"><div class="corner"></div><div class="dayrow" id="dayrow"></div></div>
+      <div class="bandwrap"><div class="corner"></div><div class="band" id="band"><div class="bcols"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div></div>
+    </div>
     <div class="bodywrap">
       <div class="gutter" id="gutter"></div>
       <div class="canvas" id="canvas">
@@ -197,14 +199,6 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
         <div class="cols" id="cols"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
       </div>
     </div>
-  </div>
-</div>
-
-<div class="tray">
-  <div class="tcard">
-    <h3>Waiting to be placed</h3>
-    <p>The all-day items across the top of the grid that have no time on them yet. Drag one down onto the grid and it takes that slot.</p>
-    <div class="chips" id="chips"></div>
   </div>
 </div>
 
@@ -242,7 +236,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Week view v1.2 =====
+/* ===== Project YOU · Week view v1.3 =====
    A second way of looking at the same calendar_events table the list view on
    calendar.html reads. Nothing here has its own store: a block on this grid IS
    a calendar event, so a change made here shows up on the list view and on
@@ -401,7 +395,6 @@ function render(){
   drawBand(days);
   drawBlocks(days);
   drawNow(days,tdy);
-  drawTray(days);
 }
 
 /* ---------- the calendar switches ---------- */
@@ -563,31 +556,6 @@ function drawNow(days,tdy){
   canvas.appendChild(n);
 }
 
-/* ---------- the tray of things with no time yet ---------- */
-function drawTray(days){
-  var box=document.getElementById('chips'); box.innerHTML='';
-  var nb=el('div','chip newblk','+ New block');
-  nb.title='Drag this onto the grid, or click an empty slot';
-  wireChipDrag(nb,null);
-  box.appendChild(nb);
-
-  var waiting=weekEvents().filter(function(e){
-    return !isTimed(e) && (!e.end||e.end===e.date) && days.indexOf(e.date)>=0;
-  });
-  waiting.forEach(function(e){
-    var c=catOf(e.cat);
-    var ch=el('div','chip');
-    ch.style.background=c.fill; ch.style.color=c.color;
-    var sw=el('span','sw'); sw.style.background=c.color; ch.appendChild(sw);
-    ch.appendChild(document.createTextNode(e.title||'(no title)'));
-    ch.dataset.id=e.id;
-    wireChipDrag(ch,e);
-    box.appendChild(ch);
-  });
-  if(!waiting.length){ box.appendChild(el('span','emptytray','Nothing waiting — everything this week already has a time.')); }
-}
-
-
 /* ---------- moving and resizing a block ---------- */
 function wireBlock(b,e,it){
   b.addEventListener('pointerdown',function(ev){
@@ -632,24 +600,62 @@ function wireBlock(b,e,it){
   });
 }
 
-/* ---------- dragging an all-day bar sideways ---------- */
+/* ---------- dragging an all-day bar ----------
+   Two gestures on one bar, and which one you meant is decided by where you let
+   go, not by anything you have to choose first:
+     sideways, released in the band  -> it changes which days it covers
+     downwards, released on the grid -> it stops being all day and takes that
+                                        slot, which is what the tray used to do
+   Scott's call, Aug 29: "let me drag straight down from the top banner and drop
+   the tray". So the tray is gone and this is the only way in. */
 function wireBandDrag(d,e){
   d.addEventListener('pointerdown',function(ev){
     if(ev.button)return;
     ev.preventDefault();
     var band=document.getElementById('band');
+    var canvas=document.getElementById('canvas');
     var colW=band.getBoundingClientRect().width/7;
     var startX=ev.clientX, left0=d.offsetLeft, moved=false, delta=0;
+    var ghost=null, onGrid=false, gday=0, gst=T0;
     function mv(ev2){
       var dx=ev2.clientX-startX;
-      if(Math.abs(dx)>3)moved=true;
+      if(Math.abs(dx)>3||Math.abs(ev2.clientY-ev.clientY)>6)moved=true;
+      var r=canvas.getBoundingClientRect();
+      onGrid = ev2.clientX>=r.left && ev2.clientX<=r.right && ev2.clientY>=r.top && ev2.clientY<=r.bottom;
+      if(onGrid){
+        d.classList.add('dragging');
+        if(!ghost){ ghost=el('div','ghost'); canvas.appendChild(ghost); }
+        gday=Math.max(0,Math.min(6,Math.floor((ev2.clientX-r.left)/(r.width/7))));
+        gst=Math.max(T0,Math.min(T1-60,snap(minOf(ev2.clientY-r.top))));
+        ghost.style.left='calc('+(gday*100/7)+'% + 1px)';
+        ghost.style.width='calc('+(100/7)+'% - 2px)';
+        ghost.style.top=yOf(gst)+'px';
+        ghost.style.height=PXH+'px';
+        d.style.left=left0+'px';
+        delta=0;
+        return;
+      }
+      if(ghost){ ghost.remove(); ghost=null; }
+      d.classList.remove('dragging');
       delta=Math.round(dx/colW);
       d.style.left=(left0+delta*colW)+'px';
     }
     function up(){
       document.removeEventListener('pointermove',mv);
       document.removeEventListener('pointerup',up);
+      d.classList.remove('dragging');
+      if(ghost){ ghost.remove(); ghost=null; }
       if(!moved){ openEditor(e); return; }
+
+      if(onGrid){
+        if(e.end && e.end!==e.date){ toast('That one runs across several days, so it cannot take a single time slot.'); render(); return; }
+        if(e.readonly){ toast('That one comes from Google, so its day is not ours to move.'); render(); return; }
+        var ds=weekDates()[gday];
+        e.date=ds; e.end=null;
+        commitTime(e,ds,gst,gst+60);
+        return;
+      }
+
       if(!delta){ render(); return; }
       if(e.readonly){ toast('That one comes from Google, so its dates are not ours to move.'); render(); return; }
       var nd=iso(addDays(parseISO(e.date),delta));
@@ -657,42 +663,6 @@ function wireBandDrag(d,e){
       e.date=nd; if(ne)e.end=ne;
       render();
       saveRow(e.id,{date:nd,end_date:ne,updated_at:new Date().toISOString()},'Moved '+(e.title||'it'));
-    }
-    document.addEventListener('pointermove',mv);
-    document.addEventListener('pointerup',up);
-  });
-}
-
-/* ---------- dragging a chip out of the tray onto the grid ---------- */
-function wireChipDrag(ch,e){
-  ch.addEventListener('pointerdown',function(ev){
-    if(ev.button)return;
-    ev.preventDefault();
-    var canvas=document.getElementById('canvas');
-    var ghost=null, over=false, day=0, st=T0, moved=false;
-    ch.classList.add('dragging');
-    function mv(ev2){
-      moved=true;
-      var r=canvas.getBoundingClientRect();
-      over = ev2.clientX>=r.left && ev2.clientX<=r.right && ev2.clientY>=r.top && ev2.clientY<=r.bottom;
-      if(!over){ if(ghost){ghost.remove();ghost=null;} return; }
-      if(!ghost){ ghost=el('div','ghost'); canvas.appendChild(ghost); }
-      day=Math.max(0,Math.min(6,Math.floor((ev2.clientX-r.left)/(r.width/7))));
-      st=Math.max(T0,Math.min(T1-60,snap(minOf(ev2.clientY-r.top))));
-      ghost.style.left='calc('+(day*100/7)+'% + 1px)';
-      ghost.style.width='calc('+(100/7)+'% - 2px)';
-      ghost.style.top=yOf(st)+'px';
-      ghost.style.height=(PXH)+'px';
-    }
-    function up(){
-      ch.classList.remove('dragging');
-      document.removeEventListener('pointermove',mv);
-      document.removeEventListener('pointerup',up);
-      if(ghost){ghost.remove();}
-      if(!moved||!over){ if(!e&&!moved) toast('Drag this onto the grid, or click an empty slot on the grid.'); return; }
-      var ds=weekDates()[day];
-      if(e){ commitTime(e,ds,st,st+60); }
-      else { openEditor({__new:true,date:ds,start_time:toSQLTime(st),end_time:toSQLTime(st+60),cat:catOrder[0]||'Personal',title:''}); }
     }
     document.addEventListener('pointermove',mv);
     document.addEventListener('pointerup',up);
@@ -902,8 +872,17 @@ async function signIn(){
 document.getElementById('signBtn').onclick=signIn;
 document.getElementById('pass').addEventListener('keydown',function(e){ if(e.key==='Enter')signIn(); });
 
+/* The nav's height depends on how many groups the config renders, so measure it
+   rather than hardcoding a number the nav can outgrow. The pinned header sits
+   directly under it. Same approach as calendar.html. */
+function navH(){ var n=document.querySelector('.pynav'); return n?Math.round(n.getBoundingClientRect().height):60; }
+function setNavVar(){ document.documentElement.style.setProperty('--navh',navH()+'px'); }
+window.addEventListener('resize',setNavVar);
+
 async function boot(){
   WEEK0=mondayOf(parseISO(todayET()));
+  setNavVar();
+  setTimeout(setNavVar,600);   /* the nav is built by navpatch after us */
   wireCanvas();
   render();
   if(!sb){
