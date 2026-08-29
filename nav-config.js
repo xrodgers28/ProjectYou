@@ -10,6 +10,13 @@ window.NAV_CONFIG = {
     { "label": "Staging<br>Area", "href": "staging-area.html" },
     { "label": "All<br>ToDos", "href": "all-todos.html" }
   ],
+  /* Calendar (Aug 29 2026, Scott). ONE slot in the top bar, in line with the
+     sub-nav principle: the bar holds sections, and the two ways of looking at
+     the calendar - the running list and the week grid - are a tab strip on the
+     page itself, built from CAL_NAV further down this file. */
+  "Calendar": [
+    { "label": "Calendar", "href": "calendar.html" }
+  ],
   "Habit Modules": [
     { "label": "Cue Cards", "href": "habit-modules.html" },
     { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" }
@@ -45,6 +52,7 @@ window.NAV_CONFIG = {
    When a group name here has a URL, navpatch.js renders its grey label as a
    clickable link (and marks it active on that page). */
 window.NAV_GROUP_LINKS = {
+  "Calendar": "calendar.html",
   "Habit Modules": "habit-modules.html",
   "Parking Lot": "connections.html"
 };
@@ -104,6 +112,25 @@ window.LISTS_NAV = {
     { "label": "Movies",         "href": "movies.html",         "count": "movies" },
     { "label": "Bucket List",    "href": "my-bucket-list.html", "count": "bucket_list" },
     { "label": "Asa Activities", "href": "asa-activities.html", "count": "asa_activities" }
+  ]
+};
+
+/* CALENDAR subsection (Aug 29 2026, Scott).
+   Third use of the same pattern as MAPS_NAV and LISTS_NAV, and deliberately not
+   a fourth invention: navpatch.js renders this list as the segmented tab strip
+   that sits under the top nav on the calendar pages, so the top bar needs one
+   slot instead of two.
+
+   ORDER IS FIXED, same as LISTS. The top-nav item points at items[0], which is
+   why landing on Calendar lands on the running list rather than the week grid.
+   Add a third way of looking at the calendar here and it appears on both
+   existing pages on its own. */
+window.CAL_NAV = {
+  "label": "Calendar",
+  "ver": "Calendar v1.0",
+  "items": [
+    { "label": "List", "href": "calendar.html" },
+    { "label": "Week", "href": "calendar-week.html" }
   ]
 };
 
