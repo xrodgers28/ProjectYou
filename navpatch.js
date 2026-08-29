@@ -280,6 +280,89 @@ window.__pnNavCss=function(){
   }
 }catch(e){ if(window.console) console.log('navpatch lists strip',e); }})();
 
+/* ONE NAV PER SUBSECTION - CALENDAR (Aug 29 2026, Scott).
+   Third use of the strip pattern, same contract as MAPS and LISTS above: the
+   top nav carries one Calendar slot, and the two ways of looking at the same
+   calendar_events table - the running list on calendar.html and the week grid
+   on calendar-week.html - share the tab strip built below from CAL_NAV.
+
+   It reuses the .lsub stylesheet the LISTS strip injects, on purpose. Two tab
+   strips that look different would be two patterns, and the whole point of
+   this being the third copy rather than a third invention is that they cannot
+   drift apart. The id guard means whichever strip renders first injects the
+   CSS and the other finds it already there.
+
+   No counts. There is no number worth putting on a calendar tab, and the
+   counts fetch is the one part of the LISTS strip that touches the network. */
+(function(){try{
+  var CFG=window.CAL_NAV;
+  if(!CFG||!CFG.items||!CFG.items.length) return;
+  var cur=(location.pathname.split('/').pop()||'index.html');
+  var here=-1;
+  CFG.items.forEach(function(it,i){ if(it.href===cur) here=i; });
+  if(here<0) return;                       /* not a calendar page - do nothing */
+  if(document.querySelector('.lsub')) return;
+
+  /* Keep the single top-nav item lit on both pages in the subsection. */
+  document.querySelectorAll('.pynav a.pn-link').forEach(function(a){
+    if(a.getAttribute('href')===CFG.items[0].href) a.classList.add('on');
+  });
+
+  if(!document.getElementById('lsub-css')){
+    var st=document.createElement('style'); st.id='lsub-css';
+    st.textContent='.lsub{display:flex;align-items:flex-end;gap:2px;max-width:1180px;margin:14px auto 0;padding:0 4px;border-bottom:2px solid #e3e7ee;font-family:Arial,Helvetica,sans-serif;overflow-x:auto}'
+      +'.lsub::-webkit-scrollbar{height:0}'
+      +'.lsub-lbl{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#aab2bd;padding:0 12px 11px 2px;white-space:nowrap;flex:none}'
+      +'.lsub a{position:relative;font-size:14px;font-weight:800;color:#8d96a3;text-decoration:none;padding:9px 15px 10px;border-radius:9px 9px 0 0;white-space:nowrap;flex:none}'
+      +'.lsub a:hover{color:#3f6f8f;background:#f4f7fb}'
+      +'.lsub a.on{color:#2f5a74;background:#fff;box-shadow:0 -2px 10px rgba(31,42,68,.05)}'
+      +'.lsub a.on:after{content:"";position:absolute;left:8px;right:8px;bottom:-2px;height:3px;border-radius:2px;background:#3f6f8f}'
+      +'.lsub-ver{margin-left:auto;font-size:10.5px;font-weight:800;color:#9aa6b4;padding:0 4px 11px;white-space:nowrap;flex:none;font-variant-numeric:tabular-nums}'
+      +'@media(max-width:820px){.lsub{margin:10px 12px 0;padding:0}.lsub a{font-size:13px;padding:8px 11px 9px}.lsub-lbl{display:none}}';
+    document.head.appendChild(st);
+  }
+
+  var bar=document.createElement('nav');
+  bar.className='lsub';
+  bar.setAttribute('aria-label','Calendar');
+
+  var lbl=document.createElement('span');
+  lbl.className='lsub-lbl'; lbl.textContent=CFG.label||'Calendar';
+  bar.appendChild(lbl);
+
+  CFG.items.forEach(function(it,i){
+    var a=document.createElement('a');
+    a.setAttribute('href',it.href);
+    a.appendChild(document.createTextNode(it.label));
+    if(i===here){ a.className='on'; a.setAttribute('aria-current','page'); }
+    bar.appendChild(a);
+  });
+
+  if(CFG.ver){
+    var v=document.createElement('span');
+    v.className='lsub-ver'; v.textContent=CFG.ver; bar.appendChild(v);
+  }
+
+  var nav=document.querySelector('.pynav');
+  if(nav&&nav.parentNode) nav.parentNode.insertBefore(bar,nav.nextSibling);
+  else document.body.insertBefore(bar,document.body.firstChild);
+
+  /* Match the page's own content column, same reason as the LISTS strip: a tab
+     bar that does not line up with the heading beneath it reads as a mistake.
+     The calendar pages use .pagehead rather than .wrap. */
+  try{
+    var probe=document.querySelector('.pagehead')||document.querySelector('.secbar-wrap')||document.querySelector('.wrap');
+    if(probe){
+      var cs=getComputedStyle(probe);
+      if(cs.maxWidth&&cs.maxWidth!=='none'){
+        bar.style.maxWidth=cs.maxWidth;
+        bar.style.paddingLeft=cs.paddingLeft;
+        bar.style.paddingRight=cs.paddingRight;
+      }
+    }
+  }catch(_w){}
+}catch(e){ if(window.console) console.log('navpatch calendar strip',e); }})();
+
 /* Version chip parity. A page carries its version in two places: the chip in the
    nav bar (.pn-ver) and the chip beside the page heading (.secbar .ver, and the
    older .topbar / #ver variants). They are hand-maintained and used to drift.
