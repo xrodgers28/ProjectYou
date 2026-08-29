@@ -127,9 +127,18 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 @media(max-width:900px){
   .sheet,.wkbar,.pagehead,.tray{padding:0 10px}
   .card{padding:10px 8px 14px}
-  .dayrow .dh{font-size:9px}
+  .dayrow .dh{font-size:9.5px;padding:3px 1px}
   .bodywrap,.wkhead,.bandwrap{grid-template-columns:34px 1fr}
+  .gutter .hr{font-size:7px;right:3px}
   .blk{font-size:8.5px;padding:2px 3px}
+  /* .blk.tall is more specific than .blk, so the big-block size has to be
+     turned down by name or a tall block keeps its 13px and spills its column. */
+  .blk.tall{font-size:10px;padding:3px 4px}
+  /* The times inside a block do not fit in a 47px column and are the first
+     thing to go: the block's position on the hour lines already says when it
+     is, and tapping it shows the exact times. */
+  .blk .tm{display:none}
+  .allday{font-size:8px;padding:0 2px}
 }
 </style>
 </head><body>
@@ -137,7 +146,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 <div class="pynav"></div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.0</span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.1</span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag anything out of the tray underneath onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
 </div>
 
@@ -207,7 +216,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Week view v1.0 =====
+/* ===== Project YOU · Week view v1.1 =====
    A second way of looking at the same calendar_events table the list view on
    calendar.html reads. Nothing here has its own store: a block on this grid IS
    a calendar event, so a change made here shows up on the list view and on
@@ -315,9 +324,14 @@ function render(){
   var dr=document.getElementById('dayrow'); dr.innerHTML='';
   var DOW=['Mon','Tue','Wed','Thur','Fri','Sat','Sun'];
   var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  /* On a phone the full month name wraps every heading onto three lines and
+     eats a third of the grid. The month is already spelled out in the week
+     label above, so a narrow screen gets just the day number. */
+  var narrow = window.innerWidth < 700;
   days.forEach(function(ds,i){
     var d=parseISO(ds);
-    var c=el('div','dh'+(ds===tdy?' today':''), DOW[i]+' '+MON[d.getMonth()]+' '+d.getDate());
+    var txt = narrow ? (DOW[i]+' '+d.getDate()) : (DOW[i]+' '+MON[d.getMonth()]+' '+d.getDate());
+    var c=el('div','dh'+(ds===tdy?' today':''), txt);
     dr.appendChild(c);
   });
 
