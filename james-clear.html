@@ -95,6 +95,9 @@
 #deck .step{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-weight:800}
 #deck .big{font-size:21px;font-weight:700;line-height:1.22;margin-top:12px;color:var(--ink)}
 #deck .quote{font-size:19px;font-weight:500;font-style:italic;line-height:1.2;margin-top:12px;color:var(--ink)}
+#deck .quote.qm{font-size:17px;line-height:1.26}
+#deck .quote.qs{font-size:15px;line-height:1.3}
+#deck .quote.qt{font-size:14px;line-height:1.34}
 #deck .mean{font-size:14px;color:#5b6472;line-height:1.35;margin-top:12px}
   #deck .attr{font-size:13px;color:#9aa6b4;font-style:italic;margin-top:10px}
 #deck .src{font-size:12.5px;color:#9aa6b4;margin-top:10px;font-style:italic}
@@ -125,7 +128,7 @@
 
 <div id="app" class="hidden">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="ai.html" class="pn-link on">AI<br>Insights</a><a href="quotes.html" class="pn-link">Clever<br>Phrases</a><a href="compass.html" class="pn-link">Compass</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.8</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
-  <div class="secbar-wrap"><div class="secbar"><h1>Atomic Habits</h1><span class="ver">v1.10</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>Atomic Habits</h1><span class="ver">v1.11</span><span class="date"></span></div></div>
 
   <div class="toggle">
     <button id="tgToday" class="on" onclick="showView('deck')">Today's mix</button>
@@ -154,7 +157,7 @@
     </div>
   </div>
 
-  <div class="badge">Atomic Habits v1.10</div>
+  <div class="badge">Atomic Habits v1.11</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -179,6 +182,24 @@ function hstr(s){let h=2166136261;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i)
 function dstamp(){return new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});}
 function fmtDate(d){const p=d.split('-');const dt=new Date(+p[0],+p[1]-1,+p[2]);return dt.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});}
 function h2class(t){t=t||'';return t.length>260?' xs':t.length>150?' sm':'';}
+// Quote rows arrive in two shapes. In most of them the quote sits in `title` and
+// the attribution sits in `body`; in a few newer ones it is the other way round.
+// A body that opens with a quotation mark is the quote itself. Everything on this
+// page that shows or saves a quote goes through qparts() so it all agrees.
+var QMARK = String.fromCharCode(34,39,8216,8217,8220,8221);
+function qparts(c){
+  var t=String(c.title||''), b=String(c.body||'');
+  var bodyIsQuote = b.length>2 && QMARK.indexOf(b.replace(/^\s+/,'').charAt(0))>=0;
+  var q = bodyIsQuote ? b : t;
+  var a = bodyIsQuote ? t : b;
+  q = q.trim();
+  while(q.length && QMARK.indexOf(q.charAt(0))>=0) q = q.slice(1);
+  while(q.length && QMARK.indexOf(q.charAt(q.length-1))>=0) q = q.slice(0,-1);
+  a = String(a||'').replace(/[\s:]+$/,'').trim();
+  if(!a) a = c.source_book||'';
+  return {q:q.trim(), a:a};
+}
+function qsize(s){s=s||'';return s.length>400?' qt':s.length>260?' qs':s.length>150?' qm':'';}
 
 async function boot(){const {data:{session}}=await sb.auth.getSession();if(session){onLogin(session);return;}
   document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');load();}
@@ -207,14 +228,15 @@ function render(){
   document.getElementById('dots').innerHTML=MIX.map((_,i)=>'<div class="dot '+(i===idx?'on':'')+'"></div>').join('')+'<div class="dot '+(idx===total?'on':'')+'"></div>';
   if(idx>=total){renderSave();return;}
   const c=MIX[idx];
-  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div><span class="ver">v1.10</span></div>';
+  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div><span class="ver">v1.11</span></div>';
   const star='<span class="sstar'+(c.saved?' on':'')+'" title="Save to favorites" onclick="toggleFav(\''+c.id+'\')"><svg viewBox="0 0 24 24">'+STARP+'</svg></span>';
   let bd='<div class="step">'+esc(KICK[c.card_type]||c.card_type)+'</div>';
   if(c.card_type==='quote'){
-    // the quote itself is the headline; the title line is the attribution beneath it
-    var qt=(c.body&&c.body.length>2)?c.body:c.title, at=(c.body&&c.body.length>2)?c.title:(c.source_book||'');
+    // qparts() works out which column holds the quote and which holds the
+    // attribution, because the rows are not stored consistently.
+    var qp=qparts(c); var qt=qp.q, at=qp.a;
     qt=String(qt).replace(/^[\u201c\u2018"']+|[\u201d\u2019"']+$/g,'');
-    bd+='<div class="quote">&ldquo;'+esc(qt)+'&rdquo;</div>';
+    bd+='<div class="quote'+qsize(qt)+'">&ldquo;'+esc(qt)+'&rdquo;</div>';
     if(at) bd+='<div class="attr">'+esc(at)+'</div>';
     bd+='<button class="cta" id="sendcp" onclick="sendGreatQuote(\''+c.id+'\')">&#9733; Send to Things Worth Knowing</button>';
   } else {
@@ -234,7 +256,7 @@ function renderSave(){
     const lbl=c.card_type.charAt(0).toUpperCase()+c.card_type.slice(1)+' · '+fmtDate(c.issue_date);
     return '<div class="ck"><input type="checkbox" id="sv'+i+'" '+(c.saved?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(lbl)+'</div><div class="d">'+esc((c.title||'').slice(0,95))+'</div></label></div>';
   }).join('');
-  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div><span class="ver">v1.10</span></div>';
+  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div><span class="ver">v1.11</span></div>';
   document.getElementById('deck').innerHTML='<div class="card" style="--acc:#3f8f7a;--tint:#e4f1ec">'+hd+
     '<div class="bd"><div class="step">End of mix</div><div class="big">Keep what mattered.</div><div class="cklist">'+rows+'</div>'+
     '<div class="howlong">How long did this take?<input id="tmin" type="number" min="1" placeholder="min" class="in"></div>'+
@@ -266,14 +288,14 @@ function drawBrowse(){
   document.getElementById('bcount').textContent=list.length+' of '+CARDS.length+' pieces';
   document.getElementById('grid').innerHTML=list.map(c=>{
     const tag=c.card_type==='idea'?'Idea':c.card_type==='quote'?'Quote':'Question';
-    const txt=c.card_type==='quote'?('&ldquo;'+esc(c.title)+'&rdquo;'):esc(c.title);
+    const txt=c.card_type==='quote'?('&ldquo;'+esc(qparts(c).q)+'&rdquo;'):esc(c.title);
     const meta=c.card_type==='quote'&&c.source_book?(',  '+esc(c.source_book)+' · '+esc(fmtDate(c.issue_date))):('From '+esc(fmtDate(c.issue_date)));
     return '<div class="pcard"><span class="star '+(c.saved?'on':'')+'" onclick="toggleFav(\''+c.id+'\')">&#9733;</span>'+
       '<div class="ptag">'+tag+'</div><div class="txt">'+txt+'</div><div class="meta">'+meta+'</div></div>';
   }).join('') || '<div style="color:var(--muted);font-size:14px;padding:10px">Nothing matches.</div>';
 }
 
-function favPayload(c){return {content_type:c.card_type,title:c.title,body:c.body||null,author:c.card_type==='quote'?(c.body||null):null,url:c.issue_url||null,source:'James Clear 3-2-1 · '+c.issue_date,source_module:'james-clear',ref_table:'jc_321',ref_id:c.id,tags:[c.card_type,'james-clear']};}
+function favPayload(c){var qp=c.card_type==='quote'?qparts(c):null;return {content_type:c.card_type,title:qp?qp.q:c.title,body:qp?(qp.a||null):(c.body||null),author:qp?(qp.a||null):null,url:c.issue_url||null,source:'James Clear 3-2-1 · '+c.issue_date,source_module:'james-clear',ref_table:'jc_321',ref_id:c.id,tags:[c.card_type,'james-clear']};}
 async function toggleFav(id){
   const c=CARDS.find(x=>x.id===id); if(!c)return;
   if(c.saved){
@@ -291,15 +313,16 @@ async function toggleFav(id){
 }
 async function sendGreatQuote(id){
   const c=CARDS.find(x=>x.id===id); if(!c)return;
-  const author=c.body||null;
-  const {data:ex}=await sb.from('quotes').select('id,tags').eq('text',c.title).limit(1);
+  const qp=qparts(c);
+  const author=qp.a||null;
+  const {data:ex}=await sb.from('quotes').select('id,tags').eq('text',qp.q).limit(1);
   if(ex&&ex.length){
     const q=ex[0]; const tags=q.tags||[];
     if(tags.includes('great-quote')){toast('Already in Things Worth Knowing.');markSendDone();return;}
     const {error}=await sb.from('quotes').update({tags:tags.concat('great-quote'),is_new:true}).eq('id',q.id);
     if(error){toast('Error: '+error.message);return;}
   } else {
-    const {error}=await sb.from('quotes').insert({text:c.title,meaning:c.source_book||null,author:author,tags:['great-quote','james-clear'],source_module:'james-clear',is_new:true});
+    const {error}=await sb.from('quotes').insert({text:qp.q,meaning:c.source_book||null,author:author,tags:['great-quote','james-clear'],source_module:'james-clear',is_new:true});
     if(error){toast('Error: '+error.message);return;}
   }
   toast('Added to Things Worth Knowing ✓'); markSendDone();
