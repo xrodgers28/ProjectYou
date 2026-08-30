@@ -30,10 +30,11 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
   margin:0 -16px;padding:10px 16px 0;border-radius:12px 12px 0 0;
   box-shadow:0 6px 10px -10px rgba(31,42,68,.5)}
 .hrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 0 8px}
-/* Month / Week switch. It sits in the sticky header so it is reachable without
-   scrolling back to the top, which is what Scott asked for on Aug 30 2026. */
-.vsw{display:inline-flex;border:1px solid #d7d7cf;border-radius:8px;overflow:hidden;background:#f4f4ee;margin-right:4px}
-.vsw a{padding:5px 11px;font-size:11.5px;font-weight:700;color:#5f6b5f;text-decoration:none}
+/* Month / Week switch. It sits at the top of the pinned layers panel, matching
+   the calendar page exactly, so it is in the same place on both and never
+   scrolls out of reach. Scott asked for that on Aug 30 2026. */
+.vsw{display:flex;border:1px solid #d7d7cf;border-radius:8px;overflow:hidden;background:#f4f4ee;margin:0 0 12px}
+.vsw a{flex:1;text-align:center;padding:7px 0;font-size:12px;font-weight:700;color:#5f6b5f;text-decoration:none;letter-spacing:.2px}
 .vsw a.on{background:#2F8A5B;color:#fff}
 .vsw a:not(.on):hover{background:#e8e8e0;color:#1b1b1b}
 .hrow button{font:inherit;font-size:12.5px;font-weight:700;color:#5b6472;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
@@ -99,9 +100,20 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
    exact column the Layers list reads and writes. Turn Work off on either page
    and it is off on both. Sub-calendars (the ones inside Google, the artists
    inside Live events) are in-memory only on this page, same as they are there. */
-.cals{max-width:1360px;margin:10px auto 0;padding:0 16px;display:flex;flex-wrap:wrap;align-items:center;gap:6px}
-.cals .lab{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--faint);margin-right:2px;flex:none}
-.cal{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;font-family:inherit;line-height:1.3}
+/* The grid and the layers panel sit side by side, and the panel is pinned so it
+   stays put while the week scrolls. Scott asked for that on Aug 30 2026: the
+   calendars used to be a chip row above the grid that scrolled away. */
+.wklayout{max-width:1360px;margin:12px auto 40px;padding:0 16px;display:flex;gap:14px;align-items:flex-start}
+.sheet{flex:1;min-width:0;max-width:none;margin:0;padding:0}
+.wkrail{width:288px;flex:none;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px;
+  position:sticky;top:calc(var(--navh,60px) + 10px);max-height:calc(100vh - var(--navh,60px) - 24px);overflow:auto;
+  box-shadow:0 2px 10px rgba(31,42,68,.05)}
+.raillab{margin:0 0 2px;font-size:12.5px;color:var(--ink)}
+.railhint{margin:0 0 10px;font-size:10.5px;color:var(--faint);line-height:1.4}
+.cals{display:flex;flex-direction:column;align-items:stretch;gap:5px;margin:0;padding:0;max-width:none}
+.cals .lab{display:none}
+.cal{display:flex;width:100%;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 9px;font-size:12px;font-weight:700;color:var(--ink);cursor:pointer;font-family:inherit;line-height:1.3;text-align:left}
+.cal .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cal .dot{width:9px;height:9px;border-radius:50%;flex:none}
 .cal .n{font-size:10px;font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums}
 .cal .car{font-size:8px;color:var(--faint);padding-left:1px}
@@ -109,8 +121,8 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 .cal.off{opacity:.5;background:#f1f4f8}
 .cal.off .t{text-decoration:line-through}
 .cals .allon{font-size:11.5px;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit;padding:4px 2px}
-.subcals{flex-basis:100%;display:flex;flex-wrap:wrap;gap:5px;padding:2px 0 0 6px}
-.subcal{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 9px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit}
+.subcals{display:flex;flex-direction:column;align-items:stretch;gap:4px;padding:1px 0 3px 14px}
+.subcal{display:flex;width:100%;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 9px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit;text-align:left}
 .subcal .dot{width:6px;height:6px;border-radius:50%;flex:none}
 .subcal.off{opacity:.5;background:#f1f4f8;text-decoration:line-through}
 
@@ -148,7 +160,15 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 
 @media(max-width:900px){
-  .sheet,.pagehead{padding:0 10px}
+  /* No room for a side panel on a phone, so it folds above the grid and stops
+     being pinned. Same behaviour as the month view. */
+  .wklayout{flex-direction:column;padding:0 10px;gap:10px}
+  .wkrail{width:auto;align-self:stretch;position:static;max-height:none;overflow:visible;padding:10px}
+  .cals{flex-direction:row;flex-wrap:wrap;align-items:center}
+  .cal{width:auto;border-radius:999px;padding:4px 10px}
+  .subcals{flex-direction:row;flex-wrap:wrap;flex-basis:100%;padding-left:6px}
+  .subcal{width:auto;border-radius:999px}
+  .pagehead{padding:0 10px}
   .stickhead{margin:0 -8px;padding:8px 8px 0}
   .hrow{gap:6px;padding-bottom:6px}
   .hrow button{font-size:11.5px;padding:4px 9px}
@@ -177,17 +197,16 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 <div class="pynav"></div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.5</span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.6</span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag an all-day bar from the top band down onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
 </div>
 
-<div class="cals" id="cals"></div>
+<div class="wklayout">
 
 <div class="sheet">
   <div class="card">
     <div class="stickhead">
       <div class="hrow">
-        <span class="vsw"><a href="calendar.html">Month</a><a class="on" href="calendar-week.html">Week</a></span>
         <button id="prev">&#8249; Previous</button>
         <button id="today">This week</button>
         <button id="next">Next &#8250;</button>
@@ -207,6 +226,15 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
       </div>
     </div>
   </div>
+</div>
+
+<div class="wkrail">
+  <div class="vsw"><a href="calendar.html">Month</a><a class="on" href="calendar-week.html">Week</a></div>
+  <h2 class="raillab">Layers</h2>
+  <p class="railhint">Tick a calendar to show or hide it. The arrow opens the calendars inside it. Everything you change here is saved.</p>
+  <div class="cals" id="cals"></div>
+</div>
+
 </div>
 
 <div class="pop" id="pop"><div class="box">
@@ -243,7 +271,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Week view v1.5 =====
+/* ===== Project YOU · Week view v1.6 =====
    A second way of looking at the same calendar_events table the list view on
    calendar.html reads. Nothing here has its own store: a block on this grid IS
    a calendar event, so a change made here shows up on the list view and on
@@ -461,7 +489,17 @@ function drawCals(){
         sb2.onclick=function(){ enabledSub[key]=!son; render(); setSub(openCat,sname,!son); };
         row.appendChild(sb2);
       });
-      box.appendChild(row);
+      /* In the side panel the list runs downwards, so the calendars inside a
+         layer have to sit directly under their own row, not at the foot of the
+         panel where they would look like they belong to the last layer. */
+      var parentBtn=null;
+      [].slice.call(box.querySelectorAll('.cal')).forEach(function(btn){
+        var t=btn.querySelector('.t');
+        if(t && t.textContent===catLabel(openCat)) parentBtn=btn;
+      });
+      if(parentBtn && parentBtn.nextSibling) box.insertBefore(row,parentBtn.nextSibling);
+      else if(parentBtn) box.appendChild(row);
+      else box.appendChild(row);
     }
   }
 }
