@@ -103,6 +103,17 @@ p.sub b{color:#2f8f5b}
 /* ---------- right rail ---------- */
 .rail{width:288px;flex:none;background:#fff;border:1px solid #d7d7cf;border-radius:8px;padding:12px;position:sticky;top:calc(var(--navh,63px) + 10px);max-height:calc(100vh - var(--navh,63px) - 24px);overflow:auto}
 .rail h2{margin:0 0 2px;font-size:12.5px;color:#1b1b1b}
+/* Month / Week switch. It lives with the Layers panel on purpose: Scott asked
+   Aug 30 to stop scrolling to the top of the page to change view. */
+.vsw{display:flex;gap:0;margin:0 0 12px;border:1px solid #d7d7cf;border-radius:8px;overflow:hidden;background:#f4f4ee}
+.vsw a{flex:1;text-align:center;padding:7px 0;font-size:12px;font-weight:700;color:#5f6b5f;text-decoration:none;letter-spacing:.2px}
+.vsw a.on{background:#2F8A5B;color:#fff}
+.vsw a:not(.on):hover{background:#e8e8e0;color:#1b1b1b}
+/* rename pencil, shown on hover so the panel stays quiet */
+.pen{opacity:0;border:none;background:none;cursor:pointer;font-size:10.5px;color:#9a9a90;padding:0 3px;line-height:1}
+.catrow:hover .pen,.subrow:hover .pen{opacity:1}
+.pen:hover{color:#2F8A5B}
+.subrow .sdot{width:7px;height:7px;border-radius:50%;flex:none;margin-right:1px}
 .rail .hint{margin:0 0 10px;font-size:10.5px;color:#9a9a90;line-height:1.4}
 .cat{border-radius:7px;margin-bottom:1px}
 .cat.dragover{box-shadow:inset 0 2px 0 var(--accent)}
@@ -272,12 +283,12 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v1.6</span>
+  <span class="pn-ver">v1.7</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v1.6</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v1.7</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Live events sit dimmed because they are tour dates you are tracking; star one to say you are going and it comes forward. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
 </div>
 
@@ -298,6 +309,8 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
       <div class="eg">Try: “ZBB at Red Rocks on October 19”, “dentist the 14th at 3pm”, “trip to Boston Dec 2 to Dec 5”.</div>
       <div class="msg" id="sayMsg"></div>
     </div>
+
+    <div class="vsw"><a class="vs on" href="calendar.html">Month</a><a class="vs" href="calendar-week.html">Week</a></div>
 
     <h2>Layers</h2>
     <p class="hint">Hover to light up &middot; drag to reorder &middot; arrow folds a layer &middot; tick to show or hide it. Everything you change here is saved.</p>
@@ -338,7 +351,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Calendar v1.6 =====
+/* ===== Project YOU · Calendar v1.7 =====
    Events live in public.calendar_events, layers in public.calendar_categories.
    New in v1.2: sign-in (the Google feed brings personal appointments onto this
    page, so it can no longer be open to anyone with the URL), plain-English add
@@ -360,6 +373,15 @@ const GCALS=[
 ];
 
 let CATS={}, catOrder=[], EVENTS=[], Y0=2026, Y1=2027;
+/* Display names and colours for the calendars nested inside a layer, keyed
+   "Layer|Calendar". Scott renames them on this page (Aug 30 2026); the stored
+   key never changes, so the two-hourly Google sync cannot undo his name. */
+let SUBMETA={};
+function subMeta(cat,sub){return (sub&&SUBMETA[cat+"|"+sub])||{};}
+function catLabel(c){return (CATS[c]&&CATS[c].label)||c;}
+function subLabel(cat,sub){return subMeta(cat,sub).label||sub;}
+function colorOf(e){return subMeta(e.cat,e.sub).color||catOf(e.cat).color;}
+function fillOf(e){return subMeta(e.cat,e.sub).fill||catOf(e.cat).fill;}
 const MAXCHIPS=3;
 const MFULL=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DOWN=["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
@@ -422,8 +444,8 @@ function starHTML(e){
   return '<span class="st" data-star="'+e.id+'" title="'+(e.attending?'You are going, tap to undo':'Star it if you are going')+'">'+(e.attending?'\u2605':'\u2606')+'</span>';
 }
 function chipHTML(e,span){
-  return '<div class="chip'+(span?' spanchip':'')+goCls(e)+'" data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'" style="color:'+catOf(e.cat).color+'">'
-    +'<span class="cd" style="background:'+catOf(e.cat).color+'"></span>'
+  return '<div class="chip'+(span?' spanchip':'')+goCls(e)+'" data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'" style="color:'+colorOf(e)+'">'
+    +'<span class="cd" style="background:'+colorOf(e)+'"></span>'
     +iconHTML(e)
     +(e.start_time?'<span class="tm">'+shortTime(e.start_time)+'</span>':'')
     +'<span class="ct">'+esc(labelOf(e))+'</span>'
@@ -464,7 +486,7 @@ function renderCal(){
         const liveSingles=startSingles.filter(e=>e.cat==='Live events');
         const otherSingles=startSingles.filter(e=>e.cat!=='Live events');
         let bg="", bgcat="";
-        if(spans.length){bg='background:'+catOf(spans[0].cat).fill+';';bgcat=hk(spans[0]);}
+        if(spans.length){bg='background:'+fillOf(spans[0])+';';bgcat=hk(spans[0]);}
         else if(otherSingles.length){bg='background:'+catOf(otherSingles[0].cat).fill+';';bgcat=hk(otherSingles[0]);}
         html+='<div class="cell'+(out?' out':'')+(today?' today':'')+'"'+(i===0?' data-mon="'+ds+'"':'')+(bgcat?' data-bg="'+esc(bgcat)+'"':'')+' style="'+bg+'"><span class="dn">'+cd.getDate()+'</span>';
         const body=[];
@@ -527,15 +549,22 @@ function renderRail(){
       +'<div class="catrow" data-hov="'+esc(c)+'"><span class="grip">&#8942;&#8942;</span>'
       +'<span class="caret" data-fold="'+esc(c)+'">'+(collapsed[c]?'&#9656;':'&#9662;')+'</span>'
       +'<span class="dot" style="background:'+col+'"></span>'
-      +'<span class="nm">'+esc(c)+'</span>'
+      +'<span class="nm">'+esc(catLabel(c))+'</span>'
+      +'<button class="pen" data-rencat="'+esc(c)+'" title="Rename this layer">&#9998;</button>'
       +(going?'<span class="going" title="You are going to '+going+'">\u2605'+going+'</span>':'')
       +'<span class="cnt">'+cnt+'</span>'
       +'<input type="checkbox" data-cat="'+esc(c)+'"'+(enabledCat[c]?' checked':'')+'></div>';
-    if(has){h+='<div class="subs">';subs.forEach(s=>{const k=c+"|"+s,on=enabledSub[k]!==false;h+='<div class="subrow" data-hov="'+esc(k)+'"><input type="checkbox" data-sub="'+esc(k)+'"'+(on?' checked':'')+'><span>'+esc(s)+'</span></div>';});h+='</div>';}
+    if(has){h+='<div class="subs">';subs.forEach(s=>{const k=c+"|"+s,on=enabledSub[k]!==false,sc=subMeta(c,s).color;
+      h+='<div class="subrow" data-hov="'+esc(k)+'"><input type="checkbox" data-sub="'+esc(k)+'"'+(on?' checked':'')+'>'
+        +(sc?'<span class="sdot" style="background:'+sc+'"></span>':'')
+        +'<span>'+esc(subLabel(c,s))+'</span>'
+        +'<button class="pen" data-rensub="'+esc(k)+'" title="Rename this calendar">&#9998;</button></div>';});h+='</div>';}
     h+='</div>';
   });
   r.innerHTML=h;
   r.querySelectorAll('.caret').forEach(el=>el.onclick=()=>{collapsed[el.dataset.fold]=!collapsed[el.dataset.fold];renderRail();});
+  r.querySelectorAll('[data-rencat]').forEach(el=>el.onclick=ev=>{ev.stopPropagation();renameCat(el.dataset.rencat);});
+  r.querySelectorAll('[data-rensub]').forEach(el=>el.onclick=ev=>{ev.stopPropagation();renameSub(el.dataset.rensub);});
   r.querySelectorAll('input[data-cat]').forEach(el=>el.onchange=()=>{
     enabledCat[el.dataset.cat]=el.checked; renderCal(); renderRail();
     save('calendar_categories',{enabled:el.checked},'name',el.dataset.cat);
@@ -577,6 +606,30 @@ function saveOrder(){catOrder.forEach((c,i)=>save('calendar_categories',{sort_or
    how it is held in memory, so it is split back apart here rather than stored
    joined: two columns can be read by any other page without knowing the join
    character. */
+/* Renaming. Only the NAME SHOWN changes; the underlying key stays put, so the
+   two-hourly Google sync keeps matching events to the right layer and cannot
+   quietly rename anything back. Clearing the box restores the original name. */
+function renameCat(c){
+  const cur=catLabel(c);
+  const v=window.prompt('What should this layer be called?\n\n(Leave it empty to go back to "'+c+'")',cur);
+  if(v===null)return;
+  const lab=v.trim()||null;
+  if(!CATS[c])return;
+  CATS[c].label=lab; renderRail();
+  save('calendar_categories',{label:lab},'name',c);
+}
+function renameSub(key){
+  const i=key.indexOf('|'); if(i<0)return;
+  const cat=key.slice(0,i), sub=key.slice(i+1);
+  const v=window.prompt('What should this calendar be called?\n\n(Leave it empty to go back to "'+sub+'")',subLabel(cat,sub));
+  if(v===null)return;
+  const lab=v.trim()||null;
+  const m=SUBMETA[key]||{}; m.label=lab; SUBMETA[key]=m; renderRail();
+  if(!sb)return;
+  sb.from('calendar_sub_prefs')
+    .upsert([{cat:cat,sub:sub,enabled:enabledSub[key]!==false,label:lab,color:m.color||null,fill:m.fill||null,updated_at:new Date().toISOString()}],{onConflict:'cat,sub'})
+    .then(r=>{ if(r&&r.error){console.error(r.error);flag(false,'Could not save that name');} else flag(true); });
+}
 function saveSub(key,on){
   if(!sb)return;
   const i=key.indexOf('|'); if(i<0)return;
@@ -662,7 +715,7 @@ function openEvent(id){
     +(e.loc?'<div class="meta">'+esc(e.loc)+'</div>':'')
     +(e.link?'<div class="meta"><a href="'+esc(e.link)+'" target="_blank" rel="noopener">Open the source</a></div>':'')
     +(e.notes?'<div class="meta">'+esc(e.notes)+'</div>':'')
-    +'<span class="tag" style="background:'+col+'">'+esc(e.cat)+(e.sub?' / '+esc(e.sub):'')+'</span>'
+    +'<span class="tag" style="background:'+colorOf(e)+'">'+esc(catLabel(e.cat))+(e.sub?' / '+esc(subLabel(e.cat,e.sub)):'')+'</span>'
     +(e.readonly?'<span class="ro">Read only, it lives in Google</span>':'')
     +(gs==='queued'?'<div class="meta" style="color:#2F8A5B"><b>Queued for Google</b></div>':'')
     +(gs==='sent'?'<div class="meta" style="color:#2F8A5B"><b>On your Google calendar</b></div>':'')
@@ -863,7 +916,7 @@ function openConfirm(p,rawText){
    +'<div><label>To</label><input id="fT2" type="time" value="'+esc(p.end_time||'')+'"></div></div>'
    +'<div><label>Where</label><input id="fLoc" value="'+esc(p.loc||'')+'"></div>'
    +'<div class="two"><div><label>Layer</label><select id="fCat" class="'+(p.guessedCat?'guessed':'')+'">'
-     +catOrder.map(c=>'<option'+(c===p.cat?' selected':'')+'>'+esc(c)+'</option>').join('')+'</select></div>'
+     +catOrder.map(c=>'<option value="'+esc(c)+'"'+(c===p.cat?' selected':'')+'>'+esc(catLabel(c))+'</option>').join('')+'</select></div>'
    +'<div><label>Sub-layer</label><input id="fSub" value="'+esc(p.sub||'')+'" placeholder="e.g. Zac Brown Band"></div></div>'
    +'<div><label>Notes</label><textarea id="fNotes"></textarea></div>'
    +'</div>'
@@ -982,7 +1035,7 @@ async function load(scroll){
     const [rc,re,rs]=await Promise.all([
       sb.from('calendar_categories').select('*').order('sort_order',{ascending:true}),
       sb.from('calendar_events').select('*').order('date',{ascending:true}).limit(5000),
-      sb.from('calendar_sub_prefs').select('cat,sub,enabled')
+      sb.from('calendar_sub_prefs').select('cat,sub,enabled,label,color,fill')
     ]);
     if(rc.error)throw rc.error; if(re.error)throw re.error;
     /* The layers INSIDE a layer used to reset to all-on every reload. Scott asked
@@ -990,9 +1043,11 @@ async function load(scroll){
        are stored the same way the top-level ones are and read back here. A
        failure to read them is not fatal: everything simply starts switched on. */
     const SUBSAVED={};
-    if(rs&&!rs.error&&rs.data) rs.data.forEach(r=>{ SUBSAVED[r.cat+"|"+r.sub]=(r.enabled!==false); });
+    SUBMETA={};
+    if(rs&&!rs.error&&rs.data) rs.data.forEach(r=>{ SUBSAVED[r.cat+"|"+r.sub]=(r.enabled!==false);
+      SUBMETA[r.cat+"|"+r.sub]={label:r.label||null,color:r.color||null,fill:r.fill||null}; });
     CATS={}; catOrder=[];
-    rc.data.forEach(c=>{CATS[c.name]={color:c.color,fill:c.fill}; catOrder.push(c.name);
+    rc.data.forEach(c=>{CATS[c.name]={color:c.color,fill:c.fill,label:c.label||null}; catOrder.push(c.name);
       if(enabledCat[c.name]===undefined)enabledCat[c.name]=c.enabled!==false;
       if(collapsed[c.name]===undefined)collapsed[c.name]=false;});
     EVENTS=re.data.map(e=>({id:e.id,date:e.date,end:e.end_date,start_time:e.start_time,end_time:e.end_time,
