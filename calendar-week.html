@@ -30,6 +30,12 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
   margin:0 -16px;padding:10px 16px 0;border-radius:12px 12px 0 0;
   box-shadow:0 6px 10px -10px rgba(31,42,68,.5)}
 .hrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:0 0 8px}
+/* Month / Week switch. It sits in the sticky header so it is reachable without
+   scrolling back to the top, which is what Scott asked for on Aug 30 2026. */
+.vsw{display:inline-flex;border:1px solid #d7d7cf;border-radius:8px;overflow:hidden;background:#f4f4ee;margin-right:4px}
+.vsw a{padding:5px 11px;font-size:11.5px;font-weight:700;color:#5f6b5f;text-decoration:none}
+.vsw a.on{background:#2F8A5B;color:#fff}
+.vsw a:not(.on):hover{background:#e8e8e0;color:#1b1b1b}
 .hrow button{font:inherit;font-size:12.5px;font-weight:700;color:#5b6472;background:#fff;border:1px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer}
 .hrow button:hover{border-color:var(--accent);color:var(--accent)}
 .hrow .wklab{font-size:15px;font-weight:800;color:var(--ink);margin:0 4px}
@@ -171,7 +177,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 <div class="pynav"></div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.4</span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.5</span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag an all-day bar from the top band down onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
 </div>
 
@@ -181,6 +187,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
   <div class="card">
     <div class="stickhead">
       <div class="hrow">
+        <span class="vsw"><a href="calendar.html">Month</a><a class="on" href="calendar-week.html">Week</a></span>
         <button id="prev">&#8249; Previous</button>
         <button id="today">This week</button>
         <button id="next">Next &#8250;</button>
@@ -236,7 +243,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:Arial,Helvetica,sans-s
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Week view v1.4 =====
+/* ===== Project YOU · Week view v1.5 =====
    A second way of looking at the same calendar_events table the list view on
    calendar.html reads. Nothing here has its own store: a block on this grid IS
    a calendar event, so a change made here shows up on the list view and on
@@ -296,6 +303,15 @@ function clock(m){
   return h12+(mm?':'+String(mm).padStart(2,'0'):'')+' '+ap;
 }
 function catOf(c){ return CATS[c]||{color:'#5F6B7A',fill:'#EAECEF'}; }
+/* Display names and colours for the calendars nested inside a layer, keyed
+   "Layer|Calendar", shared with the month view. Scott renames them there
+   (Aug 30 2026) and this page has to show the name he chose. */
+var SUBMETA={};
+function subMeta(cat,sub){ return (sub&&SUBMETA[cat+'|'+sub])||{}; }
+function catLabel(c){ return (CATS[c]&&CATS[c].label)||c; }
+function subLabel(cat,sub){ return subMeta(cat,sub).label||sub; }
+function colorOf(e){ return subMeta(e.cat,e.sub).color||catOf(e.cat).color; }
+function fillOf(e){ return subMeta(e.cat,e.sub).fill||catOf(e.cat).fill; }
 
 /* Monday of the week a date falls in. */
 function mondayOf(d){ var x=new Date(d.getTime()); var w=(x.getDay()+6)%7; x.setDate(x.getDate()-w); x.setHours(0,0,0,0); return x; }
@@ -411,7 +427,7 @@ function drawCals(){
     var subs=subsOf(name);
     var b=el('button','cal'+(on?'':' off'));
     var d=el('span','dot'); d.style.background=c.color; b.appendChild(d);
-    b.appendChild(el('span','t',name));
+    b.appendChild(el('span','t',catLabel(name)));
     if(n) b.appendChild(el('span','n',String(n)));
     if(subs.length){ b.appendChild(el('span','car', openCat===name?'▾':'▸')); }
     b.title = on ? 'Hide '+name : 'Show '+name;
@@ -440,8 +456,8 @@ function drawCals(){
       subs.forEach(function(sname){
         var key=openCat+'|'+sname, son=enabledSub[key]!==false;
         var sb2=el('button','subcal'+(son?'':' off'));
-        var sd=el('span','dot'); sd.style.background=catOf(openCat).color; sb2.appendChild(sd);
-        sb2.appendChild(document.createTextNode(sname));
+        var sd=el('span','dot'); sd.style.background=subMeta(openCat,sname).color||catOf(openCat).color; sb2.appendChild(sd);
+        sb2.appendChild(document.createTextNode(subLabel(openCat,sname)));
         sb2.onclick=function(){ enabledSub[key]=!son; render(); setSub(openCat,sname,!son); };
         row.appendChild(sb2);
       });
@@ -490,7 +506,7 @@ function drawBand(days){
   band.style.height=(n*17+5)+'px';
 
   items.forEach(function(it){
-    var c=catOf(it.e.cat);
+    var c={color:colorOf(it.e),fill:fillOf(it.e)};
     var d=el('div','allday');
     d.style.left='calc('+(it.a*100/7)+'% + 1px)';
     d.style.width='calc('+((it.b-it.a+1)*100/7)+'% - 2px)';
@@ -536,7 +552,7 @@ function drawBlocks(days){
 }
 
 function makeBlock(it,di){
-  var e=it.e, c=catOf(e.cat), locked=!!e.readonly;
+  var e=it.e, c={color:colorOf(e),fill:fillOf(e)}, locked=!!e.readonly;
   var colW=100/7, w=colW/it.width;
   var b=el('div','blk'+(locked?' locked':'')+((it.en-it.s)>=170?' tall':''));
   b.style.left='calc('+(di*colW+it.lane*w)+'% + 1px)';
@@ -829,17 +845,19 @@ async function load(){
     const [rc,re,rs]=await Promise.all([
       sb.from('calendar_categories').select('*').order('sort_order',{ascending:true}),
       sb.from('calendar_events').select('*').order('date',{ascending:true}).limit(5000),
-      sb.from('calendar_sub_prefs').select('cat,sub,enabled')
+      sb.from('calendar_sub_prefs').select('cat,sub,enabled,label,color,fill')
     ]);
     if(rc.error)throw rc.error; if(re.error)throw re.error;
     /* The calendars INSIDE a calendar used to reset to all-on every reload.
        Scott asked Aug 29 for them to be remembered, here and on the list view,
        so they are read from the same store both pages write to. A failure to
        read them is not fatal: everything simply starts switched on. */
-    if(rs&&!rs.error&&rs.data) rs.data.forEach(function(r){ enabledSub[r.cat+'|'+r.sub]=(r.enabled!==false); });
+    SUBMETA={};
+    if(rs&&!rs.error&&rs.data) rs.data.forEach(function(r){ enabledSub[r.cat+'|'+r.sub]=(r.enabled!==false);
+      SUBMETA[r.cat+'|'+r.sub]={label:r.label||null,color:r.color||null,fill:r.fill||null}; });
     CATS={}; catOrder=[];
     rc.data.forEach(function(c){
-      CATS[c.name]={color:c.color,fill:c.fill}; catOrder.push(c.name);
+      CATS[c.name]={color:c.color,fill:c.fill,label:c.label||null}; catOrder.push(c.name);
       if(enabledCat[c.name]===undefined) enabledCat[c.name]=(c.enabled!==false);
     });
     EVENTS=re.data.map(function(e){ return {
