@@ -167,7 +167,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.3</div>
+  <div class="stamp" id="stamp">v1.4</div>
 </div>
 
 <script>
@@ -293,15 +293,23 @@ function paint(){
   document.getElementById("savedlink").textContent = saved ? ("Saved, "+saved+" today") : "Saved";
 }
 
+function setStar(it){
+  var b=document.querySelector('[data-item="'+it.item_id+'"]');
+  if(b) b.setAttribute("aria-pressed", it.saved?"true":"false");
+  var k=document.getElementById("oaKeep");
+  if(k){ k.setAttribute("aria-pressed", it.saved?"true":"false"); k.textContent=it.saved?"Kept":"Keep"; }
+  var n=ITEMS.filter(function(i){return i.saved;}).length;
+  document.getElementById("savedlink").textContent = n ? ("Saved, "+n+" today") : "Saved";
+}
 function toggle(it){
   var want=!it.saved;
   var p = want
     ? api("wall_saved",{method:"POST",body:JSON.stringify({item_id:it.item_id}),prefer:"resolution=ignore-duplicates"})
     : api("wall_saved?item_id=eq."+it.item_id,{method:"DELETE"});
   it.saved=want;
-  paint();
+  setStar(it);
   p.catch(function(e){
-    it.saved=!want; paint();
+    it.saved=!want; setStar(it);
     document.getElementById("err").innerHTML='<div class="err">Could not save that one: '+esc(e.message)+'</div>';
   });
 }
@@ -358,7 +366,7 @@ function boot(){
         days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+" pictures from ten sources";
       document.getElementById("layname").textContent=LAYNAME[LAYOUT]||LAYOUT;
       document.getElementById("stamp").textContent=
-        "v1.3, dealt "+DAY+", the layout changes every day, nothing here is about you";
+        "v1.4, dealt "+DAY+", the layout changes every day, nothing here is about you";
       if(DAY!==today()){
         document.getElementById("err").innerHTML=
           '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
