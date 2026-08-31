@@ -70,7 +70,7 @@
 
   .cs{background:#171614;padding:16px 18px 20px}
   .cs .g{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
-  .cs .c{position:relative}
+  .cs .c{position:relative;content-visibility:auto;contain-intrinsic-size:180px 200px}
   .cs .c a{display:block}
   .cs .c img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:#2a2723;border:1px solid #34312c}
   .cs .c .n{font-size:9px;letter-spacing:.4px;text-transform:uppercase;color:#8b8378;
@@ -128,7 +128,11 @@
 
   .ig{padding:4px 16px 16px}
   .igr{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px}
-  .igr iframe{flex:0 0 322px;height:142px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .igslot{flex:0 0 322px;height:142px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);
+          display:grid;place-items:center;overflow:hidden;position:relative}
+  .igslot iframe{width:322px;height:142px;border:0;background:#fff;display:block}
+  .igslot .ph{font-size:12px;color:var(--muted);text-align:center;padding:0 12px}
+  .igslot .ph b{display:block;color:var(--ink);font-size:13px;margin-bottom:3px}
 
   .stamp{margin-top:16px;font-size:10.5px;letter-spacing:.6px;color:var(--muted);text-align:center}
   .err{background:var(--badbg);border:1px solid var(--bad);color:var(--bad);
@@ -159,18 +163,24 @@
   <div class="card">
     <div class="sec"><h2>Photographers</h2><span class="n">live cards from Instagram</span></div>
     <div class="ig"><div class="igr" id="igr"></div></div>
-    <div class="note">Instagram will not hand a machine their photographs, so these are the live profile cards, which are always current. Anything of theirs you pin to your board turns up in the board rail the next morning.</div>
+    <div class="note">Instagram will not hand a machine their photographs, so these are the live profile cards, which are always current. Anything of theirs you pin to your board turns up in the board rail the next morning. The cards load one at a time, because five of them at once make the page crawl.</div>
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.0</div>
+  <div class="stamp" id="stamp">v1.1</div>
 </div>
 
 <script>
 var SB="https://arnjntspmrhigodlssbn.supabase.co";
 var KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
 
-var HANDLES=["stevemccurryofficial","monaris_","sixstreetunder","arnold_daniel","joel_meyerowitz"];
+var PHOTOGS=[
+  {h:"stevemccurryofficial", n:"Steve McCurry"},
+  {h:"monaris_",             n:"Paola M. Franqui"},
+  {h:"sixstreetunder",       n:"Craig Whitehead"},
+  {h:"arnold_daniel",        n:"Daniel Arnold"},
+  {h:"joel_meyerowitz",      n:"Joel Meyerowitz"}
+];
 var LAYNAME={contact:"Contact sheet",lightbox:"Lightbox",rails:"Rails",broadsheet:"Broadsheet",one:"One at a time"};
 
 function api(path,opts){
@@ -188,6 +198,9 @@ var STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5
 function starBtn(it){
   return '<button class="st" type="button" data-item="'+it.item_id+'" aria-label="Save this" aria-pressed="'+
     (it.saved?"true":"false")+'">'+STAR+'</button>';
+}
+function img(src,alt,extra){
+  return '<img src="'+esc(src)+'" alt="'+esc(alt)+'" loading="lazy" decoding="async"'+(extra||"")+'>';
 }
 function today(){
   if(window.PY&&PY.today) return PY.today();
@@ -207,8 +220,7 @@ function drawContact(){
   var h='<div class="card"><div class="sec"><h2>Contact sheet</h2><span class="n">'+ITEMS.length+' frames, ten sources</span></div><div class="cs"><div class="g">';
   ITEMS.forEach(function(it){
     h+='<div class="c">'+starBtn(it)+'<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+
-       '<img src="'+esc(it.img)+'" alt="'+esc(it.title)+'" loading="lazy"></a>'+
-       '<div class="n">'+esc(it.source)+'</div></div>';
+       img(it.img,it.title)+'</a><div class="n">'+esc(it.source)+'</div></div>';
   });
   return h+'</div></div></div>';
 }
@@ -219,8 +231,8 @@ function drawLightbox(){
   ITEMS.forEach(function(it,n){
     var z=sizes[n%sizes.length];
     h+='<div class="p" style="transform:rotate('+rots[n%rots.length]+'deg)">'+starBtn(it)+
-       '<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer"><img src="'+esc(it.img)+
-       '" alt="'+esc(it.title)+'" loading="lazy" style="width:'+z[0]+'px;height:'+z[1]+'px"></a>'+
+       '<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+
+       img(it.img,it.title,' style="width:'+z[0]+'px;height:'+z[1]+'px"')+'</a>'+
        '<div class="lb">'+esc(it.source)+'</div></div>';
   });
   return h+'</div></div></div>';
@@ -231,7 +243,7 @@ function drawRails(){
     h+='<div class="rh"><b>'+esc(g.name)+'</b><span>'+g.items.length+' today</span></div><div class="rail">';
     g.items.forEach(function(it){
       h+='<div class="tile">'+starBtn(it)+'<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+
-         '<img src="'+esc(it.img)+'" alt="'+esc(it.title)+'" loading="lazy"></a>'+
+         img(it.img,it.title)+'</a>'+
          '<div class="tt"><a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+esc(it.title)+'</a></div>'+
          '<div class="ts">'+esc(it.source)+'</div></div>';
     });
@@ -244,12 +256,12 @@ function drawBroadsheet(){
   var lead=ITEMS[0], rest=ITEMS.slice(1,7);
   var h='<div class="card"><div class="sec"><h2>Broadsheet</h2><span class="n">one lead, then the tail</span></div><div class="bs">'+
     '<div class="lead">'+starBtn(lead)+'<a href="'+esc(lead.link)+'" target="_blank" rel="noopener noreferrer">'+
-    '<img src="'+esc(lead.img)+'" alt="'+esc(lead.title)+'" loading="lazy"></a>'+
+    img(lead.img,lead.title)+'</a>'+
     '<h3><a href="'+esc(lead.link)+'" target="_blank" rel="noopener noreferrer">'+esc(lead.title)+'</a></h3>'+
     '<div class="srcline">'+esc(lead.source)+'</div></div><div class="side">';
   rest.forEach(function(it){
     h+='<div class="sm"><a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+
-       '<img src="'+esc(it.img)+'" alt="" loading="lazy"></a><div class="x">'+
+       img(it.img,"")+'</a><div class="x">'+
        '<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+esc(it.title)+'</a>'+
        '<div class="srcline">'+esc(it.source)+'</div></div></div>';
   });
@@ -259,7 +271,7 @@ function drawOne(){
   if(!ITEMS.length) return "";
   var it=ITEMS[oneAt];
   return '<div class="card"><div class="oa"><div class="stage">'+
-    '<img src="'+esc(it.img)+'" alt="'+esc(it.title)+'">'+
+    '<img src="'+esc(it.img)+'" alt="'+esc(it.title)+'" decoding="async">'+
     '<div class="ctr"><span>'+(oneAt+1)+' of '+ITEMS.length+'</span><span>'+esc(it.source)+'</span></div></div>'+
     '<div class="bar"><div class="tx"><a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+
     esc(it.title)+'</a><em>'+esc(it.source)+'</em></div>'+
@@ -303,15 +315,34 @@ document.addEventListener("click",function(e){
   if(it) toggle(it);
 });
 
-(function(){
-  HANDLES.forEach(function(h){
+function mountPhotogs(){
+  var host=document.getElementById("igr"), slots=[];
+  PHOTOGS.forEach(function(p){
+    var d=document.createElement("div");
+    d.className="igslot";
+    d.innerHTML='<div class="ph"><b>'+esc(p.n)+'</b>@'+esc(p.h)+'</div>';
+    d.setAttribute("data-h",p.h);
+    host.appendChild(d); slots.push(d);
+  });
+  var i=0;
+  function next(){
+    if(i>=slots.length) return;
+    var d=slots[i++], h=d.getAttribute("data-h");
     var f=document.createElement("iframe");
     f.src="https://www.instagram.com/"+h+"/embed/";
-    f.setAttribute("scrolling","no"); f.setAttribute("loading","lazy");
+    f.setAttribute("scrolling","no");
     f.title="Instagram profile, "+h;
-    document.getElementById("igr").appendChild(f);
-  });
-})();
+    f.onload=function(){ setTimeout(next,300); };
+    setTimeout(function(){ if(i===slots.length) return; next(); },4000);
+    d.innerHTML=""; d.appendChild(f);
+  }
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(en){ if(en.isIntersecting){ io.disconnect(); next(); } });
+    },{rootMargin:"200px"});
+    io.observe(host);
+  } else { setTimeout(next,2000); }
+}
 
 function boot(){
   api("v_wall_today?select=*&order=day.desc,slot.asc&limit=200").then(function(rows){
@@ -327,16 +358,18 @@ function boot(){
         days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+" pictures from ten sources";
       document.getElementById("layname").textContent=LAYNAME[LAYOUT]||LAYOUT;
       document.getElementById("stamp").textContent=
-        "v1.0, dealt "+DAY+", the layout changes every day, nothing here is about you";
+        "v1.1, dealt "+DAY+", the layout changes every day, nothing here is about you";
       if(DAY!==today()){
         document.getElementById("err").innerHTML=
           '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
       }
       paint();
+      setTimeout(mountPhotogs,1200);
     });
   }).catch(function(e){
     document.getElementById("err").innerHTML='<div class="err">Could not load the wall: '+esc(e.message)+'</div>';
     document.getElementById("sub").textContent="";
+    setTimeout(mountPhotogs,1200);
   });
 }
 boot();
