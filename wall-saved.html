@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saved &middot; ProjectYou</title>
+<script src="py-day.js"></script>
+</head>
+<body>
+<div class="pynav"></div>
+<style>
+  :root{
+    --ink:#1f2a44; --onbg:#1f2a44; --muted:#5b6472; --faint:#9aa6b4;
+    --line:#e3e7ee; --bg:#eef1f6; --card:#fff; --key:#c2c8d1;
+    --sunk:#f6f8fb; --accent:#3f6f8f; --acc:#a35a4e;
+    --bad:#b8433a; --badbg:#f7e6e4; --star:#c98a1f;
+    --shadow:0 12px 34px rgba(31,42,68,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#1f2a44; --onbg:#e7eaf0; --muted:#5b6472; --faint:#8892a3;
+      --line:#c9d0dc; --bg:#0f1420; --card:#e7eaf0; --key:#b7c0cf;
+      --sunk:#d9dee8; --accent:#3f6f8f; --acc:#a35a4e;
+      --bad:#b8433a; --badbg:#f2ddda; --star:#a9741a;
+      --shadow:0 12px 34px rgba(0,0,0,.55);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ink:#1f2a44; --onbg:#e7eaf0; --muted:#5b6472; --faint:#8892a3;
+    --line:#c9d0dc; --bg:#0f1420; --card:#e7eaf0; --key:#b7c0cf;
+    --sunk:#d9dee8; --accent:#3f6f8f; --acc:#a35a4e;
+    --bad:#b8433a; --badbg:#f2ddda; --star:#a9741a;
+    --shadow:0 12px 34px rgba(0,0,0,.55);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+       font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+  .wrap{max-width:1100px;margin:0 auto;padding:18px 14px 80px}
+  .head{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-bottom:6px}
+  .kick{font-size:10.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--acc)}
+  h1{font-size:27px;margin:5px 0 0;letter-spacing:-.2px;color:var(--onbg)}
+  .sub{font-size:12.5px;color:var(--onbg);opacity:.72;margin-top:5px}
+  .tool{font-size:11px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+        padding:8px 12px;border-radius:8px;border:1px solid var(--key);background:var(--card);
+        color:var(--ink);cursor:pointer;text-decoration:none;display:inline-block}
+  .tool:hover{border-color:var(--accent);color:var(--accent)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(212px,1fr));gap:14px;margin-top:16px}
+  .it{position:relative;background:var(--card);border:1px solid var(--key);border-radius:14px;
+      overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .it img{width:100%;height:150px;object-fit:cover;display:block;background:var(--line)}
+  .it .t{padding:10px 11px 6px;font-size:12px;line-height:1.4;flex:1}
+  .it .t a{color:inherit;text-decoration:none}
+  .it .t a:hover{text-decoration:underline}
+  .it .m{padding:0 11px 10px;font-size:8.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted)}
+  .rm{position:absolute;top:7px;right:7px;width:28px;height:28px;border-radius:50%;
+      border:0;background:var(--star);color:#fff;cursor:pointer;display:grid;place-items:center;padding:0;z-index:2}
+  .rm svg{width:14px;height:14px;fill:currentColor;stroke:currentColor;stroke-width:1.9}
+  .empty{background:var(--card);border:1px dashed var(--key);border-radius:14px;
+         padding:30px 20px;text-align:center;color:var(--muted);margin-top:18px;font-size:14px}
+  .err{background:var(--badbg);border:1px solid var(--bad);color:var(--bad);
+       border-radius:12px;padding:12px 14px;margin-top:14px;font-size:13px}
+  .stamp{margin-top:18px;font-size:10.5px;letter-spacing:.6px;color:var(--muted);text-align:center}
+</style>
+
+<div class="wrap">
+  <div class="head">
+    <div>
+      <div class="kick">Kept off the wall</div>
+      <h1>Saved</h1>
+      <div class="sub" id="sub">Loading</div>
+    </div>
+    <a class="tool" href="wall.html">Back to the wall</a>
+  </div>
+  <div id="body"></div>
+  <div id="err"></div>
+  <div class="stamp" id="stamp">v1.0</div>
+</div>
+
+<script>
+var SB="https://arnjntspmrhigodlssbn.supabase.co";
+var KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+function api(path,opts){
+  opts=opts||{};
+  var h={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
+  return fetch(SB+"/rest/v1/"+path,{method:opts.method||"GET",headers:h,body:opts.body})
+    .then(function(r){
+      if(!r.ok) return r.text().then(function(t){ throw new Error(r.status+" "+t.slice(0,140)); });
+      return r.status===204?null:r.json();
+    });
+}
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+var TICK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
+var ROWS=[];
+
+function paint(){
+  var b=document.getElementById("body");
+  if(!ROWS.length){
+    b.innerHTML='<div class="empty">Nothing kept yet. Tap the star on anything on the wall and it lands here.</div>';
+    document.getElementById("sub").textContent="Nothing kept yet";
+    return;
+  }
+  var h='<div class="grid">';
+  ROWS.forEach(function(r){
+    var it=r.wall_items||{};
+    h+='<div class="it"><button class="rm" type="button" data-rm="'+r.item_id+'" aria-label="Remove from saved">'+TICK+'</button>'+
+       '<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer"><img src="'+esc(it.img)+'" alt="" loading="lazy"></a>'+
+       '<div class="t"><a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+esc(it.title)+'</a></div>'+
+       '<div class="m">'+esc(it.source_key)+' &middot; kept '+esc(String(r.saved_at).slice(0,10))+'</div></div>';
+  });
+  b.innerHTML=h+'</div>';
+  document.getElementById("sub").textContent=ROWS.length+(ROWS.length===1?" thing kept":" things kept");
+}
+
+document.addEventListener("click",function(e){
+  var b=e.target.closest("[data-rm]");
+  if(!b) return;
+  e.preventDefault();
+  var id=+b.getAttribute("data-rm");
+  var keep=ROWS;
+  ROWS=ROWS.filter(function(r){ return r.item_id!==id; });
+  paint();
+  api("wall_saved?item_id=eq."+id,{method:"DELETE"}).catch(function(err){
+    ROWS=keep; paint();
+    document.getElementById("err").innerHTML='<div class="err">Could not remove that one: '+esc(err.message)+'</div>';
+  });
+});
+
+api("wall_saved?select=item_id,saved_at,wall_items(title,link,img,source_key)&order=saved_at.desc&limit=400")
+  .then(function(rows){
+    ROWS=rows||[];
+    document.getElementById("stamp").textContent="v1.0 &middot; everything you starred on the wall";
+    paint();
+  })
+  .catch(function(e){
+    document.getElementById("err").innerHTML='<div class="err">Could not load what you saved: '+esc(e.message)+'</div>';
+    document.getElementById("sub").textContent="";
+  });
+</script>
+
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
