@@ -56,7 +56,7 @@ p.sub b{color:#2f8f5b}
    This is the rule Scott's own wall calendar has followed for years: colour
    marks the days a thing SPANS. Built Aug 31 2026. */
 .wgrid{flex:1;display:flex;flex-direction:column}
-.wrow{position:relative;display:grid;grid-template-columns:repeat(7,1fr)}
+.wrow{position:relative;display:grid;grid-template-columns:repeat(7,1fr);overflow:hidden}
 .bandlayer{position:absolute;left:0;right:0;top:14px;pointer-events:none;z-index:2}
 .band{position:absolute;height:15px;border-radius:3px;border-left:3px solid;display:flex;align-items:center;
   font-size:9.5px;font-weight:600;letter-spacing:.1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
@@ -317,12 +317,12 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v3.0</span>
+  <span class="pn-ver">v3.1</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.0</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.1</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Live events sit dimmed because they are tour dates you are tracking; star one to say you are going and it comes forward. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
 </div>
 
@@ -386,7 +386,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Calendar v3.0 =====
+/* ===== Project YOU · Calendar v3.1 =====
    Events live in public.calendar_events, layers in public.calendar_categories.
    New in v1.2: sign-in (the Google feed brings personal appointments onto this
    page, so it can no longer be open to anyone with the URL), plain-English add
@@ -548,10 +548,14 @@ function renderCal(){
       const bars=EVENTS.filter(visible).filter(isSpan)
         .filter(e=>e.date<=wkB&&(e.end||e.date)>=wkA)
         .sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:((y.end||y.date)<(x.end||x.date)?1:-1));
+      /* Both sides must be measured at the SAME time of day. wk is local
+         midnight and an event date parses at noon, so subtracting them gave
+         i + 0.5, which rounded UP and drew every bar a day late. */
+      const wkNoon=new Date(wk.getFullYear(),wk.getMonth(),wk.getDate(),12,0,0);
       const lanes=[];
       bars.forEach(e=>{
-        const s=Math.max(0,Math.round((new Date(e.date+"T12:00:00")-wk)/86400000));
-        const en=Math.min(6,Math.round((new Date((e.end||e.date)+"T12:00:00")-wk)/86400000));
+        const s=Math.max(0,Math.min(6,Math.round((new Date(e.date+"T12:00:00")-wkNoon)/86400000)));
+        const en=Math.max(0,Math.min(6,Math.round((new Date((e.end||e.date)+"T12:00:00")-wkNoon)/86400000)));
         e._a=s; e._b=Math.max(s,en);
         let L=0; while(lanes[L]!==undefined&&lanes[L]>=e._a)L++;
         lanes[L]=e._b; e._lane=L;
@@ -1128,12 +1132,28 @@ function navH(){const n=document.querySelector('.pynav');return n?Math.round(n.g
 function setNavVar(){document.documentElement.style.setProperty('--navh',navH()+'px');}
 window.addEventListener('resize',setNavVar);
 
+/* The database hands back at most 1,000 rows per request whatever limit you ask
+   for, so a single call quietly dropped everything past the first thousand by
+   date. Scott had 1,533 events and was seeing 1,000 of them, with no error and
+   nothing to notice. Page through instead. */
+async function loadAllEvents(){
+  const PAGE=1000; let from=0, all=[];
+  for(;;){
+    const r=await sb.from('calendar_events').select('*').order('date',{ascending:true}).range(from,from+PAGE-1);
+    if(r.error) return r;
+    all=all.concat(r.data||[]);
+    if(!r.data||r.data.length<PAGE) break;
+    from+=PAGE;
+    if(from>20000) break;
+  }
+  return {data:all,error:null};
+}
 async function load(scroll){
   const st=document.getElementById('status');
   try{
     const [rc,re,rs]=await Promise.all([
       sb.from('calendar_categories').select('*').order('sort_order',{ascending:true}),
-      sb.from('calendar_events').select('*').order('date',{ascending:true}).limit(5000),
+      loadAllEvents(),
       sb.from('calendar_sub_prefs').select('cat,sub,enabled,label,color,fill')
     ]);
     if(rc.error)throw rc.error; if(re.error)throw re.error;
