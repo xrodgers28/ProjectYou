@@ -61,8 +61,12 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
 .band .bcols{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr);pointer-events:none}
 .band .bcols i{border-left:1px solid var(--colline)}
 .band .bcols i:first-child{border-left:none}
-.allday{position:absolute;height:15px;cursor:grab;display:flex;align-items:center;justify-content:center;
-  font-size:9.5px;letter-spacing:.2px;overflow:hidden;white-space:nowrap;padding:0 5px}
+/* No filled blocks anywhere on this grid. Scott, Aug 30 2026: the colour
+   backgrounds made it hard to read. The layer colour is now a bar down the left
+   edge and the text itself; the block stays white so the words win. */
+.allday{position:absolute;height:15px;cursor:grab;display:flex;align-items:center;justify-content:flex-start;
+  font-size:9.5px;letter-spacing:.2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 5px;
+  background:#fff;border:1px solid var(--line);border-left-width:3px;border-radius:2px}
 .allday:hover{filter:brightness(.97)}
 .allday.dragging{opacity:.7;z-index:9}
 
@@ -83,9 +87,10 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
 
 /* blocks */
 .blk{position:absolute;overflow:hidden;padding:3px 5px;cursor:grab;z-index:3;
-  font-size:9.5px;line-height:1.25;border-radius:2px}
+  font-size:9.5px;line-height:1.25;border-radius:2px;
+  background:#fff;border:1px solid var(--line);border-left-width:3px}
 .blk.tall{font-size:13px;padding:7px 8px}
-.blk .t{display:block;font-weight:400;white-space:normal;overflow:hidden}
+.blk .t{display:block;font-weight:400;white-space:normal;overflow:hidden;text-overflow:ellipsis}
 .blk .tm{display:block;font-size:8px;opacity:.72;margin-top:1px}
 .blk.dragging{opacity:.75;z-index:20;cursor:grabbing;box-shadow:0 6px 18px rgba(31,42,68,.22)}
 .blk .grip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:ns-resize}
@@ -194,10 +199,18 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
 </style>
 </head><body>
 
-<div class="pynav"></div>
+<div class="pynav">
+  <a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a>
+  <span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link">Staging<br>Area</a></span></span>
+  <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
+  <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
+  <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
+  <span class="pn-ver">v1.9</span>
+  <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
+</div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.8</span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v1.9</span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag an all-day bar from the top band down onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
 </div>
 
@@ -271,7 +284,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Week view v1.8 =====
+/* ===== Project YOU · Week view v1.9 =====
    A second way of looking at the same calendar_events table the list view on
    calendar.html reads. Nothing here has its own store: a block on this grid IS
    a calendar event, so a change made here shows up on the list view and on
@@ -553,7 +566,7 @@ function drawBand(days){
     d.style.left='calc('+(it.a*100/7)+'% + 1px)';
     d.style.width='calc('+((it.b-it.a+1)*100/7)+'% - 2px)';
     d.style.top=(3+it.lane*17)+'px';
-    d.style.background=c.fill; d.style.color=c.color;
+    d.style.borderLeftColor=c.color; d.style.color=c.color;
     d.textContent=it.e.title||'(no title)';
     d.title=it.e.title+(it.e.loc?' · '+it.e.loc:'');
     d.dataset.id=it.e.id;
@@ -601,7 +614,7 @@ function makeBlock(it,di){
   b.style.width='calc('+w+'% - 2px)';
   b.style.top=yOf(it.s)+'px';
   b.style.height=Math.max(13,yOf(it.en)-yOf(it.s)-1)+'px';
-  b.style.background=c.fill; b.style.color=c.color;
+  b.style.borderLeftColor=c.color; b.style.color=c.color;
   b.dataset.id=e.id; b.dataset.day=di;
   var t=el('span','t',e.title||'(no title)'); b.appendChild(t);
   if((it.en-it.s)>=45){ b.appendChild(el('span','tm',clock(it.s)+' – '+clock(it.en))); }
@@ -817,7 +830,7 @@ function openEditor(e){
   catOrder.forEach(function(name){
     var c=catOf(name);
     var b=el('div','sw2'+(name===(e.cat||catOrder[0])?' on':''),name);
-    b.style.background=c.fill; b.style.color=c.color;
+    b.style.borderLeftColor=c.color; b.style.color=c.color;
     b.onclick=function(){ [].slice.call(sw.children).forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); };
     sw.appendChild(b);
   });
