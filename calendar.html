@@ -51,11 +51,30 @@ p.sub b{color:#2f8f5b}
 .calwrap{flex:1;min-width:0;background:#fff;border:1px solid #d7d7cf;border-radius:4px}
 .mblock{display:flex;border-bottom:1px solid #cfcfc7}
 .mlabel{width:36px;flex:none;background:#1b1b1b;color:#fff;font-weight:800;font-size:15px;letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;justify-content:center;writing-mode:vertical-rl;transform:rotate(180deg);padding:8px 0}
-.wgrid{flex:1;display:grid;grid-template-columns:repeat(7,1fr)}
-.cell{position:relative;min-height:90px;border-right:1px solid #e6e6de;border-bottom:1px solid #e6e6de;padding:15px 4px 3px;display:flex;flex-direction:column;overflow:hidden}
+/* A week is now its own row, so a multi-day event can be drawn as ONE bar
+   running across the days it covers instead of a chip repeated in each cell.
+   This is the rule Scott's own wall calendar has followed for years: colour
+   marks the days a thing SPANS. Built Aug 31 2026. */
+.wgrid{flex:1;display:flex;flex-direction:column}
+.wrow{position:relative;display:grid;grid-template-columns:repeat(7,1fr)}
+.bandlayer{position:absolute;left:0;right:0;top:14px;pointer-events:none;z-index:2}
+.band{position:absolute;height:15px;border-radius:3px;border-left:3px solid;display:flex;align-items:center;
+  font-size:9.5px;font-weight:600;letter-spacing:.1px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+  padding:0 5px;cursor:pointer;pointer-events:auto}
+.band .bx{margin-left:auto;padding-left:4px;opacity:0;font-size:11px;line-height:1}
+.band:hover .bx{opacity:.75}
+.band.contL{border-left-width:0;border-top-left-radius:0;border-bottom-left-radius:0}
+.band.contR{border-top-right-radius:0;border-bottom-right-radius:0}
+.band.notgoing{opacity:.4}
+#cal.hling .band:not(.hl){opacity:.16}
+.winmore{display:flex;justify-content:center;padding:10px 0;background:#f4f4ee;border-bottom:1px solid #e6e6de}
+.winmore button{font:inherit;font-size:12px;font-weight:700;color:#3f6f8f;background:#fff;border:1px solid #d7d7cf;
+  border-radius:8px;padding:6px 14px;cursor:pointer}
+.winmore button:hover{border-color:#3f6f8f;background:#eef2f8}
+.cell{position:relative;min-height:90px;border-right:1px solid #e6e6de;border-bottom:1px solid #e6e6de;padding:calc(15px + var(--bandh,0px)) 4px 3px;display:flex;flex-direction:column;overflow:hidden}
 .cell .body{flex:1 1 auto}
 .cell:nth-child(7n){border-right:0}
-.wgrid>.cell:nth-last-child(-n+7){border-bottom:0}
+.wgrid>.wrow:last-child>.cell{border-bottom:0}
 .cell.out{}
 .cell.out .dn{color:#c4c4bc}
 .cell.today{box-shadow:inset 0 0 0 2px #E8894A}
@@ -298,12 +317,12 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v2.1</span>
+  <span class="pn-ver">v3.0</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v2.1</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.0</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Live events sit dimmed because they are tour dates you are tracking; star one to say you are going and it comes forward. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
 </div>
 
@@ -367,7 +386,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Calendar v2.1 =====
+/* ===== Project YOU · Calendar v3.0 =====
    Events live in public.calendar_events, layers in public.calendar_categories.
    New in v1.2: sign-in (the Google feed brings personal appointments onto this
    page, so it can no longer be open to anyone with the URL), plain-English add
@@ -462,6 +481,21 @@ function starHTML(e){
   if(!tracked(e))return '';
   return '<span class="st" data-star="'+e.id+'" title="'+(e.attending?'You are going, tap to undo':'Star it if you are going')+'">'+(e.attending?'\u2605':'\u2606')+'</span>';
 }
+/* One bar, clipped to the week it is drawn in. A bar carrying on past either
+   edge loses that corner and its left rule, so the eye reads it as continuing
+   rather than as something new starting on Monday. */
+function bandHTML(e,wkA,wkB){
+  const contL=e.date<wkA, contR=(e.end||e.date)>wkB, w=100/7;
+  return '<div class="band'+(contL?' contL':'')+(contR?' contR':'')+goCls(e)+'"'
+    +' data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'"'
+    +' style="left:calc('+(e._a*w)+'% + 2px);width:calc('+((e._b-e._a+1)*w)+'% - 4px);top:'+(e._lane*17)+'px;'
+    +'background:'+fillOf(e)+';border-left-color:'+colorOf(e)+';color:'+colorOf(e)+'"'
+    +' title="'+esc(e.title)+(e.loc?' \u00b7 '+esc(e.loc):'')+'">'
+    +(contL?'<span style="opacity:.55;padding-right:3px">&#8592;</span>':'')
+    +'<span>'+esc(labelOf(e))+'</span>'
+    +(contR?'<span style="opacity:.55;padding-left:3px">&#8594;</span>':'')
+    +'<span class="bx" data-hide="'+e.id+'" title="Hide this one">&times;</span></div>';
+}
 function chipHTML(e,span){
   return '<div class="chip'+(span?' spanchip':'')+goCls(e)+'" data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'" style="color:'+colorOf(e)+';background:'+fillOf(e)+';border-left-color:'+colorOf(e)+'">'
     +'<span class="cd" style="background:'+colorOf(e)+'"></span>'
@@ -483,19 +517,51 @@ function setAttending(id,val){
   save('calendar_events',{attending:val},'id',id);
 }
 
+/* How much of the calendar is actually drawn. Every month from 2006 to 2027 at
+   once made the page 104,000 pixels tall and it locked up. Scott only ever looks
+   near today, so draw a window and let him widen it from either end. */
+let WIN_BACK=2, WIN_FWD=14;
+function winRange(){
+  const t=new Date(todayET()+"T12:00:00");
+  return [new Date(t.getFullYear(),t.getMonth()-WIN_BACK,1),
+          new Date(t.getFullYear(),t.getMonth()+WIN_FWD+1,0)];
+}
 function renderCal(){
   const todayStr=todayET();
-  let d=new Date(Y0,0,1); d.setDate(d.getDate()-((d.getDay()+6)%7));
-  const last=new Date(Y1,11,31);
+  const [winA,winB]=winRange();
+  let d=new Date(winA); d.setDate(d.getDate()-((d.getDay()+6)%7));
+  const last=new Date(winB);
   const weeks=[]; while(d<=last){weeks.push(new Date(d)); d.setDate(d.getDate()+7);}
   const groups=[];
   weeks.forEach(wk=>{const th=new Date(wk);th.setDate(wk.getDate()+3);const m=th.getMonth(),y=th.getFullYear();
     if(!groups.length||groups[groups.length-1].m!==m||groups[groups.length-1].y!==y)groups.push({m,y,weeks:[]});
     groups[groups.length-1].weeks.push(wk);});
-  let html="";
+  let html='<div class="winmore"><button id="winback">&#8593; Show 12 earlier months</button></div>';
   groups.forEach(g=>{
-    html+='<div class="mblock"><div class="mlabel">'+MFULL[g.m]+(g.y!==Y0?" ’"+String(g.y).slice(2):"")+'</div><div class="wgrid">';
+    html+='<div class="mblock"><div class="mlabel">'+MFULL[g.m]+" ’"+String(g.y).slice(2)+'</div><div class="wgrid">';
     g.weeks.forEach(wk=>{
+      /* This week's bars first: everything spanning more than a day that touches
+         these seven days, clipped to the week and stacked in lanes so a
+         conference inside a longer trip sits under it rather than over it. */
+      const wkA=iso(wk), wkEndD=new Date(wk); wkEndD.setDate(wk.getDate()+6);
+      const wkB=iso(wkEndD);
+      const bars=EVENTS.filter(visible).filter(isSpan)
+        .filter(e=>e.date<=wkB&&(e.end||e.date)>=wkA)
+        .sort((x,y)=>x.date<y.date?-1:x.date>y.date?1:((y.end||y.date)<(x.end||x.date)?1:-1));
+      const lanes=[];
+      bars.forEach(e=>{
+        const s=Math.max(0,Math.round((new Date(e.date+"T12:00:00")-wk)/86400000));
+        const en=Math.min(6,Math.round((new Date((e.end||e.date)+"T12:00:00")-wk)/86400000));
+        e._a=s; e._b=Math.max(s,en);
+        let L=0; while(lanes[L]!==undefined&&lanes[L]>=e._a)L++;
+        lanes[L]=e._b; e._lane=L;
+      });
+      html+='<div class="wrow" style="--bandh:'+(lanes.length?lanes.length*17:0)+'px">';
+      if(bars.length){
+        html+='<div class="bandlayer">';
+        bars.forEach(e=>{ html+=bandHTML(e,wkA,wkB); });
+        html+='</div>';
+      }
       for(let i=0;i<7;i++){
         const cd=new Date(wk); cd.setDate(wk.getDate()+i);
         const ds=iso(cd), out=(cd.getFullYear()<Y0||cd.getFullYear()>Y1), today=ds===todayStr;
@@ -510,8 +576,9 @@ function renderCal(){
         if(spans.length){bgcat=hk(spans[0]);}
         else if(otherSingles.length){bgcat=hk(otherSingles[0]);}
         html+='<div class="cell'+(out?' out':'')+(today?' today':'')+'"'+(i===0?' data-mon="'+ds+'"':'')+(bgcat?' data-bg="'+esc(bgcat)+'"':'')+' style="'+bg+'"><span class="dn">'+cd.getDate()+'</span>';
+        /* Multi-day things are bars above the row now, so a cell carries only
+           what begins and ends on this day. */
         const body=[];
-        spans.forEach(e=>{if(ds===e.date)body.push([e,true]);});
         otherSingles.forEach(e=>body.push([e,false]));
         const show=body.slice(0,MAXCHIPS), extra=body.length-show.length;
         html+='<div class="body">';
@@ -527,10 +594,21 @@ function renderCal(){
         }
         html+='</div>';
       }
+      html+='</div>';
     });
     html+='</div></div>';
   });
+  html+='<div class="winmore"><button id="winfwd">Show 12 more months &#8595;</button></div>';
   const cal=document.getElementById('cal'); cal.innerHTML=html;
+  const wb=document.getElementById('winback');
+  if(wb) wb.onclick=()=>{ const h=document.body.scrollHeight, y=window.scrollY;
+    WIN_BACK+=12; renderCal(); window.scrollTo(0,y+(document.body.scrollHeight-h)); };
+  const wf=document.getElementById('winfwd');
+  if(wf) wf.onclick=()=>{ const y=window.scrollY; WIN_FWD+=12; renderCal(); window.scrollTo(0,y); };
+  cal.querySelectorAll('.band').forEach(el=>el.onclick=(ev)=>{
+    if(ev.target.dataset.hide){setHidden(+ev.target.dataset.hide,true);return;}
+    openEvent(+el.dataset.open);
+  });
   cal.querySelectorAll('.chip,.lchip').forEach(el=>el.onclick=(ev)=>{
     if(ev.target.dataset.hide){setHidden(+ev.target.dataset.hide,true);return;}
     if(ev.target.dataset.star){const id=+ev.target.dataset.star;
@@ -548,7 +626,7 @@ function highlight(key){
     cal.querySelectorAll('.hl').forEach(x=>x.classList.remove('hl'));
     cal.querySelectorAll('.bgdim').forEach(x=>x.classList.remove('bgdim'));return;}
   const isSub=key.indexOf('|')>-1;
-  cal.querySelectorAll('.chip,.lchip').forEach(el=>{
+  cal.querySelectorAll('.chip,.lchip,.band').forEach(el=>{
     const m=isSub?(el.dataset.hs===key):(el.dataset.hc===key);
     el.classList.toggle('hl',m);
   });
