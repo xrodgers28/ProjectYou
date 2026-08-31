@@ -77,7 +77,7 @@ window.NAV_GROUP_RENAME = {
 window.MAPS_NAV = {
   "label": "\uD83D\uDDFA Maps",
   "hub": "maps.html",
-  "ver": "Maps v1.7",
+  "ver": "Maps",
   "items": [
     { "label": "\u2190 Overview", "href": "maps.html" },
     { "label": "Knowledge Graph", "href": "blueprint.html" },
@@ -105,7 +105,7 @@ window.MAPS_NAV = {
    number - nothing breaks. */
 window.LISTS_NAV = {
   "label": "Lists",
-  "ver": "Lists v1.0",
+  "ver": "Lists",
   "counts": "v_list_counts",
   "items": [
     { "label": "Connections",    "href": "connections.html",    "count": "connections" },
@@ -127,7 +127,7 @@ window.LISTS_NAV = {
    existing pages on its own. */
 window.CAL_NAV = {
   "label": "Calendar",
-  "ver": "Calendar v1.0",
+  "ver": "Calendar",
   "items": [
     { "label": "List", "href": "calendar.html" },
     { "label": "Week", "href": "calendar-week.html" }
@@ -241,3 +241,47 @@ window.PAGE_VERSIONS = {
    load, so a new page inherits the rule with no extra work.
    ============================================================ */
 window.ONDARK_INK = "#d6dce4";
+
+
+/* ============================================================
+   SECTION VERSION CHIPS, MADE SELF-CORRECTING (Aug 30, 2026)
+
+   The Maps, Lists and Calendar tab strips each carried a hand-typed
+   version, and they drifted. On Aug 30 2026 the Calendar strip still
+   read "Calendar v1.0" while the two calendar pages were on v1.8, and
+   Scott reasonably read the old number and concluded the work had not
+   shipped. That is the second time a duplicated version number has
+   misled him, so the fix is not to retype these three, it is to stop
+   them being a second copy at all.
+
+   The "ver" values above are now just the section NAME. This appends
+   the version the PAGE ITSELF is showing, read from the same chip
+   navpatch already treats as the page version. One source of truth,
+   so the two can never disagree again. If anything here fails the chip
+   simply reads the section name with no number, which is honest.
+   ============================================================ */
+(function(){try{
+  var SEL='.secbar .ver, h1.ph-h1 .ver, .topbar .ver, #ver, h1 .ver, h1 .badge';
+  function pageVer(){
+    var els=document.querySelectorAll(SEL);
+    for(var i=0;i<els.length;i++){
+      var t=(els[i].textContent||'').trim();
+      if(/^v\d+(\.\d+)*$/.test(t)) return t;
+    }
+    return null;
+  }
+  function fix(){
+    var v=pageVer(); if(!v) return;
+    var chips=document.querySelectorAll('.msub-ver, .lsub-ver, .csub-ver');
+    for(var i=0;i<chips.length;i++){
+      var base=(chips[i].textContent||'').trim().replace(/\s+v\d+(\.\d+)*$/,'');
+      if(!base) continue;
+      var want=base+' '+v;
+      if(chips[i].textContent!==want) chips[i].textContent=want;
+    }
+  }
+  function arm(){ fix(); setTimeout(fix,250); setTimeout(fix,1200); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',arm);
+  else arm();
+  window.addEventListener('load',fix);
+}catch(e){ if(window.console) console.log('section version sync skipped',e); }})();
