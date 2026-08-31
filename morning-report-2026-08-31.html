@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Brief</title>
+<style>
+  :root{
+    --bg:#f6f5f2; --panel:#ffffff; --ink:#232323; --soft:#5c5c5c; --faint:#8a8a8a;
+    --line:#e3e0d8; --chip:#eceae4; --accent:#3f6f8f;
+    --green:#2f8f5b; --amber:#c07f10; --red:#b23b2e;
+    --do:#3f6f8f; --more:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+    --atomic:#3f6f8f; --atomicbg:#eef3f7;
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme: dark){
+      --bg:#17181a; --panel:#212327; --ink:#eceae4; --soft:#b7b4ac; --faint:#8b8880;
+      --line:#33353a; --chip:#2b2d31; --accent:#7fb0cf;
+      --green:#5cc189; --amber:#e0a94a; --red:#e07d6f;
+      --do:#6fa2c4; --more:#e0a94a; --did:#5cc189; --read:#9aa6b5; --kill:#cf9a72;
+      --atomic:#7fb0cf; --atomicbg:#22303a;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#17181a; --panel:#212327; --ink:#eceae4; --soft:#b7b4ac; --faint:#8b8880;
+    --line:#33353a; --chip:#2b2d31; --accent:#7fb0cf;
+    --green:#5cc189; --amber:#e0a94a; --red:#e07d6f;
+    --do:#6fa2c4; --more:#e0a94a; --did:#5cc189; --read:#9aa6b5; --kill:#cf9a72;
+    --atomic:#7fb0cf; --atomicbg:#22303a;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:Arial, Helvetica, sans-serif;line-height:1.5;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:820px;margin:0 auto;padding:22px 18px 60px;}
+  h1{font-size:26px;margin:0;letter-spacing:.2px;}
+  .titlerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+  .ver{font-size:12px;font-weight:700;color:var(--accent);background:var(--chip);
+    border:1px solid var(--line);border-radius:6px;padding:2px 7px;}
+  .date{color:var(--soft);font-size:14px;margin:4px 0 0;}
+  .lead{color:var(--soft);font-size:15px;margin:14px 0 0;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:16px 18px;margin-top:16px;}
+  .panel h2{font-size:13px;text-transform:uppercase;letter-spacing:.9px;
+    color:var(--faint);margin:0 0 10px;}
+  .day p{margin:6px 0;color:var(--soft);font-size:14.5px;}
+  .day b{color:var(--ink);}
+
+  /* button key */
+  .key{margin-top:16px;}
+  .key .keyrow{display:flex;gap:9px;align-items:flex-start;margin:7px 0;font-size:13.5px;color:var(--soft);}
+  .kdot{flex:none;width:12px;height:12px;border-radius:3px;margin-top:4px;}
+  .key b{color:var(--ink);}
+
+  /* sticky answer box */
+  .sticky{position:sticky;top:0;z-index:20;background:var(--bg);
+    padding:12px 0 10px;margin-top:16px;border-bottom:1px solid var(--line);}
+  .sticky label{display:block;font-size:12px;text-transform:uppercase;
+    letter-spacing:.8px;color:var(--faint);margin-bottom:6px;}
+  #answers{width:100%;min-height:88px;resize:vertical;background:var(--panel);
+    color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:11px 12px;
+    font-family:Arial, Helvetica, sans-serif;font-size:13.5px;line-height:1.5;}
+  .stickybar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:7px;}
+  .hint{font-size:12px;color:var(--faint);}
+  .copybtn{background:var(--chip);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:700;cursor:pointer;}
+
+  /* rows */
+  .rows{margin-top:8px;}
+  .row{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);
+    border-radius:11px;padding:15px 16px;margin-top:14px;transition:opacity .15s;}
+  .row.settled{opacity:.62;}
+  .rhead{display:flex;align-items:flex-start;gap:10px;}
+  .light{flex:none;width:13px;height:13px;border-radius:50%;margin-top:5px;}
+  .light.green{background:var(--green);} .light.amber{background:var(--amber);} .light.red{background:var(--red);}
+  .rtitle{font-size:16.5px;font-weight:700;color:var(--ink);margin:0;}
+  .rbody{color:var(--soft);font-size:14.5px;margin:9px 0 0;}
+  .rnext{font-size:14px;margin:10px 0 0;}
+  .rnext b{color:var(--ink);}
+  .status{font-size:12.5px;font-weight:700;margin-top:9px;display:none;}
+
+  .btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+  .b{border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    border-radius:8px;padding:8px 13px;font-size:13px;font-weight:700;cursor:pointer;
+    font-family:Arial, Helvetica, sans-serif;transition:filter .12s;}
+  .b:hover{filter:brightness(.97);}
+  .b.on{color:#fff;border-color:transparent;}
+  .b-do.on{background:var(--do);} .b-more.on{background:var(--more);}
+  .b-did.on{background:var(--did);} .b-read.on{background:var(--read);} .b-kill.on{background:var(--kill);}
+
+  .cmt{margin-top:11px;}
+  .cmt textarea{width:100%;min-height:40px;resize:vertical;background:var(--bg);
+    color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 10px;
+    font-family:Arial, Helvetica, sans-serif;font-size:13px;}
+
+  .proj p{margin:8px 0;font-size:14.5px;color:var(--soft);}
+  .proj b{color:var(--ink);}
+  .proj .nxt{color:var(--ink);}
+
+  .atomic{background:var(--atomicbg);border-left:4px solid var(--atomic);
+    border-radius:10px;padding:14px 16px;margin-top:18px;}
+  .atomic .tag{display:inline-flex;align-items:center;gap:7px;font-weight:700;
+    color:var(--atomic);font-size:13px;}
+  .atomic .badge{width:19px;height:19px;border-radius:50%;background:var(--atomic);
+    color:#fff;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;}
+  .atomic p{margin:8px 0 0;font-size:14.5px;color:var(--soft);}
+  .atomic i{color:var(--ink);font-style:italic;}
+
+  .tech{margin-top:22px;padding-top:14px;border-top:1px solid var(--line);
+    font-size:12px;color:var(--faint);line-height:1.55;}
+  .tech b{color:var(--soft);}
+  @media (max-width:560px){ h1{font-size:22px;} .btns .b{flex:1 1 auto;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="titlerow">
+    <h1>Morning Brief</h1>
+    <span class="ver">v1.0</span>
+  </div>
+  <p class="date">Sunday, August 31, 2026</p>
+  <p class="lead">A wide-open Sunday with nothing on the calendar. The one thing worth knowing before coffee: last night's helper stalled, so the work you lined up did not get done. Details below, plus seven things waiting on a quick call from you.</p>
+
+  <!-- YOUR DAY -->
+  <div class="panel day">
+    <h2>Your day</h2>
+    <p><b>Today.</b> Nothing scheduled. The whole day is yours.</p>
+    <p><b>Tomorrow.</b> Labor Day, and one thing on it: a call with Mike for Lizzy at 3:30pm your time. Everything else is clear.</p>
+    <p><b>Email.</b> Nothing needs a reply from you. Your back-and-forth with Ruth about moving this week's time settled itself last night. She had nothing earlier that fit, so you kept Friday as it was. The rest of the inbox is receipts, shipping notices, and travel confirmations.</p>
+  </div>
+
+  <!-- BUTTON KEY -->
+  <div class="panel key">
+    <h2>What each button means</h2>
+    <div class="keyrow"><span class="kdot" style="background:var(--do)"></span><span><b>Do this.</b> Go build it, run it, ship it. This is an instruction, not an answer. The item stays open until the work is done.</span></div>
+    <div class="keyrow"><span class="kdot" style="background:var(--more)"></span><span><b>Tell me more.</b> You are leaning yes but want the cost, the risk, or the reasoning first. The item stays open and the next move is mine.</span></div>
+    <div class="keyrow"><span class="kdot" style="background:var(--did)"></span><span><b>I did it.</b> You handled it yourself. The item closes.</span></div>
+    <div class="keyrow"><span class="kdot" style="background:var(--read)"></span><span><b>I read this.</b> Just noting you saw it. Nothing is owed. The item closes.</span></div>
+    <div class="keyrow"><span class="kdot" style="background:var(--kill)"></span><span><b>Kill this task.</b> Drop it for good. It does not come back.</span></div>
+  </div>
+
+  <!-- STICKY ANSWERS -->
+  <div class="sticky">
+    <label for="answers">Your answers (select all and copy back into the chat)</label>
+    <textarea id="answers" readonly placeholder="Tap a button on any item and your answer appears here."></textarea>
+    <div class="stickybar">
+      <span class="hint">Tapping a button fills this box. Nothing is saved anywhere; this is just for copying back.</span>
+      <button class="copybtn" id="copybtn" type="button">Copy</button>
+    </div>
+  </div>
+
+  <!-- ROWS -->
+  <div class="rows" id="rows">
+
+    <!-- R1 -->
+    <div class="row" data-id="1" data-title="Overnight run quit before it did anything">
+      <div class="rhead"><span class="light red"></span>
+        <p class="rtitle">Last night's overnight helper quit before it did anything</p></div>
+      <p class="rbody">It checked in at 4:04am and then went silent. It never came back to say it finished, and not one of the nine jobs you lined up for it moved a single step. This is the same stall that hit on August 23, and this time it happened even though the list was full. The three fresh jobs you added at bedtime, the Import fix, the duplicate-date check, and the four pages missing their labels, are all still sitting untouched.</p>
+      <p class="rnext"><b>Next:</b> Let me dig into why the run keeps dying a few minutes after it wakes up, and come back with the cause and a fix.</p>
+      <div class="status"></div>
+      <div class="btns"></div>
+      <div class="cmt"><textarea placeholder="Add a note (optional)"></textarea></div>
+    </div>
+
+    <!-- R2 -->
+    <div class="row" data-id="2" data-title="Overnight list jammed waiting on your yes">
+      <div class="rhead"><span class="light amber"></span>
+        <p class="rtitle">Your overnight list keeps stalling on your "yes"</p></div>
+      <p class="rbody">Even when the helper works, most jobs on the board are parked at "waiting for your go," so it wakes up, finds nothing it is allowed to build, and goes back to sleep. There are about a dozen finished-but-waiting items behind the nine that are cleared. The fix is to green-light a batch in one pass so the night has real work to chew on. I can gather the waiting ones into a single short approve list for you.</p>
+      <p class="rnext"><b>Next:</b> Want me to pull the waiting jobs into one approve-all list?</p>
+      <div class="status"></div>
+      <div class="btns"></div>
+      <div class="cmt"><textarea placeholder="Add a note (optional)"></textarea></div>
+    </div>
+
+    <!-- R3 -->
+    <div class="row" data-id="3" data-title="GitHub emailing publish-failed alerts">
+      <div class="rhead"><span class="light amber"></span>
+        <p class="rtitle">Your inbox is getting "publish failed" emails, but the site is fine</p></div>
+      <p class="rbody">Since Friday you have gotten five automatic "publish failed" notices, the most recent at 1:53am today. Here is the reassuring part: your pages are actually going live. Each failure is two automatic runs colliding, where the second one loses a harmless race. Nothing is broken, but the noise will keep landing in your inbox until the timing is loosened. I can quiet it so only real failures ever reach you.</p>
+      <p class="rnext"><b>Next:</b> Want me to stop the false alarms?</p>
+      <div class="status"></div>
+      <div class="btns"></div>
+      <div class="cmt"><textarea placeholder="Add a note (optional)"></textarea></div>
+    </div>
+
+    <!-- R4 -->
+    <div class="row" data-id="4" data-title="32 saved reads waiting for keep or toss">
+      <div class="rhead"><span class="light amber"></span>
+        <p class="rtitle">32 saved reads are waiting for a keep or toss</p></div>
+      <p class="rbody">Your reading feed has quietly stacked up 32 short pieces you have not sorted, going back to late July. A few look like real cue-card material: a Rockefeller piece on the principles behind his fortune, a Bobby Knight line that the key is the will to prepare to win, and a note that acceptance is not surrender. The overnight scan meant to add fresh ones did not run, so this is backlog rather than new arrivals. I can lift the strongest handful into cue cards and drop the rest.</p>
+      <p class="rnext"><b>Next:</b> Want me to pull the best few into cue cards and clear the rest?</p>
+      <div class="status"></div>
+      <div class="btns"></div>
+      <div class="cmt"><textarea placeholder="Add a note (optional)"></textarea></div>
+    </div>
+
+    <!-- R5 -->
+    <div class="row" data-id="5" data-title="Ten Compass questions still blank">
+      <div class="rhead"><span class="light amber"></span>
+        <p class="rtitle">Ten Compass questions are still blank, and one rule is unset</p></div>
+      <p class="rbody">Your Clarity Compass has ten questions with no answers, and there is still an open call on what should happen when you reach the end of a question bank, whether it recycles, stops, or refills. This has been waiting since August 21. I can draft answers to the ten for you to edit, and write you a short recommendation on the end-of-bank behavior to approve or change.</p>
+      <p class="rnext"><b>Next:</b> Want the ten drafted and a recommendation on the bank rule?</p>
+      <div class="status"></div>
+      <div class="btns"></div>
+      <div class="cmt"><textarea placeholder="Add a note (optional)"></textarea></div>
+    </div>
+
+    <!-- R6 -->
+    <div class="row" data-id="6" data-title="Travel reconciliation page not built">
+      <div class="rhead"><span class="light amber"></span>
+        <p class="rtitle">Your travel cleanup page is approved but not built</p></div>
+      <p class="rbody">You okayed a page that lines up every travel conflict, dates that disagree, trips one app saw and the other missed, countries with no date, so you can work through them instead of facing a wall of rows. It is step four of eight in the travel cleanup, and it has not been built because the overnight runs that would build it keep stalling. I can build it in a working session with you.</p>
+      <p class="rnext"><b>Next:</b> Want me to build it now?</p>
+      <div class="status"></div>
+      <div class="btns"></div>
+      <div class="cmt"><textarea placeholder="Add a note (optional)"></textarea></div>
+    </div>
+
+    <!-- R7 -->
+    <div class="row" data-id="7" data-title="System maps drifted from the live setup">
+      <div class="rhead"><span class="light amber"></span>
+        <p class="rtitle">Your "how it all connects" maps are behind the real thing</p></div>
+      <p class="rbody">The pages that draw how your whole setup fits together have fallen behind what is actually live. The nightly check has flagged more than thirty gaps, and a fresh one landed Friday for a new activity feed the map does not show yet. You approved a full rebuild earlier this week and it did run, but new drift keeps arriving faster than it clears. I can fold the newest gaps into one clean pass.</p>
+      <p class="rnext"><b>Next:</b> Want the newest drift cleaned up in one pass?</p>
+      <div class="status"></div>
+      <div class="btns"></div>
+      <div class="cmt"><textarea placeholder="Add a note (optional)"></textarea></div>
+    </div>
+
+    <!-- R8 -->
+    <div class="row" data-id="8" data-title="Aug 19 time entry blocked until Mac is on">
+      <div class="rhead"><span class="light green"></span>
+        <p class="rtitle">One old time entry is stuck until your Mac is on</p></div>
+      <p class="rbody">A 1.5-hour session from August 19 still needs to land in your time tracker, and it cannot, because that file lives on your Mac and the overnight helper has no way to reach your computer. It will keep failing quietly every night until it is handled. The clean fix is to log it next time you are at your desk, or move that tracker somewhere the helper can reach. Nothing is lost; it is just parked.</p>
+      <p class="rnext"><b>Next:</b> Nothing right now. Settle it when you are at your desk.</p>
+      <div class="status"></div>
+      <div class="btns"></div>
+      <div class="cmt"><textarea placeholder="Add a note (optional)"></textarea></div>
+    </div>
+
+  </div>
+
+  <!-- PROJECTS -->
+  <div class="panel proj">
+    <h2>Where your projects stand</h2>
+    <p><b>TreadWell.</b> Your give-back travel platform. Quiet this week, nothing moved. <span class="nxt">Next: decide if it gets a working session this week or stays parked.</span></p>
+    <p><b>CrushingIt.</b> The Time Wheel that draws your day. Calendar meetings now show as arcs on the wheel, shipped last Wednesday. <span class="nxt">Next: nothing pressing, it is current.</span></p>
+    <p><b>Project YOU and Quantified Self.</b> The busiest project. Most of the overnight list lives here: the Import fix, the social-calendar cleanup, the page labels. <span class="nxt">Next: the approve-all pass above unblocks most of it.</span></p>
+    <p><b>Clever Phrases.</b> Your quotes collection. No movement, and none needed. <span class="nxt">Next: it fills itself whenever you file a phrase from the staging area.</span></p>
+    <p><b>AI Intelligence.</b> Your daily AI micro-learning. No new cards since August 28, when the James Clear source would only hand back a loose paraphrase instead of the real words. <span class="nxt">Next: point it at the newsletter email instead of the website so it can read the text faithfully.</span></p>
+    <p><b>2026 Calendar.</b> Now living inside Project YOU as a live page. The active thread is cleaning up duplicate evenings on your social calendar. <span class="nxt">Next: three remaining duplicate pairs get checked, already queued.</span></p>
+  </div>
+
+  <!-- USAGE -->
+  <div class="panel day">
+    <h2>Your Claude weekly usage</h2>
+    <p>I cannot read your usage meter from inside this brief, so I will not guess at a number. If you start seeing slowdowns or a limit warning, that is your signal to check it in the app. Nothing in how this run behaved suggests you are near a wall.</p>
+  </div>
+
+  <!-- ATOMIC HABITS -->
+  <div class="atomic">
+    <span class="tag"><span class="badge">A</span> Atomic Habits</span>
+    <p><i>The Two-Minute Rule.</i> James Clear's idea is that a new habit should take less than two minutes to start, so "read before bed" becomes "read one page." The backlog on this page is the same trick in reverse: instead of facing a dozen waiting jobs, the approve-all list turns the whole pile into one two-minute yes. Shrink the start and the rest follows.</p>
+  </div>
+
+  <!-- TECH -->
+  <p class="tech"><b>For the record.</b> Overnight helper wrote its "started" heartbeat at 4:04am and never logged a finish or a result; the run log has no row for last night and the nine queued items are all unchanged since bedtime. Cross-checked one queued claim against the live data: the Sarah Kearney duplicate evening from last November is resolved, with a single record remaining. This page is morning-report-2026-08-31.html (v1.0), published from Supabase and confirmed in the live repository.</p>
+
+</div>
+
+<script>
+(function(){
+  var LABELS={do:"DO THIS",more:"TELL ME MORE",did:"I DID IT",read:"I READ THIS",kill:"KILL THIS TASK"};
+  var OPEN={do:1,more:1}; // these keep a row open
+  var COLORVAR={do:"--do",more:"--more",did:"--did",read:"--read",kill:"--kill"};
+  var STATUSNOTE={
+    do:"Open. Work owed by me.",
+    more:"Open. I will come back with the detail.",
+    did:"Closed. You handled it.",
+    read:"Closed. Noted.",
+    kill:"Closed. Dropped for good."
+  };
+  var order=["do","more","did","read","kill"];
+  var state={}; // id -> {choice, comment, title}
+
+  function cssvar(v){return getComputedStyle(document.documentElement).getPropertyValue(v);}
+
+  function rebuild(){
+    var lines=[];
+    document.querySelectorAll(".row").forEach(function(row){
+      var id=row.getAttribute("data-id");
+      var s=state[id];
+      if(!s||(!s.choice&&!s.comment))return;
+      var title=row.getAttribute("data-title");
+      var seg=id+". "+title;
+      if(s.choice)seg+="  ->  "+LABELS[s.choice];
+      lines.push(seg);
+      if(s.comment)lines.push("     note: "+s.comment);
+    });
+    var ta=document.getElementById("answers");
+    ta.value=lines.length?lines.join("\n"):"";
+  }
+
+  document.querySelectorAll(".row").forEach(function(row){
+    var id=row.getAttribute("data-id");
+    state[id]={choice:null,comment:"",title:row.getAttribute("data-title")};
+    var btns=row.querySelector(".btns");
+    order.forEach(function(k){
+      var b=document.createElement("button");
+      b.type="button";
+      b.className="b b-"+k;
+      b.textContent={do:"Do this",more:"Tell me more",did:"I did it",read:"I read this",kill:"Kill this task"}[k];
+      b.addEventListener("click",function(){
+        var s=state[id];
+        if(s.choice===k){ // toggle off
+          s.choice=null;
+          btns.querySelectorAll(".b").forEach(function(x){x.classList.remove("on");});
+          row.style.borderLeftColor="var(--line)";
+          row.classList.remove("settled");
+          var st=row.querySelector(".status"); st.style.display="none";
+        } else {
+          s.choice=k;
+          btns.querySelectorAll(".b").forEach(function(x){x.classList.remove("on");});
+          b.classList.add("on");
+          row.style.borderLeftColor="var("+COLORVAR[k]+")";
+          if(OPEN[k]) row.classList.remove("settled"); else row.classList.add("settled");
+          var st=row.querySelector(".status");
+          st.style.display="block";
+          st.style.color="var("+COLORVAR[k]+")";
+          st.textContent=STATUSNOTE[k];
+        }
+        rebuild();
+      });
+      btns.appendChild(b);
+    });
+    var cmt=row.querySelector(".cmt textarea");
+    cmt.addEventListener("input",function(){ state[id].comment=cmt.value.trim(); rebuild(); });
+  });
+
+  document.getElementById("copybtn").addEventListener("click",function(){
+    var ta=document.getElementById("answers");
+    ta.removeAttribute("readonly"); ta.focus(); ta.select();
+    var ok=false; try{ ok=document.execCommand("copy"); }catch(e){}
+    ta.setAttribute("readonly","readonly");
+    this.textContent = ok ? "Copied" : "Select the box to copy";
+    var self=this; setTimeout(function(){ self.textContent="Copy"; },1600);
+  });
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
