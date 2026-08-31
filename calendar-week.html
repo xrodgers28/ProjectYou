@@ -71,6 +71,9 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
   background:#fff;border:1px solid var(--line);border-left-width:3px;border-radius:2px}
 .allday:hover{filter:brightness(.97)}
 .allday.dragging{opacity:.7;z-index:9}
+.adh{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize;z-index:4}
+.adh.l{left:0} .adh.r{right:0}
+.allday:hover .adh{box-shadow:inset 0 0 0 1px rgba(31,42,68,.28);border-radius:2px}
 
 /* time body */
 .bodywrap{display:grid;grid-template-columns:52px 1fr;position:relative}
@@ -213,12 +216,12 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v2.2</span>
+  <span class="pn-ver">v2.3</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v2.2</span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v2.3</span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag an all-day bar from the top band down onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
 </div>
 
@@ -292,7 +295,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Week view v2.2 =====
+/* ===== Project YOU · Week view v2.3 =====
    A second way of looking at the same calendar_events table the list view on
    calendar.html reads. Nothing here has its own store: a block on this grid IS
    a calendar event, so a change made here shows up on the list view and on
@@ -580,6 +583,11 @@ function drawBand(days){
     d.dataset.id=it.e.id;
     d.onclick=function(){ openEditor(it.e); };
     wireBandDrag(d,it.e);
+    /* A grab zone at each end. Drag one to change which day the bar starts or
+       finishes on. Scott, Aug 31 2026: "colors bars should be able to be dragged
+       to shorten or lengthen". */
+    var hl=el('div','adh l'); d.appendChild(hl); wireBandResize(hl,d,it.e,'start');
+    var hr=el('div','adh r'); d.appendChild(hr); wireBandResize(hr,d,it.e,'end');
     band.appendChild(d);
   });
 }
@@ -719,6 +727,54 @@ function wireBlock(b,e,it){
       if(!moved){ openEditor(e); render(); return; }
       if(e.readonly && Math.round((b._nd-d0))!==0) toast('A meeting from Google can move in time, but not to another day.');
       commitTime(e,weekDates()[b._nd],b._ns,b._ne);
+    }
+    document.addEventListener('pointermove',mv);
+    document.addEventListener('pointerup',up);
+  });
+}
+
+/* ---------- stretching an all-day bar by its ends ----------
+   Whole days only, because that is what a bar means. Dragging the left end
+   changes the first day, the right end the last, and a bar can never end before
+   it starts. A bar that came from Google can still be stretched: doing so marks
+   it held, so the two-hourly sync leaves the dates alone from then on rather
+   than snapping them back and losing the change silently. */
+function wireBandResize(h,d,e,which){
+  h.addEventListener('pointerdown',function(ev){
+    if(ev.button)return;
+    ev.preventDefault(); ev.stopPropagation();
+    var band=document.getElementById('band');
+    var colW=band.getBoundingClientRect().width/7;
+    var startX=ev.clientX, left0=d.offsetLeft, w0=d.offsetWidth;
+    var d0=parseISO(e.date), e0=parseISO(e.end||e.date);
+    var days=weekDates(), shift=0, moved=false;
+    function mv(ev2){
+      var dx=ev2.clientX-startX;
+      if(Math.abs(dx)>3) moved=true;
+      shift=Math.round(dx/colW);
+      if(which==='end'){
+        var ne=addDays(e0,shift);
+        if(ne<d0){ ne=d0; shift=Math.round((ne-e0)/86400000); }
+        d.style.width=Math.max(colW*0.6,w0+shift*colW)+'px';
+      }else{
+        var nd=addDays(d0,shift);
+        if(nd>e0){ nd=e0; shift=Math.round((nd-d0)/86400000); }
+        d.style.left=(left0+shift*colW)+'px';
+        d.style.width=Math.max(colW*0.6,w0-shift*colW)+'px';
+      }
+    }
+    function up(){
+      document.removeEventListener('pointermove',mv);
+      document.removeEventListener('pointerup',up);
+      if(!moved||!shift){ render(); return; }
+      var nd=e.date, ne=e.end||e.date;
+      if(which==='end') ne=iso(addDays(e0,shift)); else nd=iso(addDays(d0,shift));
+      if(ne<nd){ render(); return; }
+      var wasReadonly=!!e.readonly;
+      e.date=nd; e.end=(ne===nd?null:ne);
+      render();
+      saveRow(e.id,{date:nd,end_date:(ne===nd?null:ne),span_locked:true,updated_at:new Date().toISOString()},
+        wasReadonly ? 'Held at your dates, Google will not change it back' : 'Dates changed');
     }
     document.addEventListener('pointermove',mv);
     document.addEventListener('pointerup',up);
