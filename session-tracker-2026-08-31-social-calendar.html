@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Tracker · Aug 31 · Project YOU OS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#20242b;--muted:#6b7280;--line:#e7e9ee;--bg:#fbfbfa;--card:#fff;--accent:#3f6f8f;--hub:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--blue:#3f6f8f;--red:#c0453b;--amber:#c68a2e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.25;padding:18px 16px 210px}
+  .head{max-width:1160px;margin:0 auto}
+  h1{font-size:22px;color:var(--hub);font-weight:800}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 10px;margin-top:7px;background:#eef7f1;color:var(--green);border:1px solid #cfe9db}
+  .chip.off{background:#fbe7e5;color:var(--red);border-color:#f0cfcb}
+  .sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.4;max-width:820px}
+  h2{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--hub);max-width:1160px;margin:18px auto 6px}
+  .tbl{max-width:1160px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .r{display:grid;grid-template-columns:34px 1fr 128px 150px 260px;align-items:flex-start;border-bottom:1px solid var(--line);transition:opacity .25s,max-height .3s,padding .3s;max-height:900px;overflow:hidden}
+  .r:last-child{border-bottom:none}
+  .r.hd{background:#f4f5f7;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);align-items:center}
+  .r.gone{opacity:0;max-height:0;border:none}
+  .c{padding:9px 14px}
+  .c.lt{padding:12px 0 9px 12px}
+  .dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .dot.green{background:var(--green)} .dot.amber{background:#e08b1f} .dot.red{background:var(--red)}
+  .r.hd .c.lt{padding-left:12px}
+  .legend{max-width:1160px;margin:10px auto 0;display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);font-weight:700;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;font-style:normal}
+  .asof{max-width:1160px;margin:14px auto 0;font-size:12.5px;font-style:italic;color:#808080}
+  .c.mid,.c.act,.c.next{padding:9px 12px}
+  .task .tt{color:var(--accent);text-decoration:none;font-size:14px;font-weight:700;line-height:1.2;border-bottom:1px solid #cfdae5}
+  .task .tt:hover{border-bottom-color:var(--accent)}
+  .task .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
+  .pill.green{background:var(--green)} .pill.blue{background:var(--blue)} .pill.red{background:var(--red)} .pill.amber{background:var(--amber)}
+  .act{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .ansrow{display:flex;gap:5px;flex-wrap:wrap}
+  .ans{font-weight:800;font-size:11.5px;border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:5px 9px;cursor:pointer;white-space:nowrap}
+  .ans:hover{border-color:currentColor}
+  .ans[data-v="Do this"]{color:#3f6f8f} .ans[data-v="Tell me more"]{color:#c07f10}
+  .ans[data-v="I did it"]{color:#2f8f5b} .ans[data-v="I read this"]{color:#6f7b8a}
+  .ans[data-v="Kill this task"]{color:#a8724a}
+  .ans.on{color:#fff}
+  .ans.on[data-v="Do this"]{background:#3f6f8f;border-color:#3f6f8f}
+  .ans.on[data-v="Tell me more"]{background:#c07f10;border-color:#c07f10}
+  .ans.on[data-v="I did it"]{background:#2f8f5b;border-color:#2f8f5b}
+  .ans.on[data-v="I read this"]{background:#6f7b8a;border-color:#6f7b8a}
+  .ans.on[data-v="Kill this task"]{background:#a8724a;border-color:#a8724a}
+  .r.tapped{border-left:4px solid var(--tapc,var(--line))}
+  .keybar{max-width:1160px;margin:10px auto 0;display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);align-items:center;line-height:1.5}
+  .keybar b{font-weight:800}
+  .keybar span{display:inline-flex;align-items:center;gap:5px}
+  .keybar i{width:9px;height:9px;border-radius:2px;display:inline-block;font-style:normal}
+  .notelink{font-size:11.5px;font-weight:700;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:0}
+  .notelink:hover{color:var(--accent)}
+  .nt{width:100%;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:30px;margin-top:2px}
+  .hidden{display:none}
+  /* Fourth column: what Scott does next */
+  .next{font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .next.none{color:#a7adb6}
+  .next.todo{background:#fdf6e9;color:#5c4a24;border-left:3px solid var(--amber)}
+  .next .nh{display:block;font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+  .next ol{margin:0 0 0 16px;padding:0}
+  .next ol li{margin:0 0 5px;line-height:1.4}
+  .next ol li:last-child{margin-bottom:0}
+  .next .lead{display:block;margin-bottom:4px}
+  .next code{background:#fff;border:1px solid #e2d9c2;border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+  .next a{color:var(--accent);font-weight:700}
+  .mins{display:inline-block;font-weight:800;font-size:10.5px;color:var(--muted);background:var(--chip);border-radius:999px;padding:2px 7px;margin-left:4px}
+  .allclear{max-width:1160px;margin:0 auto;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  @media(max-width:900px){
+    .r{grid-template-columns:22px 1fr auto}
+    .c.lt{grid-row:span 2}
+    .c.act,.c.next{grid-column:1/-1;border-top:1px solid var(--line)}
+    .c.act{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .r.hd{display:none}
+  }
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(31,42,68,.10);padding:9px 16px}
+  .dock .bar{max-width:1160px;margin:0 auto}
+  .dock .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:10px;flex-wrap:wrap}
+  .dock .top b{font-size:12.5px;color:var(--hub)}.dock .hint{font-size:11px;color:var(--muted)}
+  #out{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;border:1px solid var(--line);border-radius:10px;padding:8px;height:80px;resize:vertical;background:#fbfcfe;color:var(--ink)}
+  .copybtn{font-weight:700;font-size:12px;border:1px solid var(--line);background:var(--chip);color:var(--accent);border-radius:9px;padding:6px 11px;cursor:pointer;margin-top:5px}
+  h1 .ver{display:inline-block;margin-left:9px;font-size:11px;font-weight:800;color:#9aa6b4;background:none;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;vertical-align:middle;letter-spacing:0}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Session Tracker<span class="ver">v1.0</span></h1>
+  <div class="meta">Project YOU OS · Aug 31, 2026 · Social page v3.0, 18 connections logged, and three things waiting on you</div>
+  <div id="syncchip" class="chip">connecting...</div>
+  <div class="sub">Five columns. The light on the left is the fastest read: green is finished, amber is waiting on you, red is not started. Every row carries the same five answers, and two of them leave the row on the page because they mean work is still owed. Your answers build up in the box at the top, ready to copy back into the chat.</div>
+<div class="legend"><span><i style="background:#1e8e5a"></i>Done</span><span><i style="background:#e08b1f"></i>Awaiting your comments</span><span><i style="background:#c0453b"></i>Not started</span></div>
+<div class="keybar">
+  <span><i style="background:#3f6f8f"></i><b>Do this</b> go and build it, stays open</span>
+  <span><i style="background:#c07f10"></i><b>Tell me more</b> tell me the cost first, stays open</span>
+  <span><i style="background:#2f8f5b"></i><b>I did it</b> handled it myself</span>
+  <span><i style="background:#6f7b8a"></i><b>I read this</b> noted, nothing owed</span>
+  <span><i style="background:#a8724a"></i><b>Kill this task</b> dead, do not ask again</span>
+</div>
+<div class="asof">As of August 31st</div>
+
+<h2>Work this session · <span id="leftct"></span></h2>
+<div class="tbl" id="tblWork"><div class="r hd"><div class="c lt"></div><div class="c">Input / Task</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+<div id="allclear" class="allclear hidden"></div>
+
+<h2>Your call · decisions</h2>
+<div class="tbl" id="tblLater"><div class="r hd"><div class="c lt"></div><div class="c">Item</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+
+<div class="dock"><div class="bar">
+  <div class="top"><b>Your responses (live)</b><span class="hint">saved automatically · this box is the fallback</span></div>
+  <textarea id="out" readonly></textarea>
+  <button class="copybtn" onclick="copyOut()">Copy</button>
+</div></div>
+
+<script>
+const SESSION='2026-08-31-social-calendar';
+const SITE='https://xrodgers28.github.io/ProjectYou/';
+const TODOS=SITE+'connections.html';
+const SOCIAL=SITE+'connections.html';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+const WF='https://github.com/xrodgers28/ProjectYou/edit/main/.github/workflows/publish.yml';
+const PAT='https://github.com/settings/personal-access-tokens/new';
+const VAULT='https://supabase.com/dashboard/project/arnjntspmrhigodlssbn/settings/vault';
+const ACT='https://github.com/xrodgers28/ProjectYou/actions/workflows/publish.yml';
+
+const WORK=[
+  {item:SESSION+'::year', label:'The grid opens on 2026 now', url:SOCIAL, pill:'green', ptext:'Live', light:'green',
+   desc:'It used to open on whichever year held the most entries, which is why you kept landing on 2025 and having to click across. 2026 also sits on the left of the two year buttons now, and the left and right arrow keys still step the way you expect.',
+   next:'Nothing.', mins:''},
+
+  {item:SESSION+'::header', label:'New header, built from your mock', url:SOCIAL, pill:'green', ptext:'Live', light:'green',
+   desc:'The blue Social strip with the version and the date is gone. The title is a plain Social Interactions with no year after it, and the year buttons and the birthday control moved up into the same row as the tabs. They hide themselves on the Log and People views, where a year switcher means nothing.',
+   next:'Nothing.', mins:''},
+
+  {item:SESSION+'::icons', label:'Phone, Text and In person icons on every block', url:SOCIAL, pill:'green', ptext:'Live', light:'green',
+   desc:'Your records had no way to say how a connection happened, only what it was. Every entry now carries a Phone, Text or In person setting, shown as a small grey mark centred above the name. I filled in all 135 existing entries by reading the occasion: a call became Phone, everything else became In person. You can change any of them.',
+   lead:'Worth a two minute sanity check on a handful of the old ones.',
+   steps:[
+     'Open the Social page and tap any block on the grid.',
+     'Look at the new <b>How</b> dropdown, next to Occasion.',
+     'If my guess is wrong for that one, change it and press <b>Save</b>.'
+   ], mins:'2'},
+
+  {item:SESSION+'::tweaks', label:'Icons centred, names unbolded, published as v3.0', url:SOCIAL, pill:'green', ptext:'Live', light:'green',
+   desc:'Your three follow ups from this morning. The icon sits above the name rather than in the corner, and the names dropped from bold to normal weight. A name that has an icon above it now gets two lines instead of three so nothing spills out of the small squares.',
+   next:'If the lighter text reads too faint on your screen, say so and I will put it back a step.', mins:''},
+
+  {item:SESSION+'::sarah', label:'15 Sarah Kearney entries added for 2026', url:SOCIAL, pill:'green', ptext:'Done', light:'green',
+   desc:'14 texts, taking only the first of each week the way you asked, plus the June 5 call. Jan 17, Jan 18, Feb 7, Feb 10, Feb 23, Mar 10, Mar 27, Apr 9, Apr 12, May 30, Jun 3, Jun 5, Jun 20, Jul 16, Aug 28. Every one of those dates came off a screenshot that also showed the day name, and all of them line up with 2026, so the year is proved rather than assumed.',
+   next:'Nothing.', mins:''},
+
+  {item:SESSION+'::luzzo', label:'Three Mike Luzzo calls added', url:SOCIAL, pill:'green', ptext:'Done', light:'green',
+   desc:'Aug 28 2026 (the group of three back to back), Apr 5 2026, and Dec 13 2025, which lands on the 2025 grid. I left out 10/19/25 because your wall chart already had it, and the red 8/23/26 because it never connected. They are logged as Luzzo so the blocks all read the same on the grid.',
+   next:'Nothing.', mins:''},
+
+  {item:SESSION+'::merge', label:'Sarah Hedrick and Sarah Kearney are one person now', url:SOCIAL, pill:'green', ptext:'Done', light:'green',
+   desc:'I got two things wrong here and you caught both. I told you Sarah Hedrick was a separate person, and I told you Sarah was not on your birthdays list when she was already there from your own wall chart. All three names, Sarah Kearney, Sarah Hedrick and Sarah &amp; PJ, now resolve to one person, so her birthday and the drift views count them together. I also tagged the Nov 20 2025 call, which had been sitting there grey with no group.',
+   next:'Nothing.', mins:''},
+
+  {item:SESSION+'::undated', label:'Two Sarah conversations still have no date', url:SOCIAL, pill:'red', ptext:'Blocked', light:'red',
+   desc:'In two of your screenshots there is a block of messages above the visible date stamp: the Vietnam and San Francisco exchange, and the year of Yes one. Their date labels sit just off the top of the picture, so I did not guess at them.',
+   lead:'Three minutes on your phone and these go in with the rest.',
+   steps:[
+     'Open the Sarah thread in <b>Messages</b> and scroll up a little past each of those two.',
+     'Screenshot so the grey date line above them is in shot.',
+     'Send both here and I add them.'
+   ], mins:'3', todo:true}
+];
+
+const LATER=[
+  {item:SESSION+'::d-rename', label:'Rename the two 2025 Sarah Hedrick rows?', url:SOCIAL, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'They still read Sarah Hedrick on the 2025 grid. The page already knows they are her, so nothing is broken, but the blocks look like a different person. Your own notes also flag Nov 13 and Nov 20 as possibly the same evening logged twice from two sources.',
+   next:'Do this and I rename both to Sarah Kearney and check whether those two dates are really one event.', mins:''},
+
+  {item:SESSION+'::d-missed', label:'Should a missed call count as a connection?', url:SOCIAL, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'The Luzzo call on 8/23/26 is red in your call log, meaning it did not connect. I left it out. This is a rule, not a one off: it decides what happens every time you send me a call log.',
+   next:'Do this and I add it and count attempts from now on. Kill this task and attempts stay out for good.', mins:''},
+
+  {item:SESSION+'::d-jan', label:'Sarah has both Jan 17 and Jan 18 logged', url:SOCIAL, pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'It is one conversation that ran from Saturday night into Sunday, but a week starts on Sunday, so by your one per week rule they landed in two different weeks and both went in.',
+   next:'Do this and I drop the Jan 18 one. I read this and they both stay.', mins:''}
+];
+
+const ALL=[...WORK,...LATER];
+const state={}; ALL.forEach(x=>state[x.item]={choice:'',note:'',got:false});
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const TODAY=ymd(new Date());
+let sb=null; try{ sb=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co',KEY); }catch(e){}
+function chip(ok){const c=document.getElementById('syncchip');if(ok){c.textContent='saved. Claude can see it';c.className='chip';}else{c.textContent='offline: copy the box below';c.className='chip off';}}
+function nextCell(x){
+  const mins=x.mins?'<span class="mins">'+x.mins+' min</span>':'';
+  if(x.steps){
+    const lead=x.lead?'<span class="lead">'+x.lead+'</span>':'';
+    return '<div class="c next todo"><span class="nh">Your move</span>'+lead+
+           '<ol>'+x.steps.map(t=>'<li>'+t+'</li>').join('')+'</ol>'+mins+'</div>';
+  }
+  if(x.todo) return '<div class="c next todo"><span class="nh">Your move</span>'+x.next+mins+'</div>';
+  if(x.decide) return '<div class="c next">'+x.next+'</div>';
+  const none=/^Nothing\.?$/i.test((x.next||'').trim());
+  return '<div class="c next'+(none?' none':'')+'">'+(x.next||'')+mins+'</div>';
+}
+const ANSWERS=['Do this','Tell me more','I did it','I read this','Kill this task'];
+const ANSCOLOUR={'Do this':'#3f6f8f','Tell me more':'#c07f10','I did it':'#2f8f5b','I read this':'#6f7b8a','Kill this task':'#a8724a'};
+// Two answers mean work is still owed, so the row stays on the page.
+const KEEPS_OPEN=new Set(['Do this','Tell me more']);
+function rowNode(x){
+  const d=document.createElement('div'); d.className='r'; d.dataset.i=x.item;
+  const desc=x.desc?'<div class="desc">'+x.desc+'</div>':'';
+  let act='<div class="ansrow">'+ANSWERS.map(v=>'<button class="ans" data-i="'+x.item+'" data-v="'+v+'">'+v+'</button>').join('')+'</div>';
+  act+='<button class="notelink" data-i="'+x.item+'">＋ note</button><textarea class="nt hidden" data-i="'+x.item+'" placeholder="comment (optional)"></textarea>';
+  const lt=x.light||'amber';
+  d.innerHTML=
+    '<div class="c lt"><span class="dot '+lt+'" title="'+({green:'Done',amber:'Awaiting your comments',red:'Not started'}[lt])+'"></span></div>'+
+    '<div class="c task"><a class="tt" href="'+x.url+'" target="_blank" rel="noopener">'+x.label+'</a>'+desc+'</div>'+
+    '<div class="c mid"><span class="pill '+x.pill+'">'+x.ptext+'</span></div>'+
+    '<div class="c act">'+act+'</div>'+
+    nextCell(x);
+  return d;
+}
+let viewed=new Set();
+function renderWork(){
+  const tw=document.getElementById('tblWork');
+  tw.querySelectorAll('.r:not(.hd)').forEach(n=>n.remove());
+  WORK.filter(x=>!viewed.has(x.item)).forEach(x=>tw.appendChild(rowNode(x)));
+  updateLeft();
+}
+function updateLeft(){
+  const left=WORK.filter(x=>!viewed.has(x.item)).length;
+  document.getElementById('leftct').textContent=left+' left';
+  const ac=document.getElementById('allclear');
+  if(left===0){ ac.textContent='All caught up. '+viewed.size+' filed to today\'s session content.'; ac.classList.remove('hidden'); document.getElementById('tblWork').classList.add('hidden'); }
+  else { ac.classList.add('hidden'); document.getElementById('tblWork').classList.remove('hidden'); }
+}
+const tl=document.getElementById('tblLater'); LATER.forEach(x=>tl.appendChild(rowNode(x)));
+async function saveContent(x){ if(!sb){chip(false);return;} try{ const {error}=await sb.from('session_content').upsert({day:TODAY,item:x.item,label:x.label,session:SESSION,saved_at:new Date().toISOString()},{onConflict:'day,item'}); chip(!error);}catch(e){chip(false);} }
+async function saveTracker(x){ compile(); if(!sb){chip(false);return;} try{ const {error}=await sb.from('tracker').upsert({item:x.item,label:x.label,choice:state[x.item].choice,note:state[x.item].note,session:SESSION,updated_at:new Date().toISOString()},{onConflict:'item'}); chip(!error);}catch(e){chip(false);} }
+document.body.addEventListener('click',e=>{
+  const nl=e.target.closest('.notelink');
+  if(nl){ const ta=nl.parentElement.querySelector('.nt'); ta.classList.toggle('hidden'); if(!ta.classList.contains('hidden')) ta.focus(); return; }
+  const b=e.target.closest('.ans'); if(!b)return;
+  const i=b.dataset.i, v=b.dataset.v, x=ALL.find(z=>z.item===i);
+  state[i].choice=(state[i].choice===v)?'':v;
+  const rowEl=b.closest('.r');
+  rowEl.querySelectorAll('.ans').forEach(y=>y.classList.remove('on'));
+  const chosen=state[i].choice;
+  if(chosen){ b.classList.add('on'); rowEl.classList.add('tapped'); rowEl.style.setProperty('--tapc',ANSCOLOUR[chosen]||''); }
+  else { rowEl.classList.remove('tapped'); rowEl.style.removeProperty('--tapc'); }
+  saveTracker(x);
+  // Do this and Tell me more mean work is owed, so the row stays put.
+  if(chosen && !KEEPS_OPEN.has(chosen)){
+    state[i].got=true; viewed.add(i); saveContent(x);
+    rowEl.classList.add('gone'); setTimeout(()=>{rowEl.remove();updateLeft();},300);
+  } else {
+    state[i].got=false; viewed.delete(i); updateLeft();
+  }
+  compile();
+});
+let t=null;
+document.body.addEventListener('input',e=>{ const n=e.target.closest('.nt'); if(!n)return; state[n.dataset.i].note=n.value; clearTimeout(t); t=setTimeout(()=>saveTracker(ALL.find(x=>x.item===n.dataset.i)),500); });
+function compile(){
+  const lines=['Session Tracker, Project YOU OS, Aug 31, 2026, Social calendar',''];
+  const owed=ALL.filter(x=>KEEPS_OPEN.has(state[x.item].choice));
+  if(owed.length){
+    lines.push('Over to you ('+owed.length+'):');
+    owed.forEach(x=>{ const s=state[x.item]; let l='- '+s.choice.toUpperCase()+': '+x.label; if(s.note) l+=' , '+s.note; lines.push(l); });
+    lines.push('');
+  }
+  const settled=ALL.filter(x=>{const c=state[x.item].choice; return c && !KEEPS_OPEN.has(c);});
+  if(settled.length){
+    lines.push('Settled ('+settled.length+'):');
+    settled.forEach(x=>{ const s=state[x.item]; let l='- '+x.label+': '+s.choice; if(s.note) l+=' , '+s.note; lines.push(l); });
+    lines.push('');
+  }
+  ALL.forEach(x=>{ const s=state[x.item]; if(s.choice || !s.note) return; lines.push('- '+x.label+' , '+s.note); });
+  if(lines.length===2) lines.push('(nothing tapped yet)');
+  document.getElementById('out').value=lines.join('\n');
+}
+function copyOut(){const o=document.getElementById('out');o.select();try{document.execCommand('copy');}catch(e){}}
+async function boot(){
+  if(!sb){chip(false);renderWork();compile();return;}
+  try{
+    const sc=await sb.from('session_content').select('item').eq('day',TODAY).eq('session',SESSION);
+    viewed=new Set((sc.data||[]).map(r=>r.item).filter(Boolean));
+    viewed.forEach(i=>{ if(state[i]) state[i].got=true; });
+    renderWork();
+    const tr=await sb.from('tracker').select('*').eq('session',SESSION);
+    (tr.data||[]).forEach(r=>{ if(!state[r.item])return; state[r.item].choice=r.choice||''; state[r.item].note=r.note||'';
+      if(r.choice){const b=document.querySelector('.ans[data-i="'+r.item+'"][data-v="'+r.choice+'"]');
+        if(b){b.classList.add('on'); const rw=b.closest('.r'); if(rw){rw.classList.add('tapped'); rw.style.setProperty('--tapc',ANSCOLOUR[r.choice]||'');}}}
+      if(r.note){const n=document.querySelector('.nt[data-i="'+r.item+'"]'); if(n){n.value=r.note;n.classList.remove('hidden');}} });
+    chip(true); compile();
+  }catch(e){ chip(false); renderWork(); compile(); }
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
