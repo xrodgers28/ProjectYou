@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Wall &middot; ProjectYou</title>
 <script src="py-day.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="pynav"></div>
@@ -163,6 +164,23 @@
   .vhint{text-align:center;font-size:9.5px;letter-spacing:1.1px;text-transform:uppercase;
          color:#6f6a63;padding:0 16px 14px}
   .hint{font-size:11.5px;color:var(--onbg);opacity:.55;margin-top:4px}
+  .fin{padding:2px 16px 16px}
+  .fintx{font-size:12.5px;color:var(--muted);margin-bottom:11px;max-width:62ch}
+  .finrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  button.tool{font-family:inherit}
+  .tool.tick{background:var(--good);border-color:var(--good);color:#fff}
+  .minl{font-size:10.5px;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);
+        display:flex;align-items:center;gap:7px}
+  .minl input{width:62px;padding:7px 9px;border:1px solid var(--key);border-radius:8px;
+        background:var(--card);color:var(--ink);font-family:inherit;font-size:13px}
+  .gate{margin-top:13px;max-width:320px}
+  .gate p{font-size:12px;color:var(--muted);margin:0 0 8px}
+  .gate input{width:100%;padding:8px 10px;border:1px solid var(--key);border-radius:8px;
+        font-size:13.5px;margin-bottom:7px;font-family:inherit;background:var(--card);color:var(--ink)}
+  .gate button{width:100%;padding:9px;border:0;border-radius:8px;background:var(--accent);
+        color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit}
+  .gate .err{color:var(--bad);font-size:12px;margin-top:6px;min-height:15px}
+  .hidden{display:none!important}
   .stamp{margin-top:16px;font-size:10.5px;letter-spacing:.6px;color:var(--muted);text-align:center}
   .err{background:var(--badbg);border:1px solid var(--bad);color:var(--bad);
        border-radius:12px;padding:12px 14px;margin-top:14px;font-size:13px}
@@ -219,8 +237,26 @@
     <div class="vhint">Tap the top or bottom to go back to the board. Tap the left or right for the one either side. Swipe and the arrow keys work too. S keeps it.</div>
   </div>
 
+  <div class="card">
+    <div class="sec"><h2>Done for today</h2><span class="n">ticks it off your list</span></div>
+    <div class="fin">
+      <div class="fintx" id="finmsg">Tick it once you have had your look. It crosses The Wall off today&rsquo;s list, adds the minutes to the wheel, and marks your worksheet.</div>
+      <div class="finrow">
+        <label class="minl">Minutes <input id="mins" type="number" min="1" max="180" value="10"></label>
+        <button class="tool on" type="button" id="finbtn">Done for today</button>
+      </div>
+      <div class="gate hidden" id="gate">
+        <p>Sign in once and this browser will remember you, same as the other cards.</p>
+        <input id="email" type="email" placeholder="Email" autocomplete="username">
+        <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+        <button type="button" id="gobtn">Sign in</button>
+        <div class="err" id="gateErr"></div>
+      </div>
+    </div>
+  </div>
+
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.11</div>
+  <div class="stamp" id="stamp">v1.12</div>
 </div>
 
 <script>
@@ -532,6 +568,80 @@ function mountPhotogs(){
   } else { setTimeout(next,2000); }
 }
 
+/* ---- the eleventh cue card -------------------------------------------------
+   Same contract as the other ten: find the habit row on today's list, set it
+   done with the minutes typed in, then bounce to the Cue Cards board. The
+   to-do list is behind a sign-in, so this half of the page needs the account
+   even though the pictures do not. */
+var HABIT="The Wall", sb=null, signedIn=false, ticked=false, habitRow=null;
+try{ if(window.supabase && window.supabase.createClient) sb=window.supabase.createClient(SB,KEY); }catch(e){ sb=null; }
+
+function finMsg(t){ var e=document.getElementById("finmsg"); if(e) e.textContent=t; }
+function paintFinish(){
+  var b=document.getElementById("finbtn");
+  if(!b) return;
+  if(ticked){
+    b.textContent="Done today"; b.classList.add("tick");
+    finMsg("Ticked. It is on today's list, the wheel and your worksheet.");
+  }else{
+    b.textContent="Done for today"; b.classList.remove("tick");
+  }
+}
+function toBoard(){ setTimeout(function(){ location.href="habit-modules.html?done=wall"; },550); }
+
+function loadHabit(){
+  if(!sb || !signedIn) return Promise.resolve();
+  return sb.from("todos").select("id,task,done,actual_minutes,for_date")
+    .eq("is_habit",true).eq("task",HABIT)
+    .order("for_date",{ascending:false}).limit(1)
+    .then(function(r){
+      habitRow=(r.data && r.data[0]) || null;
+      ticked=!!(habitRow && habitRow.done && habitRow.for_date===today());
+      paintFinish();
+    });
+}
+
+function finish(){
+  if(!sb){ finMsg("The sign-in did not load, so the tick cannot be saved. Reload the page."); return; }
+  if(!signedIn){ document.getElementById("gate").classList.remove("hidden"); finMsg("Sign in first so the tick reaches the wheel."); return; }
+  if(ticked){ toBoard(); return; }
+  if(!habitRow){ finMsg("Could not find The Wall on today's list."); return; }
+  var el=document.getElementById("mins"), v=parseInt(el&&el.value,10);
+  var mins=(v>0&&v<=180)?v:(habitRow.actual_minutes||10);
+  var now=new Date().toISOString(), t=today();
+  sb.from("todos").update({done:true,status:"done",done_at:now,actual_minutes:mins,for_date:t,updated_at:now})
+    .eq("id",habitRow.id)
+    .then(function(res){
+      if(res.error){ finMsg("Did not save: "+res.error.message); return; }
+      ticked=true; habitRow.done=true; habitRow.for_date=t;
+      paintFinish();
+      finMsg("The Wall to the wheel, "+mins+" min.");
+      toBoard();
+    });
+}
+
+function signIn(){
+  var em=document.getElementById("email").value.trim(), pw=document.getElementById("pass").value;
+  sb.auth.signInWithPassword({email:em,password:pw}).then(function(r){
+    if(r.error){ document.getElementById("gateErr").textContent=r.error.message; return; }
+    signedIn=true;
+    document.getElementById("gate").classList.add("hidden");
+    finMsg("Signed in. Tick it whenever you are finished.");
+    loadHabit();
+  });
+}
+
+function bootHabit(){
+  var b=document.getElementById("finbtn"); if(b) b.onclick=finish;
+  var g=document.getElementById("gobtn"); if(g) g.onclick=signIn;
+  if(!sb){ finMsg("The sign-in did not load, so the tick is unavailable on this visit."); return; }
+  sb.auth.getSession().then(function(s){
+    signedIn=!!(s && s.data && s.data.session);
+    if(signedIn) return loadHabit();
+    document.getElementById("gate").classList.remove("hidden");
+  }).catch(function(){});
+}
+
 function boot(){
   api("v_wall_today?select=*&order=day.desc,slot.asc&limit=200").then(function(rows){
     if(!rows || !rows.length) throw new Error("nothing has been dealt yet");
@@ -547,13 +657,14 @@ function boot(){
         " pictures from "+bySource().length+" sources";
       document.getElementById("layname").textContent=LAYNAME[LAYOUT]||LAYOUT;
       document.getElementById("stamp").textContent=
-        "v1.11, dealt "+DAY+", the layout changes every day, nothing here is about you";
+        "v1.12, dealt "+DAY+", the layout changes every day, nothing here is about you";
       if(DAY!==today()){
         document.getElementById("err").innerHTML=
           '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
       }
       paint();
       setTimeout(mountPhotogs,1200);
+      bootHabit();
     });
   }).catch(function(e){
     document.getElementById("err").innerHTML='<div class="err">Could not load the wall: '+esc(e.message)+'</div>';
