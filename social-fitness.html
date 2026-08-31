@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Social Fitness</title>
-<meta name="pn-ver" content="v1.0">
+<meta name="pn-ver" content="v1.1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -102,6 +102,18 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
 .err{background:var(--warm-soft);border:1px solid var(--warm);color:var(--ink);border-radius:var(--r);
   padding:18px 20px;font-size:15px}
 .hidden{display:none}
+
+.hist{margin:26px 0 0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.hist h3{font-family:"Bricolage Grotesque",sans-serif;font-weight:600;font-size:16px;margin:0 0 3px;letter-spacing:-.01em}
+.hist .sub{font-size:13.5px;color:var(--muted);margin:0 0 14px}
+.dots{display:grid;grid-template-columns:repeat(15,1fr);gap:6px;margin:0 0 14px}
+.dots i{aspect-ratio:1;border-radius:5px;background:var(--line-soft);display:block}
+.dots i.on{background:var(--good)}
+.dots i.today{outline:2px solid var(--warm);outline-offset:1px}
+.hist .tot{display:flex;gap:18px;flex-wrap:wrap;align-items:baseline}
+.hist .tot b{font-family:"Bricolage Grotesque",sans-serif;font-weight:800;font-size:24px;color:var(--ink);line-height:1}
+.hist .tot span{font-size:13.5px;color:var(--ink-2)}
+.hist .due{margin:14px 0 0;padding-top:12px;border-top:1px solid var(--line-soft);font-size:13.5px;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -115,6 +127,8 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
   <div id="mount"><div class="load">Dealing today&rsquo;s card&hellip;</div></div>
 
   <div class="foot" id="foot"></div>
+
+  <div class="hist hidden" id="hist"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -267,7 +281,7 @@ async function doTick(){
     ticked=true;
     say('Logged. That is on the wheel and the worksheet.','');
     el('did').textContent='Done today';
-    drawFoot();
+    drawFoot(); drawHist();
   }catch(e){
     el('did').disabled=false;
     say('That did not save. Try again in a moment.','warn');
@@ -309,9 +323,62 @@ async function drawFoot(){
   }catch(e){ }
 }
 
+/* ---------- the last 30 days ---------- */
+function key(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function longDate(s){
+  var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2])
+    .toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+}
+async function drawHist(){
+  try{
+    var from=new Date(); from.setDate(from.getDate()-29);
+    var r=await sb.from('v_social_fitness').select('day,minutes').gte('day',key(from));
+    var done={}; (r.data||[]).forEach(function(x){ done[x.day]=(x.minutes||0); });
+
+    var cells=[], hit=0, mins=0, streak=0;
+    for(var i=29;i>=0;i--){
+      var d=new Date(); d.setDate(d.getDate()-i);
+      var k=key(d), on=Object.prototype.hasOwnProperty.call(done,k);
+      if(on){ hit++; mins+=done[k]; }
+      cells.push('<i class="'+(on?'on':'')+(k===DAY?' today':'')+'" title="'+k+(on?' - done':'')+'"></i>');
+    }
+    /* streak counts back from today, and today not yet done does not break it */
+    var back=0;
+    while(true){
+      var d2=new Date(); d2.setDate(d2.getDate()-back);
+      var k2=key(d2);
+      if(Object.prototype.hasOwnProperty.call(done,k2)){ streak++; back++; continue; }
+      if(back===0){ back++; continue; }
+      break;
+    }
+
+    var due='';
+    try{
+      var n=await sb.from('v_sf_next_checkin').select('due,last_taken').single();
+      if(n.data&&n.data.due){
+        var left=Math.round((new Date(n.data.due)-new Date())/86400000);
+        due='<p class="due">Next check-in '+longDate(n.data.due)+
+            (left>0?' - '+left+' days away':' - due now')+
+            '. Twenty questions, same as the first one, so the two can be compared.</p>';
+      }
+    }catch(e){}
+
+    el('hist').innerHTML=
+      '<h3>The last thirty days</h3>'+
+      '<p class="sub">One square a day. Filled means you did the thing.</p>'+
+      '<div class="dots">'+cells.join('')+'</div>'+
+      '<div class="tot">'+
+        '<span><b>'+hit+'</b> of 30 days</span>'+
+        '<span><b>'+streak+'</b> in a row</span>'+
+        (mins?'<span><b>'+mins+'</b> minutes</span>':'')+
+      '</div>'+due;
+    el('hist').classList.remove('hidden');
+  }catch(e){ }
+}
+
 /* ---------- go ---------- */
 (async function(){
-  try{ render(await todaysCard()); }
+  try{ render(await todaysCard()); drawHist(); }
   catch(e){
     el('mount').innerHTML='<div class="err">Could not reach your cards just now. Refresh in a moment.</div>';
   }
