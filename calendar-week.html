@@ -61,9 +61,11 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
 .band .bcols{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr);pointer-events:none}
 .band .bcols i{border-left:1px solid var(--colline)}
 .band .bcols i:first-child{border-left:none}
-/* No filled blocks anywhere on this grid. Scott, Aug 30 2026: the colour
-   backgrounds made it hard to read. The layer colour is now a bar down the left
-   edge and the text itself; the block stays white so the words win. */
+/* Every event carries a PALE fill in its calendar's colour, with a darker bar
+   down the left edge and darker text of the same hue. Scott, Aug 30 2026:
+   "every event should have a pale color background". The earlier white-block
+   version was a correction to saturated fills, not to colour itself; his own
+   wall calendar has used pale fills for years. */
 .allday{position:absolute;height:15px;cursor:grab;display:flex;align-items:center;justify-content:flex-start;
   font-size:9.5px;letter-spacing:.2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:0 5px;
   background:#fff;border:1px solid var(--line);border-left-width:3px;border-radius:2px}
@@ -90,14 +92,17 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
   font-size:9.5px;line-height:1.25;border-radius:2px;
   background:#fff;border:1px solid var(--line);border-left-width:3px}
 .blk.tall{font-size:13px;padding:7px 8px}
-/* Long meeting names used to spill past a narrow block once the blocks went
-   white. Break the word rather than letting it run over the edge. */
+/* Break long meeting names rather than letting them run past a narrow block. */
 .blk .t{display:block;font-weight:400;white-space:normal;overflow:hidden;text-overflow:ellipsis;
   word-break:break-word;overflow-wrap:anywhere;hyphens:auto}
 .blk .tm{display:block;font-size:8px;opacity:.72;margin-top:1px}
 .blk.dragging{opacity:.75;z-index:20;cursor:grabbing;box-shadow:0 6px 18px rgba(31,42,68,.22)}
 .blk .grip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:ns-resize}
 .blk .lockdot{position:absolute;top:3px;right:4px;font-size:8px;opacity:.5}
+.morechip{position:absolute;z-index:9;font-size:9px;font-weight:800;color:#fff;background:#4a5a6b;
+  border-radius:999px;padding:2px 7px;line-height:1.2;cursor:pointer;box-shadow:0 1px 3px rgba(31,42,68,.35);
+  letter-spacing:.2px;user-select:none}
+.morechip:hover{background:#1f2a44}
 .ghost{position:absolute;z-index:19;border:1.5px dashed var(--accent);background:rgba(63,111,143,.10);border-radius:2px;pointer-events:none}
 
 
@@ -208,12 +213,12 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v2.0</span>
+  <span class="pn-ver">v2.1</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v2.0</span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v2.1</span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag an all-day bar from the top band down onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
 </div>
 
@@ -287,7 +292,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Week view v2.0 =====
+/* ===== Project YOU · Week view v2.1 =====
    A second way of looking at the same calendar_events table the list view on
    calendar.html reads. Nothing here has its own store: a block on this grid IS
    a calendar event, so a change made here shows up on the list view and on
@@ -569,7 +574,7 @@ function drawBand(days){
     d.style.left='calc('+(it.a*100/7)+'% + 1px)';
     d.style.width='calc('+((it.b-it.a+1)*100/7)+'% - 2px)';
     d.style.top=(3+it.lane*17)+'px';
-    d.style.borderLeftColor=c.color; d.style.color=c.color;
+    d.style.background=c.fill; d.style.borderLeftColor=c.color; d.style.color=c.color;
     d.textContent=it.e.title||'(no title)';
     d.title=it.e.title+(it.e.loc?' · '+it.e.loc:'');
     d.dataset.id=it.e.id;
@@ -590,23 +595,58 @@ function drawBlocks(days){
       .map(function(e){ var s=effStart(e), en=effEnd(e); if(en==null||en<=s)en=s+30; return {e:e,s:s,en:en}; })
       .sort(function(x,y){ return x.s-y.s || y.en-x.en; });
 
-    /* side by side where two things overlap */
+    /* Lanes first: the usual side-by-side placement. */
     var active=[];
     evs.forEach(function(it){
       active=active.filter(function(a){ return a.en>it.s; });
       var used={}; active.forEach(function(a){ used[a.lane]=1; });
       var L=0; while(used[L])L++;
       it.lane=L; active.push(it);
-      it.width=Math.max.apply(null,active.map(function(a){return a.lane;}))+1;
-    });
-    /* a second pass so early blocks in a cluster know the final width */
-    evs.forEach(function(it){
-      var w=1; evs.forEach(function(o){ if(o.s<it.en&&o.en>it.s) w=Math.max(w,o.lane+1); });
-      it.width=w;
     });
 
-    evs.forEach(function(it){ canvas.appendChild(makeBlock(it,di)); });
+    /* Then group them into clusters: a run of events that overlap each other.
+       Scott chose this on Aug 30 2026: NEVER more than two side by side, so a
+       block is never narrower than half a day, and whatever will not fit folds
+       away behind a count that sits ON TOP of the cluster. */
+    var clusters=[], cur=null;
+    evs.forEach(function(it){
+      if(cur && it.s < cur.en){ cur.items.push(it); cur.en=Math.max(cur.en,it.en); }
+      else { cur={items:[it], s:it.s, en:it.en}; clusters.push(cur); }
+    });
+
+    clusters.forEach(function(cl){
+      var lanes=1;
+      cl.items.forEach(function(it){ lanes=Math.max(lanes,it.lane+1); });
+      var key=ds+'@'+cl.s;
+      var open=!!EXPANDED[key];
+      var shown=open?lanes:Math.min(lanes,MAX_ABREAST);
+      var hidden=0;
+      cl.items.forEach(function(it){
+        if(it.lane>=shown){ hidden++; return; }
+        it.width=shown;
+        canvas.appendChild(makeBlock(it,di));
+      });
+      if(hidden>0 || open){ canvas.appendChild(makeMore(cl,di,hidden,open,key)); }
+    });
   });
+}
+
+/* How many things may sit side by side before the rest fold away. */
+var MAX_ABREAST=2;
+var EXPANDED={};
+
+function makeMore(cl,di,hidden,open,key){
+  var colW=100/7;
+  var m=el('div','morechip', open?'\u00d7':('+'+hidden));
+  m.style.left='calc('+(di*colW+colW*0.52)+'% + 1px)';
+  m.style.top=Math.max(0,yOf(cl.s)-2)+'px';
+  m.title=open?'Fold these back up':(hidden+' more here, tap to show '+(hidden===1?'it':'them'));
+  m.onclick=function(ev){
+    ev.stopPropagation();
+    if(open) delete EXPANDED[key]; else EXPANDED[key]=true;
+    render();
+  };
+  return m;
 }
 
 function makeBlock(it,di){
@@ -617,7 +657,7 @@ function makeBlock(it,di){
   b.style.width='calc('+w+'% - 2px)';
   b.style.top=yOf(it.s)+'px';
   b.style.height=Math.max(13,yOf(it.en)-yOf(it.s)-1)+'px';
-  b.style.borderLeftColor=c.color; b.style.color=c.color;
+  b.style.background=c.fill; b.style.borderLeftColor=c.color; b.style.color=c.color;
   b.dataset.id=e.id; b.dataset.day=di;
   var t=el('span','t',e.title||'(no title)'); b.appendChild(t);
   if((it.en-it.s)>=45){ b.appendChild(el('span','tm',clock(it.s)+' – '+clock(it.en))); }
@@ -833,7 +873,7 @@ function openEditor(e){
   catOrder.forEach(function(name){
     var c=catOf(name);
     var b=el('div','sw2'+(name===(e.cat||catOrder[0])?' on':''),name);
-    b.style.borderLeftColor=c.color; b.style.color=c.color;
+    b.style.background=c.fill; b.style.borderLeftColor=c.color; b.style.color=c.color;
     b.onclick=function(){ [].slice.call(sw.children).forEach(function(x){x.classList.remove('on');}); b.classList.add('on'); };
     sw.appendChild(b);
   });
