@@ -67,6 +67,19 @@ p.sub b{color:#2f8f5b}
 .band.contR{border-top-right-radius:0;border-bottom-right-radius:0}
 .band.notgoing{opacity:.4}
 #cal.hling .band:not(.hl){opacity:.16}
+/* Grab either end of a bar and pull. Scott, Aug 31 2026: "colors bars should be
+   able to be dragged to shorten or lengthen". The handle only appears on an end
+   that actually falls in THIS week - an end that carries on past the edge is set
+   in the week that shows it. touch-action stops the page scrolling under a drag. */
+.bh{position:absolute;top:0;bottom:0;width:10px;cursor:ew-resize;z-index:5;touch-action:none}
+.bh.l{left:0} .bh.r{right:0}
+.band:hover .bh{box-shadow:inset 0 0 0 1px rgba(31,42,68,.3);border-radius:2px;background:rgba(255,255,255,.35)}
+.band.dragging{opacity:.85;box-shadow:0 1px 6px rgba(31,42,68,.3)}
+.chip.dragging{box-shadow:0 0 0 2px rgba(31,42,68,.35)}
+/* A one-day event has no bar to grab, so its own right edge is the way to stretch
+   it into one. Without this a bar shrunk down to a single day could never grow back. */
+.cgrip{position:absolute;top:0;bottom:0;right:0;width:9px;cursor:ew-resize;z-index:5;touch-action:none;opacity:0}
+.chip:hover .cgrip{opacity:1;box-shadow:inset 0 0 0 1px rgba(31,42,68,.25);border-radius:2px}
 .winmore{display:flex;justify-content:center;padding:10px 0;background:#f4f4ee;border-bottom:1px solid #e6e6de}
 .winmore button{font:inherit;font-size:12px;font-weight:700;color:#3f6f8f;background:#fff;border:1px solid #d7d7cf;
   border-radius:8px;padding:6px 14px;cursor:pointer}
@@ -82,7 +95,7 @@ p.sub b{color:#2f8f5b}
 .cell.today .dn{background:#E8894A;color:#fff;border-radius:9px;padding:0 5px;top:2px}
 /* Every event carries a pale fill in its calendar's colour with a darker bar
    down the left edge, matching the bands and the week grid. Scott, Aug 30 2026. */
-.chip{display:flex;align-items:center;gap:3px;margin-top:0;font-size:10px;line-height:1.25;border-radius:3px;
+.chip{position:relative;display:flex;align-items:center;gap:3px;margin-top:0;font-size:10px;line-height:1.25;border-radius:3px;
   padding:2px 3px;cursor:pointer;border-left:3px solid transparent}
 /* A hairline between events stacked in the same day. With a pale fill on every
    event, two of the same colour back to back read as one block without it.
@@ -317,12 +330,12 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v3.1</span>
+  <span class="pn-ver">v3.2</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.1</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.2</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Live events sit dimmed because they are tour dates you are tracking; star one to say you are going and it comes forward. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
 </div>
 
@@ -386,7 +399,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Calendar v3.1 =====
+/* ===== Project YOU · Calendar v3.2 =====
    Events live in public.calendar_events, layers in public.calendar_categories.
    New in v1.2: sign-in (the Google feed brings personal appointments onto this
    page, so it can no longer be open to anyone with the URL), plain-English add
@@ -494,7 +507,10 @@ function bandHTML(e,wkA,wkB){
     +(contL?'<span style="opacity:.55;padding-right:3px">&#8592;</span>':'')
     +'<span>'+esc(labelOf(e))+'</span>'
     +(contR?'<span style="opacity:.55;padding-left:3px">&#8594;</span>':'')
-    +'<span class="bx" data-hide="'+e.id+'" title="Hide this one">&times;</span></div>';
+    +'<span class="bx" data-hide="'+e.id+'" title="Hide this one">&times;</span>'
+    +(contL?'':'<span class="bh l" data-grip="s" title="Drag to change the first day"></span>')
+    +(contR?'':'<span class="bh r" data-grip="e" title="Drag to change the last day"></span>')
+    +'</div>';
 }
 function chipHTML(e,span){
   return '<div class="chip'+(span?' spanchip':'')+goCls(e)+'" data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'" style="color:'+colorOf(e)+';background:'+fillOf(e)+';border-left-color:'+colorOf(e)+'">'
@@ -503,7 +519,8 @@ function chipHTML(e,span){
     +(e.start_time?'<span class="tm">'+shortTime(e.start_time)+'</span>':'')
     +'<span class="ct">'+esc(labelOf(e))+'</span>'
     +starHTML(e)
-    +'<span class="cx" data-hide="'+e.id+'" title="Hide this one">&times;</span></div>';
+    +'<span class="cx" data-hide="'+e.id+'" title="Hide this one">&times;</span>'
+    +'<span class="cgrip" data-grip="e" title="Drag right to run this over more days"></span></div>';
 }
 function liveChipHTML(e){
   return '<div class="lchip'+goCls(e)+'" data-open="'+e.id+'" data-hc="'+esc(e.cat)+'" data-hs="'+esc(hk(e))+'" style="color:'+catOf(e.cat).color+'">'
@@ -610,16 +627,81 @@ function renderCal(){
   const wf=document.getElementById('winfwd');
   if(wf) wf.onclick=()=>{ const y=window.scrollY; WIN_FWD+=12; renderCal(); window.scrollTo(0,y); };
   cal.querySelectorAll('.band').forEach(el=>el.onclick=(ev)=>{
+    if(ev.target.dataset.grip)return;
     if(ev.target.dataset.hide){setHidden(+ev.target.dataset.hide,true);return;}
     openEvent(+el.dataset.open);
   });
   cal.querySelectorAll('.chip,.lchip').forEach(el=>el.onclick=(ev)=>{
+    if(ev.target.dataset.grip)return;
     if(ev.target.dataset.hide){setHidden(+ev.target.dataset.hide,true);return;}
     if(ev.target.dataset.star){const id=+ev.target.dataset.star;
       setAttending(id,!(EVENTS.find(x=>x.id===id)||{}).attending);return;}
     openEvent(+el.dataset.open);
   });
   cal.querySelectorAll('.more').forEach(el=>el.onclick=()=>openDay(el.dataset.day));
+  cal.querySelectorAll('.bh,.cgrip').forEach(wireDrag);
+}
+
+/* ---------- dragging a colour bar ----------
+   Grab either end and pull sideways: the bar follows the pointer a whole day at a
+   time, and on release the new first or last day is written down. A day column is
+   a seventh of the week row, so the maths is the same one the bars are drawn with.
+
+   Anything you set by hand is marked span_locked, which is the flag the two-hourly
+   Google sync reads before it touches dates - so a bar you dragged stays where you
+   put it instead of snapping back on the next pull. Scott, Aug 31 2026. */
+function wireDrag(h){
+  h.addEventListener('pointerdown',function(ev){
+    if(ev.button)return;
+    ev.preventDefault(); ev.stopPropagation();
+    const box=h.parentNode, row=box.closest('.wrow')||box.closest('.cell');
+    if(!row)return;
+    const isBand=box.classList.contains('band');
+    /* A bar measures against the seven-day row it sits in; a one-day chip has only
+       its own cell, and a cell IS one day wide. */
+    const colW=isBand?(row.getBoundingClientRect().width/7):row.getBoundingClientRect().width;
+    if(!colW)return;
+    const id=+box.dataset.open, e=EVENTS.find(x=>x.id===id); if(!e)return;
+    const which=h.dataset.grip;
+    const startX=ev.clientX, left0=box.offsetLeft, w0=box.offsetWidth;
+    const d0=new Date(e.date+"T12:00:00"), e0=new Date((e.end||e.date)+"T12:00:00");
+    let shift=0, moved=false;
+    box.classList.add('dragging');
+    function mv(ev2){
+      const dx=ev2.clientX-startX;
+      if(Math.abs(dx)>3)moved=true;
+      shift=Math.round(dx/colW);
+      if(which==='e'){
+        let ne=new Date(e0.getTime()+shift*86400000);
+        if(ne<d0){ ne=d0; shift=Math.round((ne-e0)/86400000); }
+        if(isBand) box.style.width=Math.max(colW*0.5,w0+shift*colW)+'px';
+      }else{
+        let nd=new Date(d0.getTime()+shift*86400000);
+        if(nd>e0){ nd=e0; shift=Math.round((nd-d0)/86400000); }
+        box.style.left=(left0+shift*colW)+'px';
+        box.style.width=Math.max(colW*0.5,w0-shift*colW)+'px';
+      }
+    }
+    function up(){
+      document.removeEventListener('pointermove',mv);
+      document.removeEventListener('pointerup',up);
+      box.classList.remove('dragging');
+      if(!moved||!shift){ renderCal(); return; }
+      let nd=e.date, ne=e.end||e.date;
+      if(which==='e') ne=iso(new Date(e0.getTime()+shift*86400000));
+      else nd=iso(new Date(d0.getTime()+shift*86400000));
+      if(ne<nd){ renderCal(); return; }
+      const wasReadonly=!!e.readonly;
+      e.date=nd; e.end=(ne===nd?null:ne);
+      renderCal(); renderRail(); renderLater();
+      save('calendar_events',{date:nd,end_date:(ne===nd?null:ne),span_locked:true,
+        updated_at:new Date().toISOString()},'id',id);
+      toast(wasReadonly?'Held at your dates — Google will not change it back'
+                       :'Now '+fmt(nd)+(ne===nd?'':' – '+fmt(ne)));
+    }
+    document.addEventListener('pointermove',mv);
+    document.addEventListener('pointerup',up);
+  });
 }
 
 /* Hovering a layer row lights its entries and fades everything else. `key` is a
