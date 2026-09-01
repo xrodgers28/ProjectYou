@@ -80,6 +80,7 @@ window.MAPS_NAV = {
   "ver": "Maps",
   "items": [
     { "label": "\u2190 Overview", "href": "maps.html" },
+    { "label": "Site Map", "href": "site-map.html" },
     { "label": "Knowledge Graph", "href": "blueprint.html" },
     { "label": "Architecture Map", "href": "architecture-map.html" },
     { "label": "Data Flow Chart", "href": "dfd.html" },
