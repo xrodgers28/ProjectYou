@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Travel Log &middot; Project YOU</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#1f2a44;--muted:#4b5563;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
+    --inset:#f5f7fb;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--greenbg:#e9f5ef;--amber:#9a6b06;--amberbg:#fdf6e6;
+    --rose:#b23a30;--rosebg:#fbeeec;--blue:#2a5d8f;--bluebg:#eaf1f8;
+    --biz:#2E6E8E;--bizbg:#e9f0f5;--per:#8a5a1f;--perbg:#fbf2e6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:16px}
+  .hidden{display:none!important}
+  #login{max-width:340px;margin:14vh auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 8px 26px rgba(31,42,68,.09)}
+  #login h1{font-size:20px;margin-bottom:5px}
+  #login p{font-size:14px;color:var(--muted);margin-bottom:16px}
+  #login input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;font-size:15px}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 16px;font-size:15px;font-weight:700;cursor:pointer}
+  .btn:hover{background:var(--accent2)}
+  .err{color:var(--rose);font-size:14px;margin-top:8px}
+
+  .secbar-wrap{max-width:1180px;margin:0 auto;padding:12px 20px 0}
+  .secbar{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px}
+  .secbar h1{font-size:21px}
+  .ver,.date{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:16px 20px 60px}
+  .sub{font-size:16px;color:var(--muted);margin-bottom:18px;max-width:900px}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+  .vc{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 16px}
+  .vc .k{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
+  .vc .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+  .vc .n{font-size:14px;color:var(--muted);margin-top:4px}
+  .vc.per{border-left-color:var(--per)} .vc.biz{border-left-color:var(--biz)} .vc.warn{border-left-color:var(--amber)}
+
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .tab{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 15px;font-size:15px;font-weight:700;cursor:pointer;color:var(--ink)}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+
+  .panel{display:none} .panel.on{display:block}
+  .eyebrow{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:22px 0 4px}
+  h2{font-size:19px;margin-bottom:10px}
+
+  .tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+  table{border-collapse:collapse;width:100%;min-width:760px}
+  th{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--inset);white-space:nowrap;cursor:pointer;user-select:none}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+  td{padding:9px 12px;border-bottom:1px solid var(--line);font-size:15px;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--inset)}
+  tfoot td{font-weight:800;background:var(--inset);border-top:2px solid var(--line);font-size:16px}
+
+  .pill{display:inline-block;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.04em;border-radius:999px;padding:3px 9px;border:1px solid}
+  .pill.per{color:var(--per);background:var(--perbg);border-color:#e4cfae}
+  .pill.biz{color:var(--biz);background:var(--bizbg);border-color:#bcd2df}
+  .pill.chk{color:var(--amber);background:var(--amberbg);border-color:#e8d49a}
+  .pill.ok{color:var(--green);background:var(--greenbg);border-color:#b9dfcc}
+
+  .toggle{cursor:pointer;border:none;font:inherit}
+  input.money{width:92px;padding:6px 8px;border:1px solid var(--line);border-radius:7px;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:14px;text-align:right;background:#fff;color:var(--ink)}
+  input.money:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  input.money.empty{background:var(--amberbg);border-color:#e8d49a}
+
+  .note{border-left:4px solid var(--blue);background:var(--bluebg);border-radius:0 10px 10px 0;padding:12px 14px;margin:14px 0;font-size:15px}
+  .note.amber{border-left-color:var(--amber);background:var(--amberbg)}
+  .cf{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+  .cf h3{font-size:16px;margin-bottom:8px}
+  .cf .opt{display:block;background:var(--inset);border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:7px;font-size:15px;cursor:pointer;text-align:left;width:100%;font-family:inherit;color:var(--ink)}
+  .cf .opt:hover{border-color:var(--accent)}
+  .cf .opt.picked{border-color:var(--green);background:var(--greenbg);font-weight:700}
+
+  .filt{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px;font-size:15px}
+  .filt input[type=search]{padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:15px;min-width:220px;font-family:inherit}
+  .filt label{display:flex;gap:6px;align-items:center;cursor:pointer}
+
+  footer{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-top:34px;padding-top:14px;border-top:1px solid var(--line)}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#1f2a44;color:#fff;padding:10px 16px;border-radius:9px;font-size:14px;opacity:0;pointer-events:none;transition:.2s}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ink:#e7ecf3;--muted:#aab4c2;--line:#2b3444;--bg:#141a24;--card:#1c2431;--inset:#222b3a;
+      --chip:#222b3a;--greenbg:#16302a;--amberbg:#33290f;--rosebg:#331d1a;--bluebg:#16283a;
+      --bizbg:#16293a;--perbg:#332a18;--per:#d9ac6a;--biz:#7fb6d6;--amber:#e0b75a;--green:#5ec38f;--rose:#e08a80;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>Travel Log</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+<div class="pynav"></div>
+
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Travel Log</h1><span class="ver pn-ver">v1.0</span><span class="date" id="dstamp"></span></div></div>
+
+<div class="wrap">
+  <p class="sub">Every trip you have taken, what it cost, and whether it was personal or business. The trip list comes from TripIt, back to June 2006. The money comes from Gondola, which only goes back to September 2025, so most older trips have blank boxes waiting for you. Type a number straight into any box and it saves itself.</p>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="tabs">
+    <button class="tab on" data-p="p1">By year</button>
+    <button class="tab" data-p="p2">Every trip</button>
+    <button class="tab" data-p="p3">Needs you</button>
+    <button class="tab" data-p="p4">Disagreements</button>
+  </div>
+
+  <div class="panel on" id="p1">
+    <div class="eyebrow">Year by year</div>
+    <h2>What you spent, and on what</h2>
+    <div class="tw"><table id="tyear"><thead><tr>
+      <th>Year</th><th class="num">Trips</th><th class="num">Personal</th><th class="num">Business</th>
+      <th class="num">Flights</th><th class="num">Hotels</th><th class="num">Cars</th><th class="num">Total</th>
+      <th class="num">Points</th><th class="num">Trips with no money yet</th>
+    </tr></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <div class="note">A year only counts what is in the boxes. Anything still blank is not zero, it is unknown, and the last column tells you how many blanks are hiding behind that year's total.</div>
+  </div>
+
+  <div class="panel" id="p2">
+    <div class="eyebrow">Every trip</div>
+    <h2>The whole list, 2006 to today</h2>
+    <div class="filt">
+      <input type="search" id="q" placeholder="Search a place or trip name">
+      <label><input type="checkbox" id="fmoney"> Only trips with money in them</label>
+      <label><input type="checkbox" id="fmine"> Only trips you were on</label>
+      <span id="count" style="color:var(--muted)"></span>
+    </div>
+    <div class="tw"><table id="ttrip"><thead><tr>
+      <th data-s="start_day">Dates</th><th data-s="trip_name">Trip</th><th data-s="destination">Where</th>
+      <th data-s="purpose">Personal or business</th>
+      <th class="num">Flights</th><th class="num">Hotels</th><th class="num">Cars</th><th class="num">Trip total</th>
+    </tr></thead><tbody></tbody></table></div>
+    <div class="note">Tap the personal or business word to flip it. An amber box is one nobody has filled in yet.</div>
+  </div>
+
+  <div class="panel" id="p3">
+    <div class="eyebrow">Waiting on you</div>
+    <h2>What is missing</h2>
+    <div id="needs"></div>
+  </div>
+
+  <div class="panel" id="p4">
+    <div class="eyebrow">Where two sources disagree</div>
+    <h2>Nothing here was merged for you</h2>
+    <p class="sub">Each one is two records that cannot both be right. Pick the one that is, or leave it if you want to decide later.</p>
+    <div id="conf"></div>
+  </div>
+
+  <footer id="foot"></footer>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('loginErr');if(_e)_e.textContent='Your session expired. Please sign in again.';}}});
+
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dshort(d){ if(!d) return '?'; const p=d.split('-'); return MON[+p[1]-1]+' '+(+p[2]); }
+function drange(a,b){ if(!a) return '?'; const ya=a.split('-')[0]; if(!b||b===a) return dshort(a)+', '+ya; return dshort(a)+' to '+dshort(b)+', '+ya; }
+function money(n){ n=Number(n||0); return n? '$'+n.toLocaleString('en-US',{maximumFractionDigits:0}) : ''; }
+function money0(n){ return '$'+Number(n||0).toLocaleString('en-US',{maximumFractionDigits:0}); }
+function pts(n){ n=Number(n||0); return n? n.toLocaleString('en-US')+' pts' : ''; }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); }
+
+let TRIPS=[], YEARS=[], TOT=null, CONF=[], sortKey='start_day', sortDir=-1;
+
+async function boot(){ const {data:{session}}=await sb.auth.getSession(); if(session) onLogin(session); }
+async function signIn(){
+  const email=document.getElementById('email').value.trim(), pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}
+  onLogin(data.session);
+}
+async function onLogin(session){
+  try{ await sb.realtime.setAuth(session.access_token); }catch(e){}
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  load();
+}
+
+function safe(fn){ try{ fn(); }catch(e){ console.error(e); } }
+
+async function load(){
+  const now=new Date();
+  document.getElementById('dstamp').textContent = MON[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
+  const [t,y,tt,c] = await Promise.all([
+    sb.from('travel_trips').select('*').order('start_day',{ascending:false}),
+    sb.from('v_travel_year').select('*'),
+    sb.from('v_travel_totals').select('*').single(),
+    sb.from('travel_conflicts').select('*').order('id')
+  ]);
+  TRIPS=t.data||[]; YEARS=y.data||[]; TOT=tt.data||null; CONF=c.data||[];
+  safe(drawCards); safe(drawYears); safe(drawTrips); safe(drawNeeds); safe(drawConf);
+  document.getElementById('foot').textContent='Project YOU OS  -  Travel Log v1.0  -  '+TRIPS.length+' trips  &middot;  trip list from TripIt, prices from Gondola, updated live from your own database.';
+}
+
+function drawCards(){
+  if(!TOT) return;
+  const el=document.getElementById('cards');
+  el.innerHTML =
+   '<div class="vc"><div class="k">All time, everything known</div><div class="v">'+money0(TOT.total_cash)+'</div><div class="n">'+TOT.trips+' trips on record'+(Number(TOT.points)?' &middot; plus '+pts(TOT.points):'')+'</div></div>'+
+   '<div class="vc per"><div class="k">Personal</div><div class="v">'+money0(TOT.personal_cash)+'</div><div class="n">'+TOT.personal_trips+' trips</div></div>'+
+   '<div class="vc biz"><div class="k">Business</div><div class="v">'+money0(TOT.business_cash)+'</div><div class="n">'+TOT.business_trips+' trips</div></div>'+
+   '<div class="vc warn"><div class="k">Still blank</div><div class="v">'+TOT.trips_no_money+'</div><div class="n">trips with no price against them</div></div>';
+}
+
+function drawYears(){
+  const tb=document.querySelector('#tyear tbody'), tf=document.querySelector('#tyear tfoot');
+  tb.innerHTML = YEARS.map(r=>
+    '<tr><td><b>'+r.yr+'</b></td><td class="num">'+r.trips+'</td>'+
+    '<td class="num">'+(Number(r.personal_cash)?money(r.personal_cash):'&mdash;')+'</td>'+
+    '<td class="num">'+(Number(r.business_cash)?money(r.business_cash):'&mdash;')+'</td>'+
+    '<td class="num">'+(Number(r.flight_cash)?money(r.flight_cash):'&mdash;')+'</td>'+
+    '<td class="num">'+(Number(r.hotel_cash)?money(r.hotel_cash):'&mdash;')+'</td>'+
+    '<td class="num">'+(Number(r.car_cash)?money(r.car_cash):'&mdash;')+'</td>'+
+    '<td class="num"><b>'+(Number(r.total_cash)?money(r.total_cash):'&mdash;')+'</b></td>'+
+    '<td class="num">'+(Number(r.points)?Number(r.points).toLocaleString():'&mdash;')+'</td>'+
+    '<td class="num">'+(r.trips_no_money?'<span class="pill chk">'+r.trips_no_money+'</span>':'<span class="pill ok">none</span>')+'</td></tr>').join('');
+  if(TOT) tf.innerHTML='<tr><td>All years</td><td class="num">'+TOT.trips+'</td><td class="num">'+money0(TOT.personal_cash)+'</td><td class="num">'+money0(TOT.business_cash)+'</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">'+money0(TOT.total_cash)+'</td><td class="num">'+Number(TOT.points).toLocaleString()+'</td><td class="num">'+TOT.trips_no_money+'</td></tr>';
+}
+
+function tripTotal(t){ return Number(t.flight_cost||0)+Number(t.hotel_cost||0)+Number(t.car_cost||0); }
+
+function filtered(){
+  const q=(document.getElementById('q').value||'').toLowerCase();
+  const fm=document.getElementById('fmoney').checked, fmine=document.getElementById('fmine').checked;
+  let rows=TRIPS.filter(t=>{
+    if(fm && !tripTotal(t) && !Number(t.points_used)) return false;
+    if(fmine && t.scott_went===false) return false;
+    if(q && !((t.trip_name||'')+' '+(t.destination||'')+' '+(t.country||'')).toLowerCase().includes(q)) return false;
+    return true;
+  });
+  rows.sort((a,b)=>{
+    let va=a[sortKey], vb=b[sortKey];
+    if(sortKey==='start_day'){ va=va||''; vb=vb||''; }
+    else { va=String(va==null?'':va).toLowerCase(); vb=String(vb==null?'':vb).toLowerCase(); }
+    return va<vb? -1*sortDir : va>vb? 1*sortDir : 0;
+  });
+  return rows;
+}
+
+function drawTrips(){
+  const rows=filtered();
+  document.getElementById('count').textContent=rows.length+' of '+TRIPS.length+' trips';
+  document.querySelector('#ttrip tbody').innerHTML = rows.map(t=>{
+    const chk = t.purpose_set_by==='scott' ? '' : (t.purpose_confidence==='low' ? ' <span class="pill chk" title="a guess worth checking">guess</span>' : '');
+    return '<tr data-id="'+t.id+'">'+
+      '<td style="white-space:nowrap">'+esc(drange(t.start_day,t.end_day))+'</td>'+
+      '<td>'+esc(t.trip_name||'(no name)')+(t.scott_went===false?' <span class="pill chk">not you</span>':'')+'</td>'+
+      '<td>'+esc(t.destination||'&mdash;')+'</td>'+
+      '<td><button class="toggle pill '+(t.purpose==='business'?'biz':'per')+'" onclick="flip('+t.id+')">'+(t.purpose||'set')+'</button>'+chk+'</td>'+
+      '<td class="num">'+mbox(t,'flight_cost')+'</td>'+
+      '<td class="num">'+mbox(t,'hotel_cost')+'</td>'+
+      '<td class="num">'+mbox(t,'car_cost')+'</td>'+
+      '<td class="num"><b>'+(tripTotal(t)?money(tripTotal(t)):'&mdash;')+'</b>'+(Number(t.points_used)?'<br><span style="font-size:12px;color:var(--muted)">'+pts(t.points_used)+'</span>':'')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function mbox(t,f){
+  const v=t[f]==null?'':Number(t[f]);
+  return '<input class="money'+(v===''?' empty':'')+'" inputmode="decimal" data-id="'+t.id+'" data-f="'+f+'" value="'+(v===''?'':v)+'">';
+}
+
+async function saveMoney(id,field,val){
+  const n = val==='' ? null : Number(String(val).replace(/[^0-9.]/g,''));
+  const patch={updated_at:new Date().toISOString()}; patch[field]=n;
+  const {error}=await sb.from('travel_trips').update(patch).eq('id',id);
+  if(error){ toast('Did not save: '+error.message); return; }
+  const t=TRIPS.find(x=>x.id===id); if(t) t[field]=n;
+  toast('Saved');
+  await refreshTotals(); safe(drawCards); safe(drawYears); safe(drawTrips); safe(drawNeeds);
+}
+
+async function flip(id){
+  const t=TRIPS.find(x=>x.id===id); if(!t) return;
+  const next = t.purpose==='business' ? 'personal' : 'business';
+  const {error}=await sb.from('travel_trips').update({purpose:next,purpose_set_by:'scott',purpose_confidence:'high',updated_at:new Date().toISOString()}).eq('id',id);
+  if(error){ toast('Did not save: '+error.message); return; }
+  t.purpose=next; t.purpose_set_by='scott'; t.purpose_confidence='high';
+  await refreshTotals(); safe(drawCards); safe(drawYears); safe(drawTrips); safe(drawNeeds);
+}
+
+async function refreshTotals(){
+  const [y,tt]=await Promise.all([ sb.from('v_travel_year').select('*'), sb.from('v_travel_totals').select('*').single() ]);
+  YEARS=y.data||YEARS; TOT=tt.data||TOT;
+}
+
+function drawNeeds(){
+  const noMoney=TRIPS.filter(t=>!tripTotal(t) && !Number(t.points_used));
+  const guesses=TRIPS.filter(t=>t.purpose_confidence==='low' && t.purpose_set_by!=='scott');
+  const noPlace=TRIPS.filter(t=>!t.destination);
+  const el=document.getElementById('needs');
+  el.innerHTML =
+    '<div class="note amber"><b>'+noMoney.length+' trips have no price on them.</b> Gondola only knows what you paid from September 2025 onward. Everything before that has to come from an old confirmation email, a card statement, or your memory. Type any number you know straight into the Every trip tab.</div>'+
+    '<div class="note amber"><b>'+guesses.length+' personal or business labels are a guess worth checking.</b> These are the trips whose name gave nothing away, mostly the ones TripIt named itself like "Boston, MA, April 2026". Tap the word to flip it and it stops being a guess.</div>'+
+    '<div class="note"><b>'+noPlace.length+' trips have no place recorded.</b> Mostly trips TripIt saved with no location.</div>'+
+    '<div class="eyebrow">The most recent trips still missing money</div><div class="tw"><table><thead><tr><th>Dates</th><th>Trip</th><th>Where</th><th>Personal or business</th></tr></thead><tbody>'+
+    noMoney.slice(0,40).map(t=>'<tr><td style="white-space:nowrap">'+esc(drange(t.start_day,t.end_day))+'</td><td>'+esc(t.trip_name||'(no name)')+'</td><td>'+esc(t.destination||'&mdash;')+'</td><td><span class="pill '+(t.purpose==='business'?'biz':'per')+'">'+(t.purpose||'?')+'</span></td></tr>').join('')+
+    '</tbody></table></div>';
+}
+
+function drawConf(){
+  const el=document.getElementById('conf');
+  if(!CONF.length){ el.innerHTML='<div class="note">Nothing disagrees right now.</div>'; return; }
+  el.innerHTML = CONF.map(function(c,i){ return
+    '<div class="cf"><h3>'+(i+1)+'. '+esc(c.field)+'</h3>'+
+    '<button class="opt'+(c.chosen==='a'?' picked':'')+'" data-cid="'+c.id+'" data-pick="a">'+esc(c.tripit_value)+'</button>'+
+    '<button class="opt'+(c.chosen==='b'?' picked':'')+'" data-cid="'+c.id+'" data-pick="b">'+esc(c.gondola_value)+'</button>'+
+    '<button class="opt'+(c.chosen==='both'?' picked':'')+'" data-cid="'+c.id+'" data-pick="both">Both are real, keep them both</button></div>'; }).join('');
+}
+
+async function pickConf(id,which){
+  const {error}=await sb.from('travel_conflicts').update({chosen:which,resolved:true}).eq('id',id);
+  if(error){ toast('Did not save: '+error.message); return; }
+  const c=CONF.find(x=>x.id===id); if(c){ c.chosen=which; c.resolved=true; }
+  drawConf(); toast('Noted');
+}
+
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on'); document.getElementById(b.dataset.p).classList.add('on');
+});
+document.querySelectorAll('#ttrip th[data-s]').forEach(th=>th.onclick=()=>{
+  const k=th.dataset.s; if(sortKey===k) sortDir*=-1; else { sortKey=k; sortDir=(k==='start_day'?-1:1); }
+  drawTrips();
+});
+['q','fmoney','fmine'].forEach(id=>document.getElementById(id).addEventListener('input',drawTrips));
+
+document.querySelector('#ttrip tbody').addEventListener('change',function(e){
+  var el=e.target; if(el && el.classList && el.classList.contains('money')) saveMoney(Number(el.dataset.id), el.dataset.f, el.value);
+});
+document.getElementById('conf').addEventListener('click',function(e){
+  var el=e.target.closest ? e.target.closest('.opt') : null;
+  if(el && el.dataset.cid) pickConf(Number(el.dataset.cid), el.dataset.pick);
+});
+
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
