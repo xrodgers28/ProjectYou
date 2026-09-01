@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What the old emails said &middot; Project YOU</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#1f2a44;--muted:#4b5563;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
+    --inset:#f5f7fb;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--greenbg:#e9f5ef;--amber:#9a6b06;--amberbg:#fdf6e6;
+    --rose:#b23a30;--rosebg:#fbeeec;--blue:#2a5d8f;--bluebg:#eaf1f8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:16px}
+  .hidden{display:none!important}
+  #login{max-width:340px;margin:14vh auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 8px 26px rgba(31,42,68,.09)}
+  #login h1{font-size:20px;margin-bottom:5px}
+  #login p{font-size:13.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:9px;font-size:15px;font-family:inherit}
+  .btn{background:var(--accent);color:#fff;border:0;border-radius:9px;padding:10px 16px;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+  .btn:hover{background:var(--accent2)}
+  .err{color:var(--rose);font-size:13px;margin-top:8px}
+
+  .secbar-wrap{background:#fff;border-bottom:1px solid var(--line)}
+  .secbar{max-width:1180px;margin:0 auto;padding:16px 20px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .secbar h1{font-size:25px;letter-spacing:-.2px}
+  .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line);border-radius:20px;padding:3px 9px}
+  .date{font-size:12px;color:#9aa6b4;margin-left:auto}
+
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 20px 90px}
+  .lede{font-size:17px;max-width:760px;margin-bottom:6px}
+  .sub{font-size:14px;color:var(--muted);max-width:760px;margin-bottom:18px}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px}
+  .card .k{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4}
+  .card .v{font-size:27px;font-weight:800;letter-spacing:-.5px;margin-top:2px}
+  .card .n{font-size:12px;color:var(--muted);margin-top:2px}
+
+  h2.sec{font-size:16px;margin:26px 0 4px}
+  p.secnote{font-size:13.5px;color:var(--muted);margin-bottom:12px;max-width:760px}
+
+  .row{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:9px;display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .row.done{opacity:.5}
+  .row .when{flex:0 0 96px;font-size:12.5px;font-weight:800;color:var(--muted);padding-top:2px}
+  .row .what{flex:1 1 320px;min-width:0}
+  .row .what b{font-size:15px}
+  .row .meta{font-size:12.5px;color:var(--muted);margin-top:2px}
+  .row .note{font-size:12.5px;color:var(--amber);background:var(--amberbg);border-radius:7px;padding:5px 9px;margin-top:6px;display:inline-block}
+  .row .price{flex:0 0 120px;text-align:right;font-size:19px;font-weight:800;letter-spacing:-.3px}
+  .row .pts{display:block;font-size:11.5px;font-weight:700;color:var(--muted)}
+  .row .acts{flex:0 0 auto;display:flex;gap:7px;align-items:center}
+  .mini{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 13px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit;color:var(--muted)}
+  .mini.keep:hover{border-color:var(--green);color:var(--green);background:var(--greenbg)}
+  .mini.drop:hover{border-color:var(--rose);color:var(--rose);background:var(--rosebg)}
+  .mini.on-keep{border-color:var(--green);color:var(--green);background:var(--greenbg)}
+  .mini.on-drop{border-color:var(--rose);color:var(--rose);background:var(--rosebg)}
+  .flag{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;border-radius:20px;padding:2px 9px;margin-left:6px;color:var(--rose);background:var(--rosebg)}
+
+  details{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  summary{cursor:pointer;font-weight:800;font-size:14px}
+  details .row{border:0;border-top:1px solid var(--line);border-radius:0;margin:0;padding:10px 0}
+
+  .footbar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);padding:11px 20px;display:flex;gap:14px;align-items:center;justify-content:center;box-shadow:0 -6px 20px rgba(31,42,68,.07)}
+  .footbar span{font-size:13.5px;color:var(--muted)}
+  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:74px;background:var(--ink);color:#fff;font-size:13px;padding:9px 15px;border-radius:9px;opacity:0;transition:opacity .2s;pointer-events:none}
+  #toast.show{opacity:1}
+  @media(max-width:700px){
+    .row .when{flex:0 0 100%}
+    .row .price{flex:1 1 auto;text-align:left}
+    .secbar h1{font-size:21px}
+  }
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>Old travel prices</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+<div class="pynav"></div>
+
+<div class="secbar-wrap"><div class="secbar"><h1>What your old emails said you paid</h1><span class="ver pn-ver">v1.0</span><span class="date" id="dstamp"></span></div></div>
+
+<div class="wrap">
+  <p class="lede" id="lede">Loading&hellip;</p>
+  <p class="sub">Each one below is a price I found in a real receipt in your mail, going back to 2015. Nothing has been added to your Travel Log yet. Tap <b>Keep</b> on the ones that are right and <b>Drop</b> on the ones that are not, then press the button at the bottom to put the kept ones into your trip totals.</p>
+
+  <div class="cards" id="cards"></div>
+
+  <h2 class="sec">Waiting for you</h2>
+  <p class="secnote">Oldest first, because those are the years your log has nothing for.</p>
+  <div id="pendlist"></div>
+
+  <h2 class="sec">Already in your log</h2>
+  <p class="secnote">Same booking reference as something Gondola already gave you, so these are not counted again. Nothing to do here.</p>
+  <div id="dupelist"></div>
+
+  <h2 class="sec">Found, but the number is locked in a PDF</h2>
+  <p class="secnote">The hotel bill exists in your mail but the amount is inside an attachment the mail tool cannot open. If you open one and tell me the number, I will file it.</p>
+  <div id="nolist"></div>
+</div>
+
+<div class="footbar">
+  <span id="tally"></span>
+  <button class="btn" id="applybtn" onclick="applyKept()">Put the kept ones into my trip totals</button>
+</div>
+<div id="toast"></div>
+</div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange(function(_ev,_ss){if(!_ss){var a=document.getElementById('app'),l=document.getElementById('login');if(a)a.classList.add('hidden');if(l){l.classList.remove('hidden');var e=document.getElementById('loginErr');if(e)e.textContent='Your session expired. Please sign in again.';}}});
+
+const esc=function(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');};
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dshort(d){ if(!d) return ''; var p=d.split('-'); return MON[+p[1]-1]+' '+(+p[2]); }
+function when(a,b){
+  if(!a) return 'date unknown';
+  var y=a.split('-')[0];
+  if(!b||b===a) return dshort(a)+' '+y;
+  return dshort(a)+' to '+dshort(b)+' '+y;
+}
+function money(n){ if(n==null) return ''; return '$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function toast(m){ var t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(function(){t.classList.remove('show');},1800); }
+
+var ROWS=[], TRIPS={};
+
+async function boot(){ var r=await sb.auth.getSession(); if(r.data.session) onLogin(r.data.session); }
+async function signIn(){
+  var email=document.getElementById('email').value.trim(), pass=document.getElementById('pass').value;
+  var r=await sb.auth.signInWithPassword({email:email,password:pass});
+  if(r.error){document.getElementById('loginErr').textContent=r.error.message;return;}
+  onLogin(r.data.session);
+}
+async function onLogin(session){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  var d=new Date();
+  document.getElementById('dstamp').textContent=MON[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();
+  load();
+}
+
+async function load(){
+  var r=await sb.from('travel_bookings').select('*').eq('source','email').order('start_day',{ascending:true,nullsFirst:false});
+  if(r.error){ document.getElementById('lede').textContent='Could not read the list: '+r.error.message; return; }
+  ROWS=r.data||[];
+  var ids=[]; ROWS.forEach(function(x){ if(x.trip_id&&ids.indexOf(x.trip_id)<0) ids.push(x.trip_id); });
+  if(ids.length){
+    var t=await sb.from('travel_trips').select('id,trip_name,start_day,end_day,flight_cost,hotel_cost,car_cost').in('id',ids);
+    if(!t.error) (t.data||[]).forEach(function(x){ TRIPS[x.id]=x; });
+  }
+  draw();
+}
+
+function rowHtml(x, interactive){
+  var trip=TRIPS[x.trip_id];
+  var bits=[];
+  bits.push(esc(x.supplier||''));
+  if(x.confirmation) bits.push('ref '+esc(x.confirmation));
+  if(x.travellers) bits.push(esc(x.travellers));
+  if(trip) bits.push('goes with your trip &ldquo;'+esc(trip.trip_name)+'&rdquo;'); else bits.push('no trip in your log matches these dates');
+  var price = x.cash_price!=null ? money(x.cash_price) : '&mdash;';
+  var pts = x.points_price ? '<span class="pts">'+Number(x.points_price).toLocaleString('en-US')+' points</span>' : '';
+  var flag = x.is_duplicate ? '<span class="flag">might not be real</span>' : '';
+  var acts='';
+  if(interactive){
+    acts='<div class="acts">'
+      +'<button class="mini keep'+(x.review_status==='accepted'?' on-keep':'')+'" onclick="mark('+x.id+',\'accepted\')">Keep</button>'
+      +'<button class="mini drop'+(x.review_status==='rejected'?' on-drop':'')+'" onclick="mark('+x.id+',\'rejected\')">Drop</button>'
+      +'</div>';
+  }
+  return '<div class="row'+(x.review_status==='rejected'?' done':'')+'" id="r'+x.id+'">'
+    +'<div class="when">'+esc(when(x.start_day,x.end_day))+'</div>'
+    +'<div class="what"><b>'+esc(x.title||x.supplier||'Booking')+'</b>'+flag
+      +'<div class="meta">'+bits.join(' &middot; ')+'</div>'
+      + (x.note?'<div class="note">'+esc(x.note)+'</div>':'')
+    +'</div>'
+    +'<div class="price">'+price+pts+'</div>'
+    +acts+'</div>';
+}
+
+function draw(){
+  var pend=ROWS.filter(function(x){return x.review_status==='pending'||x.review_status==='accepted'||x.review_status==='rejected';});
+  var dupe=ROWS.filter(function(x){return x.review_status==='already-in-gondola';});
+  var non =ROWS.filter(function(x){return x.review_status==='no-number';});
+  var open=pend.filter(function(x){return x.review_status==='pending';});
+  var kept=pend.filter(function(x){return x.review_status==='accepted';});
+  var sum=0; open.forEach(function(x){ if(x.cash_price) sum+=Number(x.cash_price); });
+  var keptsum=0; kept.forEach(function(x){ if(x.cash_price) keptsum+=Number(x.cash_price); });
+
+  document.getElementById('lede').innerHTML='I went through your mail back to 2015 and found <b>'+pend.length+' prices</b> your Travel Log did not have, worth <b>'+money(sum+keptsum).replace(/\.00$/,'')+'</b>.';
+
+  document.getElementById('cards').innerHTML=
+     card('Still to decide', open.length, 'tap Keep or Drop')
+    +card('Worth', money(sum).replace(/\.00$/,''), 'if you keep them all')
+    +card('Already known', dupe.length, 'Gondola had these')
+    +card('Locked in a PDF', non.length, 'number not readable');
+
+  document.getElementById('pendlist').innerHTML = pend.map(function(x){return rowHtml(x,true);}).join('') || '<p class="secnote">Nothing waiting.</p>';
+  document.getElementById('dupelist').innerHTML = '<details><summary>'+dupe.length+' bookings you already have</summary>'+dupe.map(function(x){return rowHtml(x,false);}).join('')+'</details>';
+  document.getElementById('nolist').innerHTML = non.map(function(x){return rowHtml(x,false);}).join('') || '<p class="secnote">None.</p>';
+
+  document.getElementById('tally').textContent = kept.length+' kept, '+pend.filter(function(x){return x.review_status==='rejected';}).length+' dropped, '+open.length+' still to decide';
+}
+function card(k,v,n){ return '<div class="card"><div class="k">'+esc(k)+'</div><div class="v">'+v+'</div><div class="n">'+esc(n)+'</div></div>'; }
+
+async function mark(id, status){
+  var row=null; ROWS.forEach(function(x){ if(x.id===id) row=x; });
+  if(!row) return;
+  var prev=row.review_status;
+  row.review_status = (prev===status) ? 'pending' : status;
+  draw();
+  var r=await sb.from('travel_bookings').update({review_status:row.review_status}).eq('id',id);
+  if(r.error){ row.review_status=prev; draw(); toast('Did not save: '+r.error.message); }
+}
+
+async function applyKept(){
+  var kept=ROWS.filter(function(x){return x.review_status==='accepted'&&x.trip_id&&x.cash_price!=null;});
+  if(!kept.length){ toast('Nothing kept yet.'); return; }
+  var byTrip={};
+  kept.forEach(function(x){
+    var t=byTrip[x.trip_id]||(byTrip[x.trip_id]={flight:0,hotel:0,car:0});
+    if(x.kind==='hotel') t.hotel+=Number(x.cash_price);
+    else if(x.kind==='car') t.car+=Number(x.cash_price);
+    else t.flight+=Number(x.cash_price);
+  });
+  var filled=0, skipped=0;
+  for(var id in byTrip){
+    var trip=TRIPS[id]; if(!trip) continue;
+    var patch={};
+    if(byTrip[id].flight && (trip.flight_cost==null||Number(trip.flight_cost)===0)) patch.flight_cost=Math.round(byTrip[id].flight*100)/100;
+    if(byTrip[id].hotel  && (trip.hotel_cost==null ||Number(trip.hotel_cost)===0))  patch.hotel_cost =Math.round(byTrip[id].hotel*100)/100;
+    if(byTrip[id].car    && (trip.car_cost==null   ||Number(trip.car_cost)===0))    patch.car_cost   =Math.round(byTrip[id].car*100)/100;
+    if(!Object.keys(patch).length){ skipped++; continue; }
+    var r=await sb.from('travel_trips').update(patch).eq('id',id);
+    if(r.error){ toast('Stopped: '+r.error.message); return; }
+    Object.keys(patch).forEach(function(k){ trip[k]=patch[k]; });
+    filled++;
+  }
+  toast(filled+' trips filled in'+(skipped?', '+skipped+' left alone because they already had a number':''));
+}
+
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
