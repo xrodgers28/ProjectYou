@@ -32,6 +32,14 @@ window.NAV_CONFIG = {
   "Parking Lot": [
     { "label": "All Lists", "href": "connections.html" }
   ],
+  /* Travel (Sep 1 2026, Scott). ONE slot in the top bar, same sub-nav principle
+     as Calendar and LISTS: the bar holds the section, and the three travel
+     pages - the log of what a trip cost, the map of where he has been, and the
+     board of where he wants to go - are a tab strip on the page itself, built
+     from TRAVEL_NAV further down this file. */
+  "Travel": [
+    { "label": "Travel", "href": "travel-log.html" }
+  ],
   "Editors": [
     { "label": "Daily<br>Habits", "href": "daily-template.html" },
     { "label": "Midnight<br>Run", "href": "midnight-run-v2.html" },
@@ -53,6 +61,7 @@ window.NAV_CONFIG = {
    clickable link (and marks it active on that page). */
 window.NAV_GROUP_LINKS = {
   "Calendar": "calendar.html",
+  "Travel": "travel-log.html",
   "Habit Modules": "habit-modules.html",
   "Parking Lot": "connections.html"
 };
@@ -132,6 +141,29 @@ window.CAL_NAV = {
   "items": [
     { "label": "List", "href": "calendar.html" },
     { "label": "Week", "href": "calendar-week.html" }
+  ]
+};
+
+/* TRAVEL subsection (Sep 1 2026, Scott).
+   Fourth use of the same strip pattern as MAPS_NAV, LISTS_NAV and CAL_NAV, and
+   deliberately not a fourth invention: navpatch.js renders this list as the
+   segmented tab strip under the top nav on the three travel pages, so the top
+   bar needs one slot instead of three.
+
+   ORDER IS FIXED, same as LISTS and CALENDAR. The top-nav item points at
+   items[0], so landing on Travel lands on the Travel Log. Add a fourth travel
+   page here and it appears on the others on its own.
+
+   No counts. The Travel Log reads travel_trips with Scott's signed-in session
+   only (anon is REVOKED on those tables), so a count fetched with the public
+   key would always come back empty. */
+window.TRAVEL_NAV = {
+  "label": "Travel",
+  "ver": "Travel",
+  "items": [
+    { "label": "Travel Log", "href": "travel-log.html" },
+    { "label": "Where I've Been", "href": "where-ive-been.html" },
+    { "label": "Future Travel", "href": "future-travel.html" }
   ]
 };
 
