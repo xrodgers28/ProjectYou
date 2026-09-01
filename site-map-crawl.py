@@ -19,6 +19,10 @@ Both come from the database, so the caller runs these two queries first:
 import argparse, collections, html as _html, json, os, re, sys
 
 ARCHIVE_RE = re.compile(r'^(session-tracker-20|morning-report-20|decision-review-20|feedback-20|todays-tasks-v)')
+# The Site Map links to every page it lists. Counting those as real links would
+# make every orphan look reachable and destroy the signal the map exists to give,
+# so the map is excluded as a SOURCE of links. It still appears as a page.
+MAP_PAGES = {'site-map.html'}
 HREF_RE    = re.compile(r'''href\s*=\s*["']([^"'>]+)["']''', re.I)
 JSHREF_RE  = re.compile(r'''["'`]([A-Za-z0-9_\-]+\.html(?:#[A-Za-z0-9_\-]*)?)["'`]''')
 DIV_RE     = re.compile(r'<div\b|</div>', re.I)
@@ -60,8 +64,14 @@ def read_nav(repo):
         m = re.search(r'"label"\s*:\s*"(.*?)"\s*,\s*"href"\s*:\s*"([^"]+)"', line)
         if m and cur:
             rows.append((DISPLAY.get(cur, cur), label(m.group(1)), m.group(2)))
-    for nm, gname in [('MAPS_NAV', 'Maps and Diagrams'), ('LISTS_NAV', 'Lists tabs'), ('CAL_NAV', 'Calendar tabs')]:
-        for m in re.finditer(r'"label"\s*:\s*"(.*?)"\s*,\s*"href"\s*:\s*"([^"]+)"', block(nm)):
+    # Every subsection strip is a window.<NAME>_NAV block. Read them ALL, by
+    # pattern, so a new one (TRAVEL_NAV arrived Sep 1 2026) is picked up on its
+    # own instead of quietly reading as "not in the menu".
+    PRETTY = {'MAPS': 'Maps and Diagrams', 'LISTS': 'Lists tabs',
+              'CAL': 'Calendar tabs', 'TRAVEL': 'Travel tabs'}
+    for nm in re.findall(r'window\.([A-Z0-9_]+)_NAV\s*=', nc):
+        gname = PRETTY.get(nm, nm.replace('_', ' ').title() + ' tabs')
+        for m in re.finditer(r'"label"\s*:\s*"(.*?)"\s*,\s*"href"\s*:\s*"([^"]+)"', block(nm + '_NAV')):
             rows.append((gname, label(m.group(1)), m.group(2)))
     for m in re.finditer(r'"([^"]+)"\s*:\s*"([^"]+\.html)"', block('NAV_GROUP_LINKS')):
         rows.append(('Section landing', m.group(1), m.group(2)))
@@ -118,7 +128,7 @@ def main():
 
     out = collections.defaultdict(set); inb = collections.defaultdict(set)
     for s, d in edges:
-        if d in ex: out[s].add(d); inb[d].add(s)
+        if d in ex and s not in MAP_PAGES: out[s].add(d); inb[d].add(s)
 
     live = [f for f in files if not ARCHIVE_RE.match(f)]
     inmenu = {f: (f in owner) for f in files}
