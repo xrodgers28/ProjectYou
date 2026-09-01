@@ -79,6 +79,23 @@
   .filt input[type=search]{padding:8px 11px;border:1px solid var(--line);border-radius:9px;font-size:15px;min-width:220px;font-family:inherit}
   .filt label{display:flex;gap:6px;align-items:center;cursor:pointer}
 
+  .tname{color:var(--accent);font-weight:700;text-decoration:none;border-bottom:1px solid transparent;cursor:pointer}
+  .tname:hover{border-bottom-color:var(--accent)}
+  .tname.open{border-bottom-color:var(--accent)}
+  tr.det td{background:var(--inset);padding:0}
+  .detbox{padding:14px 16px 16px;border-left:4px solid var(--accent)}
+  .dethead{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:9px}
+  .detlist{list-style:none;display:grid;gap:7px;margin-bottom:10px}
+  .detlist li{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:9px;padding:9px 12px;font-size:15px}
+  .dkind{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;border-radius:999px;padding:2px 8px;border:1px solid;color:var(--biz);background:var(--bizbg);border-color:#bcd2df;flex:none}
+  .dkind.hotel{color:var(--per);background:var(--perbg);border-color:#e4cfae}
+  .dmeta{color:var(--muted);font-size:14px}
+  .dprice{margin-left:auto;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .detnone,.detnote{font-size:15px;color:var(--muted);margin-bottom:10px}
+  .detlinks{display:flex;gap:8px;flex-wrap:wrap}
+  .dlink{font-size:14px;font-weight:700;color:var(--accent);text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px}
+  .dlink:hover{border-color:var(--accent)}
+
   footer{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:var(--muted);margin-top:34px;padding-top:14px;border-top:1px solid var(--line)}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:#1f2a44;color:#fff;padding:10px 16px;border-radius:9px;font-size:14px;opacity:0;pointer-events:none;transition:.2s}
   .toast.show{opacity:1;transform:translateX(-50%)}
@@ -103,7 +120,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Travel Log</h1><span class="ver pn-ver">v1.0</span><span class="date" id="dstamp"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Travel Log</h1><span class="ver pn-ver">v1.1</span><span class="date" id="dstamp"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Every trip you have taken, what it cost, and whether it was personal or business. The trip list comes from TripIt, back to June 2006. The money comes from Gondola, which only goes back to September 2025, so most older trips have blank boxes waiting for you. Type a number straight into any box and it saves itself.</p>
@@ -179,7 +196,7 @@ function money0(n){ return '$'+Number(n||0).toLocaleString('en-US',{maximumFract
 function pts(n){ n=Number(n||0); return n? n.toLocaleString('en-US')+' pts' : ''; }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); }
 
-let TRIPS=[], YEARS=[], TOT=null, CONF=[], sortKey='start_day', sortDir=-1;
+let TRIPS=[], YEARS=[], TOT=null, CONF=[], BOOKS=[], OPEN=null, sortKey='start_day', sortDir=-1;
 
 async function boot(){ const {data:{session}}=await sb.auth.getSession(); if(session) onLogin(session); }
 async function signIn(){
@@ -200,15 +217,16 @@ function safe(fn){ try{ fn(); }catch(e){ console.error(e); } }
 async function load(){
   const now=new Date();
   document.getElementById('dstamp').textContent = MON[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
-  const [t,y,tt,c] = await Promise.all([
+  const [t,y,tt,c,bk] = await Promise.all([
     sb.from('travel_trips').select('*').order('start_day',{ascending:false}),
     sb.from('v_travel_year').select('*'),
     sb.from('v_travel_totals').select('*').single(),
-    sb.from('travel_conflicts').select('*').order('id')
+    sb.from('travel_conflicts').select('*').order('id'),
+    sb.from('travel_bookings').select('*').order('start_day')
   ]);
-  TRIPS=t.data||[]; YEARS=y.data||[]; TOT=tt.data||null; CONF=c.data||[];
+  TRIPS=t.data||[]; YEARS=y.data||[]; TOT=tt.data||null; CONF=c.data||[]; BOOKS=bk.data||[];
   safe(drawCards); safe(drawYears); safe(drawTrips); safe(drawNeeds); safe(drawConf);
-  document.getElementById('foot').textContent='Project YOU OS  -  Travel Log v1.0  -  '+TRIPS.length+' trips  -  trip list from TripIt, prices from Gondola, updated live from your own database.';
+  document.getElementById('foot').textContent='Project YOU OS  -  Travel Log v1.1  -  '+TRIPS.length+' trips  -  trip list from TripIt, prices from Gondola, updated live from your own database.';
 }
 
 function drawCards(){
@@ -263,15 +281,38 @@ function drawTrips(){
     const chk = t.purpose_set_by==='scott' ? '' : (t.purpose_confidence==='low' ? ' <span class="pill chk" title="a guess worth checking">guess</span>' : '');
     return '<tr data-id="'+t.id+'">'+
       '<td style="white-space:nowrap">'+esc(drange(t.start_day,t.end_day))+'</td>'+
-      '<td>'+esc(t.trip_name||'(no name)')+(t.scott_went===false?' <span class="pill chk">not you</span>':'')+'</td>'+
+      '<td><a href="#" class="tname'+(OPEN===t.id?' open':'')+'" data-open="'+t.id+'">'+esc(t.trip_name||'(no name)')+'</a>'+(t.scott_went===false?' <span class="pill chk">not you</span>':'')+'</td>'+
       '<td>'+(t.destination?esc(t.destination):'&mdash;')+'</td>'+
       '<td><button class="toggle pill '+(t.purpose==='business'?'biz':'per')+'" onclick="flip('+t.id+')">'+(t.purpose||'set')+'</button>'+chk+'</td>'+
       '<td class="num">'+mbox(t,'flight_cost')+'</td>'+
       '<td class="num">'+mbox(t,'hotel_cost')+'</td>'+
       '<td class="num">'+mbox(t,'car_cost')+'</td>'+
       '<td class="num"><b>'+(tripTotal(t)?money(tripTotal(t)):'&mdash;')+'</b>'+(Number(t.points_used)?'<br><span style="font-size:12px;color:var(--muted)">'+pts(t.points_used)+'</span>':'')+'</td>'+
-    '</tr>';
+    '</tr>'+(OPEN===t.id?detailRow(t):'');
   }).join('');
+}
+
+function detailRow(t){
+  const bs=BOOKS.filter(function(b){ return b.trip_id===t.id; });
+  let h='<tr class="det"><td colspan="8"><div class="detbox">';
+  h+='<div class="dethead">What made up this trip</div>';
+  if(bs.length){
+    h+='<ul class="detlist">'+bs.map(function(b){
+      const price = b.cash_price? money(b.cash_price) : (b.points_price? pts(b.points_price) : 'no price on it');
+      return '<li><span class="dkind '+esc(b.kind)+'">'+esc(b.kind)+'</span><b>'+esc(b.title)+'</b>'
+        +'<span class="dmeta">'+esc(drange(b.start_day,b.end_day))+(b.supplier?' &middot; '+esc(b.supplier):'')+(b.confirmation?' &middot; '+esc(b.confirmation):'')+'</span>'
+        +'<span class="dprice">'+price+(b.is_duplicate?' <span class="pill chk">already counted</span>':'')+'</span></li>';
+    }).join('')+'</ul>';
+  } else {
+    h+='<p class="detnone">Nothing itemised for this trip. Gondola only holds bookings from September 2025 onward.</p>';
+  }
+  if(t.notes) h+='<p class="detnote">'+esc(t.notes)+'</p>';
+  h+='<div class="detlinks">';
+  if(t.tripit_trip_id) h+='<a class="dlink" target="_blank" rel="noopener" href="https://www.tripit.com/app/trips/'+encodeURIComponent(t.tripit_trip_id)+'">Open this trip in TripIt</a>';
+  h+='<a class="dlink" target="_blank" rel="noopener" href="https://www.gondola.ai/my-trips">Find the booking in Gondola</a>';
+  h+='<a class="dlink" href="where-ive-been.html">Where I have been</a>';
+  h+='</div></div></td></tr>';
+  return h;
 }
 
 function mbox(t,f){
@@ -344,6 +385,14 @@ document.querySelectorAll('#ttrip th[data-s]').forEach(th=>th.onclick=()=>{
 });
 ['q','fmoney','fmine'].forEach(id=>document.getElementById(id).addEventListener('input',drawTrips));
 
+document.querySelector('#ttrip tbody').addEventListener('click',function(e){
+  var a=e.target.closest? e.target.closest('.tname') : null;
+  if(!a) return;
+  e.preventDefault();
+  var id=Number(a.dataset.open);
+  OPEN=(OPEN===id)?null:id;
+  drawTrips();
+});
 document.querySelector('#ttrip tbody').addEventListener('change',function(e){
   var el=e.target; if(el && el.classList && el.classList.contains('money')) saveMoney(Number(el.dataset.id), el.dataset.f, el.value);
 });
