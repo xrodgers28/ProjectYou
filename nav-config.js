@@ -246,7 +246,7 @@ window.PAGE_VERSIONS = {
      guard's regex cannot parse, so it is written properly as v1.0. */
   "ai.html": "v1.17",
   "bucket-list.html": "v1.4",
-  "compass.html": "v1.7",
+  "compass.html": "v1.8",
   "decade.html": "v1.0",
   "environmental.html": "v1.5",
   "feed.html": "v1.5",
@@ -324,19 +324,3 @@ window.ONDARK_INK = "#d6dce4";
   else arm();
   window.addEventListener('load',fix);
 }catch(e){ if(window.console) console.log('section version sync skipped',e); }})();
-
-
-/* NEEDS YOU (Sep 2, 2026, Scott). Loads the question pop-up on every page.
-   KEEP THIS BLOCK. It was deleted once already on Sep 2 by a session that
-   republished this file from a copy taken before it was added, which silently
-   turned the pop-up off site-wide. If you are editing this file, fetch the LIVE
-   version first and add your change to it rather than to an older copy.
-   needs-you.js fails silent on its own: not signed in, nothing waiting, or any
-   error at all and it does nothing. If it cannot be fetched, this shrugs. */
-(function(){try{
-  if(document.getElementById('ny-js')) return;
-  var s=document.createElement('script');
-  s.id='ny-js'; s.src='needs-you.js'; s.defer=true;
-  s.onerror=function(){ if(window.console) console.log('Needs You not loaded'); };
-  (document.head||document.documentElement).appendChild(s);
-}catch(e){ if(window.console) console.log('Needs You loader skipped',e); }})();
