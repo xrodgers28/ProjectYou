@@ -24,7 +24,12 @@ window.NAV_CONFIG = {
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
     { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
-    { "label": "Intrinsic<br>Capacity", "href": "intrinsic-capacity.html" }
+    { "label": "Intrinsic<br>Capacity", "href": "intrinsic-capacity.html" },
+    /* Food Log (Sep 1 2026, Scott). Meals photographed on log-meal.html, which is
+       the page he keeps as an icon on his iPhone home screen. The log itself is
+       what belongs in the top bar; the camera is reached from it and from the
+       Habit Bandit row, so it does not need a slot of its own. */
+    { "label": "Food<br>Log", "href": "food-log.html" }
   ],
   /* Displayed as LISTS - see NAV_GROUP_RENAME below. The key stays "Parking Lot"
      because that string is baked into every page's markup and is what navpatch
