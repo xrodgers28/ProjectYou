@@ -137,6 +137,23 @@
 
   .zo{display:block;cursor:zoom-in}
 
+  /* one card after another, shuffled fresh every day */
+  .feed{display:flex;flex-direction:column;gap:14px;margin-top:14px}
+  .fcard{background:var(--card);border:1px solid var(--key);border-radius:16px;
+         box-shadow:var(--shadow);overflow:hidden;position:relative}
+  .fcard img{width:100%;display:block;max-height:620px;object-fit:contain;background:#141312}
+  .fcard .fb{padding:12px 16px 14px}
+  .fcard .ft{font-size:15px;line-height:1.35;color:var(--ink)}
+  .fcard .ft a{color:inherit;text-decoration:none}
+  .fcard .ft a:hover{text-decoration:underline}
+  .fcard .fs{margin-top:5px;font-size:9.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--muted)}
+  .fcard .fn{position:absolute;top:9px;left:9px;z-index:2;font-size:9.5px;letter-spacing:.9px;
+             text-transform:uppercase;color:#fff;background:rgba(15,18,25,.6);
+             padding:4px 9px;border-radius:20px}
+  .livewrap{background:var(--sunk);display:grid;place-items:center;min-height:200px}
+  .livewrap iframe{width:100%;max-width:540px;height:620px;border:0;display:block;background:#fff}
+  .livewrap .ph{padding:52px 16px;font-size:12.5px;color:var(--muted);text-align:center}
+
   .vw{position:fixed;inset:0;z-index:2147483001;background:#0b0c10;
       display:grid;grid-template-rows:auto 1fr auto;overflow:hidden;overscroll-behavior:contain}
   .vw[hidden]{display:none}
@@ -205,7 +222,7 @@
       <div class="hint">Tap any picture to see it big, then swipe or use the arrow keys.</div>
     </div>
     <div class="tools">
-      <span class="tool on" id="layname">layout</span>
+      <span class="tool on" id="layname">Shuffled for today</span>
       <a class="tool" href="wall-saved.html" id="savedlink">Saved</a>
     </div>
   </div>
@@ -256,7 +273,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.12</div>
+  <div class="stamp" id="stamp">v1.13</div>
 </div>
 
 <script>
@@ -308,12 +325,71 @@ function today(){
 
 var ITEMS=[], DAY=null, LAYOUT="rails", oneAt=0;
 
+/* The running order is worked out from the date, so it holds still all day
+   and comes out different tomorrow. Same pictures, never the same run. */
+function seedFrom(s){
+  var h=2166136261;
+  s=String(s||"wall");
+  for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0)||1;
+}
+function rng(seed){
+  var x=seed||1;
+  return function(){ x^=x<<13; x>>>=0; x^=x>>>17; x^=x<<5; x>>>=0; return x/4294967296; };
+}
+function shuffled(arr,seed){
+  var r=rng(seed), a=arr.slice(), i, j, t;
+  for(i=a.length-1;i>0;i--){ j=Math.floor(r()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
+  return a;
+}
+
 function bySource(){
   var m={}, order=[];
   ITEMS.forEach(function(i){ if(!m[i.source]){m[i.source]=[];order.push(i.source);} m[i.source].push(i); });
   return order.map(function(s){ return {name:s, items:m[s]}; });
 }
 
+var IGLIVE={h:"wrold_scope", n:"world_scope"};
+
+function liveCard(){
+  return '<div class="fcard livecard">'+
+    '<div class="fn">'+esc(IGLIVE.n)+'</div>'+
+    '<div class="livewrap" id="iglive"><div class="ph">Fetching today&rsquo;s post from @'+esc(IGLIVE.h)+'</div></div>'+
+    '<div class="fb"><div class="ft"><a href="https://www.instagram.com/'+esc(IGLIVE.h)+'/" target="_blank" rel="noopener noreferrer">@'+
+    esc(IGLIVE.h)+', whatever they put up today</a></div>'+
+    '<div class="fs">Instagram, live</div></div></div>';
+}
+function mountLive(){
+  var box=document.getElementById("iglive");
+  if(!box) return;
+  function go(){
+    var f=document.createElement("iframe");
+    f.src="https://www.instagram.com/"+IGLIVE.h+"/embed/";
+    f.setAttribute("scrolling","no");
+    f.title="Instagram, "+IGLIVE.h;
+    box.innerHTML=""; box.appendChild(f);
+  }
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ io.disconnect(); go(); } });
+    },{rootMargin:"300px"});
+    io.observe(box);
+  } else { setTimeout(go,1500); }
+}
+function drawFeed(){
+  var h='<div class="feed">';
+  var live = ITEMS.length ? (seedFrom("live"+(DAY||"")) % Math.min(5,ITEMS.length)) : 0;
+  ITEMS.forEach(function(it,n){
+    if(n===live) h+=liveCard();
+    h+='<div class="fcard">'+starBtn(it)+
+       '<div class="fn">'+esc(it.source)+'</div>'+
+       zo(it,img(it.img,it.title))+
+       '<div class="fb"><div class="ft"><a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+
+       esc(it.title)+'</a></div><div class="fs">'+esc(it.source)+'</div></div></div>';
+  });
+  if(!ITEMS.length) h+=liveCard();
+  return h+'</div>';
+}
 function drawContact(){
   var h='<div class="card"><div class="sec"><h2>Contact sheet</h2><span class="n">'+ITEMS.length+' frames, '+bySource().length+' sources</span></div><div class="cs"><div class="g">';
   ITEMS.forEach(function(it){
@@ -376,13 +452,8 @@ function drawOne(){
 }
 
 function paint(){
-  var f={contact:drawContact,lightbox:drawLightbox,rails:drawRails,broadsheet:drawBroadsheet,one:drawOne};
-  document.getElementById("stage").innerHTML=(f[LAYOUT]||drawRails)();
-  if(LAYOUT==="one"){
-    document.getElementById("oaNext").onclick=function(){ oneAt=(oneAt+1)%ITEMS.length; paint(); };
-    document.getElementById("oaPrev").onclick=function(){ oneAt=(oneAt-1+ITEMS.length)%ITEMS.length; paint(); };
-    document.getElementById("oaKeep").onclick=function(){ toggle(ITEMS[oneAt]); };
-  }
+  document.getElementById("stage").innerHTML=drawFeed();
+  mountLive();
   var saved=ITEMS.filter(function(i){return i.saved;}).length;
   document.getElementById("savedlink").textContent = saved ? ("Saved, "+saved+" today") : "Saved";
 }
@@ -647,25 +718,23 @@ function boot(){
     if(!rows || !rows.length) throw new Error("nothing has been dealt yet");
     DAY=rows[0].day;
     ITEMS=rows.filter(function(r){ return r.day===DAY; });
-    return api("wall_layout?select=layout&day=eq."+DAY).then(function(l){
-      LAYOUT=(l && l[0] && l[0].layout) || "rails";
-      var d=new Date(DAY+"T12:00:00");
-      var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-      var months=["January","February","March","April","May","June","July","August","September","October","November","December"];
-      document.getElementById("sub").textContent=
-        days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+
-        " pictures from "+bySource().length+" sources";
-      document.getElementById("layname").textContent=LAYNAME[LAYOUT]||LAYOUT;
-      document.getElementById("stamp").textContent=
-        "v1.12, dealt "+DAY+", the layout changes every day, nothing here is about you";
-      if(DAY!==today()){
-        document.getElementById("err").innerHTML=
-          '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
-      }
-      paint();
-      setTimeout(mountPhotogs,1200);
-      bootHabit();
-    });
+    var nSrc=bySource().length;
+    ITEMS=shuffled(ITEMS, seedFrom(DAY));
+    var d=new Date(DAY+"T12:00:00");
+    var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+    var months=["January","February","March","April","May","June","July","August","September","October","November","December"];
+    document.getElementById("sub").textContent=
+      days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+
+      " pictures from "+nSrc+" sources";
+    document.getElementById("stamp").textContent=
+      "v1.13, dealt "+DAY+", the order is shuffled fresh every day, nothing here is about you";
+    if(DAY!==today()){
+      document.getElementById("err").innerHTML=
+        '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
+    }
+    paint();
+    setTimeout(mountPhotogs,1200);
+    bootHabit();
   }).catch(function(e){
     document.getElementById("err").innerHTML='<div class="err">Could not load the wall: '+esc(e.message)+'</div>';
     document.getElementById("sub").textContent="";
