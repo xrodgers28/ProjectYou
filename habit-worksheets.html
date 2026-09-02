@@ -476,12 +476,12 @@ footer{margin-top:20px; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monosp
 .ulbtn:hover{background:var(--soft);border-color:var(--ink-2)}
 </style>
 
-<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v2.9</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v3.0</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
 
 <div class="shell">
   <div class="pillrow">
     <span class="pill">Project YOU</span>
-    <span class="pill">Habit Worksheets v2.9</span>
+    <span class="pill">Habit Worksheets v3.0</span>
     <span class="pill">Aug 25, 2026</span>
     <span class="pill" id="savedPill">Saves to your database</span>
   </div>
@@ -655,7 +655,7 @@ footer{margin-top:20px; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monosp
     </div>
   </details>
 
-  <footer>Project YOU · Habit Worksheets v2.9 · Aug 29, 2026 · live, saves to your Supabase database</footer>
+  <footer>Project YOU · Habit Worksheets v3.0 · Sep 2, 2026 · live, saves to your Supabase database. This page decides which habits exist and whether they are on. Order, minutes and what goes live are set on <a href="daily-template.html">Daily Habits</a>.</footer>
 </div>
 
 <script src="py-icons.js"></script>
@@ -2006,7 +2006,7 @@ function wireDrag(){
 </script>
 <script>
 /* ---------------------------------------------------------------
-   Habit Worksheets, data layer v1.1, Aug 23 2026
+   Habit Worksheets, data layer v1.2, Sep 2 2026
    The worksheet is the source of truth. It owns worksheet_rows and
    worksheet_sections, and it pushes its ACTIVE rows into
    daily_template, which everything else on the site already reads.
@@ -2279,7 +2279,20 @@ function saveAll(){
     .catch(function(e){ say('err','save failed'); console.error(e); });
 }
 
-/* ---------- push the active set into daily_template ---------- */
+/* ---------- push the active set into daily_template ----------
+   SPLIT OF DUTIES, settled by Scott Sep 2, 2026.
+   The Worksheets decide which habits EXIST and whether they are switched on.
+   The Daily Habits editor decides ORDER, MINUTES and what goes LIVE today.
+   So a habit that already has a row here keeps its minutes, its position and
+   its live/staging state, whatever this page thinks they are. Before this
+   change, saving on the Worksheets quietly reset all three, which is how his
+   edits on the editor page kept disappearing. */
+var EDITOR_OWNS = ['est_minutes','position','live'];
+function worksheetFieldsOnly(w){
+  var out = {};
+  Object.keys(w).forEach(function(k){ if(EDITOR_OWNS.indexOf(k) < 0) out[k] = w[k]; });
+  return out;
+}
 function syncDaily(){
   var want = [];
   Object.keys(DATA).forEach(function(k){
@@ -2304,7 +2317,8 @@ function syncDaily(){
       want.forEach(function(w){
         if(haveIds[w.ws_id]){
           jobs.push(sbFetch('daily_template?id=eq.'+haveIds[w.ws_id],
-            {method:'PATCH', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(w)}));
+            {method:'PATCH', headers:{'Prefer':'return=minimal'},
+             body:JSON.stringify(worksheetFieldsOnly(w))}));
         } else {
           jobs.push(sbFetch('daily_template',
             {method:'POST', headers:{'Prefer':'return=minimal'}, body:JSON.stringify([w])}));
