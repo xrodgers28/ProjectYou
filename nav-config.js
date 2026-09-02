@@ -250,7 +250,7 @@ window.PAGE_VERSIONS = {
   "decade.html": "v1.0",
   "environmental.html": "v1.5",
   "feed.html": "v1.5",
-  "habit-modules.html": "v5.1",
+  "habit-modules.html": "v5.3",
   "creativity.html": "v1.1",
   "habit-worksheets.html": "v2.9",
   "life-snapshot.html": "v1.0",
@@ -324,28 +324,3 @@ window.ONDARK_INK = "#d6dce4";
   else arm();
   window.addEventListener('load',fix);
 }catch(e){ if(window.console) console.log('section version sync skipped',e); }})();
-
-
-/* ============================================================
-   NEEDS YOU  (Sep 2, 2026, Scott)
-   ============================================================
-   "we should make it a system wide thing that when you have an
-   input Q thats where it appears".
-
-   So the question pop-up is loaded from HERE rather than being
-   pasted into each page. This file is already on every page in
-   the site, which makes it the one place that reaches all of
-   them at once - the same reason the nav itself lives here.
-
-   needs-you.js fails silent by design: no client library on the
-   page, not signed in, or nothing waiting, and it does nothing
-   at all. If it cannot even be fetched, this loader shrugs and
-   the page is unaffected.
-   ============================================================ */
-(function(){try{
-  if(document.getElementById('ny-js')) return;
-  var s=document.createElement('script');
-  s.id='ny-js'; s.src='needs-you.js'; s.defer=true;
-  s.onerror=function(){ if(window.console) console.log('Needs You not loaded'); };
-  (document.head||document.documentElement).appendChild(s);
-}catch(e){ if(window.console) console.log('Needs You loader skipped',e); }})();
