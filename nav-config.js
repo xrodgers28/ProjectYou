@@ -250,7 +250,7 @@ window.PAGE_VERSIONS = {
   "decade.html": "v1.0",
   "environmental.html": "v1.5",
   "feed.html": "v1.5",
-  "habit-modules.html": "v4.9",
+  "habit-modules.html": "v5.0",
   "habit-worksheets.html": "v2.9",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
