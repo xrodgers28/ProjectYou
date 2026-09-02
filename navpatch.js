@@ -668,3 +668,221 @@ window.__pnNavCss=function(){
   if(navOk&&linkOk) return;
   if(typeof window.__pnNavCss==='function') window.__pnNavCss();
 }catch(e){if(window.console)console.log('nav style repair error',e);}})();
+
+
+/* ============================================================
+   THE MINUTE BAR (Sep 2 2026)
+   Scott: "adding how much time is currently too difficult. you have to type in
+   a number ... the vast majority of my time its 1,2,3,4,5,6,7,8,9,10 minutes."
+   He picked the bar out of five mock-ups and asked for it a bit smaller.
+
+   Every cue card ends with a typed minute box (#tmin on the AI family, #mins on
+   the nav2 family and creativity). This replaces that box, on all eleven pages
+   at once, with a ten-block strip: tap the seventh block and the bar fills to
+   seven. The strip only SETS the page's own input and then presses the page's
+   own finish control, so every module keeps its existing save logic, its own
+   toast and its own bounce back to the board. Nothing about the database
+   contract changes, which is why this can live in the shared layer instead of
+   eleven separate page edits.
+
+   Behaviour, deliberately the same everywhere:
+   - tap a block  -> the bar fills, the number lands in the hidden input, and
+                     after a short grace the page's finish control is pressed.
+   - tap again inside the grace -> the number changes, nothing has been saved.
+   - "10+"        -> gives the original typing box back for the rare long one.
+   - the finish control is disabled or refuses (creativity's "you have not drawn
+     anything yet") -> the number is still set, the page says its own piece.
+   ============================================================ */
+(function(){try{
+  var PAGES={'ai.html':1,'quotes.html':1,'compass.html':1,'james-clear.html':1,
+             'takeaways.html':1,'open-mode.html':1,'environmental.html':1,
+             'recreational.html':1,'bucket-list.html':1,'feed.html':1,
+             'creativity.html':1};
+  var page=(location.pathname.split('/').pop()||'').toLowerCase();
+  if(!PAGES[page]) return;
+  if(window.self!==window.top) return;   /* embedded previews carry no chrome */
+
+  var GRACE=1100;                        /* ms before the finish is pressed */
+  var bar=null, seg=[], now=null, pend=null, chosen=0, committed=false, typing=false;
+
+  function css(){
+    if(document.getElementById('pymb-css')) return;
+    var s=document.createElement('style'); s.id='pymb-css';
+    s.textContent=
+      '.pymb{margin:14px 0 2px;font-family:Arial,Helvetica,sans-serif;text-align:left}'+
+      '.pymb-lab{display:flex;align-items:baseline;gap:8px;font-size:11.5px;font-weight:700;'+
+        'color:#8a93a0;margin:0 0 6px;line-height:1.3}'+
+      '.pymb-now{margin-left:auto;font-weight:800;color:#3f6f8f;font-variant-numeric:tabular-nums;'+
+        'white-space:nowrap}'+
+      '.pymb-strip{display:flex;gap:3px;height:32px;align-items:stretch}'+
+      '.pymb-seg{flex:1 1 0;min-width:0;padding:0 0 4px;margin:0;border:0;border-radius:6px;'+
+        'background:#eef2f8;color:#9aa6b4;font:800 10px/1 Arial,Helvetica,sans-serif;'+
+        'display:flex;align-items:flex-end;justify-content:center;cursor:pointer;'+
+        'font-variant-numeric:tabular-nums;-webkit-appearance:none;appearance:none;'+
+        'transition:background .1s ease,color .1s ease}'+
+      '.pymb-seg.on{background:#3f6f8f;color:#fff}'+
+      '.pymb-more{flex:0 0 44px;align-items:center;padding:0;font-size:9.5px;letter-spacing:.3px;'+
+        'background:#fff;border:1px solid #e3e7ee;color:#8a93a0}'+
+      '.pymb-more:hover{background:#eef2f8;color:#3f6f8f}'+
+      '.pymb-locked .pymb-seg{cursor:default}'+
+      '@media (prefers-reduced-motion:reduce){.pymb-seg{transition:none}}';
+    (document.head||document.documentElement).appendChild(s);
+  }
+
+  function theInput(){
+    var el=document.getElementById('tmin')||document.getElementById('mins');
+    if(!el||el.tagName!=='INPUT') return null;
+    return el;
+  }
+  function wanted(el){ return !!el && !el.classList.contains('hidden'); }
+
+  function finisher(){
+    var sels=['#nx','.mc-cta','#did','#btnNext','.foot .next'];
+    for(var i=0;i<sels.length;i++){
+      var e=document.querySelector(sels[i]);
+      if(e&&e.offsetParent!==null) return e;
+    }
+    return null;
+  }
+
+  function paint(n){
+    for(var i=0;i<seg.length;i++){
+      if(i<n) seg[i].classList.add('on'); else seg[i].classList.remove('on');
+    }
+  }
+
+  function build(){
+    css();
+    var d=document.createElement('div'); d.className='pymb';
+    var lab=document.createElement('div'); lab.className='pymb-lab';
+    var l1=document.createElement('span'); l1.textContent='How long did that take?';
+    now=document.createElement('span'); now.className='pymb-now'; now.textContent='tap the minutes';
+    lab.appendChild(l1); lab.appendChild(now);
+    var strip=document.createElement('div'); strip.className='pymb-strip';
+    seg=[];
+    for(var i=1;i<=10;i++){
+      var b=document.createElement('button');
+      b.type='button'; b.className='pymb-seg'; b.setAttribute('data-v',i);
+      b.setAttribute('aria-label',i+(i===1?' minute':' minutes'));
+      b.textContent=i;
+      strip.appendChild(b); seg.push(b);
+    }
+    var more=document.createElement('button');
+    more.type='button'; more.className='pymb-seg pymb-more'; more.textContent='10+';
+    more.setAttribute('aria-label','more than ten minutes');
+    strip.appendChild(more);
+    d.appendChild(lab); d.appendChild(strip);
+
+    strip.addEventListener('mouseover',function(e){
+      if(committed||typing) return;
+      var b=e.target.closest?e.target.closest('.pymb-seg'):null;
+      if(!b||b===more) return;
+      paint(+b.getAttribute('data-v'));
+    });
+    strip.addEventListener('mouseleave',function(){
+      if(committed||typing) return;
+      paint(chosen);
+    });
+    strip.addEventListener('click',function(e){
+      var b=e.target.closest?e.target.closest('.pymb-seg'):null;
+      if(!b||committed) return;
+      if(b===more){ showBox(); return; }
+      pick(+b.getAttribute('data-v'));
+    });
+    return d;
+  }
+
+  function showBox(){
+    var el=theInput(); if(!el) return;
+    typing=true;
+    if(pend){ clearTimeout(pend); pend=null; }
+    var host=el.__pymbWrap||el;
+    host.style.display='';
+    el.style.display='';
+    var f=finisher();
+    now.textContent='type it, then press '+(f?(f.textContent||'').trim().slice(0,24):'finish');
+    var strip=bar.querySelector('.pymb-strip');
+    if(strip) strip.style.display='none';
+    try{ el.focus(); }catch(e){}
+  }
+
+  function pick(n){
+    var el=theInput(); if(!el) return;
+    chosen=n; paint(n);
+    el.value=n;
+    try{
+      el.dispatchEvent(new Event('input',{bubbles:true}));
+      el.dispatchEvent(new Event('change',{bubbles:true}));
+    }catch(e){}
+    now.textContent=n+(n===1?' minute':' minutes')+' — saving';
+    if(pend) clearTimeout(pend);
+    pend=setTimeout(commit,GRACE);
+  }
+
+  function commit(){
+    pend=null;
+    if(committed) return;
+    committed=true;
+    if(bar) bar.classList.add('pymb-locked');
+    now.textContent=chosen+(chosen===1?' minute':' minutes')+' ✓';
+    var f=finisher();
+    if(f&&!f.disabled&&!f.classList.contains('disabled')){
+      try{ f.click(); }catch(e){}
+    }else{
+      /* nothing to press yet - leave the strip live so the number can change */
+      committed=false;
+      if(bar) bar.classList.remove('pymb-locked');
+    }
+  }
+
+  function sync(){
+    var el=theInput();
+    if(!el){
+      if(bar&&bar.parentNode) bar.parentNode.removeChild(bar);
+      bar=null; seg=[]; chosen=0; committed=false; typing=false;
+      if(pend){ clearTimeout(pend); pend=null; }
+      return;
+    }
+    if(el.getAttribute('data-pymb')==='1' && bar && bar.parentNode && document.contains(bar)){
+      bar.style.display=wanted(el)?'':'none';
+      return;
+    }
+    /* new input node (the deck re-rendered) - build a fresh strip for it */
+    if(bar&&bar.parentNode) bar.parentNode.removeChild(bar);
+    chosen=0; committed=false; typing=false;
+    if(pend){ clearTimeout(pend); pend=null; }
+
+    bar=build();
+    var wrap=el.closest?el.closest('.howlong,.mc-time,.took'):null;
+    if(wrap){
+      el.__pymbWrap=wrap;
+      wrap.style.display='none';
+      if(wrap.parentNode) wrap.parentNode.insertBefore(bar,wrap.nextSibling);
+    }else{
+      el.__pymbWrap=null;
+      el.style.display='none';
+      var row=el.parentNode;
+      if(row&&row.parentNode) row.parentNode.insertBefore(bar,row);
+      else return;
+    }
+    el.setAttribute('data-pymb','1');
+    bar.style.display=wanted(el)?'':'none';
+  }
+
+  function boot(){
+    sync();
+    try{
+      var mo=new MutationObserver(function(){
+        if(boot.q) return;
+        boot.q=true;
+        setTimeout(function(){ boot.q=false; try{ sync(); }catch(e){} },60);
+      });
+      mo.observe(document.body,{childList:true,subtree:true,attributes:true,
+                                attributeFilter:['class','style']});
+    }catch(e){}
+    setInterval(function(){ try{ sync(); }catch(e){} },1500);
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
+  else boot();
+}catch(e){if(window.console)console.log('minute bar error',e);}})();
