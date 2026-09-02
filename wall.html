@@ -154,6 +154,25 @@
   .livewrap iframe{width:100%;max-width:540px;height:620px;border:0;display:block;background:#fff}
   .livewrap .ph{padding:52px 16px;font-size:12.5px;color:var(--muted);text-align:center}
 
+  /* small mode: a wall of thumbnails */
+  .feed.sm{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+           gap:12px;align-items:start}
+  .feed.sm .fcard{border-radius:12px}
+  .feed.sm .fcard img{height:150px;max-height:none;object-fit:cover;background:var(--line)}
+  .feed.sm .fb{padding:8px 10px 10px}
+  .feed.sm .ft{font-size:11.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;
+               -webkit-box-orient:vertical;overflow:hidden}
+  .feed.sm .fs{margin-top:5px;font-size:8.5px}
+  .feed.sm .fn{display:none}
+  .feed.sm .st{width:24px;height:24px;top:5px;right:5px}
+  .feed.sm .st svg{width:12px;height:12px}
+  .feed.sm .livecard{grid-column:1/-1}
+  .feed.sm .livewrap iframe{height:520px}
+  @media (max-width:640px){
+    .feed.sm{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+    .feed.sm .fcard img{height:112px}
+  }
+
   .vw{position:fixed;inset:0;z-index:2147483001;background:#0b0c10;
       display:grid;grid-template-rows:auto 1fr auto;overflow:hidden;overscroll-behavior:contain}
   .vw[hidden]{display:none}
@@ -223,6 +242,7 @@
     </div>
     <div class="tools">
       <span class="tool on" id="layname">Shuffled for today</span>
+      <button class="tool" type="button" id="sizebtn">Bigger pictures</button>
       <a class="tool" href="wall-saved.html" id="savedlink">Saved</a>
     </div>
   </div>
@@ -273,7 +293,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.13</div>
+  <div class="stamp" id="stamp">v1.14</div>
 </div>
 
 <script>
@@ -337,10 +357,15 @@ function rng(seed){
   var x=seed||1;
   return function(){ x^=x<<13; x>>>=0; x^=x>>>17; x^=x<<5; x>>>=0; return x/4294967296; };
 }
+/* Every picture gets its own number for the day and they are laid out in that
+   order. The number depends only on the picture and the date, so a picture added
+   later in the day - the cartoon lands at lunchtime - slots in without moving
+   anything else about. */
 function shuffled(arr,seed){
-  var r=rng(seed), a=arr.slice(), i, j, t;
-  for(i=a.length-1;i>0;i--){ j=Math.floor(r()*(i+1)); t=a[i]; a[i]=a[j]; a[j]=t; }
-  return a;
+  return arr.slice().sort(function(a,b){
+    var x=seedFrom(seed+":"+a.item_id), y=seedFrom(seed+":"+b.item_id);
+    return (x-y) || (a.item_id-b.item_id);
+  });
 }
 
 function bySource(){
@@ -350,6 +375,22 @@ function bySource(){
 }
 
 var IGLIVE={h:"wrold_scope", n:"world_scope"};
+
+/* Thumbnails or big pictures. Remembered in this browser. Switching only swaps a
+   class name, so no picture is ever fetched twice. */
+var SIZE="sm";
+try{ if(localStorage.getItem("wallSize")==="lg") SIZE="lg"; }catch(e){}
+function paintSize(){
+  var f=document.getElementById("feed");
+  if(f) f.className="feed "+SIZE;
+  var b=document.getElementById("sizebtn");
+  if(b) b.textContent = (SIZE==="sm") ? "Bigger pictures" : "Thumbnails";
+}
+function toggleSize(){
+  SIZE = (SIZE==="sm") ? "lg" : "sm";
+  try{ localStorage.setItem("wallSize", SIZE); }catch(e){}
+  paintSize();
+}
 
 function liveCard(){
   return '<div class="fcard livecard">'+
@@ -377,7 +418,7 @@ function mountLive(){
   } else { setTimeout(go,1500); }
 }
 function drawFeed(){
-  var h='<div class="feed">';
+  var h='<div class="feed '+SIZE+'" id="feed">';
   var live = ITEMS.length ? (seedFrom("live"+(DAY||"")) % Math.min(5,ITEMS.length)) : 0;
   ITEMS.forEach(function(it,n){
     if(n===live) h+=liveCard();
@@ -454,6 +495,8 @@ function drawOne(){
 function paint(){
   document.getElementById("stage").innerHTML=drawFeed();
   mountLive();
+  paintSize();
+  var sb=document.getElementById("sizebtn"); if(sb) sb.onclick=toggleSize;
   var saved=ITEMS.filter(function(i){return i.saved;}).length;
   document.getElementById("savedlink").textContent = saved ? ("Saved, "+saved+" today") : "Saved";
 }
@@ -727,7 +770,7 @@ function boot(){
       days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+
       " pictures from "+nSrc+" sources";
     document.getElementById("stamp").textContent=
-      "v1.13, dealt "+DAY+", the order is shuffled fresh every day, nothing here is about you";
+      "v1.14, dealt "+DAY+", the order is shuffled fresh every day, nothing here is about you";
     if(DAY!==today()){
       document.getElementById("err").innerHTML=
         '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
