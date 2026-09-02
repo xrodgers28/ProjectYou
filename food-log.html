@@ -6,7 +6,7 @@
 <title>Food Log &middot; Project YOU</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ===== Project YOU * Food Log v1.0 ===== */
+  /* ===== Project YOU * Food Log v1.1 ===== */
   :root{
     --ink:#1f2a44;--muted:#4b5563;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
     --inset:#f5f7fb;--accent:#1e8e5a;--accent2:#166f46;--chip:#eef2f8;
@@ -107,7 +107,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.0</span><span class="date" id="dstamp"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.1</span><span class="date" id="dstamp"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Every meal you photographed, what it was, and roughly what was in it. You log a meal by taking a picture on <a href="log-meal.html">Log a Meal</a>. The numbers are estimates read off the photo, so treat them as close rather than correct. Nothing here is a target and nothing here is a streak.</p>
@@ -118,6 +118,7 @@
     <button class="tab on" data-p="p1">Today</button>
     <button class="tab" data-p="p2">Last 14 days</button>
     <button class="tab" data-p="p3">Needs you <span class="c" id="askN"></span></button>
+    <button class="tab" data-p="p5">My usuals <span class="c" id="usN"></span></button>
     <button class="tab" data-p="p4">Everything</button>
   </div>
 
@@ -146,6 +147,18 @@
     <div id="asks"></div>
   </div>
 
+  <div class="panel" id="p5">
+    <p class="eyebrow">Meals you eat again and again</p>
+    <h2 id="usline">Your usuals</h2>
+    <div class="note"><b>These become one-tap buttons on Log a Meal.</b> A meal joins this list when you save it yourself, or on its own once you have eaten the same thing three times. Removing one takes the button away; it does not touch any meal you already logged.</div>
+    <div class="tw">
+      <table id="tus">
+        <thead><tr><th>Meal</th><th class="num">Calories</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th class="num">Times</th><th>Last eaten</th><th>How it got here</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
   <div class="panel" id="p4">
     <p class="eyebrow">Everything</p>
     <h2 id="allline">Every meal on record</h2>
@@ -157,7 +170,7 @@
     </div>
   </div>
 
-  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.0</p>
+  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.1</p>
 </div>
 </div>
 
@@ -180,7 +193,7 @@ function photoUrl(p){ return p ? SUPABASE_URL+'/storage/v1/object/public/meals/'
 function n(v){ return Number(v||0); }
 const SURE={high:'Confident',medium:'Roughly',low:'A guess'};
 
-let MEALS=[];
+let MEALS=[], USUALS=[];
 
 async function boot(){ const {data:{session}}=await sb.auth.getSession(); if(session) onLogin(session); }
 async function signIn(){
@@ -204,11 +217,15 @@ async function onLogin(session){
 function safe(fn){ try{ fn(); }catch(e){ console.error(e); } }
 
 async function load(){
-  const {data,error}=await sb.from('meals').select('*').order('eaten_at',{ascending:false}).limit(2000);
-  if(error){ toast('Could not read the log'); return; }
-  MEALS=(data||[]).filter(m=>m.status!=='notfood');
-  safe(drawCards); safe(drawToday); safe(drawDays); safe(drawAsks); safe(drawAll);
-  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.0  -  '+MEALS.length+' meals on record  -  read from your own database, estimated from the photos you took.';
+  const [m,u]=await Promise.all([
+    sb.from('meals').select('*').order('eaten_at',{ascending:false}).limit(2000),
+    sb.from('meal_presets').select('*').order('active',{ascending:false}).order('times_seen',{ascending:false})
+  ]);
+  if(m.error){ toast('Could not read the log'); return; }
+  MEALS=(m.data||[]).filter(x=>x.status!=='notfood');
+  USUALS=(u && !u.error && u.data) ? u.data : [];
+  safe(drawCards); safe(drawToday); safe(drawDays); safe(drawAsks); safe(drawAll); safe(drawUsuals);
+  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.1  -  '+MEALS.length+' meals on record  -  read from your own database, estimated from the photos you took.';
 }
 
 function counted(m){ return m.status==='done'||m.status==='ask'; }
@@ -333,6 +350,46 @@ function drawAll(){
     '<td class="num">'+(counted(m)?n(m.carbs_g)+' g':'')+'</td>'+
     '<td class="num">'+(counted(m)?n(m.fat_g)+' g':'')+'</td>'+
     '<td>'+esc(m.status==='ask'?'Needs you':(SURE[m.confidence]||''))+'</td></tr>').join('');
+}
+
+/* The usuals list. Nothing here is a meal, it is the memory the camera page draws
+   its one-tap buttons from, so removing one takes a button away and leaves every
+   meal already logged exactly as it was. */
+function drawUsuals(){
+  const live=USUALS.filter(u=>u.active);
+  document.getElementById('usN').textContent = live.length ? '('+live.length+')' : '';
+  document.getElementById('usline').textContent = live.length
+    ? live.length+(live.length===1?' meal':' meals')+' you can log with one tap'
+    : 'Nothing on file yet';
+  const tb=document.querySelector('#tus tbody');
+  if(!USUALS.length){
+    tb.innerHTML='<tr><td colspan="9">Nothing yet. Save a meal from Log a Meal, or eat the same thing three times and it will appear here on its own.</td></tr>';
+    return;
+  }
+  tb.innerHTML=USUALS.map(u=>{
+    const how = u.pinned ? 'You saved it' : (u.learned ? 'Learned from repeats' : 'Added');
+    const act = u.active
+      ? '<button class="opt" style="font-size:13px;padding:5px 11px" onclick="dropUsual(\''+esc(u.id)+'\')">Remove</button>'
+      : '<button class="opt" style="font-size:13px;padding:5px 11px" onclick="keepUsual(\''+esc(u.id)+'\')">Put back</button>';
+    return '<tr'+(u.active?'':' style="opacity:.75"')+'><td>'+esc((u.emoji?u.emoji+' ':'')+u.name)+(u.active?'':' <span class="c" style="font-family:var(--mono);font-size:11px">removed</span>')+'</td>'+
+      '<td class="num">'+n(u.calories).toLocaleString('en-US')+'</td><td class="num">'+n(u.protein_g)+' g</td>'+
+      '<td class="num">'+n(u.carbs_g)+' g</td><td class="num">'+n(u.fat_g)+' g</td>'+
+      '<td class="num">'+n(u.times_seen)+'</td><td>'+esc(u.last_seen?dayLabel(u.last_seen):'')+'</td>'+
+      '<td>'+esc(how)+'</td><td>'+act+'</td></tr>';
+  }).join('');
+}
+
+async function dropUsual(id){
+  const {error}=await sb.from('meal_presets').update({active:false}).eq('id',id);
+  if(error){ toast('Could not remove that one'); return; }
+  toast('Button removed. Your logged meals are untouched.');
+  load();
+}
+async function keepUsual(id){
+  const {error}=await sb.from('meal_presets').update({active:true}).eq('id',id);
+  if(error){ toast('Could not put that back'); return; }
+  toast('Back on the camera page.');
+  load();
 }
 
 async function answer(id,val){
