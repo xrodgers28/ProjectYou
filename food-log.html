@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Food Log &middot; Project YOU</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ===== Project YOU * Food Log v1.0 ===== */
+  :root{
+    --ink:#1f2a44;--muted:#4b5563;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
+    --inset:#f5f7fb;--accent:#1e8e5a;--accent2:#166f46;--chip:#eef2f8;
+    --green:#1e8e5a;--greenbg:#e9f5ef;--amber:#9a6b06;--amberbg:#fdf6e6;
+    --rose:#b23a30;--rosebg:#fbeeec;--blue:#2a5d8f;--bluebg:#eaf1f8;
+    --bar:#7fb79b;--barnow:#1e8e5a;--grid:#dfe4ec;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:16px}
+  .hidden{display:none!important}
+
+  #login{max-width:340px;margin:14vh auto;background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:0 8px 26px rgba(31,42,68,.09)}
+  #login h1{font-size:20px;margin-bottom:5px}
+  #login p{font-size:14px;color:var(--muted);margin-bottom:16px}
+  #login input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;font-size:16px}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px 16px;font-size:15px;font-weight:700;cursor:pointer}
+  .btn:hover{background:var(--accent2)}
+  .err{color:var(--rose);font-size:14px;margin-top:8px}
+
+  .secbar-wrap{max-width:1020px;margin:0 auto;padding:12px 20px 0}
+  .secbar{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px}
+  .secbar h1{font-size:21px}
+  .ver,.date{font-family:var(--mono);font-size:12px;color:var(--muted);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+
+  .wrap{max-width:1020px;margin:0 auto;padding:16px 20px 60px}
+  .sub{font-size:16px;color:var(--muted);margin-bottom:18px;max-width:78ch}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:20px}
+  .vc{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:14px 16px}
+  .vc .k{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
+  .vc .v{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+  .vc .v small{font-size:15px;font-weight:400;color:var(--muted)}
+  .vc .n{font-size:14px;color:var(--muted);margin-top:4px}
+  .vc.blue{border-left-color:var(--blue)} .vc.warn{border-left-color:var(--amber)} .vc.quiet{border-left-color:#b9c2cf}
+
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .tab{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 15px;font-size:15px;font-weight:700;cursor:pointer;color:var(--ink)}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .tab .c{font-family:var(--mono);font-size:12px;opacity:.85}
+
+  .panel{display:none} .panel.on{display:block}
+  .eyebrow{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin:22px 0 4px}
+  h2{font-size:19px;margin-bottom:10px}
+
+  .row{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:12px;
+       padding:12px 14px;margin-bottom:10px;display:flex;gap:13px;align-items:flex-start}
+  .row.pending{border-left-color:var(--blue)}
+  .row.ask{border-left-color:var(--amber);background:var(--amberbg)}
+  .row .thumb{width:64px;height:64px;border-radius:9px;object-fit:cover;background:var(--inset);flex:0 0 auto;border:1px solid var(--line)}
+  .row .body{flex:1;min-width:0}
+  .row .nm{font-weight:700;font-size:16px}
+  .row .mc{font-family:var(--mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:3px}
+  .row .tm{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:2px}
+  .row .q{font-size:15.5px;margin-top:8px}
+  .opts{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .opt{font-size:14.5px;font-weight:700;border:1px solid #e0cd9f;background:#fff;color:var(--amber);
+       border-radius:999px;padding:8px 14px;cursor:pointer}
+  .opt:hover{background:var(--amberbg)}
+
+  .chartbox{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 16px 10px;margin-bottom:16px;overflow-x:auto}
+  .chartbox svg{display:block;min-width:520px;width:100%;height:auto}
+  .clabel{font-family:var(--mono);font-size:10px;fill:var(--muted)}
+  .cvalue{font-family:var(--mono);font-size:10.5px;fill:var(--muted)}
+
+  .tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
+  table{border-collapse:collapse;width:100%;min-width:620px}
+  th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--inset);white-space:nowrap}
+  th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
+  td{padding:9px 12px;border-bottom:1px solid var(--line);font-size:15px;vertical-align:middle}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:var(--inset)}
+  tfoot td{font-weight:800;background:var(--inset);border-top:2px solid var(--line);font-size:15.5px}
+
+  .empty{background:var(--card);border:1px dashed var(--line);border-radius:12px;padding:22px;text-align:center;color:var(--muted);font-size:15.5px}
+  .note{border-left:4px solid var(--blue);background:var(--bluebg);border-radius:10px;padding:12px 14px;font-size:15px;margin-bottom:16px}
+  .note b{display:block;margin-bottom:2px}
+
+  #toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#1f2a44;color:#fff;
+         padding:11px 17px;border-radius:10px;font-size:15px;opacity:0;transition:.22s;pointer-events:none;z-index:50}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  .foot{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:30px;border-top:1px solid var(--line);padding-top:12px;line-height:1.7}
+  a{color:var(--blue)}
+  button:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="login">
+  <h1>Food Log</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email" autocomplete="username">
+  <input id="pass" type="password" placeholder="password" autocomplete="current-password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+<div class="pynav"></div>
+
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.0</span><span class="date" id="dstamp"></span></div></div>
+
+<div class="wrap">
+  <p class="sub">Every meal you photographed, what it was, and roughly what was in it. You log a meal by taking a picture on <a href="log-meal.html">Log a Meal</a>. The numbers are estimates read off the photo, so treat them as close rather than correct. Nothing here is a target and nothing here is a streak.</p>
+
+  <div class="cards" id="cards"></div>
+
+  <div class="tabs">
+    <button class="tab on" data-p="p1">Today</button>
+    <button class="tab" data-p="p2">Last 14 days</button>
+    <button class="tab" data-p="p3">Needs you <span class="c" id="askN"></span></button>
+    <button class="tab" data-p="p4">Everything</button>
+  </div>
+
+  <div class="panel on" id="p1">
+    <p class="eyebrow">Today</p>
+    <h2 id="dayline">Nothing logged yet</h2>
+    <div id="today"></div>
+  </div>
+
+  <div class="panel" id="p2">
+    <p class="eyebrow">Calories a day</p>
+    <h2 id="wkline">Last 14 days</h2>
+    <div class="chartbox"><svg id="chart" viewBox="0 0 760 250" role="img" aria-labelledby="chartTitle"><title id="chartTitle">Calories logged each day over the last 14 days</title></svg></div>
+    <div class="tw">
+      <table id="tdays">
+        <thead><tr><th>Day</th><th class="num">Calories</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th class="num">Meals</th></tr></thead>
+        <tbody></tbody><tfoot></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel" id="p3">
+    <p class="eyebrow">Waiting on you</p>
+    <h2>Meals I could not call on my own</h2>
+    <div class="note"><b>Answering one takes a tap.</b> Your answer sends the meal back to be redone with the right portion, so the day total corrects itself.</div>
+    <div id="asks"></div>
+  </div>
+
+  <div class="panel" id="p4">
+    <p class="eyebrow">Everything</p>
+    <h2 id="allline">Every meal on record</h2>
+    <div class="tw">
+      <table id="tall">
+        <thead><tr><th>Day</th><th>Time</th><th>Meal</th><th class="num">Calories</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th>How sure</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.0</p>
+</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('loginErr');if(_e)_e.textContent='Your session expired. Please sign in again.';}}});
+
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
+function nyDay(){ return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'}); }
+function clock(iso){ if(!iso) return ''; return new Date(iso).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}).toLowerCase(); }
+function dayLabel(d){ const p=d.split('-'); const dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2])); return DOW[dt.getUTCDay()]+' '+MON[+p[1]-1]+' '+(+p[2]); }
+function photoUrl(p){ return p ? SUPABASE_URL+'/storage/v1/object/public/meals/'+encodeURIComponent(p) : ''; }
+function n(v){ return Number(v||0); }
+const SURE={high:'Confident',medium:'Roughly',low:'A guess'};
+
+let MEALS=[];
+
+async function boot(){ const {data:{session}}=await sb.auth.getSession(); if(session) onLogin(session); }
+async function signIn(){
+  const email=document.getElementById('email').value.trim(), pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}
+  onLogin(data.session);
+}
+async function onLogin(session){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  const t=new Date();
+  document.getElementById('dstamp').textContent=MON[t.getMonth()]+' '+t.getDate()+', '+t.getFullYear();
+  document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); document.getElementById(b.dataset.p).classList.add('on');
+  });
+  load();
+}
+function safe(fn){ try{ fn(); }catch(e){ console.error(e); } }
+
+async function load(){
+  const {data,error}=await sb.from('meals').select('*').order('eaten_at',{ascending:false}).limit(2000);
+  if(error){ toast('Could not read the log'); return; }
+  MEALS=(data||[]).filter(m=>m.status!=='notfood');
+  safe(drawCards); safe(drawToday); safe(drawDays); safe(drawAsks); safe(drawAll);
+  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.0  -  '+MEALS.length+' meals on record  -  read from your own database, estimated from the photos you took.';
+}
+
+function counted(m){ return m.status==='done'||m.status==='ask'; }
+
+/* One row per day, newest first, built from the meals themselves so a day with
+   nothing in it simply does not appear. */
+function byDay(){
+  const map={};
+  MEALS.filter(counted).forEach(m=>{
+    const d=m.day; if(!map[d]) map[d]={day:d,cal:0,p:0,c:0,f:0,meals:0};
+    map[d].cal+=n(m.calories); map[d].p+=n(m.protein_g); map[d].c+=n(m.carbs_g); map[d].f+=n(m.fat_g); map[d].meals++;
+  });
+  return Object.values(map).sort((a,b)=>a.day<b.day?1:-1);
+}
+
+function drawCards(){
+  const today=nyDay();
+  const days=byDay();
+  const t=days.find(d=>d.day===today)||{cal:0,p:0,meals:0};
+  const last7=days.filter(d=>d.day!==today).slice(0,7);
+  const avg=last7.length? Math.round(last7.reduce((a,d)=>a+d.cal,0)/last7.length) : 0;
+  const asks=MEALS.filter(m=>m.status==='ask').length;
+  const waiting=MEALS.filter(m=>m.status==='new').length;
+  document.getElementById('askN').textContent=asks?('('+asks+')'):'';
+  document.getElementById('cards').innerHTML =
+   '<div class="vc"><div class="k">Today</div><div class="v">'+t.cal.toLocaleString('en-US')+'<small> cal</small></div><div class="n">'+(t.meals||0)+(t.meals===1?' meal':' meals')+' logged</div></div>'+
+   '<div class="vc blue"><div class="k">Protein today</div><div class="v">'+n(t.p)+'<small> g</small></div><div class="n">across everything so far</div></div>'+
+   '<div class="vc quiet"><div class="k">Average, last 7 full days</div><div class="v">'+(avg?avg.toLocaleString('en-US'):'&mdash;')+(avg?'<small> cal</small>':'')+'</div><div class="n">'+(last7.length?last7.length+' days with anything logged':'not enough logged yet')+'</div></div>'+
+   '<div class="vc warn"><div class="k">Needs you</div><div class="v">'+asks+'</div><div class="n">'+(waiting? waiting+' more still being read':'nothing else waiting')+'</div></div>';
+}
+
+function mealRow(m,showDay){
+  const img = m.photo_path ? '<img class="thumb" alt="" loading="lazy" src="'+esc(photoUrl(m.photo_path))+'">' : '<div class="thumb"></div>';
+  const when = (showDay? dayLabel(m.day)+', ':'')+clock(m.eaten_at);
+  if(m.status==='new'){
+    return '<div class="row pending">'+img+'<div class="body"><div class="nm">Waiting to be read</div>'+
+           '<div class="mc">Picture saved. The numbers land within a couple of hours.</div>'+
+           '<div class="tm">'+esc(when)+'</div></div></div>';
+  }
+  const macros='<div class="mc">'+n(m.calories)+' cal &nbsp; '+n(m.protein_g)+'g protein &nbsp; '+n(m.carbs_g)+'g carbs &nbsp; '+n(m.fat_g)+'g fat</div>';
+  if(m.status==='ask'){
+    let opts=[]; try{ opts=Array.isArray(m.options)?m.options:JSON.parse(m.options||'[]'); }catch(e){ opts=[]; }
+    const btns = opts.length ? '<div class="opts">'+opts.map(o=>'<button class="opt" onclick="answer(\''+esc(m.id)+'\',this.textContent)">'+esc(o)+'</button>').join('')+'</div>' : '';
+    return '<div class="row ask">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
+           '<div class="tm">'+esc(when)+'</div><div class="q">'+esc(m.question||'')+'</div>'+btns+'</div></div>';
+  }
+  return '<div class="row">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
+         '<div class="tm">'+esc(when)+'</div></div></div>';
+}
+
+function drawToday(){
+  const today=nyDay();
+  const list=MEALS.filter(m=>m.day===today).slice().sort((a,b)=>a.eaten_at<b.eaten_at?-1:1);
+  const cal=list.filter(counted).reduce((a,m)=>a+n(m.calories),0);
+  document.getElementById('dayline').textContent = list.length
+    ? cal.toLocaleString('en-US')+' calories across '+list.length+(list.length===1?' meal':' meals')
+    : 'Nothing logged yet';
+  document.getElementById('today').innerHTML = list.length
+    ? list.map(m=>mealRow(m,false)).join('')
+    : '<div class="empty">Take a picture on <a href="log-meal.html">Log a Meal</a> and it shows up here.</div>';
+}
+
+/* Fourteen columns on one scale. The tallest day sets the top of the scale and is
+   the only value the axis promises, so no bar can be read against a number the
+   chart does not actually reach. */
+function drawDays(){
+  const days=byDay().slice(0,14).reverse();
+  const tb=document.querySelector('#tdays tbody'), tf=document.querySelector('#tdays tfoot');
+  const svg=document.getElementById('chart');
+  if(!days.length){
+    document.getElementById('wkline').textContent='Nothing logged yet';
+    svg.innerHTML='<title>No days logged yet</title><text x="380" y="125" text-anchor="middle" class="cvalue">Nothing logged yet</text>';
+    tb.innerHTML='<tr><td colspan="6">No days on record.</td></tr>'; tf.innerHTML=''; return;
+  }
+  const shown=days.slice().reverse();
+  const avg=Math.round(days.reduce((a,d)=>a+d.cal,0)/days.length);
+  document.getElementById('wkline').textContent=days.length+(days.length===1?' day':' days')+' logged, averaging '+avg.toLocaleString('en-US')+' calories';
+
+  const W=760,H=250,L=52,R=14,T=18,B=42;
+  const top=Math.max.apply(null,days.map(d=>d.cal))||1;
+  const iw=W-L-R, ih=H-T-B;
+  const bw=Math.min(46, iw/days.length*0.66), step=iw/days.length;
+  const today=nyDay();
+  let s='<title id="chartTitle">Calories logged each day over the last '+days.length+' days</title>';
+  [0,0.5,1].forEach(function(f){
+    const y=T+ih-ih*f, v=Math.round(top*f);
+    s+='<line x1="'+L+'" y1="'+y.toFixed(1)+'" x2="'+(W-R)+'" y2="'+y.toFixed(1)+'" stroke="var(--grid)" stroke-width="1" fill="none"></line>';
+    s+='<text x="'+(L-8)+'" y="'+(y+3.5).toFixed(1)+'" text-anchor="end" class="clabel">'+v.toLocaleString('en-US')+'</text>';
+  });
+  days.forEach(function(d,i){
+    const h=Math.max(2, ih*(d.cal/top));
+    const x=L+step*i+(step-bw)/2, y=T+ih-h;
+    const fill=(d.day===today)?'var(--barnow)':'var(--bar)';
+    s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="3" fill="'+fill+'"></rect>';
+    s+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(y-5).toFixed(1)+'" text-anchor="middle" class="cvalue">'+d.cal.toLocaleString('en-US')+'</text>';
+    const p=d.day.split('-');
+    s+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(T+ih+16)+'" text-anchor="middle" class="clabel">'+MON[+p[1]-1]+' '+(+p[2])+'</text>';
+  });
+  s+='<line x1="'+L+'" y1="'+(T+ih)+'" x2="'+(W-R)+'" y2="'+(T+ih)+'" stroke="var(--line)" stroke-width="1" fill="none"></line>';
+  s+='<text x="'+L+'" y="'+(H-8)+'" class="clabel">Calories a day. The darkest bar is today.</text>';
+  svg.innerHTML=s;
+
+  tb.innerHTML=shown.map(d=>'<tr><td>'+esc(dayLabel(d.day))+'</td><td class="num">'+d.cal.toLocaleString('en-US')+'</td><td class="num">'+d.p+' g</td><td class="num">'+d.c+' g</td><td class="num">'+d.f+' g</td><td class="num">'+d.meals+'</td></tr>').join('');
+  const tp=Math.round(days.reduce((a,d)=>a+d.p,0)/days.length), tc=Math.round(days.reduce((a,d)=>a+d.c,0)/days.length), tfat=Math.round(days.reduce((a,d)=>a+d.f,0)/days.length);
+  tf.innerHTML='<tr><td>Average a day</td><td class="num">'+avg.toLocaleString('en-US')+'</td><td class="num">'+tp+' g</td><td class="num">'+tc+' g</td><td class="num">'+tfat+' g</td><td class="num"></td></tr>';
+}
+
+function drawAsks(){
+  const list=MEALS.filter(m=>m.status==='ask');
+  document.getElementById('asks').innerHTML = list.length
+    ? list.map(m=>mealRow(m,true)).join('')
+    : '<div class="empty">Nothing is waiting on you.</div>';
+}
+
+function drawAll(){
+  const tb=document.querySelector('#tall tbody');
+  document.getElementById('allline').textContent=MEALS.length+(MEALS.length===1?' meal':' meals')+' on record';
+  if(!MEALS.length){ tb.innerHTML='<tr><td colspan="8">Nothing logged yet.</td></tr>'; return; }
+  tb.innerHTML=MEALS.map(m=>'<tr><td>'+esc(dayLabel(m.day))+'</td><td>'+esc(clock(m.eaten_at))+'</td><td>'+esc(m.name|| (m.status==='new'?'Waiting to be read':'Meal'))+'</td>'+
+    '<td class="num">'+(counted(m)?n(m.calories).toLocaleString('en-US'):'')+'</td>'+
+    '<td class="num">'+(counted(m)?n(m.protein_g)+' g':'')+'</td>'+
+    '<td class="num">'+(counted(m)?n(m.carbs_g)+' g':'')+'</td>'+
+    '<td class="num">'+(counted(m)?n(m.fat_g)+' g':'')+'</td>'+
+    '<td>'+esc(m.status==='ask'?'Needs you':(SURE[m.confidence]||''))+'</td></tr>').join('');
+}
+
+async function answer(id,val){
+  const {error}=await sb.from('meals').update({answer:val,status:'new',question:null,options:null}).eq('id',id);
+  if(error){ toast('Could not save that answer'); return; }
+  toast('Got it. I will redo that meal.');
+  load();
+}
+
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
