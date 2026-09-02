@@ -6,7 +6,7 @@
 <title>Food Log &middot; Project YOU</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ===== Project YOU * Food Log v1.1 ===== */
+  /* ===== Project YOU * Food Log v1.2 ===== */
   :root{
     --ink:#1f2a44;--muted:#4b5563;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
     --inset:#f5f7fb;--accent:#1e8e5a;--accent2:#166f46;--chip:#eef2f8;
@@ -73,7 +73,7 @@
   .cvalue{font-family:var(--mono);font-size:10.5px;fill:var(--muted)}
 
   .tw{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px}
-  table{border-collapse:collapse;width:100%;min-width:620px}
+  table{border-collapse:collapse;width:100%;min-width:700px}
   th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--inset);white-space:nowrap}
   th.num,td.num{text-align:right;font-variant-numeric:tabular-nums}
   td{padding:9px 12px;border-bottom:1px solid var(--line);font-size:15px;vertical-align:middle}
@@ -107,7 +107,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.1</span><span class="date" id="dstamp"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.2</span><span class="date" id="dstamp"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Every meal you photographed, what it was, and roughly what was in it. You log a meal by taking a picture on <a href="log-meal.html">Log a Meal</a>. The numbers are estimates read off the photo, so treat them as close rather than correct. Nothing here is a target and nothing here is a streak.</p>
@@ -164,13 +164,13 @@
     <h2 id="allline">Every meal on record</h2>
     <div class="tw">
       <table id="tall">
-        <thead><tr><th>Day</th><th>Time</th><th>Meal</th><th class="num">Calories</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th>How sure</th></tr></thead>
+        <thead><tr><th>Day</th><th>Time</th><th>Meal</th><th>Where</th><th class="num">Calories</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th>How sure</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
   </div>
 
-  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.1</p>
+  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.2</p>
 </div>
 </div>
 
@@ -191,6 +191,19 @@ function clock(iso){ if(!iso) return ''; return new Date(iso).toLocaleTimeString
 function dayLabel(d){ const p=d.split('-'); const dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2])); return DOW[dt.getUTCDay()]+' '+MON[+p[1]-1]+' '+(+p[2]); }
 function photoUrl(p){ return p ? SUPABASE_URL+'/storage/v1/object/public/meals/'+encodeURIComponent(p) : ''; }
 function n(v){ return Number(v||0); }
+/* One line saying where a meal was eaten. A named place if his check-ins knew
+   one, otherwise the coordinates rounded to about a street, and nothing at all
+   if neither is known. */
+function whereLine(m){
+  if(m.place) return '  &middot;  '+esc(m.place)+(m.city?', '+esc(m.city):'');
+  if(m.lat!=null && m.lng!=null) return '  &middot;  '+m.lat.toFixed(3)+', '+m.lng.toFixed(3);
+  return '';
+}
+function whereCell(m){
+  if(m.place) return esc(m.place)+(m.city?', '+esc(m.city):'');
+  if(m.lat!=null && m.lng!=null) return m.lat.toFixed(3)+', '+m.lng.toFixed(3);
+  return '';
+}
 const SURE={high:'Confident',medium:'Roughly',low:'A guess'};
 
 let MEALS=[], USUALS=[];
@@ -225,7 +238,7 @@ async function load(){
   MEALS=(m.data||[]).filter(x=>x.status!=='notfood');
   USUALS=(u && !u.error && u.data) ? u.data : [];
   safe(drawCards); safe(drawToday); safe(drawDays); safe(drawAsks); safe(drawAll); safe(drawUsuals);
-  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.1  -  '+MEALS.length+' meals on record  -  read from your own database, estimated from the photos you took.';
+  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.2  -  '+MEALS.length+' meals on record  -  read from your own database, estimated from the photos you took.';
 }
 
 function counted(m){ return m.status==='done'||m.status==='ask'; }
@@ -260,20 +273,21 @@ function drawCards(){
 function mealRow(m,showDay){
   const img = m.photo_path ? '<img class="thumb" alt="" loading="lazy" src="'+esc(photoUrl(m.photo_path))+'">' : '<div class="thumb"></div>';
   const when = (showDay? dayLabel(m.day)+', ':'')+clock(m.eaten_at);
+  const where = whereLine(m);
   if(m.status==='new'){
     return '<div class="row pending">'+img+'<div class="body"><div class="nm">Waiting to be read</div>'+
            '<div class="mc">Picture saved. The numbers land within a couple of hours.</div>'+
-           '<div class="tm">'+esc(when)+'</div></div></div>';
+           '<div class="tm">'+esc(when)+where+'</div></div></div>';
   }
   const macros='<div class="mc">'+n(m.calories)+' cal &nbsp; '+n(m.protein_g)+'g protein &nbsp; '+n(m.carbs_g)+'g carbs &nbsp; '+n(m.fat_g)+'g fat</div>';
   if(m.status==='ask'){
     let opts=[]; try{ opts=Array.isArray(m.options)?m.options:JSON.parse(m.options||'[]'); }catch(e){ opts=[]; }
     const btns = opts.length ? '<div class="opts">'+opts.map(o=>'<button class="opt" onclick="answer(\''+esc(m.id)+'\',this.textContent)">'+esc(o)+'</button>').join('')+'</div>' : '';
     return '<div class="row ask">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
-           '<div class="tm">'+esc(when)+'</div><div class="q">'+esc(m.question||'')+'</div>'+btns+'</div></div>';
+           '<div class="tm">'+esc(when)+where+'</div><div class="q">'+esc(m.question||'')+'</div>'+btns+'</div></div>';
   }
   return '<div class="row">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
-         '<div class="tm">'+esc(when)+'</div></div></div>';
+         '<div class="tm">'+esc(when)+where+'</div></div></div>';
 }
 
 function drawToday(){
@@ -343,8 +357,9 @@ function drawAsks(){
 function drawAll(){
   const tb=document.querySelector('#tall tbody');
   document.getElementById('allline').textContent=MEALS.length+(MEALS.length===1?' meal':' meals')+' on record';
-  if(!MEALS.length){ tb.innerHTML='<tr><td colspan="8">Nothing logged yet.</td></tr>'; return; }
+  if(!MEALS.length){ tb.innerHTML='<tr><td colspan="9">Nothing logged yet.</td></tr>'; return; }
   tb.innerHTML=MEALS.map(m=>'<tr><td>'+esc(dayLabel(m.day))+'</td><td>'+esc(clock(m.eaten_at))+'</td><td>'+esc(m.name|| (m.status==='new'?'Waiting to be read':'Meal'))+'</td>'+
+    '<td>'+whereCell(m)+'</td>'+
     '<td class="num">'+(counted(m)?n(m.calories).toLocaleString('en-US'):'')+'</td>'+
     '<td class="num">'+(counted(m)?n(m.protein_g)+' g':'')+'</td>'+
     '<td class="num">'+(counted(m)?n(m.carbs_g)+' g':'')+'</td>'+
