@@ -1,4 +1,4 @@
-/* ===== Project YOU · Needs You v1.0 =====================================
+/* ===== Project YOU · Needs You v1.1 =====================================
    The pop-up that asks Scott a question when a module gets stuck.
 
    ONE queue, any module, any page. A module writes a row into public.asks with
@@ -10,9 +10,18 @@
    are a guess at what he might say, so the box to say something else is never
    hidden behind another tap, and a comment on its own is a complete answer.
 
-   It fails silent by design. No Supabase on the page, not signed in, nothing
-   waiting, or anything at all going wrong: it does nothing and says nothing.
-   It must never be the reason a page looks broken.
+   It fails silent by design. Not signed in, nothing waiting, or anything at all
+   going wrong: it does nothing and says nothing. It must never be the reason a
+   page looks broken.
+
+   v1.1, Sep 2 2026. IT BORROWS NOTHING FROM THE PAGE IT SITS ON. v1.0 reused the
+   page's own Supabase client through window.supabase, and that made it invisible
+   on the one page Scott actually asked for: Todays Tasks loads the library as an
+   ES module from esm.sh, which never sets window.supabase, so the pop-up bailed
+   out silently on exactly the wrong page. Every other page happens to use the
+   UMD build, which does. Depending on how a page happens to load a library is a
+   trap; this now talks to the database over plain fetch and needs nothing from
+   the page at all.
    ======================================================================== */
 (function () {
   "use strict";
@@ -88,24 +97,46 @@
     try { localStorage.setItem('ny-snooze-' + id, new Date().toDateString()); } catch (e) {}
   }
 
-  var sb, ASKS = [], at = 0, card;
+  var ASKS = [], at = 0, card;
+
+  /* Whoever is signed in, read from where the client library parks the session.
+     Scanning for the key rather than hardcoding it means this keeps working if
+     the project ref or the library's naming ever changes. */
+  function token(){
+    try {
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        if (!/^sb-.*-auth-token$/.test(k)) continue;
+        var v = JSON.parse(localStorage.getItem(k) || 'null');
+        var s = v && v.currentSession ? v.currentSession : v;
+        if (!s || !s.access_token) continue;
+        /* A parked session outlives the sign-in. Without this the pop-up floats
+           over the sign-in box asking about lunch, which is how a helpful thing
+           starts feeling broken. Seen in testing Sep 2 2026. */
+        if (s.expires_at && (s.expires_at * 1000) < Date.now()) continue;
+        return s.access_token;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function headers(tok){
+    return { apikey: KEY_, Authorization: 'Bearer ' + (tok || KEY_), 'Content-Type': 'application/json' };
+  }
 
   function start(){
-    try {
-      if (!window.supabase || !window.supabase.createClient) return;   // page has no client library
-      sb = window.supabase.createClient(URL_, KEY_);
-    } catch (e) { return; }
-
-    sb.auth.getSession().then(function (r) {
-      if (!r || !r.data || !r.data.session) return;                    // not signed in, say nothing
-      return sb.from('v_asks_open').select('*').limit(20).then(function (q) {
-        if (q.error || !q.data || !q.data.length) return;
-        ASKS = q.data.filter(function (a) { return !snoozedHere(a.id); });
+    var tok = token();
+    if (!tok) return;                       // not signed in, say nothing at all
+    fetch(URL_ + '/rest/v1/v_asks_open?select=*&limit=20', { headers: headers(tok) })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (rows) {
+        if (!rows || !rows.length) return;
+        ASKS = rows.filter(function (a) { return !snoozedHere(a.id); });
         if (!ASKS.length) return;
         style();
-        setTimeout(show, 1200);            // let the page settle first
-      });
-    }).catch(function () {});
+        setTimeout(show, 1200);             // let the page settle first
+      })
+      .catch(function () {});
   }
 
   function show(){
@@ -173,19 +204,18 @@
     var note = box ? box.value.trim() : '';
     Array.prototype.forEach.call(card.querySelectorAll('button'), function (b) { b.disabled = true; });
 
-    sb.from('asks').update({
-      status: 'answered',
-      answer: picked || null,
-      comment: note || null
-    }).eq('id', a.id).then(function (r) {
-      if (r && r.error) {
-        Array.prototype.forEach.call(card.querySelectorAll('button'), function (b) { b.disabled = false; });
-        var q = card.querySelector('.ny-q');
-        if (q) q.textContent = 'That did not save. Try again in a moment.';
-        return;
-      }
+    fetch(URL_ + '/rest/v1/asks?id=eq.' + encodeURIComponent(a.id), {
+      method: 'PATCH',
+      headers: headers(token()),
+      body: JSON.stringify({ status: 'answered', answer: picked || null, comment: note || null })
+    }).then(function (r) {
+      if (!r.ok) throw new Error('save failed');
       card.innerHTML = '<div class="ny-done">Got it, thank you.</div>';
       setTimeout(next, 900);
+    }).catch(function () {
+      Array.prototype.forEach.call(card.querySelectorAll('button'), function (b) { b.disabled = false; });
+      var q = card.querySelector('.ny-q');
+      if (q) q.textContent = 'That did not save. Try again in a moment.';
     });
   }
 
