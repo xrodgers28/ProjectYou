@@ -92,6 +92,12 @@
   .dmeta{color:var(--muted);font-size:14px}
   .dprice{margin-left:auto;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
   .detnone,.detnote{font-size:15px;color:var(--muted);margin-bottom:10px}
+  .dkind.flight{color:var(--biz);background:var(--bizbg);border-color:var(--line)}
+  .dkind.train{color:var(--amber);background:var(--amberbg);border-color:var(--line)}
+  .dkind.ferry{color:var(--green);background:var(--greenbg);border-color:var(--line)}
+  .jlist li{font-variant-numeric:tabular-nums}
+  .jcity{color:var(--muted);font-weight:400;font-size:13.5px;margin-left:5px}
+  .jnum{font-weight:600;font-size:13px;color:var(--muted)}
   .detlinks{display:flex;gap:8px;flex-wrap:wrap}
   .dlink{font-size:14px;font-weight:700;color:var(--accent);text-decoration:none;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:6px 13px}
   .dlink:hover{border-color:var(--accent)}
@@ -120,7 +126,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Travel Log</h1><span class="ver pn-ver">v1.1</span><span class="date" id="dstamp"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Travel Log</h1><span class="ver pn-ver">v1.2</span><span class="date" id="dstamp"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Every trip you have taken, what it cost, and whether it was personal or business. The trip list comes from TripIt, back to June 2006. The money comes from Gondola, which only goes back to September 2025, so most older trips have blank boxes waiting for you. Type a number straight into any box and it saves itself.</p>
@@ -196,7 +202,7 @@ function money0(n){ return '$'+Number(n||0).toLocaleString('en-US',{maximumFract
 function pts(n){ n=Number(n||0); return n? n.toLocaleString('en-US')+' pts' : ''; }
 function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1600); }
 
-let TRIPS=[], YEARS=[], TOT=null, CONF=[], BOOKS=[], OPEN=null, sortKey='start_day', sortDir=-1;
+let TRIPS=[], YEARS=[], TOT=null, CONF=[], BOOKS=[], SEGS=[], OPEN=null, sortKey='start_day', sortDir=-1;
 
 async function boot(){ const {data:{session}}=await sb.auth.getSession(); if(session) onLogin(session); }
 async function signIn(){
@@ -217,16 +223,17 @@ function safe(fn){ try{ fn(); }catch(e){ console.error(e); } }
 async function load(){
   const now=new Date();
   document.getElementById('dstamp').textContent = MON[now.getMonth()]+' '+now.getDate()+', '+now.getFullYear();
-  const [t,y,tt,c,bk] = await Promise.all([
+  const [t,y,tt,c,bk,sg] = await Promise.all([
     sb.from('travel_trips').select('*').order('start_day',{ascending:false}),
     sb.from('v_travel_year').select('*'),
     sb.from('v_travel_totals').select('*').single(),
     sb.from('travel_conflicts').select('*').order('id'),
-    sb.from('travel_bookings').select('*').order('start_day')
+    sb.from('travel_bookings').select('*').order('start_day'),
+    sb.from('v_trip_journeys').select('*').order('seg_order')
   ]);
-  TRIPS=t.data||[]; YEARS=y.data||[]; TOT=tt.data||null; CONF=c.data||[]; BOOKS=bk.data||[];
+  TRIPS=t.data||[]; YEARS=y.data||[]; TOT=tt.data||null; CONF=c.data||[]; BOOKS=bk.data||[]; SEGS=sg.data||[];
   safe(drawCards); safe(drawYears); safe(drawTrips); safe(drawNeeds); safe(drawConf);
-  document.getElementById('foot').textContent='Project YOU OS  -  Travel Log v1.1  -  '+TRIPS.length+' trips  -  trip list from TripIt, prices from Gondola, updated live from your own database.';
+  document.getElementById('foot').textContent='Project YOU OS  -  Travel Log v1.2  -  '+TRIPS.length+' trips  -  trip list from TripIt, prices from Gondola, updated live from your own database.';
 }
 
 function drawCards(){
@@ -295,6 +302,21 @@ function drawTrips(){
 function detailRow(t){
   const bs=BOOKS.filter(function(b){ return b.trip_id===t.id; });
   let h='<tr class="det"><td colspan="8"><div class="detbox">';
+  const jg = t.tripit_trip_id ? SEGS.filter(function(s){ return s.trip_id===t.tripit_trip_id; }) : [];
+  if(jg.length){
+    h+='<div class="dethead">How you got there &middot; '+jg.length+' '+(jg.length===1?'leg':'legs')+'</div>';
+    h+='<ul class="detlist jlist">'+jg.map(function(s){
+      const from = (s.start_place && s.start_place!==s.start_city) ? esc(s.start_city)+' <span class="jcity">'+esc(s.start_place)+'</span>' : esc(s.start_city);
+      const to   = (s.end_place   && s.end_place!==s.end_city)     ? esc(s.end_city)+' <span class="jcity">'+esc(s.end_place)+'</span>'     : esc(s.end_city);
+      let cn='';
+      if(s.start_country_name && s.end_country_name && s.start_country_name!==s.end_country_name) cn='<span class="dmeta">'+esc(s.start_country_name)+' to '+esc(s.end_country_name)+'</span>';
+      else if(s.end_country_name) cn='<span class="dmeta">'+esc(s.end_country_name)+'</span>';
+      const num=String(s.detail||'').replace(/^Flight Number /,'').replace(/^Amtrak Train /,'Amtrak ');
+      return '<li><span class="dkind '+esc(s.seg_type)+'">'+esc(s.seg_type)+'</span>'
+        +'<b>'+from+' &rarr; '+to+'</b>'+cn
+        +'<span class="dprice jnum">'+esc(num)+'</span></li>';
+    }).join('')+'</ul>';
+  }
   h+='<div class="dethead">What made up this trip</div>';
   if(bs.length){
     h+='<ul class="detlist">'+bs.map(function(b){
