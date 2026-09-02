@@ -1,4 +1,4 @@
-/* ===== Project YOU · Needs You v1.1 =====================================
+/* ===== Project YOU · Needs You v1.2 =====================================
    The pop-up that asks Scott a question when a module gets stuck.
 
    ONE queue, any module, any page. A module writes a row into public.asks with
@@ -73,7 +73,9 @@
     '.ny-f button:hover,.ny-f a:hover{text-decoration:underline}',
     '.ny-f .ny-cnt{margin-right:auto}',
     '.ny-f span[aria-hidden]{color:#c8cdd4}',
-    '.ny-done{text-align:center;color:#2f8f5b;font-weight:700;font-size:13px;padding:6px 0 2px}'
+    '.ny-done{text-align:center;color:#2f8f5b;font-weight:700;font-size:13px;padding:6px 0 2px}',
+    '.ny-err{font-size:11.5px;font-weight:700;color:#b23a30;background:#fbeeec;border:1px solid #f0d4d0;',
+    '  border-radius:8px;padding:6px 9px;margin-bottom:8px}'
   ].join('');
 
   function esc(s){ return String(s == null ? '' : s)
@@ -214,8 +216,19 @@
       setTimeout(next, 900);
     }).catch(function () {
       Array.prototype.forEach.call(card.querySelectorAll('button'), function (b) { b.disabled = false; });
-      var q = card.querySelector('.ny-q');
-      if (q) q.textContent = 'That did not save. Try again in a moment.';
+      var send = card.querySelector('.ny-send'), box = card.querySelector('.ny-c');
+      if (send && box) send.disabled = !box.value.trim();
+      /* The question STAYS on screen and the typed comment stays in the box.
+         Scott hit this Sep 2 2026: the error replaced the question, so there was
+         nothing left to answer and his tap looked like it had been swallowed. */
+      var e = card.querySelector('.ny-err');
+      if (!e) {
+        e = document.createElement('div');
+        e.className = 'ny-err';
+        var cw = card.querySelector('.ny-cw');
+        if (cw) cw.parentNode.insertBefore(e, cw);
+      }
+      e.textContent = 'That did not send. Your answer is still here, try again.';
     });
   }
 
