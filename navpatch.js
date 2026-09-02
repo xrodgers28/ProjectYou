@@ -724,6 +724,7 @@ window.__pnNavCss=function(){
       '.pymb-more{flex:0 0 44px;align-items:center;padding:0;font-size:9.5px;letter-spacing:.3px;'+
         'background:#fff;border:1px solid #e3e7ee;color:#8a93a0}'+
       '.pymb-more:hover{background:#eef2f8;color:#3f6f8f}'+
+      '.pymb-panel{background:#fff;border:1px solid #e3e7ee;border-radius:14px;padding:10px 12px}'+
       '.pymb-locked .pymb-seg{cursor:default}'+
       '@media (prefers-reduced-motion:reduce){.pymb-seg{transition:none}}';
     (document.head||document.documentElement).appendChild(s);
@@ -861,6 +862,7 @@ window.__pnNavCss=function(){
     }else{
       el.__pymbWrap=null;
       el.style.display='none';
+      bar.classList.add('pymb-panel');
       var row=el.parentNode;
       if(row&&row.parentNode) row.parentNode.insertBefore(bar,row);
       else return;
