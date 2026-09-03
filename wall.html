@@ -160,6 +160,7 @@
   /* small mode: a wall of thumbnails */
   .feed.sm{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
            gap:12px;align-items:start}
+  .feed.sm > *{min-width:0}
   .feed.sm .fcard{border-radius:12px}
   .feed.sm .fcard img{height:150px;max-height:none;object-fit:cover;background:var(--line)}
   .feed.sm .fb{padding:8px 10px 10px}
@@ -182,11 +183,13 @@
   .stile .iglogo{height:130px;display:grid;place-items:center;color:#fff;font-size:13px;
        font-weight:700;letter-spacing:.4px;
        background:linear-gradient(135deg,#3b2a5a,#8a2f6b 46%,#d6763a)}
-  .tray{grid-column:1/-1}
+  .tray{grid-column:1/-1;min-width:0;max-width:100%;overflow:hidden}
   .tray[hidden]{display:none}
-  .trayr{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px}
+  .trayr{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;
+         -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
+         overscroll-behavior-x:contain}
   .ttile{position:relative;flex:0 0 210px;background:var(--card);border:1px solid var(--key);
-         border-radius:10px;overflow:hidden}
+         border-radius:10px;overflow:hidden;scroll-snap-align:start}
   .ttile img{width:100%;height:140px;object-fit:cover;display:block;background:var(--line)}
   .ttile .tt{padding:8px 9px 10px;font-size:11px;line-height:1.35;color:var(--ink);
              display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -208,6 +211,13 @@
   @media (max-width:640px){
     .feed.sm{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
     .feed.sm .fcard img{height:112px}
+    .stile img,.stile .iglogo{height:104px}
+    .stile .sn{font-size:11.5px}
+    /* on a phone the strip is a proper carousel: one picture at a time, and it snaps */
+    .trayr{scroll-snap-type:x mandatory;gap:8px}
+    .ttile{flex:0 0 84%;scroll-snap-align:center}
+    .ttile img{height:190px}
+    .igbox iframe{height:440px}
   }
 
   .vw{position:fixed;inset:0;z-index:2147483001;background:#0b0c10;
@@ -273,7 +283,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v1.15</span></h1>
+      <h1>The Wall <span class="ver">v1.16</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="hint">Tap any picture to see it big, then swipe or use the arrow keys.</div>
     </div>
@@ -310,7 +320,7 @@
         <div class="vsrc" id="vsrc"></div>
       </div>
     </div>
-    <div class="vhint">Tap the top or bottom to go back to the board. Tap the left or right for the one either side. Swipe and the arrow keys work too. S keeps it.</div>
+    <div class="vhint">Tap the left or the right of the picture to move through them. Swipe down, or press Close, to go back. Arrow keys work too. S keeps it.</div>
   </div>
 
   <div class="card">
@@ -332,7 +342,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.15</div>
+  <div class="stamp" id="stamp">v1.16</div>
 </div>
 
 <script>
@@ -723,8 +733,6 @@ document.addEventListener("click",function(e){
   if(fig && (e.target===fig || fig.contains(e.target))){
     var r=fig.getBoundingClientRect();
     if(!r.width || !r.height) return;
-    var y=(e.clientY-r.top)/r.height;
-    if(y<0.25 || y>0.75){ vClose(); return; }
     vGo((e.clientX-r.left)/r.width < 0.5 ? -1 : 1);
     return;
   }
@@ -755,7 +763,8 @@ document.addEventListener("keydown",function(e){
     if(!t || !t0) return;
     var dx=t.clientX-x0, dy=t.clientY-y0;
     t0=0;
-    if(Math.abs(dx)>44 && Math.abs(dx)>Math.abs(dy)*1.3){ TAPLOCK=Date.now()+600; vGo(dx<0?1:-1); }
+    if(Math.abs(dx)>44 && Math.abs(dx)>Math.abs(dy)*1.3){ TAPLOCK=Date.now()+600; vGo(dx<0?1:-1); return; }
+    if(Math.abs(dy)>70 && Math.abs(dy)>Math.abs(dx)*1.3){ TAPLOCK=Date.now()+600; vClose(); }
   },{passive:true});
   var acc=0, lock=0;
   vw.addEventListener("wheel",function(e){
@@ -885,7 +894,7 @@ function boot(){
       days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+
       " pictures from "+nSrc+" sources";
     document.getElementById("stamp").textContent=
-      "v1.15, dealt "+DAY+", the order is shuffled fresh every day, nothing here is about you";
+      "v1.16, dealt "+DAY+", the order is shuffled fresh every day, nothing here is about you";
     if(DAY!==today()){
       document.getElementById("err").innerHTML=
         '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
