@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Social Fitness</title>
-<meta name="pn-ver" content="v2.2">
+<meta name="pn-ver" content="v2.3">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -570,6 +570,17 @@ function shiftDay(n){
   d.setDate(d.getDate()+n); return key(d);
 }
 function channelFor(k){ return k==='Call'?'phone':(k==='Text'?'text':'in person'); }
+/* The Who box takes anything, so tidy it before it becomes a name.
+   "Chat with Zolty" is Zolty. "Luca - new colleague from Milan" is Luca,
+   and the rest of that line becomes the note. */
+function tidyName(s){
+  var t=String(s||'').trim(), note='';
+  var d=t.split(/\s+[-–—]\s+/);
+  if(d.length>1){ t=d[0].trim(); note=d.slice(1).join(' - ').trim(); }
+  t=t.replace(/^(?:chat|call|ring|talk|catch\s*up|coffee|lunch|dinner|breakfast|drinks|walk|meeting|party|text|message|email)\s+with\s+/i,'');
+  t=t.replace(/^(?:with|at|the)\s+/i,'');
+  return { name:t.trim(), note:note };
+}
 function whenWords(d){
   if(d===DAY) return 'today';
   if(d===shiftDay(-1)) return 'yesterday';
@@ -619,13 +630,18 @@ function refreshGo(){
 }
 function showCarry(){
   var w=el('lgWho'), why=el('lgWhy'); if(!w||!why) return;
-  var c=carryFor(w.value);
-  if(!c||!String(w.value).trim()){ why.textContent=''; why.className='why'; return; }
-  var bits=[];
-  if(c.social_group) bits.push(c.social_group);
-  if(c.circle) bits.push(c.circle+' circle');
+  var raw=String(w.value||'').trim();
+  if(!raw){ why.textContent=''; why.className='why'; return; }
+  var tn=tidyName(raw), c=carryFor(tn.name), bits=[];
+  if(c){
+    if(c.social_group) bits.push(c.social_group);
+    if(c.circle) bits.push(c.circle+' circle');
+  }
+  var line='';
+  if(tn.name!==raw) line='Filing as '+tn.name+(tn.note?', with "'+tn.note+'" as the note':'')+'. ';
+  if(c) line+= bits.length?('Known already, under '+bits.join(', ')+'.'):'Known already.';
   why.className='why';
-  why.textContent=bits.length?('Known already. Filing under '+bits.join(', ')+'.'):'Known already.';
+  why.textContent=line;
 }
 async function drawLog(){
   var box=el('log'); if(!box) return;
@@ -719,7 +735,10 @@ async function saveLog(){
   var why=el('lgWhy'), who=String(el('lgWho').value||'').trim();
   if(!who){ why.textContent='Put a name in first. A first name is enough.'; why.className='why warn'; el('lgWho').focus(); return; }
   if(!pickKind){ why.textContent='Pick what it was, from the row above.'; why.className='why warn'; return; }
+  var tn=tidyName(who); who=tn.name;
+  if(!who){ why.textContent='Put a name in first. A first name is enough.'; why.className='why warn'; el('lgWho').focus(); return; }
   var future=pickWhen>DAY, carry=carryFor(who)||{}, others=String(el('lgWith').value||'').trim();
+  var extraNote=[tn.note, others?('with '+others):''].filter(Boolean).join(' | ');
   el('lgGo').disabled=true;
   why.textContent='Saving...'; why.className='why';
   var r;
@@ -737,7 +756,7 @@ async function saveLog(){
       person:who, person_key:(carry.person_key||who), entity_type:'person',
       kind:pickKind, channel:channelFor(pickKind),
       happened_on:pickWhen, planned:false,
-      notes:others?('with '+others):null,
+      notes:extraNote||null,
       circle:carry.circle||null, social_group:carry.social_group||null,
       age_band:carry.age_band||null, labels:carry.labels||[],
       source:'logged-by-hand', superseded:false
