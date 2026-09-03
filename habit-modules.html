@@ -93,7 +93,7 @@
   .rback:hover{background:var(--acc);color:#fff}
   .shelf .rback{width:auto;margin:0;flex:none;padding:5px 11px;font-size:10.5px}
 
-  /* ===== THE COUNTER COLUMN (v5.8) — quick-tap inputs, left of the cards.
+  /* ===== THE COUNTER COLUMN (v5.9) — quick-tap inputs, left of the cards.
      INVERTED Sep 3: bright is what is still to do, done fades — the same way a
      ticked cue card dims. Coffee is the one exception, see the note by .rcup. ===== */
   /* ===== (v5.7 note kept)
@@ -125,6 +125,11 @@
   .rbadge{position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;border-radius:50%;font-size:7px;
       font-weight:800;line-height:12px;text-align:center;color:#fff;box-shadow:0 0 0 1.5px #fff}
   .rbadge.c{background:#5f3c22}
+  .rbadge.d{background:#3f6b42}
+  .rundo{margin-top:3px;width:30px;padding:2.5px 0;border:1px solid #d9c5ae;background:#fbf5ee;color:#7a5136;
+      border-radius:6px;font-size:8px;font-weight:800;line-height:1;letter-spacing:.3px;cursor:pointer;
+      transition:background .14s,border-color .14s}
+  .rundo:hover{background:#efdfcc;border-color:#c3a888}
   .rapp img{display:block;width:24px;height:24px;border-radius:6px;filter:none;opacity:1;transition:filter .16s,opacity .16s}
   .rapp.on img{filter:grayscale(1);opacity:.3}
   .rt.rdiet{height:60px}
@@ -240,7 +245,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v5.8</span>
+    <span class="pn-ver">v5.9</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -571,7 +576,7 @@ async function toggle(m,el){
    habit tracker reads "3 cups" rather than just "done".
    ========================================================================== */
 var RAIL = (function(){
-  var R = {rows:{}, presets:{}, cups:[], glasses:0, mf:{}, flags:{}, ex:null, photo:false, ready:false};
+  var R = {rows:{}, presets:{}, cups:[], glasses:0, mf:{}, flags:{}, ex:null, photo:false, meals:{}, ready:false};
   var el = null;
 
   /* ---- the day's latte pattern: same for every cup, worked out from the date ---- */
@@ -695,7 +700,8 @@ var RAIL = (function(){
       sb.from('mf_sessions').select('app').eq('day',d),
       sb.from('day_flags').select('*').eq('day',d).maybeSingle(),
       sb.from('exercise_day').select('*').eq('day',d).maybeSingle(),
-      sb.from('meal_presets').select('id,key').eq('active',true)
+      sb.from('meal_presets').select('id,key').eq('active',true),
+      sb.from('meals').select('id,preset_id,eaten_at').eq('day',d).eq('source','counter')
     ]);
     (res[0].data||[]).forEach(function(r){ if(r.tracker) R.rows[r.tracker]=r; });
     R.cups=(res[1].data||[]).map(function(r){return r.strength;});
@@ -704,6 +710,13 @@ var RAIL = (function(){
     R.flags=res[4].data||{};
     R.ex=res[5].data||null;
     (res[6].data||[]).forEach(function(p){R.presets[p.key]=p.id;});
+    /* what the Diet strip itself logged today — this is what makes those icons
+       able to come back off again. Only source='counter' rows; a meal logged on
+       the food-log page is not the strip's to undo. */
+    R.meals={}; (res[7].data||[]).forEach(function(m){
+      (R.meals[m.preset_id]=R.meals[m.preset_id]||[]).push(m); });
+    Object.keys(R.meals).forEach(function(p){ R.meals[p].sort(function(a,b){
+      return (a.eaten_at||'')<(b.eaten_at||'')?-1:1; }); });
     var pb=row('Photo Booth'); R.photo=!!(pb&&pb.done&&pb.for_date===d);
     R.ready=true;
     draw();
@@ -770,6 +783,7 @@ var RAIL = (function(){
     await sb.from('day_flags').upsert({day:today(),planned_day:on,updated_at:new Date().toISOString()});
     await tick("Today's Plan",on,{mins:5});
   }
+  function mealsOf(k){ var pid=R.presets[PRESETKEY[k]]; return (pid&&R.meals[pid])||[]; }
   async function dietTap(k){
     var d=today();
     if(k==='sweet'){
@@ -780,7 +794,22 @@ var RAIL = (function(){
     if(k==='med'){ var on=!(row('Medicine')||{}).done; draw(); await tick('Medicine',on,{mins:1}); await load(); return; }
     var pid=R.presets[PRESETKEY[k]]; if(!pid) return;
     var p=DIET.filter(function(x){return x.k===k;})[0];
-    await sb.from('meals').insert({day:d,name:p.n,preset_id:pid,source:'counter',status:'done',eaten_at:new Date().toISOString()});
+    var have=R.meals[pid]||[];
+    /* a tap toggles. Tapped on and it is in the food log; tapped again and the
+       row this strip wrote comes out of the food log. Insert-only was the bug. */
+    if(have.length){
+      var last=have[have.length-1];
+      have.pop(); R.meals[pid]=have; draw();
+      var del=await sb.from('meals').delete().eq('id',last.id);
+      if(del.error){ have.push(last); R.meals[pid]=have; draw();
+        if(typeof toast==='function') toast('Did not remove: '+del.error.message); return; }
+      if(typeof toast==='function') toast(p.n+' removed from food log');
+      return;
+    }
+    var ins=await sb.from('meals').insert({day:d,name:p.n,preset_id:pid,source:'counter',status:'done',eaten_at:new Date().toISOString()}).select('id,preset_id,eaten_at');
+    if(ins.error){ if(typeof toast==='function') toast('Did not save: '+ins.error.message); return; }
+    (R.meals[pid]=R.meals[pid]||[]).push((ins.data&&ins.data[0])||{id:null,eaten_at:new Date().toISOString()});
+    draw();
     if(typeof toast==='function') toast(p.n+' → food log ✓');
   }
   async function exTap(k){
@@ -803,7 +832,8 @@ var RAIL = (function(){
     var mfDone=APPS.filter(function(a){return R.mf[a.k];}).length;
     var cal=0, meals=0;
     var exd=R.ex||{}, legs=['dog','out_walk','back_walk','ruck'].filter(function(k){return exd[k];}).length;
-    var dietN=(med?1:0)+(R.flags.sweet==='yes'?1:0);
+    var dietN=(med?1:0)+(R.flags.sweet==='yes'?1:0)
+      +['eggs','banana','salad'].filter(function(k){return mealsOf(k).length;}).length;
 
     var h='';
     /* Mental Fitness */
@@ -816,8 +846,12 @@ var RAIL = (function(){
        '<div class="rv">'+(R.flags.planned_day?'Planned':'')+'</div></div><div class="rrow">'+
        mk('',planMark(!!R.flags.planned_day),'data-plan="1" title="Plan the day"')+'</div></div>';
     /* Coffee */
-    h+='<div class="rt" style="--ra:#7a5136"><div class="rlab rundo"><div class="rn">Coffee</div>'+
-       '<div class="rv">'+(R.cups.length?R.cups.length+(R.cups.length===1?' cup':' cups'):'')+'</div></div><div class="rrow">'+
+    h+='<div class="rt" style="--ra:#7a5136"><div class="rlab"><div class="rn">Coffee</div>'+
+       '<div class="rv">'+(R.cups.length?R.cups.length+(R.cups.length===1?' cup':' cups'):'')+'</div>'+
+       /* a tally can only ever count up unless there is a way back, and the way
+          back has to be visible. It was on the label, where nobody could find it. */
+       (R.cups.length?'<button class="rundo" title="Take the last cup back">&minus;1</button>':'')+
+       '</div><div class="rrow">'+
        ['full','half','decaf'].map(function(s){
          var n=R.cups.filter(function(c){return c===s;}).length;
          return '<span class="rmw"><button class="rmk" data-cof="'+s+'" title="'+s+'">'+(n?cup(s):cupEmpty())+'</button>'+
@@ -830,10 +864,12 @@ var RAIL = (function(){
     h+='<div class="rt rdiet" style="--ra:#4f7f52"><div class="rlab"><div class="rn">Diet</div>'+
        '<div class="rv">'+(dietN?dietN+' in':'')+'</div></div><div class="rrow rdietrow">'+
        DIET.map(function(d){
-         var cls='rmk';
+         var cls='rmk', dn=0;
          if(d.k==='sweet'){ if(R.flags.sweet==='yes')cls+=' on'; if(R.flags.sweet==='no')cls+=' no'; }
-         else if(d.k==='med'&&med) cls+=' on';
-         return '<button class="'+cls+'" data-diet="'+d.k+'" title="'+d.n+'"><span class="rico">'+d.e+'</span></button>';}).join('')+
+         else if(d.k==='med'){ if(med) cls+=' on'; }
+         else { dn=mealsOf(d.k).length; if(dn) cls+=' on'; }
+         return '<span class="rmw"><button class="'+cls+'" data-diet="'+d.k+'" title="'+d.n+'"><span class="rico">'+d.e+'</span></button>'+
+           (dn>1?'<span class="rbadge d">'+dn+'</span>':'')+'</span>';}).join('')+
        '</div></div>';
     /* Water */
     h+='<div class="rt" style="--ra:#4f8fc4"><div class="rlab"><div class="rn">Water</div>'+
