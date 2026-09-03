@@ -92,7 +92,7 @@
   .rback:hover{background:var(--acc);color:#fff}
   .shelf .rback{width:auto;margin:0;flex:none;padding:5px 11px;font-size:10.5px}
 
-  /* ===== THE COUNTER COLUMN (v6.2) — quick-tap inputs, left of the cards.
+  /* ===== THE COUNTER COLUMN (v6.3) — quick-tap inputs, left of the cards.
      INVERTED Sep 3: bright is what is still to do, done fades — the same way a
      ticked cue card dims. Coffee is the one exception, see the note by .rcup. ===== */
   /* ===== (v5.7 note kept)
@@ -212,6 +212,23 @@
   .rt.rdiet{height:60px}
   .rt.rdiet .rlab{width:30px}
   .rdietrow{display:grid;grid-template-columns:repeat(3,auto);gap:6px;justify-content:end;align-items:center}
+  /* the regulars sheet — every saved meal, not just the three on the strip */
+  .rmore{font-size:15px;font-weight:800;color:#4f7f52;line-height:1}
+  .mdbk{position:fixed;inset:0;background:rgba(20,26,38,.42);z-index:900;display:flex;
+      align-items:center;justify-content:center;padding:18px}
+  .mdcd{background:#fff;border-radius:16px;max-width:380px;width:100%;max-height:76vh;overflow:auto;
+      box-shadow:0 18px 44px rgba(20,26,38,.3);padding:18px 16px 14px}
+  .mdcd h4{margin:0 0 2px;font-size:16px;color:#1f2a44}
+  .mdsub{font-size:11.5px;color:#8a93a0;margin:0 0 12px;line-height:1.45}
+  .mdrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#f7f9fc;
+      border:1px solid #e1e6ee;border-radius:11px;padding:10px 12px;margin-bottom:7px;cursor:pointer}
+  .mdrow.on{background:#eef6ef;border-color:#4f7f52}
+  .mdrow .mde{font-size:19px;line-height:1}
+  .mdrow .mdn{flex:1;font-size:13.5px;font-weight:700;color:#1f2a44}
+  .mdrow .mdc{font-size:11.5px;font-weight:800;color:#8a93a0;white-space:nowrap}
+  .mdrow.on .mdc{color:#4f7f52}
+  .mdcl{display:block;width:100%;margin-top:6px;padding:9px;border:none;border-radius:10px;
+      background:#1f2a44;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
   .rico{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;
       filter:none;opacity:1;transition:filter .16s,opacity .16s;position:relative}
   .rmk.on .rico{filter:grayscale(1);opacity:.3}
@@ -322,7 +339,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.2</span>
+    <span class="pn-ver">v6.3</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -652,7 +669,7 @@ async function toggle(m,el){
    habit tracker reads "3 cups" rather than just "done".
    ========================================================================== */
 var RAIL = (function(){
-  var R = {rows:{}, presets:{}, cups:[], glasses:0, mf:{}, flags:{}, ex:null, photo:false, meals:{}, soc:{}, plans:[], quiet:[], ready:false};
+  var R = {rows:{}, presets:{}, plist:[], pby:{}, more:false, cups:[], glasses:0, mf:{}, flags:{}, ex:null, photo:false, meals:{}, soc:{}, plans:[], quiet:[], ready:false};
   var el = null;
 
   /* ---- the day's latte pattern: same for every cup, worked out from the date ---- */
@@ -786,7 +803,7 @@ var RAIL = (function(){
       sb.from('mf_sessions').select('app').eq('day',d),
       sb.from('day_flags').select('*').eq('day',d).maybeSingle(),
       sb.from('exercise_day').select('*').eq('day',d).maybeSingle(),
-      sb.from('meal_presets').select('id,key').eq('active',true),
+      sb.from('meal_presets').select('id,key,name,emoji,calories,protein_g,carbs_g,fat_g,sort').eq('active',true).order('sort',{ascending:true}),
       sb.from('meals').select('id,preset_id,eaten_at').eq('day',d).eq('source','counter'),
       sb.from('social_slots').select('*').eq('week_start',monday(d)),
       sb.from('social_plans').select('*').gte('day',monday(d)).lte('day',dadd(monday(d),13)),
@@ -798,7 +815,9 @@ var RAIL = (function(){
     R.mf={}; (res[3].data||[]).forEach(function(r){R.mf[r.app]=1;});
     R.flags=res[4].data||{};
     R.ex=res[5].data||null;
-    (res[6].data||[]).forEach(function(p){R.presets[p.key]=p.id;});
+    R.plist=(res[6].data||[]).slice();
+    R.pby={};
+    R.plist.forEach(function(p){R.presets[p.key]=p.id; R.pby[p.id]=p;});
     /* what the Diet strip itself logged today — this is what makes those icons
        able to come back off again. Only source='counter' rows; a meal logged on
        the food-log page is not the strip's to undo. */
@@ -885,25 +904,65 @@ var RAIL = (function(){
     }
     if(k==='med'){ var on=!(row('Medicine')||{}).done; draw(); await tick('Medicine',on,{mins:1}); await load(); return; }
     var pid=R.presets[PRESETKEY[k]]; if(!pid) return;
-    var p=DIET.filter(function(x){return x.k===k;})[0];
+    await logToggle(pid);
+  }
+
+  /* ONE place puts a regular in the food log and ONE place takes it back off, so
+     the strip and the regulars sheet can never disagree. The numbers are copied
+     off the saved regular: a meal logged here without calories is a meal the
+     day's total silently ignores, which is what the strip used to do. */
+  async function logToggle(pid){
+    var p=R.pby[pid]; if(!p) return;
+    var nm=(p.emoji?p.emoji+' ':'')+p.name;
     var have=R.meals[pid]||[];
-    /* a tap toggles. Tapped on and it is in the food log; tapped again and the
-       row this strip wrote comes out of the food log. Insert-only was the bug. */
     if(have.length){
       var last=have[have.length-1];
-      have.pop(); R.meals[pid]=have; draw();
+      have.pop(); R.meals[pid]=have; draw(); moreDraw();
       var del=await sb.from('meals').delete().eq('id',last.id);
-      if(del.error){ have.push(last); R.meals[pid]=have; draw();
+      if(del.error){ have.push(last); R.meals[pid]=have; draw(); moreDraw();
         if(typeof toast==='function') toast('Did not remove: '+del.error.message); return; }
-      if(typeof toast==='function') toast(p.n+' removed from food log');
+      if(typeof toast==='function') toast(p.name+' removed from food log');
       return;
     }
-    var ins=await sb.from('meals').insert({day:d,name:p.n,preset_id:pid,source:'counter',status:'done',eaten_at:new Date().toISOString()}).select('id,preset_id,eaten_at');
+    var ins=await sb.from('meals').insert({day:today(),name:nm,preset_id:pid,source:'counter',
+      status:'done',confidence:'high',calories:p.calories,protein_g:p.protein_g,
+      carbs_g:p.carbs_g,fat_g:p.fat_g,eaten_at:new Date().toISOString()})
+      .select('id,preset_id,eaten_at');
     if(ins.error){ if(typeof toast==='function') toast('Did not save: '+ins.error.message); return; }
     (R.meals[pid]=R.meals[pid]||[]).push((ins.data&&ins.data[0])||{id:null,eaten_at:new Date().toISOString()});
-    draw();
-    if(typeof toast==='function') toast(p.n+' → food log ✓');
+    draw(); moreDraw();
+    if(typeof toast==='function') toast(p.name+(p.calories?' · '+p.calories+' cal':'')+' → food log ✓');
   }
+
+  /* The regulars sheet. The strip only has room for three; this is all of them,
+     newest saved meal included, with no page change needed when one is added. */
+  function esc(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  function moreDraw(){
+    var bk=document.getElementById('mdbk');
+    if(!R.more){ if(bk) bk.remove(); return; }
+    if(!bk){
+      bk=document.createElement('div'); bk.id='mdbk'; bk.className='mdbk';
+      bk.onclick=function(e){ if(e.target===bk) moreClose(); };
+      document.body.appendChild(bk);
+      document.addEventListener('keydown',moreKey);
+    }
+    var h='<div class="mdcd"><h4>My regulars</h4>'+
+      '<p class="mdsub">Tap one to put it in today&rsquo;s food log. Tap it again to take it back off.</p>';
+    if(!R.plist.length) h+='<p class="mdsub">Nothing saved yet. Anything you tell Claude about a meal you eat often gets saved here.</p>';
+    h+=R.plist.map(function(p){
+      var n=(R.meals[p.id]||[]).length;
+      return '<button class="mdrow'+(n?' on':'')+'" data-pid="'+esc(p.id)+'">'+
+        '<span class="mde">'+esc(p.emoji||'🍽')+'</span>'+
+        '<span class="mdn">'+esc(p.name)+'</span>'+
+        '<span class="mdc">'+(p.calories?p.calories+' cal':'')+(n?' &middot; '+n+' today':'')+'</span></button>';
+    }).join('');
+    h+='<button class="mdcl" data-mdcl="1">Close</button></div>';
+    bk.innerHTML=h;
+    bk.querySelectorAll('[data-pid]').forEach(function(b){ b.onclick=function(){ logToggle(b.dataset.pid); }; });
+    var c=bk.querySelector('[data-mdcl]'); if(c) c.onclick=moreClose;
+  }
+  function moreKey(e){ if(e.key==='Escape') moreClose(); }
+  function moreClose(){ R.more=false; document.removeEventListener('keydown',moreKey); moreDraw(); }
   async function exTap(k){
     var d=today(), cur=R.ex||{day:d,dog:false,out_walk:false,back_walk:false,ruck:false,ideas:false};
     cur[k]=!cur[k]; R.ex=cur; draw();
@@ -1243,6 +1302,7 @@ var RAIL = (function(){
          else { dn=mealsOf(d.k).length; if(dn) cls+=' on'; }
          return '<span class="rmw"><button class="'+cls+'" data-diet="'+d.k+'" title="'+d.n+'"><span class="rico">'+d.e+'</span></button>'+
            (dn>1?'<span class="rbadge d">'+dn+'</span>':'')+'</span>';}).join('')+
+       '<span class="rmw"><button class="rmk" data-more="1" title="All my regulars"><span class="rico rmore">&#9662;</span></button></span>'+
        '</div></div>';
     /* Water */
     h+='<div class="rt" style="--ra:#4f8fc4"><div class="rlab"><div class="rn">Water</div>'+
@@ -1265,6 +1325,7 @@ var RAIL = (function(){
     el.querySelectorAll('[data-cof]').forEach(function(b){b.onclick=function(){addCup(b.dataset.cof);};});
     el.querySelectorAll('[data-w]').forEach(function(b){b.onclick=function(){var i=+b.dataset.w;setWater(i+1===R.glasses?i:i+1);};});
     el.querySelectorAll('[data-diet]').forEach(function(b){b.onclick=function(){dietTap(b.dataset.diet);};});
+    var mb=el.querySelector('[data-more]'); if(mb) mb.onclick=function(){ R.more=true; moreDraw(); };
     el.querySelectorAll('[data-ex]').forEach(function(b){b.onclick=function(){exTap(b.dataset.ex);};});
     var pl=el.querySelector('[data-plan]'); if(pl) pl.onclick=togglePlan;
     var pb=el.querySelector('[data-photo]'); if(pb) pb.onclick=togglePhoto;
