@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAC0CAYAAAA9zQYyAAAD+UlEQVR4nO3d21XbQBiFUchKHUlfUAWNJFVQGJWQl7BwLrY1mquO9n42tkAfP4MYi8dvP57eHyDEl9kHAC0JmiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoonydfQCrent5nX0Id33/+Tz7EJbz6F8j/+kIIf9N2J8sOS4cMeaHh+Medw+C/u3oURz9+FsR9ENODCmfRw1BE+X0QadNtbTPp9TpgyaLoIkiaKIImiiCJoqgiSJoogiaKKcPOm2nWtrnU2rp7aNn/6vXylb9xlkuaBEfz0pxLxO0kI9vhbCXWEOLOcMK53HqhF7hC0Afs6b1tAkt5myzzu8SSw5oZUrQpvM5zDjPw4MW87mMPt+WHEQZGrTpfE4jz7sJTRRBE2VY0JYb5zbq/JvQRBE0UdwfupMtexksw9oTdEOlG3IuHy/uNgTdQIudZR/PIew6gq7QY4uksOv4pXCn3vt9V3j3xxEJeodRsYm6nKALjY5M1GUEXWBWXKLeTtAbzY5q9usfhascG+yN6daVij3P+f3ns6sfdwi6gy3RfTzG5G3LkuOOkuDeXl6LJ2jpx/gGuE3QjdQuBSwl2hD0DVunYasYtz6PKX2dNXRn/4vPNO7HhK6050rGrQkr9jqCvqL2x/q9j+/9/Gcl6ArXpunW2K49zpTeT9CN1Wzyp56giSJoogiaKIImiqAb27OXg3YEXaH2slvtZT/+Jegrem82spmpD0FX2vNn7NYb//lkc1JnJulYJvQNo7dzjt6umkjQjdhstAZB31H69qg9ezlK3+bFddbQHWy5P52J3IegN3h7ed1924HWx8FtlhwbzY5p9usfhaALzIpKzNsJutDouMRcRtA7jIpMzOUEvVPv2MS8j6scFXrcn07IdQTdQIuwhdyGoBu6jNL/KZxD0J2IdQ6/FBJF0EQRNFEETRRBE0XQRBE0UQRNFEETRdBEETRRBE0UQRNF0EQRNFEETRRBE0XQRBkWtJsTntuo829CE0XQRBkatGXHOY087yY0UYYHbUqfy+jzPWVCi/ocZpxnSw6iTAvalM426/w+fvvx9D7llS+4D1yO2YNqiSXH7C8CbaxwHpeY0JdM6+NZIeQPywV9SdzrWiniS0sHDaWWWENDK4ImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKIImiiCJoqgiSJoogiaKIImiqCJImiiCJoogiaKoIkiaKL8Aqf/DX+Kyv/2AAAAAElFTkSuQmCC">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ===== Project YOU * Log a Meal v1.3 ===== */
+  /* ===== Project YOU * Log a Meal v1.4 ===== */
   :root{
     --ink:#1f2a44;--muted:#4b5563;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
     --inset:#f5f7fb;--accent:#1e8e5a;--accent2:#166f46;--chip:#eef2f8;
@@ -110,6 +110,49 @@
   a{color:var(--blue)}
   button:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
   @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+  /* ---- One meal, opened up. Scott, Sep 3 2026: tap a meal, see the picture
+     big with the numbers beside it. The panel borrows the shape of a real
+     nutrition label, because that is the form these numbers already live in
+     on the packet, and it is the one layout he does not have to learn. ---- */
+  .mdet{position:fixed;inset:0;background:rgba(18,24,36,.66);z-index:200;
+        display:flex;align-items:center;justify-content:center;padding:18px;
+        opacity:0;transition:opacity .18s}
+  .mdet.on{opacity:1}
+  .mdbox{background:#fff;border-radius:16px;width:100%;max-width:900px;max-height:92vh;
+         overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 326px;position:relative;
+         box-shadow:0 24px 60px rgba(15,20,32,.35)}
+  /* Nothing to look at, so do not reserve half the screen for it. */
+  .mdbox.nopic{grid-template-columns:1fr;max-width:390px}
+  .mdbox.nopic .mdimg{min-height:0;background:var(--inset)}
+  .mdbox.nopic .mdnone{padding:22px 20px 18px;color:var(--muted)}
+  .mdbox.nopic .mdnone .big{font-size:32px;margin-bottom:5px}
+  @media (max-width:760px){.mdbox{grid-template-columns:1fr;max-height:94vh;overflow-y:auto}}
+  .mdimg{background:#0d1013;display:flex;align-items:center;justify-content:center;min-height:220px}
+  .mdimg img{display:block;width:100%;max-height:92vh;object-fit:contain}
+  @media (max-width:760px){.mdimg img{max-height:44vh}}
+  .mdnone{color:#8b949c;font-size:14px;text-align:center;padding:36px 20px;line-height:1.6}
+  .mdnone .big{font-size:44px;display:block;margin-bottom:8px}
+  .mdinfo{padding:20px 22px 24px;overflow-y:auto}
+  .mdx{position:absolute;top:10px;right:12px;z-index:2;background:rgba(255,255,255,.92);border:1px solid var(--line);
+       color:var(--ink);width:32px;height:32px;border-radius:50%;font-size:19px;line-height:1;cursor:pointer}
+  .mdx:hover{background:#fff}
+  .mdinfo h3{font-size:21px;line-height:1.25;margin:0 0 4px}
+  .mdwhen{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-bottom:14px}
+  .nfcal{display:flex;align-items:baseline;justify-content:space-between;
+         border-top:7px solid var(--ink);border-bottom:1px solid var(--ink);padding:8px 0 6px}
+  .nfcal b{font-size:17px}
+  .nfcal span{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .nfr{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+  .nfr b{font-weight:700}
+  .nfr span{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .nfr.sub{padding-left:16px;font-size:14px;color:var(--muted);border-bottom-color:#eef1f5}
+  .nfr.tot{border-top:4px solid var(--ink);border-bottom:none;font-weight:700}
+  .mdnote{margin-top:14px;background:var(--inset);border-radius:10px;padding:11px 13px;font-size:14px;color:var(--muted);line-height:1.55}
+  .mdmeta{margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--muted);line-height:1.8;letter-spacing:.02em}
+  .mdmeta i{font-style:normal;color:var(--ink)}
+  .row{cursor:pointer}
+  .row:hover{border-color:var(--line-2,#cfd6de)}
 </style>
 </head>
 <body>
@@ -124,7 +167,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Log a Meal</h1><span class="ver pn-ver">v1.3</span><span class="date" id="dstamp"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Log a Meal</h1><span class="ver pn-ver">v1.4</span><span class="date" id="dstamp"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Take the picture. That is the whole job. The numbers get filled in for you within a couple of hours, and you only get asked something if a portion is genuinely unclear.</p>
@@ -156,8 +199,17 @@
 
   <div id="list"></div>
 
-  <p class="foot" id="foot">Project YOU OS  -  Log a Meal v1.3</p>
+  <p class="foot" id="foot">Project YOU OS  -  Log a Meal v1.4</p>
 </div>
+</div>
+
+
+<div id="mdet" class="mdet hidden" onclick="closeDetail(event)">
+  <div class="mdbox">
+    <button class="mdx" type="button" onclick="closeDetail()" aria-label="Close">&times;</button>
+    <div class="mdimg"></div>
+    <div class="mdinfo"></div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -176,6 +228,9 @@ function toast(m){const t=document.getElementById('toast');t.textContent=m;t.cla
 function nyDay(){ return nyDayOf(new Date()); }
 function nyDayOf(d){ return d.toLocaleDateString('en-CA',{timeZone:'America/New_York'}); }
 function clock(iso){ if(!iso) return ''; return new Date(iso).toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}).toLowerCase(); }
+const DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function dayLabel(d){ if(!d) return ''; const p=d.split('-'); const dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+  return DOW[dt.getUTCDay()]+' '+MON[+p[1]-1]+' '+(+p[2]); }
 function photoUrl(p){ return p ? SUPABASE_URL+'/storage/v1/object/public/meals/'+encodeURIComponent(p) : ''; }
 function n(v){ return Number(v||0); }
 /* One line saying where. A named place if his check-ins knew one, otherwise the
@@ -259,7 +314,7 @@ function draw(){
     const img = m.photo_path ? '<img class="thumb" alt="" src="'+esc(photoUrl(m.photo_path))+'">' : '<div class="thumb"></div>';
     const where = whereLine(m);
     if(m.status==='new'){
-      return '<div class="row pending">'+img+'<div class="body"><div class="nm">Waiting to be read</div>'+
+      return '<div class="row pending" onclick="openDetail(\''+esc(m.id)+'\',event)">'+img+'<div class="body"><div class="nm">Waiting to be read</div>'+
              '<div class="mc">Picture saved. The numbers land within a couple of hours.</div>'+
              '<div class="tm">'+esc(clock(m.eaten_at))+where+'</div></div></div>';
     }
@@ -269,7 +324,7 @@ function draw(){
       const btns = opts.length
         ? '<div class="opts">'+opts.map(o=>'<button class="opt" onclick="answer(\''+esc(m.id)+'\',this.textContent)">'+esc(o)+'</button>').join('')+'</div>'
         : '';
-      return '<div class="row ask">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
+      return '<div class="row ask" onclick="openDetail(\''+esc(m.id)+'\',event)">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
              '<div class="tm">'+esc(clock(m.eaten_at))+where+'</div>'+
              '<div class="q">'+esc(m.question||'')+'</div>'+btns+'</div></div>';
     }
@@ -277,7 +332,7 @@ function draw(){
        usual or is already one. That way he never has to wait for the learning. */
     const keep = (!m.preset_id && m.name && !known[mealKey(m.name)])
       ? '<button class="keep" onclick="keepIt(\''+esc(m.id)+'\',this)">Save as one of my usuals</button>' : '';
-    return '<div class="row">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
+    return '<div class="row" onclick="openDetail(\''+esc(m.id)+'\',event)">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
            '<div class="tm">'+esc(clock(m.eaten_at))+where+'</div>'+keep+'</div></div>';
   }).join('');
 }
@@ -453,6 +508,64 @@ async function answer(id,val){
   if(error){ toast('Could not save that answer'); return; }
   toast('Got it. I will redo that meal.');
   load();
+}
+
+/* ---- One meal, opened up ------------------------------------------------
+   Tap any logged meal and the picture opens big with its numbers beside it.
+   The numbers are laid out the way a nutrition label lays them out, since
+   that is where most of them came from. A meal typed in from a label has no
+   photo, so it says so rather than showing an empty grey box. */
+function fmtWhen(m){
+  var d = m.day ? dayLabel(m.day) : '';
+  var t = clock(m.eaten_at);
+  var w = whereLine(m).replace(/^\s*&middot;\s*/,'');
+  return [d, t].filter(Boolean).join(', ') + (w ? '  ·  ' + w.trim() : '');
+}
+function openDetail(id, ev){
+  /* A tap on one of the buttons inside a row is answering, not opening. */
+  if (ev && ev.target && ev.target.closest && ev.target.closest('button')) return;
+  var m = MEALS.filter(function(x){ return String(x.id) === String(id); })[0];
+  if (!m) return;
+  var box = document.getElementById('mdet');
+  var pic = m.photo_path
+    ? '<img alt="' + esc(m.name || 'Meal') + '" src="' + esc(photoUrl(m.photo_path)) + '">'
+    : '<div class="mdnone"><span class="big">🍽</span>No picture for this one.<br>It was added from a label rather than photographed.</div>';
+
+  var sure = {high:'From a label or a clear read', medium:'A reasonable read', low:'A rough guess'}[m.confidence] || '';
+  var rows =
+    '<div class="nfcal"><b>Calories</b><span>' + n(m.calories).toLocaleString('en-US') + '</span></div>' +
+    '<div class="nfr"><b>Protein</b><span>' + n(m.protein_g) + ' g</span></div>' +
+    '<div class="nfr"><b>Total carbohydrates</b><span>' + n(m.carbs_g) + ' g</span></div>' +
+    '<div class="nfr"><b>Total fat</b><span>' + n(m.fat_g) + ' g</span></div>';
+
+  var meta = [];
+  if (sure) meta.push('How sure: <i>' + esc(sure) + '</i>');
+  meta.push('Logged: <i>' + esc({ 'log-meal':'photographed', 'preset':'one of your usuals', 'chat':'told to Claude' }[m.source] || m.source || 'unknown') + '</i>');
+  if (m.answer) meta.push('You answered: <i>' + esc(m.answer) + '</i>');
+  if (m.status === 'new') meta.push('<i>Still waiting to be read</i>');
+
+  box.querySelector('.mdbox').classList.toggle('nopic', !m.photo_path);
+  box.querySelector('.mdimg').innerHTML = pic;
+  box.querySelector('.mdinfo').innerHTML =
+    '<h3>' + esc(m.name || (m.status === 'new' ? 'Waiting to be read' : 'Meal')) + '</h3>' +
+    '<div class="mdwhen">' + esc(fmtWhen(m)) + '</div>' +
+    rows +
+    (m.note ? '<div class="mdnote">' + esc(m.note) + '</div>' : '') +
+    '<div class="mdmeta">' + meta.join('<br>') + '</div>';
+
+  box.classList.remove('hidden');
+  requestAnimationFrame(function(){ box.classList.add('on'); });
+  document.addEventListener('keydown', escClose);
+}
+function escClose(e){ if (e.key === 'Escape') closeDetail(); }
+function closeDetail(ev){
+  /* Clicking the picture or the panel should not close it, only the backdrop. */
+  if (ev && ev.target && ev.target.id !== 'mdet' && !ev.target.classList.contains('mdx')) return;
+  var box = document.getElementById('mdet');
+  if (!box) return;
+  box.classList.remove('on');
+  document.removeEventListener('keydown', escClose);
+  setTimeout(function(){ box.classList.add('hidden'); }, 180);
 }
 
 boot();

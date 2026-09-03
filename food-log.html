@@ -6,7 +6,7 @@
 <title>Food Log &middot; Project YOU</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ===== Project YOU * Food Log v1.2 ===== */
+  /* ===== Project YOU * Food Log v1.3 ===== */
   :root{
     --ink:#1f2a44;--muted:#4b5563;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
     --inset:#f5f7fb;--accent:#1e8e5a;--accent2:#166f46;--chip:#eef2f8;
@@ -93,6 +93,49 @@
   a{color:var(--blue)}
   button:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
   @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+  /* ---- One meal, opened up. Scott, Sep 3 2026: tap a meal, see the picture
+     big with the numbers beside it. The panel borrows the shape of a real
+     nutrition label, because that is the form these numbers already live in
+     on the packet, and it is the one layout he does not have to learn. ---- */
+  .mdet{position:fixed;inset:0;background:rgba(18,24,36,.66);z-index:200;
+        display:flex;align-items:center;justify-content:center;padding:18px;
+        opacity:0;transition:opacity .18s}
+  .mdet.on{opacity:1}
+  .mdbox{background:#fff;border-radius:16px;width:100%;max-width:900px;max-height:92vh;
+         overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) 326px;position:relative;
+         box-shadow:0 24px 60px rgba(15,20,32,.35)}
+  /* Nothing to look at, so do not reserve half the screen for it. */
+  .mdbox.nopic{grid-template-columns:1fr;max-width:390px}
+  .mdbox.nopic .mdimg{min-height:0;background:var(--inset)}
+  .mdbox.nopic .mdnone{padding:22px 20px 18px;color:var(--muted)}
+  .mdbox.nopic .mdnone .big{font-size:32px;margin-bottom:5px}
+  @media (max-width:760px){.mdbox{grid-template-columns:1fr;max-height:94vh;overflow-y:auto}}
+  .mdimg{background:#0d1013;display:flex;align-items:center;justify-content:center;min-height:220px}
+  .mdimg img{display:block;width:100%;max-height:92vh;object-fit:contain}
+  @media (max-width:760px){.mdimg img{max-height:44vh}}
+  .mdnone{color:#8b949c;font-size:14px;text-align:center;padding:36px 20px;line-height:1.6}
+  .mdnone .big{font-size:44px;display:block;margin-bottom:8px}
+  .mdinfo{padding:20px 22px 24px;overflow-y:auto}
+  .mdx{position:absolute;top:10px;right:12px;z-index:2;background:rgba(255,255,255,.92);border:1px solid var(--line);
+       color:var(--ink);width:32px;height:32px;border-radius:50%;font-size:19px;line-height:1;cursor:pointer}
+  .mdx:hover{background:#fff}
+  .mdinfo h3{font-size:21px;line-height:1.25;margin:0 0 4px}
+  .mdwhen{font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-bottom:14px}
+  .nfcal{display:flex;align-items:baseline;justify-content:space-between;
+         border-top:7px solid var(--ink);border-bottom:1px solid var(--ink);padding:8px 0 6px}
+  .nfcal b{font-size:17px}
+  .nfcal span{font-size:34px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .nfr{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line);font-size:15px}
+  .nfr b{font-weight:700}
+  .nfr span{font-variant-numeric:tabular-nums;white-space:nowrap}
+  .nfr.sub{padding-left:16px;font-size:14px;color:var(--muted);border-bottom-color:#eef1f5}
+  .nfr.tot{border-top:4px solid var(--ink);border-bottom:none;font-weight:700}
+  .mdnote{margin-top:14px;background:var(--inset);border-radius:10px;padding:11px 13px;font-size:14px;color:var(--muted);line-height:1.55}
+  .mdmeta{margin-top:12px;font-family:var(--mono);font-size:10.5px;color:var(--muted);line-height:1.8;letter-spacing:.02em}
+  .mdmeta i{font-style:normal;color:var(--ink)}
+  .row{cursor:pointer}
+  .row:hover{border-color:var(--line-2,#cfd6de)}
 </style>
 </head>
 <body>
@@ -107,7 +150,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.2</span><span class="date" id="dstamp"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.3</span><span class="date" id="dstamp"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Every meal you photographed, what it was, and roughly what was in it. You log a meal by taking a picture on <a href="log-meal.html">Log a Meal</a>. The numbers are estimates read off the photo, so treat them as close rather than correct. Nothing here is a target and nothing here is a streak.</p>
@@ -170,8 +213,17 @@
     </div>
   </div>
 
-  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.2</p>
+  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.3</p>
 </div>
+</div>
+
+
+<div id="mdet" class="mdet hidden" onclick="closeDetail(event)">
+  <div class="mdbox">
+    <button class="mdx" type="button" onclick="closeDetail()" aria-label="Close">&times;</button>
+    <div class="mdimg"></div>
+    <div class="mdinfo"></div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -238,7 +290,7 @@ async function load(){
   MEALS=(m.data||[]).filter(x=>x.status!=='notfood');
   USUALS=(u && !u.error && u.data) ? u.data : [];
   safe(drawCards); safe(drawToday); safe(drawDays); safe(drawAsks); safe(drawAll); safe(drawUsuals);
-  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.2  -  '+MEALS.length+' meals on record  -  read from your own database, estimated from the photos you took.';
+  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.3  -  '+MEALS.length+' meals on record  -  read from your own database, estimated from the photos you took.';
 }
 
 function counted(m){ return m.status==='done'||m.status==='ask'; }
@@ -275,7 +327,7 @@ function mealRow(m,showDay){
   const when = (showDay? dayLabel(m.day)+', ':'')+clock(m.eaten_at);
   const where = whereLine(m);
   if(m.status==='new'){
-    return '<div class="row pending">'+img+'<div class="body"><div class="nm">Waiting to be read</div>'+
+    return '<div class="row pending" onclick="openDetail(\''+esc(m.id)+'\',event)">'+img+'<div class="body"><div class="nm">Waiting to be read</div>'+
            '<div class="mc">Picture saved. The numbers land within a couple of hours.</div>'+
            '<div class="tm">'+esc(when)+where+'</div></div></div>';
   }
@@ -283,10 +335,10 @@ function mealRow(m,showDay){
   if(m.status==='ask'){
     let opts=[]; try{ opts=Array.isArray(m.options)?m.options:JSON.parse(m.options||'[]'); }catch(e){ opts=[]; }
     const btns = opts.length ? '<div class="opts">'+opts.map(o=>'<button class="opt" onclick="answer(\''+esc(m.id)+'\',this.textContent)">'+esc(o)+'</button>').join('')+'</div>' : '';
-    return '<div class="row ask">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
+    return '<div class="row ask" onclick="openDetail(\''+esc(m.id)+'\',event)">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
            '<div class="tm">'+esc(when)+where+'</div><div class="q">'+esc(m.question||'')+'</div>'+btns+'</div></div>';
   }
-  return '<div class="row">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
+  return '<div class="row" onclick="openDetail(\''+esc(m.id)+'\',event)">'+img+'<div class="body"><div class="nm">'+esc(m.name||'Meal')+'</div>'+macros+
          '<div class="tm">'+esc(when)+where+'</div></div></div>';
 }
 
@@ -412,6 +464,64 @@ async function answer(id,val){
   if(error){ toast('Could not save that answer'); return; }
   toast('Got it. I will redo that meal.');
   load();
+}
+
+/* ---- One meal, opened up ------------------------------------------------
+   Tap any logged meal and the picture opens big with its numbers beside it.
+   The numbers are laid out the way a nutrition label lays them out, since
+   that is where most of them came from. A meal typed in from a label has no
+   photo, so it says so rather than showing an empty grey box. */
+function fmtWhen(m){
+  var d = m.day ? dayLabel(m.day) : '';
+  var t = clock(m.eaten_at);
+  var w = whereLine(m).replace(/^\s*&middot;\s*/,'');
+  return [d, t].filter(Boolean).join(', ') + (w ? '  ·  ' + w.trim() : '');
+}
+function openDetail(id, ev){
+  /* A tap on one of the buttons inside a row is answering, not opening. */
+  if (ev && ev.target && ev.target.closest && ev.target.closest('button')) return;
+  var m = MEALS.filter(function(x){ return String(x.id) === String(id); })[0];
+  if (!m) return;
+  var box = document.getElementById('mdet');
+  var pic = m.photo_path
+    ? '<img alt="' + esc(m.name || 'Meal') + '" src="' + esc(photoUrl(m.photo_path)) + '">'
+    : '<div class="mdnone"><span class="big">🍽</span>No picture for this one.<br>It was added from a label rather than photographed.</div>';
+
+  var sure = {high:'From a label or a clear read', medium:'A reasonable read', low:'A rough guess'}[m.confidence] || '';
+  var rows =
+    '<div class="nfcal"><b>Calories</b><span>' + n(m.calories).toLocaleString('en-US') + '</span></div>' +
+    '<div class="nfr"><b>Protein</b><span>' + n(m.protein_g) + ' g</span></div>' +
+    '<div class="nfr"><b>Total carbohydrates</b><span>' + n(m.carbs_g) + ' g</span></div>' +
+    '<div class="nfr"><b>Total fat</b><span>' + n(m.fat_g) + ' g</span></div>';
+
+  var meta = [];
+  if (sure) meta.push('How sure: <i>' + esc(sure) + '</i>');
+  meta.push('Logged: <i>' + esc({ 'log-meal':'photographed', 'preset':'one of your usuals', 'chat':'told to Claude' }[m.source] || m.source || 'unknown') + '</i>');
+  if (m.answer) meta.push('You answered: <i>' + esc(m.answer) + '</i>');
+  if (m.status === 'new') meta.push('<i>Still waiting to be read</i>');
+
+  box.querySelector('.mdbox').classList.toggle('nopic', !m.photo_path);
+  box.querySelector('.mdimg').innerHTML = pic;
+  box.querySelector('.mdinfo').innerHTML =
+    '<h3>' + esc(m.name || (m.status === 'new' ? 'Waiting to be read' : 'Meal')) + '</h3>' +
+    '<div class="mdwhen">' + esc(fmtWhen(m)) + '</div>' +
+    rows +
+    (m.note ? '<div class="mdnote">' + esc(m.note) + '</div>' : '') +
+    '<div class="mdmeta">' + meta.join('<br>') + '</div>';
+
+  box.classList.remove('hidden');
+  requestAnimationFrame(function(){ box.classList.add('on'); });
+  document.addEventListener('keydown', escClose);
+}
+function escClose(e){ if (e.key === 'Escape') closeDetail(); }
+function closeDetail(ev){
+  /* Clicking the picture or the panel should not close it, only the backdrop. */
+  if (ev && ev.target && ev.target.id !== 'mdet' && !ev.target.classList.contains('mdx')) return;
+  var box = document.getElementById('mdet');
+  if (!box) return;
+  box.classList.remove('on');
+  document.removeEventListener('keydown', escClose);
+  setTimeout(function(){ box.classList.add('hidden'); }, 180);
 }
 
 boot();
