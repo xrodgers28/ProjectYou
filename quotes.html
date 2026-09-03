@@ -130,7 +130,6 @@
 #deck .step{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-weight:800}
 #deck .big{font-size:21px;font-weight:700;line-height:1.22;margin-top:12px;color:var(--ink)}
 #deck .mean{font-size:14px;color:#5b6472;line-height:1.35;margin-top:12px}
-#deck .src{font-size:12.5px;color:#9aa6b4;margin-top:10px;font-style:italic}
 #deck .date.bottom{margin-top:auto;text-align:center;color:#b9c0cc;font-size:10.5px;font-weight:400;padding-top:14px}
 #deck .foot{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #eef1f5}
 #deck .back{font-size:13px;font-weight:700;color:#a6adba;cursor:pointer}
@@ -171,7 +170,7 @@
 
   <div id="great" class="hidden">
     <div class="wrap">
-      <div class="secbar"><h1>Great Quotes</h1><span class="ver">v1.8</span><span class="date"></span></div>
+      <div class="secbar"><h1>Great Quotes</h1><span class="ver">v1.9</span><span class="date"></span></div>
       <div style="font-size:13px;color:var(--muted);margin:2px 0 12px">Quotes you sent over from the AI board. Your curated shortlist.</div>
       <div class="count" id="gcount"></div>
       <div class="grid" id="ggrid"></div>
@@ -180,7 +179,7 @@
 
   <div id="browse" class="hidden">
     <div class="wrap">
-    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v1.8</span><span class="date"></span></div>
+    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v1.9</span><span class="date"></span></div>
       <div class="add">
         <b>Add a phrase</b>
         <div class="r">
@@ -200,7 +199,7 @@
       <div class="grid" id="grid"></div>
     </div>
   </div>
-  <div class="badge">Things Worth Knowing v1.0</div>
+  <div class="badge">Things Worth Knowing v1.9</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -240,6 +239,7 @@ async function load(){
   const sel=document.getElementById('tag');
   sel.innerHTML='<option value="">All categories</option>'+tags.map(t=>'<option>'+esc(t)+'</option>').join('');
   await loadSeen();
+  await loadFun();
   buildDaily(); renderDaily(); draw();
   stampSeen();
   hydrateFavs();
@@ -258,47 +258,107 @@ async function loadSeen(){
 async function stampSeen(){
   try{
     const t=etToday();
-    const ids=DAILY.map(d=>d.q&&d.q.id).filter(Boolean);
+    const ids=DAILY.filter(d=>d.kind==='phrase').map(d=>d.q&&d.q.id).filter(Boolean);
     if(!ids.length) return;
     await sb.from('quotes').update({seen_on:t,is_new:false}).in('id',ids);
     ids.forEach(i=>{ SEEN[i]=t; });
   }catch(e){}
 }
+/* ===== CLEVER PHRASES IS ALWAYS THE FIRST TILE =====
+   Sep 3 2026, Scott. It used to be one of three groups drawn at random, so it
+   surfaced about one day in three, while a second copy of the same library was
+   being dealt every day on the AI Insights card. It now leads this deck every
+   day and appears on no other cue card. Only change PIN_CAT if the group is
+   renamed in the library itself. */
+const PIN_CAT='Untranslatable Words';
 function buildDaily(){
   const seed=etToday();
   const byCat={};
   ALL.forEach(q=>{const c=(q.tags&&q.tags[0])?q.tags[0]:'Other';(byCat[c]=byCat[c]||[]).push(q);});
-  const cats=Object.keys(byCat).sort((a,b)=>hstr(seed+a)-hstr(seed+b)).slice(0,3);
+  const rest=Object.keys(byCat).filter(c=>c!==PIN_CAT).sort((a,b)=>hstr(seed+a)-hstr(seed+b)).slice(0,2);
+  const cats=(byCat[PIN_CAT]&&byCat[PIN_CAT].length?[PIN_CAT]:[]).concat(rest);
   const lastSeen=q=>SEEN[q.id]||'0000-00-00';
   DAILY=cats.map(c=>{
     const list=byCat[c].slice().sort((a,b)=>{
       const s=lastSeen(a).localeCompare(lastSeen(b));
       return s!==0 ? s : hstr(seed+a.id)-hstr(seed+b.id);
     });
-    return {cat:c, q:list[0]};
+    return {kind:'phrase', cat:c, q:list[0]};
   }).filter(x=>x.q);
+  DAILY=DAILY.concat(FUN.map(f=>({kind:'fun', fact:f})));
   dIdx=0;
+}
+
+/* ===== FUN FACTS =====
+   Sep 3 2026, Scott: "fun facts should be moved from farnum street into things
+   worth knowing and should be one fact on screen at a time." They used to sit on
+   The Feed as a second well with both facts stacked in one tile. They are now
+   their own tiles at the end of this deck, one fact per screen. The well itself
+   is unchanged, so nothing already dealt comes round again.
+   FUN_PER_DAY is the only number to change if he wants more or fewer. */
+const FUN_PER_DAY=2;
+const FUNSRC='Fun Facts';
+let FUN=[], FUN_LEFT=0, FUN_KEPT={};
+
+async function loadFun(){
+  FUN=[]; FUN_LEFT=0;
+  try{
+    const today=etToday();
+    const r=await sb.from('news_queue')
+      .select('id,source,section,title,body,url,published_on,status,seen_on,image_url,image_credit')
+      .eq('source',FUNSRC).neq('status','hidden')
+      .order('published_on',{ascending:false}).order('id');
+    const all=r.data||[];
+    let dealt=all.filter(x=>x.seen_on===today);
+    let pool =all.filter(x=>!x.seen_on);
+    if(dealt.length<FUN_PER_DAY && pool.length){
+      const take=pool.slice(0,FUN_PER_DAY-dealt.length);
+      const ids=take.map(x=>x.id);
+      const up=await sb.from('news_queue').update({status:'seen',seen_on:today}).in('id',ids);
+      /* If the stamp fails the deal is not stable, so show nothing rather than
+         something that changes on the next reload. */
+      if(!up.error){
+        take.forEach(x=>{x.seen_on=today;x.status='seen';});
+        dealt=dealt.concat(take);
+        pool=pool.slice(take.length);
+      }
+    }
+    dealt.sort((a,b)=>{
+      if(a.published_on!==b.published_on) return a.published_on<b.published_on?1:-1;
+      return a.id-b.id;
+    });
+    FUN=dealt; FUN_LEFT=pool.length;
+  }catch(e){ FUN=[]; FUN_LEFT=0; }
+  try{
+    const k=await sb.from('fun_facts').select('id,title');
+    FUN_KEPT={}; (k.data||[]).forEach(r=>{ FUN_KEPT[r.title]=r.id; });
+  }catch(e){ FUN_KEPT={}; }
+}
+
+async function favFun(i){
+  const f=FUN[i]; if(!f) return;
+  const had=FUN_KEPT[f.title];
+  try{
+    if(had){
+      const d=await sb.from('fun_facts').delete().eq('id',had);
+      if(d.error) throw d.error;
+      delete FUN_KEPT[f.title]; toast('Out of your fun facts');
+    }else{
+      const ins=await sb.from('fun_facts').insert({
+        title:f.title, body:f.body, url:f.url, published_on:f.published_on,
+        image_url:f.image_url||null, image_credit:f.image_credit||null
+      }).select().single();
+      if(ins.error) throw ins.error;
+      FUN_KEPT[f.title]=ins.data.id; toast('Kept');
+    }
+  }catch(e){ toast('Could not reach the server. Try again.'); }
+  renderDaily();
 }
 const TWK_ICON='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
 const TWK_STARP='<path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.7l6.1-.9z"/>';
 const CATLABEL={'Untranslatable Words':'Clever Phrases','Work & Business':'Little Known Facts'};
 function catLabel(c){return CATLABEL[c]||c;}
-function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div><span class="ver">v1.1</span></div>';}
-/* THE SOURCE LINE. Where this phrase came from, in small grey italic under the
-   meaning. source_module is the honest record: manual means Scott put it in
-   himself, ai_deck means it arrived on the AI Insights card, james-clear means
-   it was sent over from the 3-2-1 module. */
-function twkSrc(q){
-  var m=(q&&q.source_module)||'';
-  var lab='', href='';
-  if(q&&q.author){ lab=q.author; }
-  else if(m==='ai_deck'){ lab='The AI Insights card'; href='ai.html'; }
-  else if(m==='james-clear'){ lab='James Clear, 3-2-1'; href='james-clear.html'; }
-  else if(m==='manual'){ lab='Your own Clever Phrases library'; }
-  else { lab='Written for Project YOU'; }
-  var inner=href?('<a href="'+href+'" style="color:inherit;text-decoration:underline">'+esc(lab)+'</a>'):esc(lab);
-  return '<div class="src">Source &middot; '+inner+'</div>';
-}
+function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div><span class="ver">v1.9</span></div>';}
 function renderDaily(){
   const total=DAILY.length;
   const ds=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -311,7 +371,13 @@ function renderDaily(){
     return;
   }
   if(dIdx>=total){
-    let rows=DAILY.map((d,i)=>'<div class="ck"><input type="checkbox" id="sv'+i+'" '+(d.q.favorite?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(catLabel(d.cat))+'</div><div class="d">'+esc((d.q.text||'').slice(0,95))+'</div></label></div>').join('');
+    let rows=DAILY.map((d,i)=>{
+      if(d.kind==='fun'){
+        const kept=!!FUN_KEPT[d.fact.title];
+        return '<div class="ck"><input type="checkbox" id="sv'+i+'" '+(kept?'checked':'')+' disabled><label for="sv'+i+'"><div class="t">Fun Fact</div><div class="d">'+esc((d.fact.title||'').slice(0,95))+'</div></label></div>';
+      }
+      return '<div class="ck"><input type="checkbox" id="sv'+i+'" '+(d.q.favorite?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(catLabel(d.cat))+'</div><div class="d">'+esc((d.q.text||'').slice(0,95))+'</div></label></div>';
+    }).join('');
     deck.innerHTML='<div class="card" style="--acc:#7a4f9c;--tint:#efeaf4">'+twkHd()+
       '<div class="bd"><div class="step">End of set</div><div class="big">Keep what mattered.</div><div class="cklist">'+rows+'</div>'+
       '<div class="howlong">How long did this take?<input id="tmin" type="number" min="1" placeholder="min" class="in"></div>'+
@@ -319,20 +385,34 @@ function renderDaily(){
       '<div class="foot"><span class="back" onclick="dgo(-1)">Back</span><span class="next" onclick="finishDeck()">I&rsquo;m done, mark complete</span></div></div>';
     return;
   }
-  const d=DAILY[dIdx], q=d.q;
+  const d=DAILY[dIdx];
+  if(d.kind==='fun'){
+    const f=d.fact, kept=!!FUN_KEPT[f.title];
+    const fstar='<span class="sstar'+(kept?' on':'')+'" title="Keep this fact" onclick="favFun('+FUN.indexOf(f)+')"><svg viewBox="0 0 24 24">'+TWK_STARP+'</svg></span>';
+    const fback=dIdx===0?'back off':'back';
+    const fbackOn=dIdx===0?'':'onclick="dgo(-1)"';
+    const fnext=(dIdx===total-1?'Review':'Next');
+    let fbd='<div class="step">Fun Fact</div><div class="big">'+esc(f.title)+'</div>';
+    if(f.body) fbd+='<div class="mean">'+esc(f.body)+'</div>';
+    fbd+='<div class="date bottom">'+ds+'</div>';
+    deck.innerHTML='<div class="card" style="--acc:#d08c2e;--tint:#f9efdd">'+twkHd()+fstar+'<div class="bd">'+fbd+'</div>'+
+      '<div class="foot"><span class="'+fback+'" '+fbackOn+'>Back</span><span class="next" onclick="dgo(1)">'+fnext+'</span></div></div>';
+    return;
+  }
+  const q=d.q;
   const star='<span class="sstar'+(q.favorite?' on':'')+'" title="Save to favorites" onclick="favD(\''+q.id+'\','+(!q.favorite)+')"><svg viewBox="0 0 24 24">'+TWK_STARP+'</svg></span>';
   const backCls=dIdx===0?'back off':'back';
   const backOn=dIdx===0?'':'onclick="dgo(-1)"';
   const nextLabel=(dIdx===total-1?'Review':'Next');
   let bd='<div class="step">'+esc(catLabel(d.cat))+'</div><div class="big">'+esc(q.text)+'</div>';
   if(q.meaning) bd+='<div class="mean">'+esc(q.meaning)+'</div>';
-  bd+=twkSrc(q);
   bd+='<div class="date bottom">'+ds+'</div>';
   deck.innerHTML='<div class="card" style="--acc:#7a4f9c;--tint:#efeaf4">'+twkHd()+star+'<div class="bd">'+bd+'</div>'+
     '<div class="foot"><span class="'+backCls+'" '+backOn+'>Back</span><span class="next" onclick="dgo(1)">'+nextLabel+'</span></div></div>';
 }
 async function saveDaily(){
   for(let i=0;i<DAILY.length;i++){
+    if(DAILY[i].kind==='fun') continue;
     const cb=document.getElementById('sv'+i); if(!cb)continue;
     const q=DAILY[i].q; const val=cb.checked; q.favorite=val;
     try{ await cueSetTWK(q,val); }catch(e){}
@@ -401,7 +481,7 @@ async function addQuote(){
 }
 async function markDone(){
   const today=etToday();
-  const {data}=await sb.from('todos').select('id').eq('is_habit',true).eq('bucket','today').ilike('task','%Clever Phrases%').limit(1);
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).eq('bucket','today').ilike('task','%Things Worth Knowing%').limit(1);
   if(data&&data.length){await sb.from('todos').update({done:true,done_at:new Date().toISOString(),status:'done',for_date:today}).eq('id',data[0].id);toast('Things Worth Knowing habit ticked in CrushingIt. ✓');}
   else{toast('Marked done. (No Things Worth Knowing habit row found.)');}
 }
@@ -409,14 +489,14 @@ async function logTimeCP(){
   const el=document.getElementById('tmin');const v=parseInt(el&&el.value,10);
   if(!v||v<=0){toast('Enter minutes first.');return;}
   const today=etToday();const now=new Date().toISOString();
-  const {data}=await sb.from('todos').select('id').eq('is_habit',true).ilike('task','%Clever Phrases%').limit(1);
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).ilike('task','%Things Worth Knowing%').limit(1);
   if(data&&data.length){await sb.from('todos').update({actual_minutes:v,done:true,status:'done',done_at:now,for_date:today}).eq('id',data[0].id);el.disabled=true;toast('Logged '+v+' min to CrushingIt ✓');}
   else toast('No Things Worth Knowing habit row found to log against.');
 }
 async function markDoneCP(){
   const el=document.getElementById('tmin');const v=parseInt(el&&el.value,10);
   const today=etToday();const now=new Date().toISOString();
-  const {data}=await sb.from('todos').select('id').eq('is_habit',true).ilike('task','%Clever Phrases%').limit(1);
+  const {data}=await sb.from('todos').select('id').eq('is_habit',true).ilike('task','%Things Worth Knowing%').limit(1);
   if(data&&data.length){const upd={done:true,status:'done',done_at:now,for_date:today};if(v&&v>0)upd.actual_minutes=v;await sb.from('todos').update(upd).eq('id',data[0].id);if(el)el.disabled=true;toast(v&&v>0?('Things Worth Knowing done, logged '+v+' min ✓'):'Things Worth Knowing marked done ✓');}
   else toast('No Things Worth Knowing habit row found.');
 }
