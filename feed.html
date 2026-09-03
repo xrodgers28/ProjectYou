@@ -119,9 +119,9 @@
 
   <div class="wrap">
     <div class="head">
-      <div class="kick">Two fun facts, and two things to read</div>
+      <div class="kick">Two things to read</div>
       <h1>The Feed</h1>
-      <div class="sub">Two fun facts every day, plus two things to read from Farnam Street’s Brain Food. Nothing you have already been dealt comes round again. Star anything worth keeping, and put a picture on any of them.</div>
+      <div class="sub">Two things to read every day from Farnam Street’s Brain Food. Nothing you have already been dealt comes round again. Star anything worth keeping, and put a picture on any of them. Fun facts have moved to the Things Worth Knowing card.</div>
     </div>
 
     <div id="stage"></div>
@@ -141,32 +141,30 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* ===== The Feed v1.6 =====
+/* ===== The Feed v1.7 =====
    A news source you read INTO your library. Items arrive in public.news_queue
    from Farnam Street's Brain Food and are shown in Shane Parrish's own sections,
    in his order, not re-bucketed into our vocabulary, because the whole point is
    to read it the way he wrote it. Starring an item copies it into
    public.farnam_street, the library named after the source.
 
-   NEW IN v1.6 — FUN FACTS ARE A SECOND WELL, NOT A SECTION.
-   Scott, Sep 2 2026, on a Farnam Street P.S. about tiger camouflage: "this fact
-   is AMAZING!! if I could have fun facts like this everyday this would be doing
-   what I wanted it to do." The card could not deliver that from Brain Food
-   alone — P.S. is the only heading that ever carries one and it runs perhaps
-   once a week. So fun facts now arrive as their OWN source in the same queue
-   (source = 'Fun Facts') and get their own tile at the end of the deck, two a
-   day, a star on each. The two wells are dealt independently: running out of
-   Brain Food never stops the fun facts and vice versa. Do not merge them back
-   into one deal — the whole reason there are two numbers below is that the two
-   sources have completely different refill rates. */
+   CHANGED IN v1.7 — FUN FACTS HAVE LEFT THIS CARD.
+   Scott, Sep 3 2026: "fun facts should be moved from farnum street into things
+   worth knowing and should be one fact on screen at a time." They were added
+   here on Sep 2 as a second well and moved out a day later, so the reasoning
+   is worth keeping: they are not Brain Food, they never came from Shane
+   Parrish, and stacking two of them on one tile was the thing he wanted
+   changed. They now run as their own tiles on quotes.html, one fact per screen,
+   dealt from the SAME public.news_queue rows with source = 'Fun Facts'. Kept
+   fun facts live in public.fun_facts, not public.farnam_street, so this
+   library stays purely Brain Food. Do not re-add a fun facts well here. */
 const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
 var sb=null;
 try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
 
-const HABIT="The Feed", QS="The Feed", SOURCE="Farnam Street", FUNSRC="Fun Facts";
+const HABIT="The Feed", QS="The Feed", SOURCE="Farnam Street";
 const SRCLINE="Farnam Street &middot; Brain Food, Shane Parrish &middot; S15";
-const FUNLINE="Fun Facts";
 
 /* Farnam Street's own section headers, in the order he runs them. Anything that
    arrives under a heading we do not know about is appended rather than dropped,
@@ -181,11 +179,6 @@ const SECTIONS=["Tiny Thoughts","Insights","Mental Models","Outliers","The Knowl
    the card longer or shorter; nothing else needs to move. */
 const PER_DAY=2;
 
-/* ===== HOW MANY FUN FACTS A DAY =====
-   Two, on one tile, with a star on each — Scott's own shape for it. Change this
-   one number to give him more; the tile grows, nothing else moves. */
-const FUN_PER_DAY=2;
-
 /* Longest side of a picture once it has been shrunk in the browser, and how
    hard to squeeze it. A picture is stored on the row itself, so it has to stay
    small: 360px and quality .5 lands around 20KB, which a card loads instantly.
@@ -193,7 +186,7 @@ const FUN_PER_DAY=2;
 const PIC_MAX=360, PIC_Q=0.5, PIC_CEILING=90000;
 
 let ITEMS=[], TILES=[], STARRED={}, idx=0, signedIn=false, ticked=false, habitRow=null;
-let ISSUE=null, LEFT=0, LEFT_FUN=0, DEALT_ISSUES=[];
+let ISSUE=null, LEFT=0, DEALT_ISSUES=[];
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 /* THE DAY IS DEFINED ONCE, in py-day.js: 2am to 2am Eastern, because Scott works
@@ -244,14 +237,10 @@ async function dealOne(source,perDay,today){
 
 async function loadAll(){
   var today=todayKey();
-  /* Two wells, dealt separately. Brain Food refills once a week; the fun facts
-     refill on their own schedule. One shared deal would let whichever ran dry
-     first silently eat the other's slots. */
   var fs=await dealOne(SOURCE,PER_DAY,today);
-  var fun=await dealOne(FUNSRC,FUN_PER_DAY,today);
 
-  ITEMS=fs.dealt.concat(fun.dealt);
-  LEFT=fs.left; LEFT_FUN=fun.left;
+  ITEMS=fs.dealt;
+  LEFT=fs.left;
   DEALT_ISSUES=[];
   fs.dealt.forEach(function(x){if(DEALT_ISSUES.indexOf(x.published_on)<0)DEALT_ISSUES.push(x.published_on);});
   ISSUE=DEALT_ISSUES.length?DEALT_ISSUES[0]:null;
@@ -265,16 +254,12 @@ async function loadAll(){
 
 function keyOf(x){return (x.section||'')+' · '+(x.title||'');}
 
-/* One tile per Farnam Street section that actually has something in it, and
-   then the Fun Facts tile LAST — Scott asked for it as the second card, and
-   last is also where the Finish button lives, so the day's reading ends on the
-   enjoyable one. */
+/* One tile per Farnam Street section that actually has something in it. */
 function buildTiles(){
   var order={}, extra=[];
   SECTIONS.forEach(function(s,i){order[s]=i;});
-  var by={}, fun=[];
+  var by={};
   ITEMS.forEach(function(it){
-    if(it.source===FUNSRC){fun.push(it);return;}
     var s=it.section||'Etcetera';
     if(!(s in order)&&extra.indexOf(s)<0)extra.push(s);
     (by[s]=by[s]||[]).push(it);
@@ -286,12 +271,6 @@ function buildTiles(){
     foot:'Two items a day, never repeated. Star anything worth keeping and it copies into your Farnam Street library.',
     left:LEFT
   };});
-  if(fun.length)TILES.push({
-    section:'Fun Facts', items:fun, kind:'fun',
-    chips:'<span class="chip area" style="background:#d08c2e">Fun Facts</span><span class="chip">Two a day</span>',
-    foot:'Two new ones every day, never repeated. Star the keepers, and add a picture to any of them.',
-    left:LEFT_FUN
-  });
   if(idx>=TILES.length)idx=0;
 }
 
@@ -308,24 +287,21 @@ async function loadHabit(){
 
 function noEcho(t,b){b=b||'';if(!t)return b;var n=function(s){return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();};var nt=n(t);if(!nt)return b;var parts=b.match(/[^.!?]+[.!?]*\s*/g)||[b];var out=[],cut=false;for(var i=0;i<parts.length;i++){if(!cut&&n(parts[i])===nt){cut=true;continue;}out.push(parts[i]);}var r=out.join('').trim();return cut?r:b;}
 function itemHTML(it){
-  var k=keyOf(it), on=!!STARRED[k], fun=(it.source===FUNSRC);
+  var k=keyOf(it), on=!!STARRED[k];
   var when=fmtDate(it.published_on);
   var pic=it.image_url?
     '<div class="pic"><img src="'+esc(it.image_url)+'" alt="" '+
       'onerror="this.closest(\'.pic\').remove();"></div>'+
     (it.image_credit?'<div class="cred">Picture: '+esc(it.image_credit)+'</div>':'')
     :'';
-  var srcline=fun?FUNLINE:SRCLINE;
+  var srcline=SRCLINE;
   return '<div class="item">'+
     '<button class="st'+(on?' on':'')+'" data-k="'+esc(k)+'" title="'+(on?'Remove from your keeper list':'Keep this one')+'">'+(on?'★':'☆')+'</button>'+
     '<div class="t">'+esc(it.title)+'</div>'+
     (noEcho(it.title,it.body)?'<div class="b">'+esc(noEcho(it.title,it.body))+'</div>':'')+
     pic+
-    /* The fun-fact tile is already headed "Fun Facts", so repeating the source
-       under every card is the same wasted line the no-echo rule exists to kill.
-       A fun fact gets the link on its own and nothing else. */
-    '<div class="src">'+(fun?'':srcline+(when?' &middot; '+esc(when):''))+
-      (it.url?(fun?'':' &middot; ')+'<a href="'+esc(it.url)+'" target="_blank" rel="noopener">'+(fun?'where this comes from':'read it there')+'</a>':'')+'</div>'+
+    '<div class="src">'+srcline+(when?' &middot; '+esc(when):'')+
+      (it.url?' &middot; <a href="'+esc(it.url)+'" target="_blank" rel="noopener">read it there</a>':'')+'</div>'+
     '<div class="picrow">'+
       '<button class="picbtn" data-pick="'+it.id+'">'+(it.image_url?'Change the picture':'Add a picture')+'</button>'+
       (it.image_url?'<button class="picbtn sub" data-drop="'+it.id+'">Remove it</button>':'')+
@@ -467,7 +443,7 @@ async function toggleStar(it){
     }).select().single();
     if(ins.error){toast('Could not keep it: '+ins.error.message);return;}
     STARRED[k]=ins.data.id;
-    toast(it.source===FUNSRC?'Kept':'Kept to your Farnam Street library');
+    toast('Kept to your Farnam Street library');
   }
   render();
 }
@@ -516,7 +492,7 @@ async function signIn(){
 
 async function boot(){
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  document.getElementById('stamp').textContent='The Feed v1.6 · '+f+' · all times EST';
+  document.getElementById('stamp').textContent='The Feed v1.7 · '+f+' · all times EST';
   if(!sb){document.getElementById('stage').innerHTML='<div class="done"><h3>Could not reach the database</h3><p>Reload to try again.</p></div>';return;}
   var s=await sb.auth.getSession();
   if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadAll();}
