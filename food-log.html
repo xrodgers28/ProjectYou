@@ -6,7 +6,7 @@
 <title>Food Log &middot; Project YOU</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ===== Project YOU * Food Log v1.3 ===== */
+  /* ===== Project YOU * Food Log v1.5 ===== */
   :root{
     --ink:#1f2a44;--muted:#4b5563;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
     --inset:#f5f7fb;--accent:#1e8e5a;--accent2:#166f46;--chip:#eef2f8;
@@ -59,6 +59,31 @@
   .glass{width:34px;height:42px;border:2px solid var(--line);background:var(--inset);border-radius:4px 4px 10px 10px;
          cursor:pointer;padding:0;font-size:15px;line-height:1;color:#c3cbd8}
   .glass.on{border-color:var(--blue);background:var(--bluebg);color:var(--blue)}
+  /* The usuals list. Thin rows, hairline group labels, drag by the grip. */
+  .ulist{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+         -webkit-user-select:none;user-select:none}
+  .grp{display:flex;align-items:center;gap:8px;padding:9px 14px 5px;
+       font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+       color:var(--muted);background:var(--inset);border-top:1px solid var(--line)}
+  .grp:first-child{border-top:none}
+  .grp .rule{flex:1;height:1px;background:var(--line)}
+  .ur{display:flex;align-items:center;gap:10px;padding:7px 14px;background:var(--card)}
+  .ur+.ur{border-top:1px solid #f0f3f8}
+  .ur.off{opacity:.5}
+  .ur.dragging{background:var(--greenbg);box-shadow:0 6px 18px -8px rgba(31,42,68,.45);position:relative;z-index:2}
+  .grip{flex:none;width:22px;height:26px;display:flex;align-items:center;justify-content:center;
+        color:#b9c2cf;cursor:grab;touch-action:none;font-size:13px;line-height:1}
+  .grip:active{cursor:grabbing}
+  .ur .un{flex:1;min-width:0}
+  .ur .u1{font-size:15px;font-weight:700;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ur .u2{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.45;
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ur .ua{flex:none}
+  .ur .ua button{font-size:12px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);
+                 background:var(--inset);color:var(--muted);cursor:pointer;font-family:inherit}
+  .ur .ua button:hover{border-color:var(--accent);color:var(--ink)}
+  .gempty{padding:7px 14px 9px;font-size:13px;color:var(--muted);background:var(--card)}
+
   .fibgap{background:var(--greenbg);border:1px solid #cfe6da;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:15px}
 
   .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
@@ -168,7 +193,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.4</span><span class="date" id="dstamp"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.5</span><span class="date" id="dstamp"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Where today stands against your goals, then every meal you have logged. You log a meal by taking a picture on <a href="log-meal.html">Log a Meal</a>. Numbers that came off a packet are exact; numbers read off a photo are close rather than correct.</p>
@@ -214,13 +239,8 @@
   <div class="panel" id="p5">
     <p class="eyebrow">Meals you eat again and again</p>
     <h2 id="usline">Your usuals</h2>
-    <div class="note"><b>These become one-tap buttons on Log a Meal.</b> A meal joins this list when you save it yourself, or on its own once you have eaten the same thing three times. Removing one takes the button away; it does not touch any meal you already logged.</div>
-    <div class="tw">
-      <table id="tus">
-        <thead><tr><th>Meal</th><th class="num">Calories</th><th class="num">Fibre</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th class="num">Times</th><th>Last eaten</th><th>How it got here</th><th></th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
+    <div class="note"><b>Drag the handle to put them in the order you want.</b> Drag a meal under a different heading to move it there. The order you set here is the order the buttons appear in on Log a Meal and on Cue Cards. Removing one takes the button away; it does not touch any meal you already logged.</div>
+    <div class="ulist" id="tus"></div>
   </div>
 
   <div class="panel" id="p4">
@@ -246,7 +266,7 @@
     </div>
   </div>
 
-  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.4</p>
+  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.5</p>
 </div>
 </div>
 
@@ -320,7 +340,7 @@ function safe(fn){ try{ fn(); }catch(e){ console.error(e); } }
 async function load(){
   const [m,u,w,g,f]=await Promise.all([
     sb.from('meals').select('*').order('eaten_at',{ascending:false}).limit(2000),
-    sb.from('meal_presets').select('*').order('active',{ascending:false}).order('times_seen',{ascending:false}),
+    sb.from('meal_presets').select('*').order('sort',{ascending:true,nullsFirst:false}).order('name',{ascending:true}),
     sb.from('water_log').select('*').eq('day',nyDay()).order('drunk_at',{ascending:false}),
     sb.from('nutrition_goals').select('*').eq('id',1).limit(1),
     sb.from('fiber_reference').select('*').order('fiber_g',{ascending:false})
@@ -334,7 +354,7 @@ async function load(){
   GOALS=(g && !g.error && g.data && g.data[0]) ? g.data[0] : GOALS;
   FIBREF=(f && !f.error && f.data) ? f.data : [];
   safe(drawGoals); safe(drawCards); safe(drawToday); safe(drawDays); safe(drawAsks); safe(drawAll); safe(drawUsuals); safe(drawFibre);
-  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.4  -  '+MEALS.length+' meals on record  -  read from your own database.';
+  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.5  -  '+MEALS.length+' meals on record  -  read from your own database.';
 }
 
 /* Today against the two numbers he set himself, plus the four glasses of water.
@@ -557,6 +577,11 @@ function drawAll(){
     '<td>'+esc(m.status==='ask'?'Needs you':(SURE[m.confidence]||''))+'</td></tr>').join('');
 }
 
+/* Breakfast, lunch, dinner, snack. This is for grouping and order only: it is
+   deliberately separate from the one-a-day rule, which lives elsewhere and would
+   start refusing real meals if lunch and dinner were pushed into it. */
+const COURSES=[['breakfast','Breakfast'],['lunch','Lunch'],['dinner','Dinner'],['snack','Snack'],['','Anything else']];
+
 /* The usuals list. Nothing here is a meal, it is the memory the camera page draws
    its one-tap buttons from, so removing one takes a button away and leaves every
    meal already logged exactly as it was. */
@@ -566,22 +591,99 @@ function drawUsuals(){
   document.getElementById('usline').textContent = live.length
     ? live.length+(live.length===1?' meal':' meals')+' you can log with one tap'
     : 'Nothing on file yet';
-  const tb=document.querySelector('#tus tbody');
+  const box=document.getElementById('tus');
   if(!USUALS.length){
-    tb.innerHTML='<tr><td colspan="10">Nothing yet. Save a meal from Log a Meal, or eat the same thing three times and it will appear here on its own.</td></tr>';
+    box.innerHTML='<div class="gempty">Nothing yet. Save a meal from Log a Meal, or eat the same thing three times and it will appear here on its own.</div>';
     return;
   }
-  tb.innerHTML=USUALS.map(u=>{
-    const how = u.pinned ? 'You saved it' : (u.learned ? 'Learned from repeats' : 'Added');
-    const act = u.active
-      ? '<button class="opt" style="font-size:13px;padding:5px 11px" onclick="dropUsual(\''+esc(u.id)+'\')">Remove</button>'
-      : '<button class="opt" style="font-size:13px;padding:5px 11px" onclick="keepUsual(\''+esc(u.id)+'\')">Put back</button>';
-    return '<tr'+(u.active?'':' style="opacity:.75"')+'><td>'+esc((u.emoji?u.emoji+' ':'')+u.name)+(u.active?'':' <span class="c" style="font-family:var(--mono);font-size:11px">removed</span>')+'</td>'+
-      '<td class="num">'+n(u.calories).toLocaleString('en-US')+'</td><td class="num">'+fg(u.fiber_g)+' g</td><td class="num">'+n(u.protein_g)+' g</td>'+
-      '<td class="num">'+n(u.carbs_g)+' g</td><td class="num">'+n(u.fat_g)+' g</td>'+
-      '<td class="num">'+n(u.times_seen)+'</td><td>'+esc(u.last_seen?dayLabel(u.last_seen):'')+'</td>'+
-      '<td>'+esc(how)+'</td><td>'+act+'</td></tr>';
-  }).join('');
+  const byCourse={}; COURSES.forEach(c=>byCourse[c[0]]=[]);
+  USUALS.slice().sort((a,b)=>(n(a.sort)||9999)-(n(b.sort)||9999)).forEach(u=>{
+    const c = byCourse[u.course||''] ? (u.course||'') : '';
+    byCourse[c].push(u);
+  });
+  let h='';
+  COURSES.forEach(function(c){
+    h+='<div class="grp" data-course="'+c[0]+'">'+esc(c[1])+'<span class="rule"></span></div>';
+    if(!byCourse[c[0]].length){ h+='<div class="gempty">Nothing here yet. Drag one in.</div>'; }
+    byCourse[c[0]].forEach(function(u){
+      const act = u.active
+        ? '<button onclick="dropUsual(\''+esc(u.id)+'\')">Remove</button>'
+        : '<button onclick="keepUsual(\''+esc(u.id)+'\')">Put back</button>';
+      h+='<div class="ur'+(u.active?'':' off')+'" data-id="'+esc(u.id)+'">'+
+         '<div class="grip" title="Drag to reorder">&#9776;</div>'+
+         '<div class="un"><div class="u1">'+esc((u.emoji?u.emoji+' ':'')+u.name)+(u.active?'':' (removed)')+'</div>'+
+         '<div class="u2">'+n(u.calories).toLocaleString('en-US')+' cal &middot; '+fg(u.fiber_g)+'g fibre &middot; '+
+         n(u.protein_g)+'g protein &middot; '+n(u.carbs_g)+'g carbs &middot; '+n(u.fat_g)+'g fat</div></div>'+
+         '<div class="ua">'+act+'</div></div>';
+    });
+  });
+  box.innerHTML=h;
+  wireDrag(box);
+}
+
+/* Drag to reorder, by pointer rather than HTML5 drag so it works with a finger
+   as well as a mouse. The row moves in the list as you go: nothing floats, which
+   is fewer moving parts and behaves the same on a phone. touch-action:none on the
+   grip is what stops the page scrolling away underneath the drag. */
+function wireDrag(box){
+  let row=null;
+  box.querySelectorAll('.grip').forEach(function(g){
+    g.addEventListener('pointerdown', function(ev){
+      row = g.closest('.ur'); if(!row) return;
+      ev.preventDefault();
+      try{ g.setPointerCapture(ev.pointerId); }catch(e){}
+      row.classList.add('dragging');
+      const move=function(e){
+        if(!row) return;
+        const y=e.clientY;
+        const kids=[].slice.call(box.children).filter(function(k){ return k!==row; });
+        let before=null;
+        for(let i=0;i<kids.length;i++){
+          const r=kids[i].getBoundingClientRect();
+          if(y < r.top + r.height/2){ before=kids[i]; break; }
+        }
+        if(before) box.insertBefore(row, before); else box.appendChild(row);
+      };
+      const up=function(){
+        g.removeEventListener('pointermove',move);
+        g.removeEventListener('pointerup',up);
+        g.removeEventListener('pointercancel',up);
+        if(row) row.classList.remove('dragging');
+        row=null;
+        saveOrder(box);
+      };
+      g.addEventListener('pointermove',move);
+      g.addEventListener('pointerup',up);
+      g.addEventListener('pointercancel',up);
+    });
+  });
+}
+
+/* Walk the list top to bottom. The last heading passed says which meal of the day
+   a row now belongs to, and the running count is its place in the order. Only the
+   rows that actually moved get written. */
+async function saveOrder(box){
+  let course='', i=0; const want=[];
+  [].slice.call(box.children).forEach(function(k){
+    if(k.classList.contains('grp')){ course=k.getAttribute('data-course')||''; return; }
+    if(!k.classList.contains('ur')) return;
+    i++; want.push({id:k.getAttribute('data-id'), sort:i, course:course||null});
+  });
+  const changed=want.filter(function(w){
+    const u=USUALS.filter(function(x){return String(x.id)===String(w.id);})[0];
+    return u && (n(u.sort)!==w.sort || (u.course||null)!==w.course);
+  });
+  if(!changed.length) return;
+  for(const w of changed){
+    const {error}=await sb.from('meal_presets').update({sort:w.sort, course:w.course}).eq('id',w.id);
+    if(error){ toast('Could not save the new order'); await load(); return; }
+    const u=USUALS.filter(function(x){return String(x.id)===String(w.id);})[0];
+    if(u){ u.sort=w.sort; u.course=w.course; }
+  }
+  toast(changed.length===1?'Moved.':'New order saved.');
+  /* Every empty heading needs its "drag one in" line back, and a group that just
+     gained its first meal needs it gone, so redraw rather than leave it lying. */
+  safe(drawUsuals);
 }
 
 async function dropUsual(id){
