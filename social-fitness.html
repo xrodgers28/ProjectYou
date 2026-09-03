@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Social Fitness</title>
-<meta name="pn-ver" content="v2.3">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -172,6 +171,11 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
 .log .p:hover{border-color:var(--blue)}
 .log .p.on{background:var(--blue);border-color:var(--blue);color:var(--on-dark);font-weight:600}
 .log .recent .p{color:var(--blue)}
+.log .tags .p.on{background:var(--ink-2);border-color:var(--ink-2);color:var(--on-dark);font-weight:600}
+.log .tags .p.tag{padding:7px 12px}
+.tell{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:26px 0 6px;
+  padding-top:12px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--muted);
+  font-family:"IBM Plex Mono",monospace;letter-spacing:.04em}
 .log .go{width:100%;padding:14px;border-radius:11px;border:1px solid var(--good);background:var(--good);
   color:var(--on-dark);font-size:16px;font-weight:600;cursor:pointer;font-family:inherit}
 .log .go.plan{background:var(--blue);border-color:var(--blue)}
@@ -216,6 +220,14 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
   <div class="log" id="log"></div>
 
   <div class="hist hidden" id="hist"></div>
+
+  <div class="tell">
+    <span>Social Fitness</span>
+    <!-- The ONLY place this page's version is written. The publish guard
+         reads class="ver" and navpatch reads #ver, so both see this one
+         literal. Do not add a second one anywhere. -->
+    <span id="ver" class="ver">v2.4</span>
+  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -563,6 +575,14 @@ function askRating(){
 /* ---------- log a social thing ---------- */
 var KINDS=['Coffee','Lunch','Dinner','Drinks','Call','Text','Walk','Party','Meeting','Something else'];
 var pickKind='', pickWhen=DAY, known=[], knownLoaded=false;
+/* Who they are. Five of the nine things connections stores describe the PERSON,
+   not the get-together, so they carry forward. These are the ones the form asks
+   for, because a brand-new person has nothing to carry and used to save blank. */
+var PLABELS=[['family','Family'],['colleague','Colleague'],['ex-colleague','Ex-Colleague'],['industry','Industry'],['group','Group']];
+var pickLabels=[], labelsTouched=false;
+function labelWord(v){ for(var i=0;i<PLABELS.length;i++){ if(PLABELS[i][0]===v) return PLABELS[i][1]; } return v; }
+function labelList(a){ a=(a||[]).map(labelWord);
+  return a.length<2?(a[0]||''):(a.slice(0,-1).join(', ')+' and '+a[a.length-1]); }
 
 function att(s){ return esc(s).replace(/"/g,'&quot;'); }
 function shiftDay(n){
@@ -628,20 +648,42 @@ function refreshGo(){
   g.textContent=future?'Add to what is coming up':'Log it';
   g.classList.toggle('plan',future);
 }
+function paintTags(){
+  var box=el('lgTags'); if(!box) return;
+  Array.prototype.forEach.call(box.children,function(b){
+    b.classList.toggle('on', pickLabels.indexOf(b.getAttribute('data-l'))>-1);
+  });
+}
 function showCarry(){
-  var w=el('lgWho'), why=el('lgWhy'); if(!w||!why) return;
+  var w=el('lgWho'), note=el('lgWhoNote'); if(!w||!note) return;
+  note.className='why';
   var raw=String(w.value||'').trim();
-  if(!raw){ why.textContent=''; why.className='why'; return; }
-  var tn=tidyName(raw), c=carryFor(tn.name), bits=[];
-  if(c){
-    if(c.social_group) bits.push(c.social_group);
-    if(c.circle) bits.push(c.circle+' circle');
+  if(!raw){
+    if(!labelsTouched){ pickLabels=[]; paintTags(); }
+    note.textContent='Type a name. If they are new you tag them once, right below.';
+    return;
   }
-  var line='';
+  var tn=tidyName(raw), c=carryFor(tn.name), line='';
   if(tn.name!==raw) line='Filing as '+tn.name+(tn.note?', with "'+tn.note+'" as the note':'')+'. ';
-  if(c) line+= bits.length?('Known already, under '+bits.join(', ')+'.'):'Known already.';
-  why.className='why';
-  why.textContent=line;
+  if(labelsTouched&&pickLabels.length){
+    note.textContent=line+'Filing '+(tn.name||'them')+' under '+labelList(pickLabels)+'.';
+    return;
+  }
+  if(c){
+    if(!labelsTouched){ pickLabels=(c.labels||[]).slice(); paintTags(); }
+    if(!c.labels||!c.labels.length){
+      line+='Known already, but never tagged. Say who '+tn.name+' is and it sticks.';
+    } else {
+      var bits=[labelList(c.labels)];
+      if(c.social_group) bits.push(c.social_group);
+      if(c.circle) bits.push(c.circle+' circle');
+      line+='Known already \u2014 '+bits.join(', ')+'. Tap to change it.';
+    }
+  } else {
+    if(!labelsTouched){ pickLabels=[]; paintTags(); }
+    line+='New here. Say who '+(tn.name||'they')+' is once and it fills itself in every time after.';
+  }
+  note.textContent=line;
 }
 async function drawLog(){
   var box=el('log'); if(!box) return;
@@ -670,6 +712,9 @@ async function drawLog(){
         recentNames().map(function(n){return '<button type="button" class="p who" data-who="'+att(n)+'">'+esc(n)+'</button>';}).join('')+
         '</div>':'')+
     '</div>'+
+    '<div class="fld"><label>Who they are</label><div class="picks tags" id="lgTags">'+
+      PLABELS.map(function(x){return '<button type="button" class="p tag" data-l="'+att(x[0])+'">'+esc(x[1])+'</button>';}).join('')+
+    '</div><p class="why" id="lgWhoNote"></p></div>'+
     '<div class="fld"><label>What was it</label><div class="picks" id="lgKinds">'+
       KINDS.map(function(k){return '<button type="button" class="p k'+(pickKind===k?' on':'')+'" data-k="'+att(k)+'">'+esc(k)+'</button>';}).join('')+
     '</div></div>'+
@@ -701,7 +746,7 @@ async function drawLog(){
   var whoBox=el('lgWho'), dateBox=el('lgDate');
   if(el('lgRecent')) el('lgRecent').addEventListener('click',function(e){
     var b=e.target.closest('.who'); if(!b) return;
-    whoBox.value=b.getAttribute('data-who'); showCarry();
+    whoBox.value=b.getAttribute('data-who'); labelsTouched=false; showCarry();
   });
   el('lgKinds').addEventListener('click',function(e){
     var b=e.target.closest('.k'); if(!b) return;
@@ -727,7 +772,16 @@ async function drawLog(){
       refreshGo();
     }
   });
-  whoBox.addEventListener('change',showCarry);
+  el('lgTags').addEventListener('click',function(e){
+    var b=e.target.closest('.tag'); if(!b) return;
+    var v=b.getAttribute('data-l'), i=pickLabels.indexOf(v);
+    if(i>-1) pickLabels.splice(i,1); else pickLabels.push(v);
+    labelsTouched=true; paintTags();
+    showCarry();
+  });
+  whoBox.addEventListener('change',function(){ labelsTouched=false; showCarry(); });
+  whoBox.addEventListener('input',function(){ labelsTouched=false; showCarry(); });
+  paintTags(); showCarry();
   el('lgGo').addEventListener('click',saveLog);
   if(soon.length) box.querySelector('.soon').addEventListener('click',onSoon);
 }
@@ -752,20 +806,27 @@ async function saveLog(){
       for_date:pickWhen, source_project:'social-logger'
     });
   }else{
+    /* A person with no tags is invisible to the map, so this is the one
+       thing the form will not let through. It says so rather than greying out. */
+    if(!pickLabels.length){
+      el('lgGo').disabled=false;
+      why.textContent='Say who '+who+' is first \u2014 Family, Colleague, Ex-Colleague, Industry or Group.';
+      why.className='why warn'; return;
+    }
     r=await sb.from('connections').insert({
       person:who, person_key:(carry.person_key||who), entity_type:'person',
       kind:pickKind, channel:channelFor(pickKind),
       happened_on:pickWhen, planned:false,
       notes:extraNote||null,
       circle:carry.circle||null, social_group:carry.social_group||null,
-      age_band:carry.age_band||null, labels:carry.labels||[],
+      age_band:carry.age_band||null, labels:pickLabels.slice(),
       source:'logged-by-hand', superseded:false
     });
   }
   el('lgGo').disabled=false;
   if(r.error){ why.textContent='That did not save. Try again in a moment.'; why.className='why warn'; return; }
   var said=pickKind+' with '+who+', '+whenWords(pickWhen)+'.';
-  pickKind=''; knownLoaded=false;
+  pickKind=''; pickLabels=[]; labelsTouched=false; knownLoaded=false;
   await drawLog();
   var w2=el('lgWhy');
   if(w2){ w2.textContent=(future?'On your board under Social Well-Being: ':'Logged: ')+said; w2.className='why ok'; }
