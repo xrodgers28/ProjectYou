@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Social Fitness</title>
-<meta name="pn-ver" content="v2.1">
+<meta name="pn-ver" content="v2.2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -638,8 +638,9 @@ async function drawLog(){
   if(!knownLoaded) await loadKnown();
   var soon=[];
   try{
-    var s=await sb.from('connections').select('id,person,kind,happened_on')
-      .eq('planned',true).order('happened_on',{ascending:true});
+    var s=await sb.from('todos').select('id,task,for_date')
+      .eq('section','Social Well-Being').eq('done',false)
+      .order('for_date',{ascending:true,nullsFirst:false});
     soon=(s.data)||[];
   }catch(e){}
 
@@ -668,11 +669,13 @@ async function drawLog(){
     '<p class="why" id="lgWhy"></p>';
 
   if(soon.length){
-    html+='<div class="soon"><h4>Coming up</h4>'+soon.map(function(r){
-      var late=r.happened_on<DAY;
+    html+='<div class="soon"><h4>Coming up</h4>'+
+      '<p class="sub" style="margin:-4px 0 10px">The open lines in Social Well-Being on your to-do board.</p>'+
+      soon.map(function(r){
+      var w=r.for_date?((r.for_date<DAY?'was ':'')+whenWords(r.for_date)):'no date';
       return '<div class="row" data-id="'+att(r.id)+'">'+
-        '<span>'+esc(r.kind||'Something')+' with <b>'+esc(r.person||'')+'</b></span>'+
-        '<span class="when">'+esc((late?'was ':'')+whenWords(r.happened_on))+'</span>'+
+        '<span>'+esc(r.task||'')+'</span>'+
+        '<span class="when">'+esc(w)+'</span>'+
         '<span class="sp"><button class="yes">It happened</button>'+
         '<button class="no">Did not</button></span></div>';
     }).join('')+'</div>';
@@ -719,31 +722,82 @@ async function saveLog(){
   var future=pickWhen>DAY, carry=carryFor(who)||{}, others=String(el('lgWith').value||'').trim();
   el('lgGo').disabled=true;
   why.textContent='Saving...'; why.className='why';
-  var r=await sb.from('connections').insert({
-    person:who, person_key:(carry.person_key||who), entity_type:'person',
-    kind:pickKind, channel:channelFor(pickKind),
-    happened_on:pickWhen, planned:future,
-    notes:others?('with '+others):null,
-    circle:carry.circle||null, social_group:carry.social_group||null,
-    age_band:carry.age_band||null, labels:carry.labels||[],
-    source:'logged-by-hand', superseded:false
-  });
+  var r;
+  if(future){
+    /* Something coming up is a line on the to-do board, under Social Well-Being.
+       One home for plans, not two. It files itself the day it is ticked. */
+    r=await sb.from('todos').insert({
+      task:pickKind+' with '+who+(others?' and '+others:''),
+      section:'Social Well-Being', subsection:null,
+      position:0, bucket:'today', status:'todo', done:false,
+      for_date:pickWhen, source_project:'social-logger'
+    });
+  }else{
+    r=await sb.from('connections').insert({
+      person:who, person_key:(carry.person_key||who), entity_type:'person',
+      kind:pickKind, channel:channelFor(pickKind),
+      happened_on:pickWhen, planned:false,
+      notes:others?('with '+others):null,
+      circle:carry.circle||null, social_group:carry.social_group||null,
+      age_band:carry.age_band||null, labels:carry.labels||[],
+      source:'logged-by-hand', superseded:false
+    });
+  }
   el('lgGo').disabled=false;
   if(r.error){ why.textContent='That did not save. Try again in a moment.'; why.className='why warn'; return; }
   var said=pickKind+' with '+who+', '+whenWords(pickWhen)+'.';
   pickKind=''; knownLoaded=false;
   await drawLog();
   var w2=el('lgWhy');
-  if(w2){ w2.textContent=(future?'Added to what is coming up: ':'Logged: ')+said; w2.className='why ok'; }
+  if(w2){ w2.textContent=(future?'On your board under Social Well-Being: ':'Logged: ')+said; w2.className='why ok'; }
+}
+/* The same reading of a line that Todays Tasks does, so a plan ticked here
+   files exactly the same way as one ticked over there. */
+function nameIn(s){
+  var t=String(s||'').trim().replace(/\s*[-:]\s*/,' with ');
+  var m=t.match(/\bwith\s+(.+)$/i);
+  if(!m) m=t.match(/^(?:call|ring|text|email|message|meet|see|visit)\s+(.+)$/i);
+  if(!m) m=t.match(/^(?:lunch|dinner|breakfast|coffee|drinks|walk|meeting|party)\s+(.+)$/i);
+  if(!m) return {person:'',others:''};
+  var rest=m[1].replace(/^\s*(?:at|the)\s+/i,'').replace(/[.;]+$/,'').trim();
+  var parts=rest.split(/\s*(?:,|\band\b|&|\+)\s*/i).map(function(x){return x.trim();}).filter(Boolean);
+  var VAGUE=/^(someone|somebody|anyone|anybody|people|a friend|friends|the team|everyone)$/i;
+  var named=parts.filter(function(x){ return !VAGUE.test(x); });
+  return {person:named[0]||'', others:named.slice(1).join(', ')};
+}
+function kindIn(s){
+  var t=String(s||'');
+  return /lunch/i.test(t)?'lunch':/coffee/i.test(t)?'coffee':/dinner/i.test(t)?'dinner'
+    :/breakfast/i.test(t)?'breakfast':/drinks/i.test(t)?'drinks':/\bwalk\b/i.test(t)?'walk'
+    :/\bparty\b/i.test(t)?'party':/\b(call|ring|zoom|phone)\b/i.test(t)?'call'
+    :/\b(text|message|whatsapp)\b/i.test(t)?'text':'meeting';
 }
 async function onSoon(e){
   var b=e.target.closest('button'); if(!b) return;
   var row=b.closest('.row'); if(!row) return;
   var id=row.getAttribute('data-id');
+  var text=(row.querySelector('span')||{}).textContent||'';
   b.disabled=true;
   try{
-    if(b.classList.contains('yes')) await sb.from('connections').update({planned:false}).eq('id',id);
-    else await sb.from('connections').delete().eq('id',id);
+    if(b.classList.contains('yes')){
+      var f=nameIn(text), k=kindIn(text);
+      if(f.person){
+        if(!knownLoaded) await loadKnown();
+        var c=carryFor(f.person)||{};
+        await sb.from('connections').insert({
+          person:f.person, person_key:(c.person_key||f.person), entity_type:'person',
+          kind:k, channel:(k==='call'?'phone':(k==='text'?'text':'in person')),
+          happened_on:DAY, planned:false, notes:(f.others?('with '+f.others):text),
+          circle:c.circle||null, social_group:c.social_group||null,
+          age_band:c.age_band||null, labels:c.labels||[],
+          source:'logged-by-hand', superseded:false
+        });
+      }
+      var now=new Date().toISOString();
+      await sb.from('todos').update({done:true,status:'done',done_at:now,completed_at:now,updated_at:now}).eq('id',id);
+    } else {
+      await sb.from('todos').delete().eq('id',id);
+    }
     knownLoaded=false;
     await drawLog();
   }catch(err){ b.disabled=false; }
