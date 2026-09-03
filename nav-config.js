@@ -38,10 +38,13 @@ window.NAV_CONFIG = {
      sits in Where I've Been." The Travel slot is gone from the top bar. The three
      travel pages still link to each other through the TRAVEL_NAV strip below, and
      the way in from the bar is Mission Control, which carries a card for each. */
+  /* Style Guide moved OUT of here into Mission Control, Sep 3 2026 (Scott).
+     Sub-nav principle: the top bar holds sections, and the Style Guide is a
+     thing you look up rather than a place you go, so it lives as a card on
+     mission.html under "Maps & dashboards". Do not put it back in the bar. */
   "Editors": [
     { "label": "Daily<br>Habits", "href": "daily-template.html" },
-    { "label": "Midnight<br>Run", "href": "midnight-run-v2.html" },
-    { "label": "Style<br>Guide", "href": "style-guide.html" }
+    { "label": "Midnight<br>Run", "href": "midnight-run-v2.html" }
   ],
   "Operating System": [
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
