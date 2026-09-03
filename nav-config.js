@@ -21,15 +21,12 @@ window.NAV_CONFIG = {
     { "label": "Cue Cards", "href": "habit-modules.html" },
     { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" }
   ],
+  /* Sep 3 2026, Scott. Two items left this group. Food Log moved to LISTS, where
+     it is now the fifth tab. Intrinsic Capacity came off the bar entirely and is
+     reached from Mission Control. What is left is the hub and the wheel. */
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
-    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
-    { "label": "Intrinsic<br>Capacity", "href": "intrinsic-capacity.html" },
-    /* Food Log (Sep 1 2026, Scott). Meals photographed on log-meal.html, which is
-       the page he keeps as an icon on his iPhone home screen. The log itself is
-       what belongs in the top bar; the camera is reached from it and from the
-       Habit Bandit row, so it does not need a slot of its own. */
-    { "label": "Food<br>Log", "href": "food-log.html" }
+    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" }
   ],
   /* Displayed as LISTS - see NAV_GROUP_RENAME below. The key stays "Parking Lot"
      because that string is baked into every page's markup and is what navpatch
@@ -37,14 +34,10 @@ window.NAV_CONFIG = {
   "Parking Lot": [
     { "label": "All Lists", "href": "connections.html" }
   ],
-  /* Travel (Sep 1 2026, Scott). ONE slot in the top bar, same sub-nav principle
-     as Calendar and LISTS: the bar holds the section, and the three travel
-     pages - the log of what a trip cost, the map of where he has been, and the
-     board of where he wants to go - are a tab strip on the page itself, built
-     from TRAVEL_NAV further down this file. */
-  "Travel": [
-    { "label": "Travel", "href": "travel-log.html" }
-  ],
+  /* Sep 3 2026, Scott: "travel list should be removed from main nav, it already
+     sits in Where I've Been." The Travel slot is gone from the top bar. The three
+     travel pages still link to each other through the TRAVEL_NAV strip below, and
+     the way in from the bar is Mission Control, which carries a card for each. */
   "Editors": [
     { "label": "Daily<br>Habits", "href": "daily-template.html" },
     { "label": "Midnight<br>Run", "href": "midnight-run-v2.html" },
@@ -52,8 +45,8 @@ window.NAV_CONFIG = {
   ],
   "Operating System": [
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
-    { "label": "Import", "href": "import.html" },
-    { "label": "Guardrails", "href": "guardrails.html" },
+    /* Sep 3 2026, Scott. Import moved to Mission Control and Guardrails moved to
+       the Docs Library, so neither needs a slot in the bar any more. */
     { "label": "Cheat<br>Sheet", "href": "cheat-sheet.html" },
     { "label": "Maps &amp;<br>Diagrams", "href": "maps.html" },
     { "label": "Mission<br>Control", "href": "mission.html" },
@@ -66,7 +59,6 @@ window.NAV_CONFIG = {
    clickable link (and marks it active on that page). */
 window.NAV_GROUP_LINKS = {
   "Calendar": "calendar.html",
-  "Travel": "travel-log.html",
   "Habit Modules": "habit-modules.html",
   "Parking Lot": "connections.html"
 };
@@ -126,7 +118,12 @@ window.LISTS_NAV = {
     { "label": "Connections",    "href": "connections.html",    "count": "connections" },
     { "label": "Movies",         "href": "movies.html",         "count": "movies" },
     { "label": "Bucket List",    "href": "my-bucket-list.html", "count": "bucket_list" },
-    { "label": "Asa Activities", "href": "asa-activities.html", "count": "asa_activities" }
+    { "label": "Asa Activities", "href": "asa-activities.html", "count": "asa_activities" },
+    /* Sep 3 2026, Scott: "move food log out of main nav and into lists." Added at
+       the END because the order here is fixed and never re-sorts. No `count` key:
+       v_list_counts has no row for meals, and a tab with no count simply shows no
+       number, which is the honest thing to show rather than a wrong one. */
+    { "label": "Food Log",       "href": "food-log.html" }
   ]
 };
 
@@ -149,15 +146,15 @@ window.CAL_NAV = {
   ]
 };
 
-/* TRAVEL subsection (Sep 1 2026, Scott).
-   Fourth use of the same strip pattern as MAPS_NAV, LISTS_NAV and CAL_NAV, and
-   deliberately not a fourth invention: navpatch.js renders this list as the
-   segmented tab strip under the top nav on the three travel pages, so the top
-   bar needs one slot instead of three.
+/* TRAVEL subsection (Sep 1 2026, Scott; top-bar slot removed Sep 3 2026).
+   Fourth use of the same strip pattern as MAPS_NAV, LISTS_NAV and CAL_NAV.
+   navpatch.js renders this list as the segmented tab strip under the top nav on
+   the three travel pages.
 
-   ORDER IS FIXED, same as LISTS and CALENDAR. The top-nav item points at
-   items[0], so landing on Travel lands on the Travel Log. Add a fourth travel
-   page here and it appears on the others on its own.
+   THE TOP BAR NO LONGER HAS A TRAVEL SLOT. This strip is what still ties the
+   three pages together, so do not delete it: without it, opening any one travel
+   page would give you no way to reach the other two. The way in from the bar is
+   Mission Control. ORDER IS FIXED, same as LISTS and CALENDAR.
 
    No counts. The Travel Log reads travel_trips with Scott's signed-in session
    only (anon is REVOKED on those tables), so a count fetched with the public
