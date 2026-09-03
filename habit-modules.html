@@ -92,7 +92,7 @@
   .rback:hover{background:var(--acc);color:#fff}
   .shelf .rback{width:auto;margin:0;flex:none;padding:5px 11px;font-size:10.5px}
 
-  /* ===== THE COUNTER COLUMN (v6.5) — quick-tap inputs, left of the cards.
+  /* ===== THE COUNTER COLUMN (v6.6) — quick-tap inputs, left of the cards.
      INVERTED Sep 3: bright is what is still to do, done fades — the same way a
      ticked cue card dims. Coffee is the one exception, see the note by .rcup. ===== */
   /* ===== (v5.7 note kept)
@@ -223,6 +223,7 @@
   .mdrow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#f7f9fc;
       border:1px solid #e1e6ee;border-radius:11px;padding:10px 12px;margin-bottom:7px;cursor:pointer}
   .mdrow.on{background:#eef6ef;border-color:#4f7f52}
+  .mdrow.spoken{opacity:.55}
   .mdrow .mde{font-size:19px;line-height:1}
   .mdrow .mdn{flex:1;font-size:13.5px;font-weight:700;color:#1f2a44}
   .mdrow .mdw{display:block;font-size:10.5px;font-weight:600;color:#8a93a0;margin-top:2px}
@@ -342,7 +343,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.5</span>
+    <span class="pn-ver">v6.6</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -672,7 +673,7 @@ async function toggle(m,el){
    habit tracker reads "3 cups" rather than just "done".
    ========================================================================== */
 var RAIL = (function(){
-  var R = {rows:{}, presets:{}, plist:[], pby:{}, more:false, cups:[], glasses:0, mf:{}, flags:{}, ex:null, photo:false, meals:{}, soc:{}, plans:[], quiet:[], ready:false};
+  var R = {rows:{}, presets:{}, plist:[], pby:{}, slots:{}, more:false, cups:[], glasses:0, mf:{}, flags:{}, ex:null, photo:false, meals:{}, soc:{}, plans:[], quiet:[], ready:false};
   var el = null;
 
   /* ---- the day's latte pattern: same for every cup, worked out from the date ---- */
@@ -806,8 +807,8 @@ var RAIL = (function(){
       sb.from('mf_sessions').select('app').eq('day',d),
       sb.from('day_flags').select('*').eq('day',d).maybeSingle(),
       sb.from('exercise_day').select('*').eq('day',d).maybeSingle(),
-      sb.from('meal_presets').select('id,key,name,emoji,calories,protein_g,carbs_g,fat_g,sort').eq('active',true).order('sort',{ascending:true}),
-      sb.from('meals').select('id,preset_id,eaten_at,source').eq('day',d).not('preset_id','is',null),
+      sb.from('meal_presets').select('id,key,name,emoji,slot,calories,protein_g,carbs_g,fat_g,sort').eq('active',true).order('sort',{ascending:true}),
+      sb.from('meals').select('id,preset_id,eaten_at,source,slot').eq('day',d),
       sb.from('social_slots').select('*').eq('week_start',monday(d)),
       sb.from('social_plans').select('*').gte('day',monday(d)).lte('day',dadd(monday(d),13)),
       sb.from('v_social_quiet').select('person,circle,days_since').limit(24)
@@ -826,7 +827,12 @@ var RAIL = (function(){
        which is why a meal logged elsewhere could be added a second time here.
        The row's source decides whether tapping is allowed to take it back off. */
     R.meals={}; (res[7].data||[]).forEach(function(m){
-      (R.meals[m.preset_id]=R.meals[m.preset_id]||[]).push(m); });
+      if(m.preset_id) (R.meals[m.preset_id]=R.meals[m.preset_id]||[]).push(m); });
+    /* Which KINDS of meal today already holds. Scott's rule, Sep 3 2026: one
+       salad and one breakfast a day. A photographed salad counts, which is why
+       this reads every meal today and not only the ones with a regular behind
+       them. Everything else, and coffee, is unlimited. */
+    R.slots={}; (res[7].data||[]).forEach(function(m){ if(m.slot) R.slots[m.slot]=true; });
     Object.keys(R.meals).forEach(function(p){ R.meals[p].sort(function(a,b){
       return (a.eaten_at||'')<(b.eaten_at||'')?-1:1; }); });
     R.soc={}; (res[8].data||[]).forEach(function(r){ R.soc[r.kind]=r; });
@@ -930,7 +936,9 @@ var RAIL = (function(){
         return;
       }
       var last=mine[mine.length-1];
-      R.meals[pid]=have.filter(function(m){return m.id!==last.id;}); draw(); moreDraw();
+      R.meals[pid]=have.filter(function(m){return m.id!==last.id;});
+      if(p.slot) delete R.slots[p.slot];
+      draw(); moreDraw();
       var del=await sb.from('meals').delete().eq('id',last.id).select('id');
       /* A DELETE the database will not allow comes back as SUCCESS with nothing
          removed, never as an error. That is exactly how "take it off" did nothing
@@ -939,10 +947,14 @@ var RAIL = (function(){
          piled up. So count what actually came back, put the row straight back if
          nothing did, and say so. Never trust a delete that returns no rows. */
       var gone=(!del.error)&&del.data&&del.data.length>0;
-      if(!gone){ R.meals[pid]=have; draw(); moreDraw();
+      if(!gone){ R.meals[pid]=have; if(p.slot) R.slots[p.slot]=true; draw(); moreDraw();
         if(typeof toast==='function') toast(del.error?('Did not remove: '+del.error.message)
           :('Could not take '+p.name+' off \u2014 nothing was removed')); return; }
       if(typeof toast==='function') toast(p.name+' taken off today');
+      return;
+    }
+    if(p.slot && R.slots[p.slot]){
+      if(typeof toast==='function') toast('You have already had a '+p.slot+' today');
       return;
     }
     var ins=await sb.from('meals').insert({day:today(),name:nm,preset_id:pid,source:'counter',
@@ -954,12 +966,16 @@ var RAIL = (function(){
          not in this page, because this page on another device can be hours out
          of date — a stale copy is exactly what put four breakfasts on Sep 3.
          A refusal here is the rule working, so it reads as a fact, not a fault. */
-      var dup=(ins.error.code==='23505')||/duplicate key|one_per_day/i.test(ins.error.message||'');
-      if(typeof toast==='function') toast(dup?('You have already had '+p.name+' today'):('Did not save: '+ins.error.message));
+      var dup=(ins.error.code==='23505')||/duplicate key|one_per/i.test(ins.error.message||'');
+      var slotdup=/per_slot/i.test(ins.error.message||'');
+      if(typeof toast==='function') toast(!dup?('Did not save: '+ins.error.message)
+        :(slotdup?('You have already had a '+(p.slot||'meal')+' today')
+                 :('You have already had '+p.name+' today')));
       if(dup) await load();
       return;
     }
-    (R.meals[pid]=R.meals[pid]||[]).push((ins.data&&ins.data[0])||{id:null,eaten_at:new Date().toISOString()});
+    (R.meals[pid]=R.meals[pid]||[]).push((ins.data&&ins.data[0])||{id:null,source:'counter',eaten_at:new Date().toISOString()});
+    if(p.slot) R.slots[p.slot]=true;
     draw(); moreDraw();
     if(typeof toast==='function') toast(p.name+(p.calories?' · '+p.calories+' cal':'')+' → food log ✓');
   }
@@ -984,11 +1000,18 @@ var RAIL = (function(){
       /* The row has to say which way it is and what a tap does next, or it reads
          as one-way: a tick and the word ON, not a silent green tint. */
       var on=(R.meals[p.id]||[]).length>0;
-      return '<button class="mdrow'+(on?' on':'')+'" data-pid="'+esc(p.id)+'">'+
+      /* THREE states, each of which says what it is BEFORE he presses anything:
+         on, off, or spoken for because he has already had one of that kind. The
+         blocked one is dimmed but never disabled — pressing it prints the reason. */
+      var blocked=(!on)&&p.slot&&R.slots[p.slot];
+      var why=on?'in today&rsquo;s log &middot; tap to take it off'
+              :(blocked?('you have already had a '+esc(p.slot)+' today')
+                       :'tap to add it to today');
+      return '<button class="mdrow'+(on?' on':'')+(blocked?' spoken':'')+'" data-pid="'+esc(p.id)+'">'+
         '<span class="mdtk">'+(on?'&#10003;':'')+'</span>'+
         '<span class="mde">'+esc(p.emoji||'🍽')+'</span>'+
         '<span class="mdn">'+esc(p.name)+
-          '<span class="mdw">'+(on?'in today&rsquo;s log &middot; tap to take it off':'tap to add it to today')+'</span></span>'+
+          '<span class="mdw">'+why+'</span></span>'+
         '<span class="mdc">'+(p.calories?p.calories+' cal':'')+'</span></button>';
     }).join('');
     h+='<button class="mdcl" data-mdcl="1">Close</button></div>';
