@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Tracker · Sep 2 · Cue cards and the Compass</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#20242b;--muted:#6b7280;--line:#e7e9ee;--bg:#fbfbfa;--card:#fff;--accent:#3f6f8f;--hub:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--blue:#3f6f8f;--red:#c0453b;--amber:#c68a2e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.25;padding:18px 16px 210px}
+  .head{max-width:1160px;margin:0 auto}
+  h1{font-size:22px;color:var(--hub);font-weight:800}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 10px;margin-top:7px;background:#eef7f1;color:var(--green);border:1px solid #cfe9db}
+  .chip.off{background:#fbe7e5;color:var(--red);border-color:#f0cfcb}
+  .sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.4;max-width:820px}
+  h2{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--hub);max-width:1160px;margin:18px auto 6px}
+  .tbl{max-width:1160px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .r{display:grid;grid-template-columns:34px 1fr 128px 150px 260px;align-items:flex-start;border-bottom:1px solid var(--line);transition:opacity .25s,max-height .3s,padding .3s;max-height:900px;overflow:hidden}
+  .r:last-child{border-bottom:none}
+  .r.hd{background:#f4f5f7;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);align-items:center}
+  .r.gone{opacity:0;max-height:0;border:none}
+  .c{padding:9px 14px}
+  .c.lt{padding:12px 0 9px 12px}
+  .dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .dot.green{background:var(--green)} .dot.amber{background:#e08b1f} .dot.red{background:var(--red)}
+  .r.hd .c.lt{padding-left:12px}
+  .legend{max-width:1160px;margin:10px auto 0;display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);font-weight:700;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;font-style:normal}
+  .asof{max-width:1160px;margin:14px auto 0;font-size:12.5px;font-style:italic;color:#808080}
+  .c.mid,.c.act,.c.next{padding:9px 12px}
+  .task .tt{color:var(--accent);text-decoration:none;font-size:14px;font-weight:700;line-height:1.2;border-bottom:1px solid #cfdae5}
+  .task .tt:hover{border-bottom-color:var(--accent)}
+  .task .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
+  .pill.green{background:var(--green)} .pill.blue{background:var(--blue)} .pill.red{background:var(--red)} .pill.amber{background:var(--amber)}
+  .act{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .ansrow{display:flex;gap:5px;flex-wrap:wrap}
+  .ans{font-weight:800;font-size:11.5px;border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:5px 9px;cursor:pointer;white-space:nowrap}
+  .ans:hover{border-color:currentColor}
+  .ans[data-v="Do this"]{color:#3f6f8f} .ans[data-v="Tell me more"]{color:#c07f10}
+  .ans[data-v="I did it"]{color:#2f8f5b} .ans[data-v="I read this"]{color:#6f7b8a}
+  .ans[data-v="Kill this task"]{color:#a8724a}
+  .ans.on{color:#fff}
+  .ans.on[data-v="Do this"]{background:#3f6f8f;border-color:#3f6f8f}
+  .ans.on[data-v="Tell me more"]{background:#c07f10;border-color:#c07f10}
+  .ans.on[data-v="I did it"]{background:#2f8f5b;border-color:#2f8f5b}
+  .ans.on[data-v="I read this"]{background:#6f7b8a;border-color:#6f7b8a}
+  .ans.on[data-v="Kill this task"]{background:#a8724a;border-color:#a8724a}
+  .r.tapped{border-left:4px solid var(--tapc,var(--line))}
+  .keybar{max-width:1160px;margin:10px auto 0;display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);align-items:center;line-height:1.5}
+  .keybar b{font-weight:800}
+  .keybar span{display:inline-flex;align-items:center;gap:5px}
+  .keybar i{width:9px;height:9px;border-radius:2px;display:inline-block;font-style:normal}
+  .notelink{font-size:11.5px;font-weight:700;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:0}
+  .notelink:hover{color:var(--accent)}
+  .nt{width:100%;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:30px;margin-top:2px}
+  .hidden{display:none}
+  /* Fourth column: what Scott does next */
+  .next{font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .next.none{color:#a7adb6}
+  .next.todo{background:#fdf6e9;color:#5c4a24;border-left:3px solid var(--amber)}
+  .next .nh{display:block;font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+  .next ol{margin:0 0 0 16px;padding:0}
+  .next ol li{margin:0 0 5px;line-height:1.4}
+  .next ol li:last-child{margin-bottom:0}
+  .next .lead{display:block;margin-bottom:4px}
+  .next code{background:#fff;border:1px solid #e2d9c2;border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+  .next a{color:var(--accent);font-weight:700}
+  .mins{display:inline-block;font-weight:800;font-size:10.5px;color:var(--muted);background:var(--chip);border-radius:999px;padding:2px 7px;margin-left:4px}
+  .allclear{max-width:1160px;margin:0 auto;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  @media(max-width:900px){
+    .r{grid-template-columns:22px 1fr auto}
+    .c.lt{grid-row:span 2}
+    .c.act,.c.next{grid-column:1/-1;border-top:1px solid var(--line)}
+    .c.act{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .r.hd{display:none}
+  }
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(31,42,68,.10);padding:9px 16px}
+  .dock .bar{max-width:1160px;margin:0 auto}
+  .dock .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:10px;flex-wrap:wrap}
+  .dock .top b{font-size:12.5px;color:var(--hub)}.dock .hint{font-size:11px;color:var(--muted)}
+  #out{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;border:1px solid var(--line);border-radius:10px;padding:8px;height:80px;resize:vertical;background:#fbfcfe;color:var(--ink)}
+  .copybtn{font-weight:700;font-size:12px;border:1px solid var(--line);background:var(--chip);color:var(--accent);border-radius:9px;padding:6px 11px;cursor:pointer;margin-top:5px}
+  h1 .ver{display:inline-block;margin-left:9px;font-size:11px;font-weight:800;color:#9aa6b4;background:none;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;vertical-align:middle;letter-spacing:0}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Session Tracker<span class="ver">v1.0</span></h1>
+  <div class="meta">Project YOU · Sep 2, 2026 · Every cue card now points at a part of the Compass, and Project YOU became the eighth category</div>
+  <div id="syncchip" class="chip">connecting...</div>
+  <div class="sub">Five columns. The light on the left is the fastest read: green is finished, amber is waiting on you, red is not started. Every row carries the same five answers, and two of them leave the row on the page because they mean work is still owed. Your answers build up in the box at the top, ready to copy back into the chat.</div>
+<div class="legend"><span><i style="background:#1e8e5a"></i>Done</span><span><i style="background:#e08b1f"></i>Awaiting your comments</span><span><i style="background:#c0453b"></i>Not started</span></div>
+<div class="keybar">
+  <span><i style="background:#3f6f8f"></i><b>Do this</b> go and build it, stays open</span>
+  <span><i style="background:#c07f10"></i><b>Tell me more</b> tell me the cost first, stays open</span>
+  <span><i style="background:#2f8f5b"></i><b>I did it</b> handled it myself</span>
+  <span><i style="background:#6f7b8a"></i><b>I read this</b> noted, nothing owed</span>
+  <span><i style="background:#a8724a"></i><b>Kill this task</b> dead, do not ask again</span>
+</div>
+<div class="asof">As of September 2nd</div>
+
+<h2>Work this session · <span id="leftct"></span></h2>
+<div class="tbl" id="tblWork"><div class="r hd"><div class="c lt"></div><div class="c">Input / Task</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+<div id="allclear" class="allclear hidden"></div>
+
+<h2>Your call · decisions</h2>
+<div class="tbl" id="tblLater"><div class="r hd"><div class="c lt"></div><div class="c">Item</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+
+<div class="dock"><div class="bar">
+  <div class="top"><b>Your responses (live)</b><span class="hint">saved automatically · this box is the fallback</span></div>
+  <textarea id="out" readonly></textarea>
+  <button class="copybtn" onclick="copyOut()">Copy</button>
+</div></div>
+
+<script>
+const SITE='https://xrodgers28.github.io/ProjectYou/';
+const TODOS=SITE+'all-todos.html';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+const WF='https://github.com/xrodgers28/ProjectYou/edit/main/.github/workflows/publish.yml';
+const PAT='https://github.com/settings/personal-access-tokens/new';
+const VAULT='https://supabase.com/dashboard/project/arnjntspmrhigodlssbn/settings/vault';
+const ACT='https://github.com/xrodgers28/ProjectYou/actions/workflows/publish.yml';
+
+const SLUG='2026-09-02-cue-cards-compass';
+const WORK=[
+  {item:SLUG+'::audit', label:'All 15 cue cards checked against the Clarity Compass', url:'https://claude.ai/code/artifact/c1eb7163-14b4-4e0e-b582-5238e3751054', pill:'green', ptext:'Done', light:'green',
+   desc:'You asked whether the wheel panel or the worksheets was the right place to double check this. The honest answer was neither, because no cue card actually stored a Compass point at all. It was being guessed from the habit behind the card, in three separate places, and for six of the fifteen those three disagreed. Eight agreed everywhere, six were wired wrong, and Photo Booth had no answer anywhere.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::boss', label:'The Habit Worksheets are now the boss for a card’s Compass point', url:'https://xrodgers28.github.io/ProjectYou/habit-worksheets.html', pill:'green', ptext:'Live', light:'green',
+   desc:'Your choice. Change a card’s point on the worksheet and everything downstream follows it, including the new chip on the board and the new panel on the Compass page. Nothing is typed into a page any more.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::projectyou', label:'Project YOU is now an eighth category, deliberately off the wheel', url:'https://xrodgers28.github.io/ProjectYou/qs-wheel.html', pill:'green', ptext:'Live', light:'green',
+   desc:'Your idea: a home for the things that build and tend the platform rather than your wellbeing. Compass and Photo Booth live there. It sits beside the seven, never inside them, so it never distorts the wheel. One knock on: Compass ticks no longer light any wedge, and eleven old ticks moved out of Mental Fitness and Sense of Purpose to get there.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::chip', label:'The pinwheel chip is on every tile, Cue Cards board v5.5', url:'https://xrodgers28.github.io/ProjectYou/habit-modules.html', pill:'green', ptext:'Live', light:'green',
+   desc:'Your design, built exactly as you approved it from the mock: the Project YOU pinwheel with that card’s point in full colour and the other six dimmed. Project YOU shows the whole wheel lit. The chip reads the point live from the worksheets, so it can never drift from them.',
+   next:'Open the board and check the chips read right at a glance.', mins:'2'},
+
+  {item:SLUG+'::panel', label:'Cue cards by section, the panel under the wheel, Clarity Compass v1.4', url:'https://xrodgers28.github.io/ProjectYou/qs-wheel.html', pill:'green', ptext:'Live', light:'green',
+   desc:'The check surface you asked for. Every cue card grouped under its point, with Project YOU shown separately at the bottom as off the wheel. Physical Health shows as an honest empty group, which is the gap you already knew about.',
+   next:'Open the Clarity Compass page and scroll to the panel under the wheel.', mins:'2'},
+
+  {item:SLUG+'::refile', label:'184 old ticks re-filed, and “Not sure yet” is now empty', url:'https://xrodgers28.github.io/ProjectYou/qs-log.html', pill:'green', ptext:'Done', light:'green',
+   desc:'Your history had the same card filed under different points on different days. Open Mode was split three ways, Compass three ways, Bucket List two. Twenty one ticks were sitting in Not sure yet. Every one is now on the point you chose, so the wheel and the streaks read true all the way back. Nothing about what you actually did changed, only the label on it.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::wiring', label:'Four cards had no row you could tick, and now they do', url:'https://xrodgers28.github.io/ProjectYou/index.html', pill:'green', ptext:'Done', light:'green',
+   desc:'Compass, Bucket List, Environmental Health and Recreational Health could all be opened but not ticked, so opening them did nothing to the wheel. Creativity was the mirror image: tickable, but missing from Daily Habits, so the wheel never counted it. All five fixed. See the amber row below, because your other chat then moved four of them to Staging on purpose.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::tags', label:'Cue cards can now carry a second tag as well as their one point', url:'https://xrodgers28.github.io/ProjectYou/habit-worksheets.html', pill:'green', ptext:'Live', light:'green',
+   desc:'Your call, from the note about Wall and Open Mode. One point decides where a tick lands; the tags are only for finding cards together. First two are Creativity, on Open Mode, The Wall and Creativity Challenge, and Always Learning, on Takeaways and The Feed. They show as small outlined pills on the tile.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::tnt', label:'Three New Things left the finance section', url:'https://xrodgers28.github.io/ProjectYou/three-new-things.html', pill:'green', ptext:'Live', light:'green',
+   desc:'You were right, it was filed under Financial confidence and it is not about money. It now sits in a new Emotional Health section called Reflect on the day. I did not rename the old section, because your real financial review habit still lives in it and would have been dragged along.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::sleep', label:'Bucket List is asleep, and the shelf stopped lying about parked cards', url:'https://xrodgers28.github.io/ProjectYou/habit-modules.html', pill:'green', ptext:'Live', light:'green',
+   desc:'It sits on the bottom shelf marked Parked. While doing it I found the shelf showed a parked card as Finished and offered a Put back button that would not have worked, because there is no finished deck to put back. Both fixed.',
+   next:'Nothing. Waking it needs me, see the decision below.', mins:''},
+
+  {item:SLUG+'::nearmiss', label:'I nearly wiped a newer version of the Cue Cards board', url:'https://xrodgers28.github.io/ProjectYou/habit-modules.html', pill:'green', ptext:'Caught, fixed', light:'green',
+   desc:'My mistake. Between fetching the board and publishing it, your other chat published a newer one carrying a whole new card style. My first publish would have thrown that away. I caught it before it mattered, took the newer version, put my changes on top of it and published again. Nothing was lost, but it was close, and the rule is now written down: re-fetch and compare the file size immediately before publishing, never trust the copy taken at the start.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::corrupt', label:'One character changed on the way up, and the length check missed it', url:'https://xrodgers28.github.io/ProjectYou/habit-modules.html', pill:'green', ptext:'Caught, fixed', light:'green',
+   desc:'Sending the page in pieces, a single character inside a four thousand character block arrived wrong. The block was still the right length, so only a checksum found it. I located the exact character, repaired that one spot and verified the whole file before publishing. The last two edits used a much better route your other chat found, where the database pulls the file from the site itself and edits it in place, so nothing large passes through the chat at all.',
+   next:'Nothing. That is the method I will use from now on.', mins:''},
+
+  {item:SLUG+'::navver', label:'The menu was still calling the board v5.3, and I fixed it', url:'https://xrodgers28.github.io/ProjectYou/habit-modules.html', pill:'green', ptext:'Live', light:'green',
+   desc:'Caught by tonight’s checks. The board is the one page whose version lives in the menu file rather than the page, and it still said v5.3 while the page shipped v5.5. Corrected and republished. Worth knowing: the version chip in the nav bar is only a mirror, so bumping it on the page alone changes nothing.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::nav', label:'Nightly menu check: clean', url:'https://xrodgers28.github.io/ProjectYou/mission.html', pill:'green', ptext:'Done', light:'green',
+   desc:'All five parts of the menu file are present and parse. All 23 pages the menu links to load. The menu renders on every page I sampled, including both pages published tonight.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::hours', label:'Tonight’s hours could not be written to the time tracker', url:'https://xrodgers28.github.io/ProjectYou/index.html', pill:'red', ptext:'Blocked', light:'amber',
+   desc:'No folder is connected to this chat, so the time tracker spreadsheet is out of reach. I did not guess a number and I did not write one anywhere. The session ran from about 7:15am to 9:00pm Eastern, but most of that was waiting on your answers rather than either of us working.',
+   lead:'One thing only I can do once you connect a folder, or you can log it yourself in ten seconds.',
+   steps:['Open the Project YOU time tracker.',
+          'Find the row for <b>Sep 2, 2026</b>.',
+          'Put your own figure for today in the <b>Hours</b> column, and <b>Yes</b> in Confirmed.'],
+   mins:'2', todo:true}
+];
+
+const LATER=[
+  {item:SLUG+'::dec-staging', label:'Four cards: on your daily list, or open them from the board only?', url:'https://xrodgers28.github.io/ProjectYou/index.html', pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'This is a collision between two chats on the same day. This morning I gave Bucket List, Compass, Environmental Health and Recreational Health a tickable row, because they had none. This afternoon your other chat moved those same four to Staging, because you said you did not want them on your daily list. Both are right, neither is a bug. Their worksheet rows stay on either way, so the cue cards and the chips are unaffected.',
+   next:'Board only leaves them exactly as they are now. Daily list puts all four back where you can tick them.', mins:''},
+
+  {item:SLUG+'::dec-wake', label:'Should a parked cue card get its own Wake it button?', url:'https://xrodgers28.github.io/ProjectYou/habit-modules.html', pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'A card put to sleep by hand has no way back on the page, by design. Cards asleep because you finished the deck do get a Put back pill. So Bucket List can only be woken by asking me. Fine if parking is rare, annoying if you expect to do it often.',
+   next:'Yes and I build the button. No and you just tell me when you want one woken.', mins:''},
+
+  {item:SLUG+'::dec-twk', label:'Things Worth Knowing has lost its streak, does that card still tick?', url:'https://xrodgers28.github.io/ProjectYou/quotes.html', pill:'amber', ptext:'Awaiting you', decide:true, light:'amber',
+   desc:'Found while checking, and it comes from your other chat today rather than from me. Clever Phrases was removed as a habit altogether, which matches your Aug 23 decision that it is a reference library and not a daily habit. But the Things Worth Knowing tile on the board still looks its streak up under that name, so it will now read zero forever.',
+   next:'Either it stays a ticking card under a name of its own, or it becomes a browse only tile with no streak and no tick. Say which and I will do it.', mins:''}
+];
+
+const ALL=[...WORK,...LATER];
+const state={}; ALL.forEach(x=>state[x.item]={choice:'',note:'',got:false});
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const TODAY=ymd(new Date());
+let sb=null; try{ sb=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co',KEY); }catch(e){}
+function chip(ok){const c=document.getElementById('syncchip');if(ok){c.textContent='saved. Claude can see it';c.className='chip';}else{c.textContent='offline: copy the box below';c.className='chip off';}}
+function nextCell(x){
+  const mins=x.mins?'<span class="mins">'+x.mins+' min</span>':'';
+  if(x.steps){
+    const lead=x.lead?'<span class="lead">'+x.lead+'</span>':'';
+    return '<div class="c next todo"><span class="nh">Your move</span>'+lead+
+           '<ol>'+x.steps.map(t=>'<li>'+t+'</li>').join('')+'</ol>'+mins+'</div>';
+  }
+  if(x.todo) return '<div class="c next todo"><span class="nh">Your move</span>'+x.next+mins+'</div>';
+  if(x.decide) return '<div class="c next">'+x.next+'</div>';
+  const none=/^Nothing\.?$/i.test((x.next||'').trim());
+  return '<div class="c next'+(none?' none':'')+'">'+(x.next||'')+mins+'</div>';
+}
+const ANSWERS=['Do this','Tell me more','I did it','I read this','Kill this task'];
+const ANSCOLOUR={'Do this':'#3f6f8f','Tell me more':'#c07f10','I did it':'#2f8f5b','I read this':'#6f7b8a','Kill this task':'#a8724a'};
+// Two answers mean work is still owed, so the row stays on the page.
+const KEEPS_OPEN=new Set(['Do this','Tell me more']);
+function rowNode(x){
+  const d=document.createElement('div'); d.className='r'; d.dataset.i=x.item;
+  const desc=x.desc?'<div class="desc">'+x.desc+'</div>':'';
+  let act='<div class="ansrow">'+ANSWERS.map(v=>'<button class="ans" data-i="'+x.item+'" data-v="'+v+'">'+v+'</button>').join('')+'</div>';
+  act+='<button class="notelink" data-i="'+x.item+'">＋ note</button><textarea class="nt hidden" data-i="'+x.item+'" placeholder="comment (optional)"></textarea>';
+  const lt=x.light||'amber';
+  d.innerHTML=
+    '<div class="c lt"><span class="dot '+lt+'" title="'+({green:'Done',amber:'Awaiting your comments',red:'Not started'}[lt])+'"></span></div>'+
+    '<div class="c task"><a class="tt" href="'+x.url+'" target="_blank" rel="noopener">'+x.label+'</a>'+desc+'</div>'+
+    '<div class="c mid"><span class="pill '+x.pill+'">'+x.ptext+'</span></div>'+
+    '<div class="c act">'+act+'</div>'+
+    nextCell(x);
+  return d;
+}
+let viewed=new Set();
+function renderWork(){
+  const tw=document.getElementById('tblWork');
+  tw.querySelectorAll('.r:not(.hd)').forEach(n=>n.remove());
+  WORK.filter(x=>!viewed.has(x.item)).forEach(x=>tw.appendChild(rowNode(x)));
+  updateLeft();
+}
+function updateLeft(){
+  const left=WORK.filter(x=>!viewed.has(x.item)).length;
+  document.getElementById('leftct').textContent=left+' left';
+  const ac=document.getElementById('allclear');
+  if(left===0){ ac.textContent='All caught up. '+viewed.size+' filed to today\'s session content.'; ac.classList.remove('hidden'); document.getElementById('tblWork').classList.add('hidden'); }
+  else { ac.classList.add('hidden'); document.getElementById('tblWork').classList.remove('hidden'); }
+}
+const tl=document.getElementById('tblLater'); LATER.forEach(x=>tl.appendChild(rowNode(x)));
+async function saveContent(x){ if(!sb){chip(false);return;} try{ const {error}=await sb.from('session_content').upsert({day:TODAY,item:x.item,label:x.label,session:SLUG,saved_at:new Date().toISOString()},{onConflict:'day,item'}); chip(!error);}catch(e){chip(false);} }
+async function saveTracker(x){ compile(); if(!sb){chip(false);return;} try{ const {error}=await sb.from('tracker').upsert({item:x.item,label:x.label,choice:state[x.item].choice,note:state[x.item].note,session:SLUG,updated_at:new Date().toISOString()},{onConflict:'item'}); chip(!error);}catch(e){chip(false);} }
+document.body.addEventListener('click',e=>{
+  const nl=e.target.closest('.notelink');
+  if(nl){ const ta=nl.parentElement.querySelector('.nt'); ta.classList.toggle('hidden'); if(!ta.classList.contains('hidden')) ta.focus(); return; }
+  const b=e.target.closest('.ans'); if(!b)return;
+  const i=b.dataset.i, v=b.dataset.v, x=ALL.find(z=>z.item===i);
+  state[i].choice=(state[i].choice===v)?'':v;
+  const rowEl=b.closest('.r');
+  rowEl.querySelectorAll('.ans').forEach(y=>y.classList.remove('on'));
+  const chosen=state[i].choice;
+  if(chosen){ b.classList.add('on'); rowEl.classList.add('tapped'); rowEl.style.setProperty('--tapc',ANSCOLOUR[chosen]||''); }
+  else { rowEl.classList.remove('tapped'); rowEl.style.removeProperty('--tapc'); }
+  saveTracker(x);
+  // Do this and Tell me more mean work is owed, so the row stays put.
+  if(chosen && !KEEPS_OPEN.has(chosen)){
+    state[i].got=true; viewed.add(i); saveContent(x);
+    rowEl.classList.add('gone'); setTimeout(()=>{rowEl.remove();updateLeft();},300);
+  } else {
+    state[i].got=false; viewed.delete(i); updateLeft();
+  }
+  compile();
+});
+let t=null;
+document.body.addEventListener('input',e=>{ const n=e.target.closest('.nt'); if(!n)return; state[n.dataset.i].note=n.value; clearTimeout(t); t=setTimeout(()=>saveTracker(ALL.find(x=>x.item===n.dataset.i)),500); });
+function compile(){
+  const lines=['Session Tracker, Project YOU, cue cards and the Compass, Sep 2, 2026',''];
+  const owed=ALL.filter(x=>KEEPS_OPEN.has(state[x.item].choice));
+  if(owed.length){
+    lines.push('Over to you ('+owed.length+'):');
+    owed.forEach(x=>{ const s=state[x.item]; let l='- '+s.choice.toUpperCase()+': '+x.label; if(s.note) l+=' , '+s.note; lines.push(l); });
+    lines.push('');
+  }
+  const settled=ALL.filter(x=>{const c=state[x.item].choice; return c && !KEEPS_OPEN.has(c);});
+  if(settled.length){
+    lines.push('Settled ('+settled.length+'):');
+    settled.forEach(x=>{ const s=state[x.item]; let l='- '+x.label+': '+s.choice; if(s.note) l+=' , '+s.note; lines.push(l); });
+    lines.push('');
+  }
+  ALL.forEach(x=>{ const s=state[x.item]; if(s.choice || !s.note) return; lines.push('- '+x.label+' , '+s.note); });
+  if(lines.length===2) lines.push('(nothing tapped yet)');
+  document.getElementById('out').value=lines.join('\n');
+}
+function copyOut(){const o=document.getElementById('out');o.select();try{document.execCommand('copy');}catch(e){}}
+async function boot(){
+  if(!sb){chip(false);renderWork();compile();return;}
+  try{
+    const sc=await sb.from('session_content').select('item').eq('session',SLUG);
+    viewed=new Set((sc.data||[]).map(r=>r.item).filter(Boolean));
+    viewed.forEach(i=>{ if(state[i]) state[i].got=true; });
+    renderWork();
+    const tr=await sb.from('tracker').select('*').eq('session',SLUG);
+    (tr.data||[]).forEach(r=>{ if(!state[r.item])return; state[r.item].choice=r.choice||''; state[r.item].note=r.note||'';
+      if(r.choice){const b=document.querySelector('.ans[data-i="'+r.item+'"][data-v="'+r.choice+'"]');
+        if(b){b.classList.add('on'); const rw=b.closest('.r'); if(rw){rw.classList.add('tapped'); rw.style.setProperty('--tapc',ANSCOLOUR[r.choice]||'');}}}
+      if(r.note){const n=document.querySelector('.nt[data-i="'+r.item+'"]'); if(n){n.value=r.note;n.classList.remove('hidden');}} });
+    chip(true); compile();
+  }catch(e){ chip(false); renderWork(); compile(); }
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
