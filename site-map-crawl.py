@@ -22,7 +22,12 @@ ARCHIVE_RE = re.compile(r'^(session-tracker-20|morning-report-20|decision-review
 # The Site Map links to every page it lists. Counting those as real links would
 # make every orphan look reachable and destroy the signal the map exists to give,
 # so the map is excluded as a SOURCE of links. It still appears as a page.
-MAP_PAGES = {'site-map.html'}
+#
+# Sep 3 2026: the Docs Library joined it. Its Pages tab was rebuilt to name every
+# page on the site, which made this crawl report ZERO stray pages the same night
+# seven of them were real. Any page whose job is to list every other page has to
+# be excluded here, or it silently answers the only question this crawl asks.
+MAP_PAGES = {'site-map.html', 'library.html'}
 HREF_RE    = re.compile(r'''href\s*=\s*["']([^"'>]+)["']''', re.I)
 JSHREF_RE  = re.compile(r'''["'`]([A-Za-z0-9_\-]+\.html(?:#[A-Za-z0-9_\-]*)?)["'`]''')
 DIV_RE     = re.compile(r'<div\b|</div>', re.I)
