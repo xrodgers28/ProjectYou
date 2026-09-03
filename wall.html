@@ -525,9 +525,21 @@ function toggleTray(n){
   });
   if(wasOpen) return;
   if(!tr.getAttribute("data-filled")){ tr.innerHTML=fillTray(n); tr.setAttribute("data-filled","1"); }
-  tr.hidden=false;
   var btn=document.querySelector('[data-src="'+n+'"]');
   if(btn) btn.setAttribute("aria-expanded","true");
+  /* drop the strip below the WHOLE row the tile sits in, so the rest of that
+     row is not left blank */
+  var feed=document.getElementById("feed");
+  if(feed && btn){
+    var cols=(getComputedStyle(feed).gridTemplateColumns||"").split(" ").filter(Boolean).length || 1;
+    var tiles=Array.prototype.slice.call(feed.querySelectorAll(".stile"));
+    var i=tiles.indexOf(btn);
+    if(i>=0){
+      var last=tiles[Math.min(tiles.length-1, Math.floor(i/cols)*cols + cols - 1)];
+      if(last && last.nextSibling!==tr) feed.insertBefore(tr, last.nextSibling);
+    }
+  }
+  tr.hidden=false;
 }
 function drawContact(){
   var h='<div class="card"><div class="sec"><h2>Contact sheet</h2><span class="n">'+ITEMS.length+' frames, '+bySource().length+' sources</span></div><div class="cs"><div class="g">';
