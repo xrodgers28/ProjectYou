@@ -43,6 +43,24 @@
   .vc .n{font-size:14px;color:var(--muted);margin-top:4px}
   .vc.blue{border-left-color:var(--blue)} .vc.warn{border-left-color:var(--amber)} .vc.quiet{border-left-color:#b9c2cf}
 
+  .goals{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+  @media(max-width:760px){ .goals{grid-template-columns:1fr} }
+  .goal{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--bar);border-radius:12px;padding:14px 16px}
+  .goal.met{border-left-color:var(--accent)}
+  .goal .gk{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:6px}
+  .goal .gv{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.2}
+  .goal .gv small{font-size:15px;font-weight:400;color:var(--muted)}
+  .track{height:10px;background:var(--inset);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:9px 0 7px}
+  .fill{height:100%;background:var(--bar);width:0}
+  .goal.met .fill{background:var(--accent)}
+  .goal .gn{font-size:14px;color:var(--muted)}
+  .goal.met .gn{color:var(--accent);font-weight:700}
+  .glasses{display:flex;gap:7px;margin:10px 0 7px}
+  .glass{width:34px;height:42px;border:2px solid var(--line);background:var(--inset);border-radius:4px 4px 10px 10px;
+         cursor:pointer;padding:0;font-size:15px;line-height:1;color:#c3cbd8}
+  .glass.on{border-color:var(--blue);background:var(--bluebg);color:var(--blue)}
+  .fibgap{background:var(--greenbg);border:1px solid #cfe6da;border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:15px}
+
   .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
   .tab{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 15px;font-size:15px;font-weight:700;cursor:pointer;color:var(--ink)}
   .tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
@@ -150,10 +168,12 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.3</span><span class="date" id="dstamp"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.4</span><span class="date" id="dstamp"></span></div></div>
 
 <div class="wrap">
-  <p class="sub">Every meal you photographed, what it was, and roughly what was in it. You log a meal by taking a picture on <a href="log-meal.html">Log a Meal</a>. The numbers are estimates read off the photo, so treat them as close rather than correct. Nothing here is a target and nothing here is a streak.</p>
+  <p class="sub">Where today stands against your goals, then every meal you have logged. You log a meal by taking a picture on <a href="log-meal.html">Log a Meal</a>. Numbers that came off a packet are exact; numbers read off a photo are close rather than correct.</p>
+
+  <div class="goals" id="goals"></div>
 
   <div class="cards" id="cards"></div>
 
@@ -162,6 +182,7 @@
     <button class="tab" data-p="p2">Last 14 days</button>
     <button class="tab" data-p="p3">Needs you <span class="c" id="askN"></span></button>
     <button class="tab" data-p="p5">My usuals <span class="c" id="usN"></span></button>
+    <button class="tab" data-p="p6">Fibre list</button>
     <button class="tab" data-p="p4">Everything</button>
   </div>
 
@@ -177,7 +198,7 @@
     <div class="chartbox"><svg id="chart" viewBox="0 0 760 250" role="img" aria-labelledby="chartTitle"><title id="chartTitle">Calories logged each day over the last 14 days</title></svg></div>
     <div class="tw">
       <table id="tdays">
-        <thead><tr><th>Day</th><th class="num">Calories</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th class="num">Meals</th></tr></thead>
+        <thead><tr><th>Day</th><th class="num">Calories</th><th class="num">Fibre</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th class="num">Meals</th></tr></thead>
         <tbody></tbody><tfoot></tfoot>
       </table>
     </div>
@@ -196,7 +217,7 @@
     <div class="note"><b>These become one-tap buttons on Log a Meal.</b> A meal joins this list when you save it yourself, or on its own once you have eaten the same thing three times. Removing one takes the button away; it does not touch any meal you already logged.</div>
     <div class="tw">
       <table id="tus">
-        <thead><tr><th>Meal</th><th class="num">Calories</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th class="num">Times</th><th>Last eaten</th><th>How it got here</th><th></th></tr></thead>
+        <thead><tr><th>Meal</th><th class="num">Calories</th><th class="num">Fibre</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th class="num">Times</th><th>Last eaten</th><th>How it got here</th><th></th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -207,13 +228,25 @@
     <h2 id="allline">Every meal on record</h2>
     <div class="tw">
       <table id="tall">
-        <thead><tr><th>Day</th><th>Time</th><th>Meal</th><th>Where</th><th class="num">Calories</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th>How sure</th></tr></thead>
+        <thead><tr><th>Day</th><th>Time</th><th>Meal</th><th>Where</th><th class="num">Calories</th><th class="num">Fibre</th><th class="num">Protein</th><th class="num">Carbs</th><th class="num">Fat</th><th>How sure</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
   </div>
 
-  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.3</p>
+  <div class="panel" id="p6">
+    <p class="eyebrow">Where fibre comes from</p>
+    <h2 id="fibline">Your own list</h2>
+    <div class="fibgap" id="fibgap"></div>
+    <div class="tw">
+      <table id="tfib">
+        <thead><tr><th>Food</th><th>How much</th><th class="num">Fibre</th><th class="num">Protein</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.4</p>
 </div>
 </div>
 
@@ -243,6 +276,8 @@ function clock(iso){ if(!iso) return ''; return new Date(iso).toLocaleTimeString
 function dayLabel(d){ const p=d.split('-'); const dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2])); return DOW[dt.getUTCDay()]+' '+MON[+p[1]-1]+' '+(+p[2]); }
 function photoUrl(p){ return p ? SUPABASE_URL+'/storage/v1/object/public/meals/'+encodeURIComponent(p) : ''; }
 function n(v){ return Number(v||0); }
+/* His own sheet counts half grams, so fibre prints 14.5 but 11 rather than 11.0. */
+function fg(v){ const x=Math.round(Number(v||0)*10)/10; return String(x); }
 /* One line saying where a meal was eaten. A named place if his check-ins knew
    one, otherwise the coordinates rounded to about a street, and nothing at all
    if neither is known. */
@@ -258,6 +293,7 @@ function whereCell(m){
 }
 const SURE={high:'Confident',medium:'Roughly',low:'A guess'};
 
+let WATER=[], FIBREF=[], GOALS={fiber_g:38,protein_g:60,water_glasses:4,glass_oz:20};
 let MEALS=[], USUALS=[];
 
 async function boot(){ const {data:{session}}=await sb.auth.getSession(); if(session) onLogin(session); }
@@ -282,15 +318,116 @@ async function onLogin(session){
 function safe(fn){ try{ fn(); }catch(e){ console.error(e); } }
 
 async function load(){
-  const [m,u]=await Promise.all([
+  const [m,u,w,g,f]=await Promise.all([
     sb.from('meals').select('*').order('eaten_at',{ascending:false}).limit(2000),
-    sb.from('meal_presets').select('*').order('active',{ascending:false}).order('times_seen',{ascending:false})
+    sb.from('meal_presets').select('*').order('active',{ascending:false}).order('times_seen',{ascending:false}),
+    sb.from('water_log').select('*').eq('day',nyDay()).order('drunk_at',{ascending:false}),
+    sb.from('nutrition_goals').select('*').eq('id',1).limit(1),
+    sb.from('fiber_reference').select('*').order('fiber_g',{ascending:false})
   ]);
   if(m.error){ toast('Could not read the log'); return; }
   MEALS=(m.data||[]).filter(x=>x.status!=='notfood');
   USUALS=(u && !u.error && u.data) ? u.data : [];
-  safe(drawCards); safe(drawToday); safe(drawDays); safe(drawAsks); safe(drawAll); safe(drawUsuals);
-  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.3  -  '+MEALS.length+' meals on record  -  read from your own database, estimated from the photos you took.';
+  WATER=(w && !w.error && w.data) ? w.data : [];
+  /* If the goals row cannot be read the page still knows what he asked for,
+     so a goal bar never sits there empty with no explanation. */
+  GOALS=(g && !g.error && g.data && g.data[0]) ? g.data[0] : GOALS;
+  FIBREF=(f && !f.error && f.data) ? f.data : [];
+  safe(drawGoals); safe(drawCards); safe(drawToday); safe(drawDays); safe(drawAsks); safe(drawAll); safe(drawUsuals); safe(drawFibre);
+  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.4  -  '+MEALS.length+' meals on record  -  read from your own database.';
+}
+
+/* Today against the two numbers he set himself, plus the four glasses of water.
+   This is the first thing on the page because it is the only thing that answers
+   "how am I doing" without reading anything else. */
+function todayTotals(){
+  const today=nyDay();
+  const list=MEALS.filter(m=>m.day===today && counted(m));
+  return {
+    cal:list.reduce((a,m)=>a+n(m.calories),0),
+    fib:list.reduce((a,m)=>a+n(m.fiber_g),0),
+    pro:list.reduce((a,m)=>a+n(m.protein_g),0),
+    meals:list.length
+  };
+}
+
+function goalCard(k, have, goal, unit, cls){
+  const pct=goal? Math.min(100, Math.round(have/goal*1000)/10) : 0;
+  const met=have>=goal && goal>0;
+  const short=Math.round((goal-have)*10)/10;
+  const over=Math.round((have-goal)*10)/10;
+  const line = !goal ? 'No goal set'
+    : met ? ('Done'+(over>0?', '+fg(over)+unit+' over':''))
+    : (fg(short)+unit+' to go');
+  return '<div class="goal'+(met?' met':'')+(cls?' '+cls:'')+'">'+
+    '<div class="gk">'+esc(k)+'</div>'+
+    '<div class="gv">'+fg(have)+'<small> of '+fg(goal)+unit+'</small></div>'+
+    '<div class="track"><div class="fill" style="width:'+pct+'%"></div></div>'+
+    '<div class="gn">'+esc(line)+'</div></div>';
+}
+
+function drawGoals(){
+  const t=todayTotals();
+  const gl=n(GOALS.water_glasses)||4, oz=n(GOALS.glass_oz)||20, had=WATER.length;
+  let glasses='';
+  for(let i=1;i<=gl;i++){
+    glasses+='<button class="glass'+(i<=had?' on':'')+'" title="'+(i<=had?'Take this glass back':'I drank this one')+'" onclick="setWater('+i+')">'+(i<=had?'\u2022':'')+'</button>';
+  }
+  const wLine = had>=gl ? ('Done, '+(had*oz)+'oz') : ((gl-had)+(gl-had===1?' glass':' glasses')+' to go, tap one when you drink it');
+  document.getElementById('goals').innerHTML =
+    goalCard('Fibre today',   t.fib, n(GOALS.fiber_g)||38,   'g') +
+    goalCard('Protein today', t.pro, n(GOALS.protein_g)||60, 'g') +
+    '<div class="goal'+(had>=gl?' met':'')+'"><div class="gk">Water today</div>'+
+      '<div class="gv">'+had+'<small> of '+gl+' glasses</small></div>'+
+      '<div class="glasses">'+glasses+'</div>'+
+      '<div class="gn">'+esc(wLine)+'</div></div>';
+}
+
+/* Tapping the glass you are already on takes it back, so a mis-tap costs one tap. */
+async function setWater(target){
+  const had=WATER.length;
+  if(target===had) target=had-1;
+  if(target>had){
+    const rows=[]; for(let i=had;i<target;i++) rows.push({day:nyDay(), oz:n(GOALS.glass_oz)||20, source:'tap'});
+    const {error}=await sb.from('water_log').insert(rows);
+    if(error){ toast('Could not save that glass'); return; }
+  } else if(target<had){
+    const drop=WATER.slice(0, had-target).map(x=>x.id);
+    const {error}=await sb.from('water_log').delete().in('id',drop);
+    if(error){ toast('Could not take that glass back'); return; }
+  } else { return; }
+  const w=await sb.from('water_log').select('*').eq('day',nyDay()).order('drunk_at',{ascending:false});
+  WATER=(w && !w.error && w.data) ? w.data : WATER;
+  safe(drawGoals);
+}
+
+/* His own fruit and veg list, biggest fibre first, with the day's gap on top of it. */
+/* "one carrot", "1/2 cup of kidney beans" - the way he would say it out loud. */
+function portion(x){
+  const nm=String(x.name).toLowerCase(), a=String(x.amount).trim();
+  const phrase = (a==='1') ? ('One '+nm) : (a+' of '+nm);
+  return (x.emoji? x.emoji+' ' : '')+phrase;
+}
+
+function drawFibre(){
+  const tb=document.querySelector('#tfib tbody');
+  const t=todayTotals(), goal=n(GOALS.fiber_g)||38;
+  const short=Math.round((goal-t.fib)*10)/10;
+  const box=document.getElementById('fibgap');
+  if(short<=0){
+    box.innerHTML='<b>You are there.</b> '+fg(t.fib)+'g of fibre today against a goal of '+fg(goal)+'g.';
+  } else {
+    const all=FIBREF.filter(x=>n(x.fiber_g)>0).slice().sort((a,b)=>n(a.fiber_g)-n(b.fiber_g));
+    const enough=all.filter(x=>n(x.fiber_g)>=short);
+    const pick=enough.length? enough[0] : all[all.length-1];
+    box.innerHTML='<b>'+fg(short)+'g of fibre to go today.</b>'+
+      (pick? ' '+esc(portion(pick))+' would '+(n(pick.fiber_g)>=short?'do it':'take '+fg(pick.fiber_g)+'g off it')+'.' : '');
+  }
+  document.getElementById('fibline').textContent = FIBREF.length
+    ? FIBREF.length+' foods off your own sheet' : 'Nothing on file yet';
+  if(!FIBREF.length){ tb.innerHTML='<tr><td colspan="4">Nothing on file yet.</td></tr>'; return; }
+  tb.innerHTML=FIBREF.map(x=>'<tr><td>'+esc((x.emoji?x.emoji+' ':'')+x.name)+'</td><td>'+esc(x.amount)+'</td>'+
+    '<td class="num">'+fg(x.fiber_g)+' g</td><td class="num">'+(x.protein_g==null?'':fg(x.protein_g)+' g')+'</td></tr>').join('');
 }
 
 function counted(m){ return m.status==='done'||m.status==='ask'; }
@@ -300,8 +437,8 @@ function counted(m){ return m.status==='done'||m.status==='ask'; }
 function byDay(){
   const map={};
   MEALS.filter(counted).forEach(m=>{
-    const d=m.day; if(!map[d]) map[d]={day:d,cal:0,p:0,c:0,f:0,meals:0};
-    map[d].cal+=n(m.calories); map[d].p+=n(m.protein_g); map[d].c+=n(m.carbs_g); map[d].f+=n(m.fat_g); map[d].meals++;
+    const d=m.day; if(!map[d]) map[d]={day:d,cal:0,p:0,c:0,f:0,fib:0,meals:0};
+    map[d].cal+=n(m.calories); map[d].p+=n(m.protein_g); map[d].c+=n(m.carbs_g); map[d].f+=n(m.fat_g); map[d].fib+=n(m.fiber_g); map[d].meals++;
   });
   return Object.values(map).sort((a,b)=>a.day<b.day?1:-1);
 }
@@ -309,7 +446,7 @@ function byDay(){
 function drawCards(){
   const today=nyDay();
   const days=byDay();
-  const t=days.find(d=>d.day===today)||{cal:0,p:0,meals:0};
+  const t=days.find(d=>d.day===today)||{cal:0,p:0,fib:0,meals:0};
   const last7=days.filter(d=>d.day!==today).slice(0,7);
   const avg=last7.length? Math.round(last7.reduce((a,d)=>a+d.cal,0)/last7.length) : 0;
   const asks=MEALS.filter(m=>m.status==='ask').length;
@@ -317,8 +454,7 @@ function drawCards(){
   document.getElementById('askN').textContent=asks?('('+asks+')'):'';
   document.getElementById('cards').innerHTML =
    '<div class="vc"><div class="k">Today</div><div class="v">'+t.cal.toLocaleString('en-US')+'<small> cal</small></div><div class="n">'+(t.meals||0)+(t.meals===1?' meal':' meals')+' logged</div></div>'+
-   '<div class="vc blue"><div class="k">Protein today</div><div class="v">'+n(t.p)+'<small> g</small></div><div class="n">across everything so far</div></div>'+
-   '<div class="vc quiet"><div class="k">Average, last 7 full days</div><div class="v">'+(avg?avg.toLocaleString('en-US'):'none yet')+(avg?'<small> cal</small>':'')+'</div><div class="n">'+(last7.length?last7.length+' days with anything logged':'not enough logged yet')+'</div></div>'+
+   '<div class="vc quiet"><div class="k">Average, last 7 full days</div><div class="v">'+(avg?avg.toLocaleString('en-US'):'none yet')+(avg?'<small> cal</small>':'')+'</div><div class="n">'+(last7.length?last7.length+(last7.length===1?' day':' days')+' with anything logged':'not enough logged yet')+'</div></div>'+
    '<div class="vc warn"><div class="k">Needs you</div><div class="v">'+asks+'</div><div class="n">'+(waiting? waiting+' more still being read':'nothing else waiting')+'</div></div>';
 }
 
@@ -331,7 +467,7 @@ function mealRow(m,showDay){
            '<div class="mc">Picture saved. The numbers land within a couple of hours.</div>'+
            '<div class="tm">'+esc(when)+where+'</div></div></div>';
   }
-  const macros='<div class="mc">'+n(m.calories)+' cal &nbsp; '+n(m.protein_g)+'g protein &nbsp; '+n(m.carbs_g)+'g carbs &nbsp; '+n(m.fat_g)+'g fat</div>';
+  const macros='<div class="mc">'+n(m.calories)+' cal &nbsp; '+fg(m.fiber_g)+'g fibre &nbsp; '+n(m.protein_g)+'g protein &nbsp; '+n(m.carbs_g)+'g carbs &nbsp; '+n(m.fat_g)+'g fat</div>';
   if(m.status==='ask'){
     let opts=[]; try{ opts=Array.isArray(m.options)?m.options:JSON.parse(m.options||'[]'); }catch(e){ opts=[]; }
     const btns = opts.length ? '<div class="opts">'+opts.map(o=>'<button class="opt" onclick="answer(\''+esc(m.id)+'\',this.textContent)">'+esc(o)+'</button>').join('')+'</div>' : '';
@@ -364,7 +500,7 @@ function drawDays(){
   if(!days.length){
     document.getElementById('wkline').textContent='Nothing logged yet';
     svg.innerHTML='<title>No days logged yet</title><text x="380" y="125" text-anchor="middle" class="cvalue">Nothing logged yet</text>';
-    tb.innerHTML='<tr><td colspan="6">No days on record.</td></tr>'; tf.innerHTML=''; return;
+    tb.innerHTML='<tr><td colspan="7">No days on record.</td></tr>'; tf.innerHTML=''; return;
   }
   const shown=days.slice().reverse();
   const avg=Math.round(days.reduce((a,d)=>a+d.cal,0)/days.length);
@@ -394,9 +530,10 @@ function drawDays(){
   s+='<text x="'+L+'" y="'+(H-8)+'" class="clabel">Calories a day. The darkest bar is today.</text>';
   svg.innerHTML=s;
 
-  tb.innerHTML=shown.map(d=>'<tr><td>'+esc(dayLabel(d.day))+'</td><td class="num">'+d.cal.toLocaleString('en-US')+'</td><td class="num">'+d.p+' g</td><td class="num">'+d.c+' g</td><td class="num">'+d.f+' g</td><td class="num">'+d.meals+'</td></tr>').join('');
+  tb.innerHTML=shown.map(d=>'<tr><td>'+esc(dayLabel(d.day))+'</td><td class="num">'+d.cal.toLocaleString('en-US')+'</td><td class="num">'+fg(d.fib)+' g</td><td class="num">'+d.p+' g</td><td class="num">'+d.c+' g</td><td class="num">'+d.f+' g</td><td class="num">'+d.meals+'</td></tr>').join('');
   const tp=Math.round(days.reduce((a,d)=>a+d.p,0)/days.length), tc=Math.round(days.reduce((a,d)=>a+d.c,0)/days.length), tfat=Math.round(days.reduce((a,d)=>a+d.f,0)/days.length);
-  tf.innerHTML='<tr><td>Average a day</td><td class="num">'+avg.toLocaleString('en-US')+'</td><td class="num">'+tp+' g</td><td class="num">'+tc+' g</td><td class="num">'+tfat+' g</td><td class="num"></td></tr>';
+  const tfib=Math.round(days.reduce((a,d)=>a+d.fib,0)/days.length*10)/10;
+  tf.innerHTML='<tr><td>Average a day</td><td class="num">'+avg.toLocaleString('en-US')+'</td><td class="num">'+fg(tfib)+' g</td><td class="num">'+tp+' g</td><td class="num">'+tc+' g</td><td class="num">'+tfat+' g</td><td class="num"></td></tr>';
 }
 
 function drawAsks(){
@@ -409,10 +546,11 @@ function drawAsks(){
 function drawAll(){
   const tb=document.querySelector('#tall tbody');
   document.getElementById('allline').textContent=MEALS.length+(MEALS.length===1?' meal':' meals')+' on record';
-  if(!MEALS.length){ tb.innerHTML='<tr><td colspan="9">Nothing logged yet.</td></tr>'; return; }
+  if(!MEALS.length){ tb.innerHTML='<tr><td colspan="10">Nothing logged yet.</td></tr>'; return; }
   tb.innerHTML=MEALS.map(m=>'<tr><td>'+esc(dayLabel(m.day))+'</td><td>'+esc(clock(m.eaten_at))+'</td><td>'+esc(m.name|| (m.status==='new'?'Waiting to be read':'Meal'))+'</td>'+
     '<td>'+whereCell(m)+'</td>'+
     '<td class="num">'+(counted(m)?n(m.calories).toLocaleString('en-US'):'')+'</td>'+
+    '<td class="num">'+(counted(m)?fg(m.fiber_g)+' g':'')+'</td>'+
     '<td class="num">'+(counted(m)?n(m.protein_g)+' g':'')+'</td>'+
     '<td class="num">'+(counted(m)?n(m.carbs_g)+' g':'')+'</td>'+
     '<td class="num">'+(counted(m)?n(m.fat_g)+' g':'')+'</td>'+
@@ -430,7 +568,7 @@ function drawUsuals(){
     : 'Nothing on file yet';
   const tb=document.querySelector('#tus tbody');
   if(!USUALS.length){
-    tb.innerHTML='<tr><td colspan="9">Nothing yet. Save a meal from Log a Meal, or eat the same thing three times and it will appear here on its own.</td></tr>';
+    tb.innerHTML='<tr><td colspan="10">Nothing yet. Save a meal from Log a Meal, or eat the same thing three times and it will appear here on its own.</td></tr>';
     return;
   }
   tb.innerHTML=USUALS.map(u=>{
@@ -439,7 +577,7 @@ function drawUsuals(){
       ? '<button class="opt" style="font-size:13px;padding:5px 11px" onclick="dropUsual(\''+esc(u.id)+'\')">Remove</button>'
       : '<button class="opt" style="font-size:13px;padding:5px 11px" onclick="keepUsual(\''+esc(u.id)+'\')">Put back</button>';
     return '<tr'+(u.active?'':' style="opacity:.75"')+'><td>'+esc((u.emoji?u.emoji+' ':'')+u.name)+(u.active?'':' <span class="c" style="font-family:var(--mono);font-size:11px">removed</span>')+'</td>'+
-      '<td class="num">'+n(u.calories).toLocaleString('en-US')+'</td><td class="num">'+n(u.protein_g)+' g</td>'+
+      '<td class="num">'+n(u.calories).toLocaleString('en-US')+'</td><td class="num">'+fg(u.fiber_g)+' g</td><td class="num">'+n(u.protein_g)+' g</td>'+
       '<td class="num">'+n(u.carbs_g)+' g</td><td class="num">'+n(u.fat_g)+' g</td>'+
       '<td class="num">'+n(u.times_seen)+'</td><td>'+esc(u.last_seen?dayLabel(u.last_seen):'')+'</td>'+
       '<td>'+esc(how)+'</td><td>'+act+'</td></tr>';
@@ -492,6 +630,7 @@ function openDetail(id, ev){
     '<div class="nfcal"><b>Calories</b><span>' + n(m.calories).toLocaleString('en-US') + '</span></div>' +
     '<div class="nfr"><b>Protein</b><span>' + n(m.protein_g) + ' g</span></div>' +
     '<div class="nfr"><b>Total carbohydrates</b><span>' + n(m.carbs_g) + ' g</span></div>' +
+    '<div class="nfr"><b>&nbsp;&nbsp;Dietary fibre</b><span>' + fg(m.fiber_g) + ' g</span></div>' +
     '<div class="nfr"><b>Total fat</b><span>' + n(m.fat_g) + ' g</span></div>';
 
   var meta = [];
