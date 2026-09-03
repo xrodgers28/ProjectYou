@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Three New Things</title>
+<title>It&rsquo;s a wrap</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -267,6 +267,15 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 .gateline{font-size:13.5px;color:var(--ink-3);margin:0;text-align:center;min-height:18px}
 .gateline.hot{color:var(--q-yellow)}
 
+.sect{
+  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--ink-3);margin:22px 0 2px;
+  padding-top:14px;border-top:1px solid var(--line);
+}
+.sect:first-of-type{border-top:0;padding-top:0;margin-top:6px}
+.legend>div{display:flex;align-items:center;gap:8px}
+.legend .ln{flex:1;min-width:0}
+.legend b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
 .said{
   font-family:"Fraunces",Georgia,serif;font-size:clamp(22px,5.2vw,29px);line-height:1.28;
   font-weight:400;font-style:italic;color:var(--ink);margin:0;text-wrap:balance;
@@ -434,11 +443,11 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
   </div>
   <div class="stage" id="stage"></div>
   <div class="tell">
-    <span>Three New Things</span>
+    <span>It&rsquo;s a wrap</span>
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v1.5</span>
+    <span id="ver" class="ver">v1.6</span>
   </div>
 </div>
 
@@ -571,7 +580,7 @@ function nightState(){
    ========================================================== */
 var SB_URL='https://arnjntspmrhigodlssbn.supabase.co';
 var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
-var HABIT='Three New Things', TRACKER='Three New Things', WS_ID=96;
+var HABIT="It's a wrap", TRACKER="It's a wrap", WS_ID=96;
 var sb=null, signedIn=false, cloud=false;
 try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.createClient(SB_URL,SB_KEY); }catch(e){ sb=null; }
 
@@ -637,40 +646,83 @@ async function loadDay(){
     return DAYT;
   }catch(e){ return null; }
 }
+/* THE SAME SIX ROWS, THE SAME ORDER AND THE SAME COLOURS as "Where today goes"
+   on Today's Tasks. Scott, Sep 3 2026: that tracker is the accurate one, so this
+   page reflects it instead of inventing its own names and its own palette. The
+   colours are the calendar's own. If they change there they must change here. */
 var SLICES=[
-  {k:'amz',   n:'Amazon',      c:'#d98b3f'},
-  {k:'py',    n:'Project You', c:'#e07b41'},
-  {k:'hab',   n:'Habits',      c:'#98a0f0'},
-  {k:'todo',  n:'To-dos',      c:'#7fae8e'},
-  {k:'other', n:'Everything else', c:'#8d7f74'},
-  {k:'open',  n:'Unaccounted', c:'#3a2f27'}
+  {k:'amz',   n:'Amazon',      c:'#e8912f'},
+  {k:'hab',   n:'Habits',      c:'#1e8e5a'},
+  {k:'todo',  n:'Your to-dos', c:'#6f8fbe'},
+  {k:'py',    n:'Project You', c:'#e8a0b8'},
+  {k:'other', n:'Personal',    c:'#8e3f6e'},
+  {k:'open',  n:'Still open',  c:'#e6eaf0'}
 ];
+/* 6h 57, 1h 9, 0m - written exactly the way Today's Tasks writes it */
+function dur(m){
+  m=Math.round(m||0);
+  if(m<60) return m+'m';
+  var h=Math.floor(m/60), r=m%60;
+  return r? h+'h '+r : h+'h';
+}
+function hhmm(m){
+  var h=Math.floor(m/60), r=m%60, ap=h<12?'am':'pm', hh=h%12; if(hh===0) hh=12;
+  return hh+(r?':'+String(r).padStart(2,'0'):'')+ap;
+}
+
+/* The blocks behind the numbers, so the page can say WHY a slice looks odd.
+   Sep 3 2026: Scott looked at 1h 9 of "Your to-dos" and said it made no sense.
+   54 of those 69 minutes were walks, and Walk is also one of his habits, so he
+   was seeing his walking twice. The minutes are not double counted - every
+   minute carries exactly one tag - but the page now says so out loud. */
+var DAYB=null;
+async function loadBlocks(){
+  if(!cloud) return null;
+  try{
+    var r=await sb.from('day_blocks').select('cat,title,mins').eq('day',DAY());
+    if(r.error||!r.data) return null;
+    DAYB=r.data; return DAYB;
+  }catch(e){ return null; }
+}
+function walkMins(){
+  if(!DAYB) return 0;
+  var n=0;
+  DAYB.forEach(function(b){
+    if(b.cat==='todo' && /walk|\u{1F6B6}/iu.test(b.title||'')) n+=(b.mins||0);
+  });
+  return n;
+}
 function drawDay(){
   var box=document.getElementById('daybox');
   if(!box) return;
   if(!DAYT){
-    box.innerHTML='<p class="tiny">'+(cloud?'No time logged for today yet, so there is nothing to compare.':'Sign in to see how the day actually went.')+'</p>';
+    box.innerHTML='<p class="tiny">'+(cloud?'Nothing logged on the day yet, so there is nothing to show.':'Sign in to see where the day went.')+'</p>';
     return;
   }
-  var py=DAYT.py||0, hab=DAYT.hab||0, top=Math.max(py,hab,1);
-  var h='<div class="item"><span class="c">Project You against the habits</span>';
-  h+='<div class="dayrow"><span class="dl">Project You</span><span class="dt"><i style="width:'+Math.round(py/top*100)+'%"></i></span><span class="dn">'+py+' min</span></div>';
-  h+='<div class="dayrow"><span class="dl">Habits</span><span class="dt"><i class="b" style="width:'+Math.round(hab/top*100)+'%"></i></span><span class="dn">'+hab+' min</span></div>';
-  if(py===0&&hab===0) h+='<p class="tiny" style="margin-top:6px">Neither logged anything today.</p>';
-  else if(py===0) h+='<p class="tiny" style="margin-top:6px">Nothing logged against Project You today.</p>';
-  h+='</div>';
-
   var tot=0; SLICES.forEach(function(x){ tot+=(DAYT[x.k]||0); });
-  h+='<div class="item"><span class="c">And the whole day</span><div class="wheelwrap">';
-  h+='<canvas id="daywheel" width="224" height="224"></canvas><div class="legend">';
+  if(!tot){ box.innerHTML='<p class="tiny">Nothing logged on the day yet.</p>'; return; }
+
+  var h='<div class="wheelwrap"><canvas id="daywheel" width="224" height="224"></canvas><div class="legend">';
   SLICES.forEach(function(x){
-    var v=DAYT[x.k]||0; if(!v) return;
-    h+='<div><i style="background:'+x.c+'"></i>'+x.n+' &middot; '+(v<60?v+'m':(Math.round(v/60*10)/10)+'h')+'</div>';
+    var v=DAYT[x.k]||0;
+    h+='<div><i style="background:'+x.c+'"></i><span class="ln">'+x.n+'</span><b>'+dur(v)+'</b></div>';
   });
-  h+='</div></div></div>';
+  h+='</div></div>';
+
+  var f=DAYT.win_from, t=DAYT.win_to;
+  if(typeof f==='number'&&typeof t==='number'){
+    h+='<p class="tiny">Counts wall-clock time across '+hhmm(f)+' to '+hhmm(t)+'. Amazon, Habits and Project You go to the wheel.</p>';
+  }
+  var w=walkMins();
+  if(w>0){
+    h+='<p class="tiny">'+dur(w)+' of your to-do time was walking, which also ticks your Walk habit \u2014 so you are seeing the same walk in two rows.</p>';
+  }
+  if((DAYT.other||0)===0 && (DAYT.open||0)>60){
+    h+='<p class="tiny">Personal reads 0 because nothing personal was on a calendar. Most of \u201cStill open\u201d is that time.</p>';
+  }
   box.innerHTML=h;
 
-  var cv=document.getElementById('daywheel'); if(!cv||!tot) return;
+  var cv=document.getElementById('daywheel'); if(!cv) return;
   var ctx=cv.getContext('2d'), cx=112, cy=112, R=100, r0=58, a=-Math.PI/2;
   SLICES.forEach(function(x){
     var v=DAYT[x.k]||0; if(!v) return;
@@ -681,6 +733,66 @@ function drawDay(){
     ctx.closePath(); ctx.fillStyle=x.c; ctx.fill();
     a+=sweep;
   });
+  /* Amazon hours in the middle, the same as the donut on Today's Tasks */
+  ctx.textAlign='center';
+  ctx.fillStyle='#e8912f'; ctx.font='700 30px Fraunces, Georgia, serif';
+  ctx.fillText(((DAYT.amz||0)/60).toFixed(1)+'h', cx, cy+2);
+  ctx.fillStyle='rgba(232,145,47,.65)'; ctx.font='700 10px IBM Plex Mono, monospace';
+  ctx.fillText('AMAZON', cx, cy+20);
+}
+
+/* ---------- what tomorrow already looks like ----------
+   Scott, Sep 3 2026: "what else would be helpful to summarize or prompt for
+   tomorrow?" Three things he cannot see anywhere else at this hour: the first
+   thing in the diary, how much is already on it, and the habits today did not
+   get to. All of it is his own data - nothing is invented or predicted. */
+var TOM=null;
+function tomorrowKey(){
+  var p=DAY().split('-');
+  var d=new Date(+p[0], +p[1]-1, +p[2]); d.setDate(d.getDate()+1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+async function loadTomorrow(){
+  if(!cloud) return null;
+  var k=tomorrowKey(), out={key:k, first:null, n:0, missed:[]};
+  try{
+    var ev=await sb.from('calendar_events').select('title,start_time,hidden,dismissed,skipped').eq('date',k);
+    if(ev.data){
+      var live=ev.data.filter(function(e){ return !e.hidden && !e.dismissed && !e.skipped; })
+                      .sort(function(a,b){ return String(a.start_time||'').localeCompare(String(b.start_time||'')); });
+      out.n=live.length;
+      for(var i=0;i<live.length;i++){ if(live[i].start_time){ out.first=live[i]; break; } }
+    }
+  }catch(e){}
+  try{
+    var td=await sb.from('todos').select('task,is_habit,done,archived,for_date').eq('for_date',DAY());
+    if(td.data){
+      out.missed=td.data.filter(function(t){ return t.is_habit && !t.done && !t.archived; })
+                        .map(function(t){ return t.task; });
+    }
+  }catch(e){}
+  TOM=out; return out;
+}
+function drawTomorrow(){
+  var box=document.getElementById('tombox'); if(!box) return;
+  var h='';
+  if(TOM&&TOM.n){
+    if(TOM.first){
+      var t=String(TOM.first.start_time||'').slice(0,5).split(':');
+      h+='<div class="item"><span class="c">First thing</span><span class="t">'+
+         hhmm(+t[0]*60+ +t[1])+' \u00b7 '+esc(TOM.first.title||'')+'</span></div>';
+    }
+    h+='<p class="tiny">'+TOM.n+' thing'+(TOM.n===1?'':'s')+' already on tomorrow.</p>';
+  }else if(cloud){
+    h+='<p class="tiny">Nothing on the calendar for tomorrow yet.</p>';
+  }
+  if(TOM&&TOM.missed.length){
+    h+='<div class="item"><span class="c">Did not get to today</span><span class="t">'+
+       TOM.missed.map(esc).join(' \u00b7 ')+'</span></div>';
+  }
+  var thin=CATS.slice().sort(function(a,b){return countIn(a.k)-countIn(b.k);})[0];
+  h+='<p class="tiny">Thinnest corner so far: <b style="color:var(--ink-2)">'+thin.n+'</b>. Have a look there tomorrow.</p>';
+  box.innerHTML=h;
 }
 
 /* ---------- the eight, dealt out of the bank ---------- */
@@ -753,7 +865,7 @@ async function tickHabit(){
     var row=(r.data&&r.data[0])?r.data[0]:null;
     if(!row){
       var ins=await sb.from('todos').insert({
-        task:HABIT, section:'Emotional Health', subsection:'Three New Things',
+        task:HABIT, section:'Emotional Health', subsection:"It's a wrap",
         category:'Emotional Health', qs_group:'Emotional Health', tracker:TRACKER,
         is_habit:true, done:false, staged:false,
         for_date:d, est_minutes:10, ws_id:WS_ID, source_project:'three-new-things'
@@ -1099,14 +1211,21 @@ function render(){
 
   /* ---------- done ---------- */
   else if(view==='done'){
+    /* THE CLOSING PAGE, rebuilt Sep 3 2026. It used to be one long column with
+       tonight, the day and tomorrow all mixed together. It is three blocks now,
+       in the order he actually wants them: what he just did, where the day went,
+       and what tomorrow already looks like. */
     stage.className='stage top';
-    h+='<p class="kick">That is the day</p>';
+    h+='<p class="kick">It\u2019s a wrap</p>';
     h+='<div class="head"><canvas id="hd"></canvas></div>';
+
+    h+='<p class="sect">Tonight</p>';
     h+='<div class="log">';
     N.items.forEach(function(it){
       h+='<div class="item"><span class="c">'+catOf(it.k).n+'</span><span class="t">'+esc(it.t)+'</span></div>';
     });
     h+='</div>';
+    if(!N.items.length) h+='<p class="tiny">No three things tonight. The day still counts.</p>';
     if(N.words.length) h+='<div class="item"><span class="c">Tonight you were</span><span class="t">'+N.words.join(' &middot; ')+'</span></div>';
     if(energyText()) h+='<div class="item"><span class="c">What put something back</span><span class="t">'+esc(energyText())+'</span></div>';
     if(N.ownQ.trim()&&N.ownV!==null) h+='<div class="item"><span class="c">Your own question</span><span class="t">'+esc(N.ownQ.trim())+' &mdash; '+(N.ownV+1)+' of 5</span></div>';
@@ -1115,7 +1234,6 @@ function render(){
     h+='<div><b>'+S.nights+'</b><span>nights</span></div>';
     h+='<div><b>'+S.told+'</b><span>people told</span></div>';
     h+='</div>';
-    h+='<div id="daybox"></div>';
     if(S.checks.length>2){
       if(presNights().length>1) h+='<div class="item"><span class="c">How much of you has been here</span><div class="spark">'+sparkFor()+'</div></div>';
       var w=topWords();
@@ -1123,9 +1241,13 @@ function render(){
     }else{
       h+='<p class="tiny">A few more nights and the shapes start showing up here.</p>';
     }
-    var thin=CATS.slice().sort(function(a,b){return countIn(a.k)-countIn(b.k);})[0];
-    h+='<p class="tiny">Thinnest corner so far: <b style="color:var(--ink-2)">'+thin.n+'</b>. Have a look there tomorrow.</p>';
-    h+='<p class="tiny" id="tickline">Saving\u2026</p>';
+
+    h+='<p class="sect">Where the day went</p>';
+    h+='<div id="daybox"></div>';
+
+    h+='<p class="sect">Tomorrow</p>';
+    h+='<div id="tombox"></div>';
+
     /* the last look round the room */
     var NL=nightState(), nd=NL.done.length, nt=NIGHTLIST.length;
     h+='<div class="cl"><div class="clhead"><span class="lab">Before lights out</span>';
@@ -1137,6 +1259,7 @@ function render(){
          '<span class="clwhy">'+esc(it.w)+'</span></span></button>';
     });
     h+='</div></div>';
+    h+='<p class="tiny" id="tickline">Saving\u2026</p>';
 
     h+='<div class="foot"><button class="btn" data-go="board">Back to the cue cards</button>';
     h+='<button class="btn ghost" data-go="restart">Do another night</button></div>';
@@ -1148,7 +1271,10 @@ function render(){
   bind();
   if(view==='field') wireField();
   if(view==='eight') wireEight();
-  if(view==='done'){ var cv=document.getElementById('hd'); if(cv) setTimeout(function(){drawHead(cv,S.hist.length);},30); }
+  if(view==='done'){
+    var cv=document.getElementById('hd'); if(cv) setTimeout(function(){drawHead(cv,S.hist.length);},30);
+    drawDay(); drawTomorrow();
+  }
   var t=document.getElementById('tx'); if(t) t.focus();
 }
 
@@ -1510,7 +1636,8 @@ function act(a){
     });
     S.nights++; save(); burst(46); view='done'; render();
     saveQuestions();
-    loadDay().then(function(){ drawDay(); saveCheckin(); });
+    loadBlocks().then(function(){ return loadDay(); }).then(function(){ drawDay(); saveCheckin(); });
+    loadTomorrow().then(function(){ drawTomorrow(); });
     tickHabit().then(function(ok){
       var f=document.getElementById('tickline');
       if(f) f.textContent = ok ? 'Ticked on the board.' : (cloud?'Saved here, but the board tick did not land.':'Saved in this browser only.');
