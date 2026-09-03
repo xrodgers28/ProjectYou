@@ -694,12 +694,14 @@ window.__pnNavCss=function(){
      anything yet") -> the number is still set, the page says its own piece.
    ============================================================ */
 (function(){try{
-  var PAGES={'ai.html':1,'quotes.html':1,'compass.html':1,'james-clear.html':1,
-             'takeaways.html':1,'open-mode.html':1,'environmental.html':1,
-             'recreational.html':1,'bucket-list.html':1,'feed.html':1,
-             'creativity.html':1};
+  /* EVERY card that asks for minutes gets the bar, including cards built after
+     this was written. Sep 3 2026: the old allow-list of eleven pages silently
+     skipped three-new-things, social-fitness and wall, and would have skipped
+     every card built later. Two pages keep their typing box on purpose, because
+     hours are entered there and "3h" / "2:30" needs a keyboard. */
+  var NEVER={'index.html':1,'habit-worksheets.html':1};
   var page=(location.pathname.split('/').pop()||'').toLowerCase();
-  if(!PAGES[page]) return;
+  if(NEVER[page]) return;
   if(window.self!==window.top) return;   /* embedded previews carry no chrome */
 
   var GRACE=1100;                        /* ms before the finish is pressed */
@@ -709,22 +711,26 @@ window.__pnNavCss=function(){
     if(document.getElementById('pymb-css')) return;
     var s=document.createElement('style'); s.id='pymb-css';
     s.textContent=
-      '.pymb{margin:14px 0 2px;font-family:Arial,Helvetica,sans-serif;text-align:left}'+
+      '.pymb{margin:14px 0 2px;font-family:Arial,Helvetica,sans-serif;text-align:left;'+
+        '--pymb-off:#eef2f8;--pymb-offink:#9aa6b4;--pymb-on:#3f6f8f;--pymb-onink:#fff;'+
+        '--pymb-lab:#8a93a0;--pymb-panel:#fff;--pymb-line:#e3e7ee}'+
+      '.pymb.pymb-dark{font-family:inherit}'+
+      '.pymb.pymb-dark .pymb-seg{font-family:inherit}'+
       '.pymb-lab{display:flex;align-items:baseline;gap:8px;font-size:11.5px;font-weight:700;'+
-        'color:#8a93a0;margin:0 0 6px;line-height:1.3}'+
-      '.pymb-now{margin-left:auto;font-weight:800;color:#3f6f8f;font-variant-numeric:tabular-nums;'+
+        'color:var(--pymb-lab);margin:0 0 6px;line-height:1.3}'+
+      '.pymb-now{margin-left:auto;font-weight:800;color:var(--pymb-on);font-variant-numeric:tabular-nums;'+
         'white-space:nowrap}'+
       '.pymb-strip{display:flex;gap:3px;height:32px;align-items:stretch}'+
       '.pymb-seg{flex:1 1 0;min-width:0;padding:0 0 4px;margin:0;border:0;border-radius:6px;'+
-        'background:#eef2f8;color:#9aa6b4;font:800 10px/1 Arial,Helvetica,sans-serif;'+
+        'background:var(--pymb-off);color:var(--pymb-offink);font:800 10px/1 Arial,Helvetica,sans-serif;'+
         'display:flex;align-items:flex-end;justify-content:center;cursor:pointer;'+
         'font-variant-numeric:tabular-nums;-webkit-appearance:none;appearance:none;'+
         'transition:background .1s ease,color .1s ease}'+
-      '.pymb-seg.on{background:#3f6f8f;color:#fff}'+
+      '.pymb-seg.on{background:var(--pymb-on);color:var(--pymb-onink)}'+
       '.pymb-more{flex:0 0 44px;align-items:center;padding:0;font-size:9.5px;letter-spacing:.3px;'+
-        'background:#fff;border:1px solid #e3e7ee;color:#8a93a0}'+
-      '.pymb-more:hover{background:#eef2f8;color:#3f6f8f}'+
-      '.pymb-panel{background:#fff;border:1px solid #e3e7ee;border-radius:14px;padding:10px 12px}'+
+        'background:var(--pymb-panel);border:1px solid var(--pymb-line);color:var(--pymb-lab)}'+
+      '.pymb-more:hover{background:var(--pymb-off);color:var(--pymb-on)}'+
+      '.pymb-panel{background:var(--pymb-panel);border:1px solid var(--pymb-line);border-radius:14px;padding:10px 12px}'+
       '.pymb-locked .pymb-seg{cursor:default}'+
       '@media (prefers-reduced-motion:reduce){.pymb-seg{transition:none}}';
     (document.head||document.documentElement).appendChild(s);
@@ -738,12 +744,38 @@ window.__pnNavCss=function(){
   function wanted(el){ return !!el && !el.classList.contains('hidden'); }
 
   function finisher(){
-    var sels=['#nx','.mc-cta','#did','#btnNext','.foot .next'];
+    var sels=['#nx','.mc-cta','#did','#btnNext','#finbtn','.btn[data-go="finish"]','.foot .next'];
     for(var i=0;i<sels.length;i++){
       var e=document.querySelector(sels[i]);
       if(e&&e.offsetParent!==null) return e;
     }
     return null;
+  }
+
+  /* Dark cards, Sep 3 2026. The strip shipped in one light palette because the
+     first eleven cards were all light. three-new-things is near black, so a white
+     panel sat on it like a sticker. The page is measured instead of listed: if the
+     background is dark the strip switches to the dark tokens, and the "on" colour
+     is taken from the page's own finish button so it always looks native. */
+  function pymbRGB(s){
+    var m=/rgba?\(([\d.]+)[ ,]+([\d.]+)[ ,]+([\d.]+)(?:[ ,\/]+([\d.]+))?/.exec(s||'');
+    if(!m) return null;
+    return {r:+m[1],g:+m[2],b:+m[3],a:(m[4]===undefined?1:parseFloat(m[4]))};
+  }
+  function pymbDark(){
+    var els=[document.body,document.documentElement];
+    for(var i=0;i<els.length;i++){
+      if(!els[i]) continue;
+      var c=pymbRGB(getComputedStyle(els[i]).backgroundColor);
+      if(c&&c.a>0.5) return (0.2126*c.r+0.7152*c.g+0.0722*c.b)/255 < 0.45;
+    }
+    return false;
+  }
+  function pymbAccent(){
+    var f=finisher(); if(!f) return null;
+    var st=getComputedStyle(f), bg=pymbRGB(st.backgroundColor);
+    if(!bg||bg.a<0.6) return null;
+    return {bg:st.backgroundColor, ink:st.color};
   }
 
   function paint(n){
@@ -755,6 +787,17 @@ window.__pnNavCss=function(){
   function build(){
     css();
     var d=document.createElement('div'); d.className='pymb';
+    if(pymbDark()){
+      d.classList.add('pymb-dark');
+      var ac=pymbAccent();
+      d.style.setProperty('--pymb-on',   ac?ac.bg :'#e07b41');
+      d.style.setProperty('--pymb-onink',ac?ac.ink:'#1a120c');
+      d.style.setProperty('--pymb-off','rgba(255,255,255,.09)');
+      d.style.setProperty('--pymb-offink','rgba(255,255,255,.42)');
+      d.style.setProperty('--pymb-lab','rgba(255,255,255,.5)');
+      d.style.setProperty('--pymb-panel','rgba(255,255,255,.05)');
+      d.style.setProperty('--pymb-line','rgba(255,255,255,.14)');
+    }
     var lab=document.createElement('div'); lab.className='pymb-lab';
     var l1=document.createElement('span'); l1.textContent='How long did that take?';
     now=document.createElement('span'); now.className='pymb-now'; now.textContent='tap the minutes';
@@ -854,7 +897,7 @@ window.__pnNavCss=function(){
     if(pend){ clearTimeout(pend); pend=null; }
 
     bar=build();
-    var wrap=el.closest?el.closest('.howlong,.mc-time,.took'):null;
+    var wrap=el.closest?el.closest('.howlong,.mc-time,.took,.minrow,.minl'):null;
     if(wrap){
       el.__pymbWrap=wrap;
       wrap.style.display='none';
