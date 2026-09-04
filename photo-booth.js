@@ -1,8 +1,12 @@
-/* Photo Booth strip v1.1 — the week of morning photos, as one slim line that opens.
+/* Photo Booth strip v1.2 — the week of morning photos, as one slim line that opens.
    v1.1: tapping an empty square no longer opens a bare file box. It opens a sheet of the
    pictures already read off the Mac's Photos app (public.recent_photos, refreshed hourly),
    newest first, with that day's shots at the top. Tap one and it is filed. The file box is
    still there as a fallback for anything older than the feed reaches.
+   v1.2: ON A TOUCH DEVICE THE SHEET IS SKIPPED and the camera roll opens straight away.
+   Scott's call, Sep 3 2026: the phone's own picker already shows his newest pictures, holds
+   everything rather than the last six days, and is never an hour behind. The sheet is for
+   the Mac, where the old button opened Finder and was no use at all.
    Self-contained on purpose: it talks to the database over plain fetch and needs NOTHING
    from the page it sits on (no window.supabase, no shared client). That is the lesson from
    needs-you.js v1.0, which worked everywhere except the one page it was built for.
@@ -275,7 +279,7 @@
       '<span class="pbx-sp"></span>' +
       '<span class="pbx-hint">' + (open ? "tap to close" : "tap to open") + "</span></button>" +
       '<div class="pbx-shade"><div class="pbx-in">' + g + band +
-      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.1</span></div>' +
+      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.2</span></div>' +
       "</div></div></div>"
     );
     return node;
@@ -321,6 +325,19 @@
   }
 
   function closeSheet() { if (SHEET) SHEET.hidden = true; PENDING = null; }
+
+  /* A finger rather than a mouse means the phone, and the phone's own picker is better
+     than anything here: it holds every picture he has ever taken and it is never behind. */
+  function onTouchDevice() {
+    try { return !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches); }
+    catch (e) { return false; }
+  }
+
+  function addPhoto(job) {
+    ensureSheet();
+    if (onTouchDevice()) { PENDING = job; PICKER.value = ""; PICKER.click(); return; }
+    openSheet(job);
+  }
 
   function openSheet(job) {
     ensureSheet();
@@ -464,7 +481,7 @@
           return;
         }
         var a = e.target.closest("[data-add]");
-        if (a) openSheet({ series: a.getAttribute("data-add"), day: a.getAttribute("data-day"), btn: a });
+        if (a) addPhoto({ series: a.getAttribute("data-add"), day: a.getAttribute("data-day"), btn: a });
       });
     }).catch(function () { /* silent by design */ });
   }
