@@ -12,11 +12,14 @@ session.
     cat db-facts.json | python3 projects-refresh.py --dry-run  # write only
 
 db-facts.json looks like:
-    { "project-you": { "figures":[{"n":"138","l":"Pages live"}, ...],
-                       "last_label":"Last thing finished",
+    { "project-you": { "pages":138, "open_jobs":82, "sessions":43,
                        "last_text":"Clever Phrases and Fun Facts",
-                       "status_extra":"The last piece of work went live at 10:23pm last night.",
-                       "url":"mission.html" }, ... }
+                       "url":"mission.html" },
+      "treadwell":   { "open_jobs":1, "sessions":1,
+                       "last_text":"The decks reached v13 and Mike Cann's feedback came in" } }
+
+Leave "pages" out and the first figure counts files in the folder instead.
+Leave "last_text" out and the card asks for a first note instead.
 
 Nothing here invents a fact. If a folder is missing, the card says the project
 is brand new. If there is no picture, the card says there is no picture. The
@@ -183,17 +186,23 @@ def main():
             sys.stderr.write("picture skipped for %s: %s\n" % (p["slug"], e))
             img, src = None, None
 
+        # Three figures, in the same three places on every card so they can be
+        # read across. The first is whatever best measures the size of the
+        # project: pages for the one that is a website, files for the rest.
+        # The other two are the same for everybody, which is the whole point.
         figures = f.get("figures")
         if not figures:
-            figures = [{"n": str(n), "l": "Files"},
-                       {"n": str(days) if days is not None else "0", "l": "Days quiet"},
-                       {"n": "0", "l": "Open jobs"}]
+            first = ({"n": str(f["pages"]), "l": "Pages live"} if f.get("pages") is not None
+                     else {"n": str(n), "l": "Files"})
+            figures = [first,
+                       {"n": str(f.get("open_jobs", 0)), "l": "Open jobs"},
+                       {"n": str(f.get("sessions", 0)),  "l": "Sessions"}]
 
         out.append(dict(slug=p["slug"], name=p["name"], accent=p["accent"],
                         state=state, tone=tone, status=status,
                         hero=img, hero_fit=p["hero_fit"], hero_from=src,
                         figures=figures[:3],
-                        last_label=f.get("last_label", "Waiting on you"),
+                        last_label=f.get("last_label", "Last thing finished" if f.get("last_text") else "Waiting on you"),
                         last_text=f.get("last_text", "A first note from you about what this project is for"),
                         url=f.get("url")))
 
