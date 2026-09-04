@@ -414,13 +414,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.16</span>
+    <span class="pn-ver">v6.17</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.16</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.17</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -914,7 +914,9 @@ var RAIL = (function(){
       sb.from('meals').select('id,preset_id,eaten_at,source,slot').eq('day',d),
       sb.from('social_slots').select('*').eq('week_start',monday(d)),
       sb.from('social_plans').select('*').gte('day',monday(d)).lte('day',dadd(monday(d),13)),
-      sb.from('v_social_quiet').select('person,circle,days_since').limit(24)
+      sb.from('v_social_quiet').select('person,circle,days_since').limit(24),
+      sb.from('connections').select('id,person,kind,happened_on,superseded')
+        .gte('happened_on',monday(d)).lte('happened_on',dadd(monday(d),13))
     ]);
     (res[0].data||[]).forEach(function(r){ if(r.tracker) R.rows[r.tracker]=r; });
     R.cups=(res[1].data||[]).map(function(r){return r.strength;});
@@ -941,9 +943,39 @@ var RAIL = (function(){
     R.soc={}; (res[8].data||[]).forEach(function(r){ R.soc[r.kind]=r; });
     R.plans=res[9].data||[];
     R.quiet=res[10].data||[];
+    /* Sep 4, 2026: anything already written in the connections book counts here too.
+       The squares used to light only for things booked through this counter, so a
+       call logged by hand, or one that came in from anywhere else, left the week
+       looking empty when it was not. A logged connection joins the grid as a done
+       item. A booking on the same day with the same person wins, so a call that was
+       booked here and then logged again is still only one square. */
+    var socSeen={};
+    R.plans.forEach(function(p){ socSeen[(p.day||'')+'|'+String(p.person||'').toLowerCase()]=1; });
+    ((res[11]||{}).data||[]).forEach(function(c){
+      if(c.superseded) return;
+      var k=(c.happened_on||'')+'|'+String(c.person||'').toLowerCase();
+      if(socSeen[k]) return;
+      socSeen[k]=1;
+      R.plans.push({id:'log:'+c.id, day:c.happened_on, person:c.person,
+        kind:(c.kind==='call'?'call':(c.kind||'other')), note:null,
+        source:'connections', done:true, logged:true});
+    });
     var pb=row('Photo Booth'); R.photo=!!(pb&&pb.done&&pb.for_date===d);
     R.ready=true;
     draw();
+    socLoadSync();
+  }
+
+  /* A connection logged somewhere else should still tick Social for the week.
+     This only ever ticks ON. It must never untick on a page load, or opening the
+     page on a quiet Monday would take back a tick Scott made by hand. */
+  async function socLoadSync(){
+    var a=wkStart(), b=dadd(a,6);
+    var n=R.plans.filter(function(p){return p.done&&p.day>=a&&p.day<=b;}).length;
+    var r=row('Social');
+    if(!n||!r) return;
+    if(r.done && String(r.value||'')===String(n)) return;
+    await tick('Social',true,{mins:30,count:n,label:'connections'});
   }
 
   /* ---------- the one place a tick reaches the rest of the system ---------- */
