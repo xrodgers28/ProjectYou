@@ -1,4 +1,4 @@
-/* Photo Booth strip v1.3 — the week of morning photos, as one slim line that opens.
+/* Photo Booth strip v1.4 — the week of morning photos, as one slim line that opens.
    v1.1: tapping an empty square no longer opens a bare file box. It opens a sheet of the
    pictures already read off the Mac's Photos app (public.recent_photos, refreshed hourly),
    newest first, with that day's shots at the top. Tap one and it is filed. The file box is
@@ -130,6 +130,7 @@
     ".pbx-fchev{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#7b8794;width:11px;flex:none;text-align:center}",
     ".pbx-flab{font-size:11.5px;color:#68737f}",
     ".pbx-fmeta{margin-left:auto;font-size:10px;color:#8b95a1;white-space:nowrap;font-variant-numeric:tabular-nums}",
+    "@media (max-width:430px){.pbx-fold{flex-wrap:wrap}.pbx-fmeta{margin-left:19px;width:100%}}",
     ".pbx-band{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2e6ea;border-left:3px solid #4fa08a;border-radius:0 6px 6px 0;padding:9px 11px;margin-top:9px}",
     ".pbx-band .pbx-c{width:54px;max-width:54px;flex:none}",
     ".pbx-band .bt{flex:1;min-width:0}",
@@ -256,7 +257,7 @@
 
     /* the roll-away line. Folded it still reports where both rows stand, so nothing
        is actually lost by hiding them. */
-    var fmeta = SHORT.wiwut + " " + chip("wiwut").txt + " &middot; " + SHORT.street + " " + chip("street").txt;
+    var fmeta = "WIWUT " + chip("wiwut").txt + " &middot; Street " + chip("street").txt;
     g += '<button class="pbx-fold" type="button">' +
       '<span class="pbx-fchev">' + (folded ? "+" : "&ndash;") + "</span>" +
       '<span class="pbx-flab">' + (folded ? "Show" : "Hide") + " What I woke up to and Street portrait</span>" +
@@ -305,7 +306,7 @@
       '<span class="pbx-sp"></span>' +
       '<span class="pbx-hint">' + (open ? "tap to close" : "tap to open") + "</span></button>" +
       '<div class="pbx-shade"><div class="pbx-in">' + g + band +
-      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.3</span></div>' +
+      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.4</span></div>' +
       "</div></div></div>"
     );
     return node;
