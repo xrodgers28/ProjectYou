@@ -264,6 +264,30 @@
         color:#fff;font-size:13.5px;font-weight:800;cursor:pointer;font-family:inherit}
   .gate .err{color:var(--bad);font-size:12px;margin-top:6px;min-height:15px}
   .hidden{display:none!important}
+  .wl{padding:0 16px 12px}
+  .wlr{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;min-width:0;max-width:100%;
+       scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+  .wlt{flex:0 0 236px;scroll-snap-align:start;background:var(--sunk);border:1px solid var(--key);
+       border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+  .wlimg{display:block;position:relative;background:#11161f;text-decoration:none}
+  .wlimg img{display:block;width:100%;height:132px;object-fit:cover}
+  .wlno{width:100%;height:132px}
+  .wldur{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.82);color:#fff;
+         font-size:10.5px;font-weight:700;letter-spacing:.4px;padding:2px 6px;border-radius:5px}
+  .wlb{padding:9px 11px 11px;display:flex;flex-direction:column;gap:5px;flex:1}
+  .wlti{font-size:13px;font-weight:700;line-height:1.32;color:var(--ink);text-decoration:none}
+  .wlti:hover{color:var(--accent)}
+  .wlch{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+  .wlact{margin-top:auto;padding-top:4px}
+  .wlbtn{font-family:inherit;font-size:10.5px;font-weight:700;letter-spacing:.4px;
+         text-transform:uppercase;border:1px solid var(--key);background:var(--card);
+         color:var(--ink);border-radius:999px;padding:5px 10px;cursor:pointer}
+  .wlbtn:hover{border-color:var(--accent);color:var(--accent)}
+  .wlempty{font-size:13px;color:var(--muted);padding:2px 0 6px}
+  @media (max-width:640px){
+    .wlt{flex:0 0 82%}
+    .wlr{scroll-snap-type:x mandatory}
+  }
   .stamp{margin-top:16px;font-size:10.5px;letter-spacing:.6px;color:var(--muted);text-align:center}
   .err{background:var(--badbg);border:1px solid var(--bad);color:var(--bad);
        border-radius:12px;padding:12px 14px;margin-top:14px;font-size:13px}
@@ -283,7 +307,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v1.17</span></h1>
+      <h1>The Wall <span class="ver">v1.18</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="hint">Tap any picture to see it big, then swipe or use the arrow keys.</div>
     </div>
@@ -293,6 +317,12 @@
       <a class="tool" href="wall-saved.html" id="savedlink">Saved</a>
       <a class="tool" href="wall-humor.html">Six more to pick from</a>
     </div>
+  </div>
+
+  <div class="card" id="wlcard" hidden>
+    <div class="sec"><h2>Watchlist</h2><span class="n" id="wln"></span></div>
+    <div class="wl"><div class="wlr" id="wlr"></div></div>
+    <div class="note">Things you sent yourself to watch when you have the time. Say &ldquo;add this to my watchlist&rdquo; with a link in any chat and it turns up here the next time you load the page. The badge on the picture is how long it runs, so you can pick one that fits the gap you have. Tap Watched and it moves out of the way.</div>
   </div>
 
   <div id="stage"></div>
@@ -343,7 +373,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.16</div>
+  <div class="stamp" id="stamp">v1.18</div>
 </div>
 
 <script>
@@ -881,6 +911,54 @@ function bootHabit(){
   }).catch(function(){});
 }
 
+function wlDur(s){
+  s=+s||0; if(!s) return "";
+  var m=Math.floor(s/60), ss=s%60;
+  if(m>=60) return Math.floor(m/60)+"h "+(m%60)+"m";
+  return m+":"+(ss<10?"0":"")+ss;
+}
+function wlTile(r){
+  var d=wlDur(r.seconds);
+  return '<div class="wlt">'+
+    '<a class="wlimg" href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer">'+
+      (r.thumb?'<img src="'+esc(r.thumb)+'" alt="">':'<div class="wlno"></div>')+
+      (d?'<span class="wldur">'+esc(d)+'</span>':'')+
+    '</a>'+
+    '<div class="wlb">'+
+      '<a class="wlti" href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer">'+esc(r.title||r.url)+'</a>'+
+      '<div class="wlch">'+esc(r.channel||r.source||"")+'</div>'+
+      '<div class="wlact"><button type="button" class="wlbtn" data-wldone="'+esc(r.id)+'">Watched</button></div>'+
+    '</div></div>';
+}
+function loadWatch(){
+  var card=document.getElementById("wlcard");
+  var row=document.getElementById("wlr");
+  var n=document.getElementById("wln");
+  if(!card||!row) return;
+  api("watchlist?select=id,url,title,channel,source,thumb,seconds&watched=is.false&order=position.asc,created_at.asc&limit=60")
+    .then(function(rows){
+      rows=rows||[];
+      n.textContent = rows.length ? (rows.length===1 ? "1 to watch" : rows.length+" to watch") : "nothing queued";
+      row.innerHTML = rows.length ? rows.map(wlTile).join("")
+        : '<div class="wlempty">Nothing queued. Send yourself a link in any chat and say &ldquo;add this to my watchlist&rdquo;.</div>';
+      card.hidden=false;
+    })
+    .catch(function(){ card.hidden=true; });
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest ? e.target.closest("[data-wldone]") : null;
+  if(!b) return;
+  e.preventDefault();
+  var id=b.getAttribute("data-wldone");
+  var day=(window.PY && PY.today) ? PY.today() : null;
+  b.disabled=true; b.textContent="Filed";
+  api("watchlist?id=eq."+encodeURIComponent(id),
+      {method:"PATCH",prefer:"return=minimal",
+       body:JSON.stringify(day?{watched:true,watched_on:day}:{watched:true})})
+    .then(function(){ loadWatch(); })
+    .catch(function(){ b.disabled=false; b.textContent="Watched"; });
+});
+
 function boot(){
   api("v_wall_today?select=*&order=day.desc,slot.asc&limit=200").then(function(rows){
     if(!rows || !rows.length) throw new Error("nothing has been dealt yet");
@@ -895,7 +973,7 @@ function boot(){
       days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+
       " pictures from "+nSrc+" sources";
     document.getElementById("stamp").textContent=
-      "v1.16, dealt "+DAY+", the order is shuffled fresh every day, nothing here is about you";
+      "v1.18, dealt "+DAY+", the order is shuffled fresh every day, nothing here is about you";
     if(DAY!==today()){
       document.getElementById("err").innerHTML=
         '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
@@ -910,6 +988,7 @@ function boot(){
   });
 }
 boot();
+loadWatch();
 </script>
 
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
