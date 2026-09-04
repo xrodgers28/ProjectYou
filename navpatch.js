@@ -931,3 +931,31 @@ window.__pnNavCss=function(){
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot);
   else boot();
 }catch(e){if(window.console)console.log('minute bar error',e);}})();
+
+
+/* ===== Needs You loader =====================================================
+   KEEP THIS. It loads needs-you.js, the little pop-up that asks Scott the one
+   question a module is stuck on. It used to live at the end of nav-config.js
+   and has now been deleted TWICE by other sessions republishing that file from
+   an older copy, each time silently switching the pop-up off on every page.
+   It lives here instead because navpatch.js is injected into every page by the
+   same publish step and is edited far less often. Moved Sep 3 2026, after the
+   nightly nav check found two of his questions stranded behind the missing
+   loader. Fails silent: if the script cannot load, nothing is said.
+   ========================================================================== */
+(function(){try{
+  if(window.__needsYouLoaded) return;
+  window.__needsYouLoaded = true;
+  if(document.querySelector('script[src*="needs-you.js"]')) return;
+  var add=function(){
+    try{
+      var s=document.createElement('script');
+      s.src='needs-you.js';
+      s.async=true;
+      s.onerror=function(){};
+      (document.body||document.head||document.documentElement).appendChild(s);
+    }catch(e){}
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',add);
+  else add();
+}catch(e){}})();
