@@ -23,8 +23,17 @@ is brand new. If there is no picture, the card says there is no picture. The
 board would rather show a gap than something that is not true.
 """
 
-import base64, io, json, os, subprocess, sys, time
-from datetime import date, datetime
+import base64, io, json, os, subprocess, sys
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+# Scott's rules: every time and date on this project is Eastern, named as
+# Eastern, and never the clock of whatever machine happens to be running.
+ET = ZoneInfo("America/New_York")
+def today_et():
+    return datetime.now(ET).date()
+def day_of(ts):
+    return datetime.fromtimestamp(ts, ET).date()
 
 ROOT = os.path.expanduser("~/mnt/CoWork")
 OUT  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "projects-data.json")
@@ -36,8 +45,9 @@ ANON = ("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im
 PUTKEY = "py-put-6f2a9c41d83b"
 
 # ---- the only place to add a project -------------------------------------
-# hero_pin: a path under the project folder to use as the picture. Leave it
-# None and the newest picture in the folder is used instead.
+# The picture, in order: hero_pin (a file inside the project folder), then
+# hero_url (a picture already on the site), then the newest picture in the
+# folder, then nothing at all. Set neither and the card looks after itself.
 PROJECTS = [
     dict(slug="project-you", name="Project YOU", accent="#3f6f8f",
          folder="Project YOU",
@@ -71,7 +81,7 @@ def walk(folder):
             except OSError:
                 continue
             n += 1
-            d = date.fromtimestamp(m)
+            d = day_of(m)
             if newest is None or d > newest:
                 newest = d
             if f.lower().endswith(PIC):
@@ -115,7 +125,7 @@ def state_for(newest, has_folder):
     """How the card describes itself. One rule, so two projects can be compared."""
     if not has_folder or newest is None:
         return "Brand new", "note", None
-    days = (date.today() - newest).days
+    days = (today_et() - newest).days
     if days <= 0:   return "Moving", "good", days
     if days < 7:    return "Warm",   "good", days
     if days < 30:   return "Quiet",  "warn", days
@@ -161,14 +171,14 @@ def main():
             if p.get("hero_pin") and os.path.isfile(os.path.join(folder, p["hero_pin"])):
                 src = p["hero_pin"]
                 img = hero(os.path.join(folder, p["hero_pin"]), p["hero_fit"])
-            elif pics:
-                src = os.path.relpath(pics[0], folder)
-                img = hero(pics[0], p["hero_fit"])
             elif p.get("hero_url"):
                 data = fetch(p["hero_url"])
                 if data:
                     src = p["hero_url"].rsplit("/", 1)[-1]
                     img = hero(data, p["hero_fit"])
+            if img is None and pics:
+                src = os.path.relpath(pics[0], folder)
+                img = hero(pics[0], p["hero_fit"])
         except Exception as e:
             sys.stderr.write("picture skipped for %s: %s\n" % (p["slug"], e))
             img, src = None, None
@@ -187,7 +197,7 @@ def main():
                         last_text=f.get("last_text", "A first note from you about what this project is for"),
                         url=f.get("url")))
 
-    now = datetime.now().astimezone()
+    now = datetime.now(ET)
     doc = {"version": "1.0",
            "checked": now.isoformat(timespec="seconds"),
            "checked_label": now.strftime("%b %-d, %Y at %-I:%M%p ET").replace("AM", "am").replace("PM", "pm"),
