@@ -1,4 +1,4 @@
-/* Photo Booth strip v1.2 — the week of morning photos, as one slim line that opens.
+/* Photo Booth strip v1.3 — the week of morning photos, as one slim line that opens.
    v1.1: tapping an empty square no longer opens a bare file box. It opens a sheet of the
    pictures already read off the Mac's Photos app (public.recent_photos, refreshed hourly),
    newest first, with that day's shots at the top. Tap one and it is filed. The file box is
@@ -20,6 +20,11 @@
   var SUB = { wiwut: "WIWUT", bell: "", platform: "Mon to Fri", street: "any day", safari: "1 a work week" };
   var DOW = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
   var STORE_KEY = "pb.open";
+  /* Scott, Sep 3 2026: "can you window shade up street portrait and WIWUT - if i take
+     those photos I'll window shade down". So these two rows are rolled away by default
+     and their counts move onto the roll-away line, where he can still see them. */
+  var FOLD_KEY = "pb.fold";
+  var FOLDABLE = ["wiwut", "street"];
 
   function todayNY() {
     var p = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -118,6 +123,13 @@
     ".pbx-c.na{background:#e6eaee;border:1px solid #e6eaee}",
     ".pbx-c.na:after{content:'';position:absolute;inset:0;border-radius:2px;background:repeating-linear-gradient(135deg,transparent 0 3px,rgba(120,132,146,.42) 3px 4px)}",
     ".pbx-c.busy{opacity:.55}",
+    ".pbx-grid.pbx-folded .pbx-off{display:none}",
+    ".pbx-fold{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;border-top:1px dashed #e2e6ea;font:inherit;color:inherit;padding:8px 2px 2px;margin-top:4px;cursor:pointer;text-align:left}",
+    ".pbx-fold:hover .pbx-flab{color:#3f6f8f}",
+    ".pbx-fold:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px;border-radius:4px}",
+    ".pbx-fchev{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#7b8794;width:11px;flex:none;text-align:center}",
+    ".pbx-flab{font-size:11.5px;color:#68737f}",
+    ".pbx-fmeta{margin-left:auto;font-size:10px;color:#8b95a1;white-space:nowrap;font-variant-numeric:tabular-nums}",
     ".pbx-band{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #e2e6ea;border-left:3px solid #4fa08a;border-radius:0 6px 6px 0;padding:9px 11px;margin-top:9px}",
     ".pbx-band .pbx-c{width:54px;max-width:54px;flex:none}",
     ".pbx-band .bt{flex:1;min-width:0}",
@@ -220,21 +232,35 @@
       return { txt: got + " of " + due, full: due > 0 && got >= due };
     }
 
+    var folded = true;
+    try { if (localStorage.getItem(FOLD_KEY) === "0") folded = false; } catch (e) { }
+
     var gridSeries = ["wiwut", "bell", "platform", "street"];
-    var g = '<div class="pbx-grid"><div class="pbx-s lab"></div>';
+    var g = '<div class="pbx-grid' + (folded ? " pbx-folded" : "") + '"><div class="pbx-s lab"></div>';
     byS.wiwut.forEach(function (r, i) {
       g += '<div class="pbx-s' + (r.day === today ? " now" : "") + '"><span class="pbx-h"><b>' + DOW[i] + '</b><i>' + fmtDay(r.day) + '</i></span></div>';
     });
     g += '<div class="pbx-s"></div>';
     gridSeries.forEach(function (s) {
-      g += '<div class="pbx-s lab"><span>' + SHORT[s] + (SUB[s] ? "<br>" + SUB[s] : "") + "</span></div>";
+      /* the two he rolls away carry the marker on every cell of their row; the grid's
+         own class decides whether the marker bites, so the toggle is one class flip. */
+      var off = FOLDABLE.indexOf(s) >= 0 ? " pbx-off" : "";
+      g += '<div class="pbx-s lab' + off + '"><span>' + SHORT[s] + (SUB[s] ? "<br>" + SUB[s] : "") + "</span></div>";
       byS[s].forEach(function (r) {
-        g += '<div class="pbx-s' + (r.day === today ? " now" : "") + '">' + cellHTML(s, r) + "</div>";
+        g += '<div class="pbx-s' + (r.day === today ? " now" : "") + off + '">' + cellHTML(s, r) + "</div>";
       });
       var c = chip(s);
-      g += '<div class="pbx-s"><span class="pbx-chip' + (c.full ? " full" : "") + '">' + c.txt + "</span></div>";
+      g += '<div class="pbx-s' + off + '"><span class="pbx-chip' + (c.full ? " full" : "") + '">' + c.txt + "</span></div>";
     });
     g += "</div>";
+
+    /* the roll-away line. Folded it still reports where both rows stand, so nothing
+       is actually lost by hiding them. */
+    var fmeta = SHORT.wiwut + " " + chip("wiwut").txt + " &middot; " + SHORT.street + " " + chip("street").txt;
+    g += '<button class="pbx-fold" type="button">' +
+      '<span class="pbx-fchev">' + (folded ? "+" : "&ndash;") + "</span>" +
+      '<span class="pbx-flab">' + (folded ? "Show" : "Hide") + " What I woke up to and Street portrait</span>" +
+      '<span class="pbx-fmeta">' + fmeta + "</span></button>";
 
     /* the safari band: weekly, so it never shows seven boxes */
     var saf = byS.safari.filter(function (r) { return r.path; })[0];
@@ -279,7 +305,7 @@
       '<span class="pbx-sp"></span>' +
       '<span class="pbx-hint">' + (open ? "tap to close" : "tap to open") + "</span></button>" +
       '<div class="pbx-shade"><div class="pbx-in">' + g + band +
-      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.2</span></div>' +
+      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.3</span></div>' +
       "</div></div></div>"
     );
     return node;
@@ -450,6 +476,14 @@
       var node = build(rows);
       host.innerHTML = "";
       host.appendChild(node);
+
+      var fold = node.querySelector(".pbx-fold");
+      if (fold) fold.addEventListener("click", function () {
+        var off = node.querySelector(".pbx-grid").classList.toggle("pbx-folded");
+        try { localStorage.setItem(FOLD_KEY, off ? "1" : "0"); } catch (e) { }
+        fold.querySelector(".pbx-fchev").innerHTML = off ? "+" : "&ndash;";
+        fold.querySelector(".pbx-flab").textContent = (off ? "Show" : "Hide") + " What I woke up to and Street portrait";
+      });
 
       var line = node.querySelector(".pbx-line");
       line.addEventListener("click", function () {
