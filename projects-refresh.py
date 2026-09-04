@@ -192,11 +192,13 @@ def main():
         # The other two are the same for everybody, which is the whole point.
         figures = f.get("figures")
         if not figures:
-            first = ({"n": str(f["pages"]), "l": "Pages live"} if f.get("pages") is not None
-                     else {"n": str(n), "l": "Files"})
+            def fig(count, one, many):
+                return {"n": str(count), "l": one if count == 1 else many}
+            first = (fig(f["pages"], "Page live", "Pages live") if f.get("pages") is not None
+                     else fig(n, "File", "Files"))
             figures = [first,
-                       {"n": str(f.get("open_jobs", 0)), "l": "Open jobs"},
-                       {"n": str(f.get("sessions", 0)),  "l": "Sessions"}]
+                       fig(f.get("open_jobs", 0), "Open job", "Open jobs"),
+                       fig(f.get("sessions", 0),  "Session",  "Sessions")]
 
         out.append(dict(slug=p["slug"], name=p["name"], accent=p["accent"],
                         state=state, tone=tone, status=status,
