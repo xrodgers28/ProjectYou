@@ -349,6 +349,14 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 .chip.peri.on{background:var(--peri);border-color:var(--peri);color:#14110f}
 .chip:focus-visible{outline:2px solid var(--peri);outline-offset:2px}
 
+.crscale{display:flex;justify-content:space-between;margin-top:2px;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.crnum{font-family:"Fraunces",Georgia,serif;font-size:34px;font-weight:600;text-align:center;line-height:1.1;margin:2px 0 0}
+.crnum span{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:400}
+.chip.star.on{background:var(--peri);border-color:var(--peri);color:#14110f;font-weight:600}
+.crleague{display:grid;gap:5px;margin-top:6px}
+.crrow{display:flex;justify-content:space-between;gap:10px;font-size:14.5px;color:var(--ink-2);border-bottom:1px solid var(--line);padding-bottom:5px}
+.crrow b{color:var(--ink);font-weight:600}
+.crrow em{font-style:normal;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;color:var(--ink-3)}
 .spark{display:flex;align-items:flex-end;gap:3px;height:44px}
 .spark i{flex:1;background:var(--ember);border-radius:2px 2px 0 0;min-height:2px;opacity:.85}
 .spark i.b{background:var(--peri)}
@@ -447,7 +455,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v1.7</span>
+    <span id="ver" class="ver">v1.8</span>
   </div>
 </div>
 
@@ -547,6 +555,7 @@ var QFALL=[
 var WITH=['Åsa','Carson','Max','Zingo','On my own','Family','Friends','Colleagues','Someone new'];
 var ENERGY=['A person','Being outside','Making something','Moving','Finishing something','Quiet','Music','A good meal','A win at work','Solving something','Nothing much did'];
 var WHERE=['Home','Out','Work','Travelling','Outside'];
+var CRE_WORD=['Flat','Ticking over','Some sparks','Really flowing','On fire'];
 
 /* The last look round the room, on the end of the done screen.
    Add a line and it shows up tonight. `id` is what gets remembered, so give
@@ -606,6 +615,7 @@ async function loadCloud(){
     S.nights=S.checks.length;
     S.told=(S.checks.filter(function(x){return x.a&&x.a.__told;})).length;
     cloud=true;
+    await loadProjects();
     return true;
   }catch(e){ return false; }
 }
@@ -636,6 +646,8 @@ function minutesTonight(){
 }
 
 /* ---------- how the day actually went, off the same tally the wheel uses ---------- */
+var PROJ=[];      /* his own project list, tnt_projects */
+var LEAGUE=[];    /* which projects have felt most creative, v_creative_projects */
 var DAYT=null;
 async function loadDay(){
   if(!cloud) return null;
@@ -837,6 +849,48 @@ async function saveQuestions(){
   }catch(e){}
 }
 
+function addProject(){
+  var i=document.getElementById('prown'); if(!i) return;
+  var nm=(i.value||'').trim().replace(/\s+/g,' ').slice(0,60);
+  if(nm.length<2) return;
+  if(PROJ.some(function(x){return x.toLowerCase()===nm.toLowerCase();})){ gateSay('That one is already on the list.'); i.value=''; return; }
+  PROJ.push(nm);
+  if(N.stars.length<2) N.stars.push(nm);
+  i.value='';
+  if(cloud){ try{ sb.from('tnt_projects').insert({name:nm, position:PROJ.length}); }catch(e){} }
+  render();
+}
+
+async function loadProjects(){
+  if(!cloud) return;
+  try{
+    var r=await sb.from('tnt_projects').select('name,position,active').eq('active',true).order('position',{ascending:true});
+    if(!r.error) PROJ=(r.data||[]).map(function(x){return x.name;});
+    var l=await sb.from('v_creative_projects').select('project,nights_starred,avg_score_when_starred').order('nights_starred',{ascending:false});
+    if(!l.error) LEAGUE=l.data||[];
+  }catch(e){}
+}
+
+/* Tonight's creativity: the score on tnt_creative, the stars as their own rows
+   so the league table is a plain count, not a parsed list. */
+async function saveCreative(){
+  if(!cloud) return;
+  if(N.skipped.indexOf('creative')>-1 && !N.crePlaced && !N.stars.length) return;
+  try{
+    var d=DAY();
+    await sb.from('tnt_creative').upsert({
+      for_date:d, score:(N.crePlaced?N.cre:null), note:(N.creNote||null),
+      updated_at:new Date().toISOString()
+    },{onConflict:'for_date'});
+    await sb.from('tnt_creative_stars').delete().eq('for_date',d);
+    if(N.stars.length){
+      await sb.from('tnt_creative_stars').insert(N.stars.map(function(nm,i){
+        return {for_date:d, project:nm, position:i+1};
+      }));
+    }
+  }catch(e){}
+}
+
 async function saveCheckin(){
   if(!cloud) return;
   try{
@@ -914,7 +968,8 @@ function newNight(){
     words:[], shown:[], deal:null, narrow:false,
     qs:[], a:{}, ownQ:'', ownV:null,
     withw:[], wherew:null, energy:[], energyNote:'', mins:'',
-    items:[], cat:null, text:'', extra:null, etext:'', skipped:[]
+    items:[], cat:null, text:'', extra:null, etext:'', skipped:[],
+    cre:3, crePlaced:false, stars:[], creNote:''
   };
 }
 /* the sections he left out tonight - a skipped dial is saved as nothing, not as a 50 */
@@ -935,23 +990,24 @@ function seenBefore(t){
 }
 
 /* progress pips: 1 field + 1 words + 4 questions + 1 tags + 3 things + 1 extra = 11 */
-var STEPS=['field','words','tags','energy','t1','t2','t3','extra','eight'];
+var STEPS=['field','words','tags','energy','creative','t1','t2','t3','extra','eight'];
 function stepIndex(){
   if(view==='field')return 0;
   if(view==='words')return 1;
   if(view==='tags')return 2;
   if(view==='energy')return 3;
-  if(view==='pick'||view==='write'||view==='savor')return 4+N.items.length;
-  if(view==='extra')return 7;
-  if(view==='eight')return 8;
-  if(view==='done')return 9;
+  if(view==='creative')return 4;
+  if(view==='pick'||view==='write'||view==='savor')return 5+N.items.length;
+  if(view==='extra')return 8;
+  if(view==='eight')return 9;
+  if(view==='done')return 10;
   return -1;
 }
 function paintProg(){
   var el=document.getElementById('prog'); if(!el) return;
   if(view==='start'||view==='done'){ el.innerHTML=''; return; }
   var i=stepIndex(), h='';
-  for(var k=0;k<9;k++){ h+='<span class="sd'+(k<i?' on':(k===i?' now':''))+'"></span>'; }
+  for(var k=0;k<10;k++){ h+='<span class="sd'+(k<i?' on':(k===i?' now':''))+'"></span>'; }
   el.innerHTML=h;
 }
 function whenLabel(){
@@ -1112,9 +1168,35 @@ function render(){
     ENERGY.forEach(function(w,i){ h+='<button class="chip'+(N.energy.indexOf(i)>-1?' on':'')+'" data-en="'+i+'">'+w+'</button>'; });
     h+='</div>';
     h+='<textarea class="box" id="entx" style="min-height:70px" placeholder="Or say it in your own words. Optional.">'+esc(N.energyNote)+'</textarea>';
-    h+='<div class="foot"><button class="btn" data-go="things">Now the good bits</button>';
+    h+='<div class="foot"><button class="btn" data-go="creative">Next</button>';
     h+='<p class="gateline" id="gate1">'+((N.energy.length||N.energyNote.trim())?'Ready.':'Tap one, or write a line — or skip this one.')+'</p>';
     h+='<button class="skiplink" data-go="skipenergy">Skip this one tonight</button></div>';
+  }
+
+  /* ---------- 5. how creative did today feel ---------- */
+  else if(view==='creative'){
+    stage.className='stage top';
+    h+='<p class="kick">Fifth</p>';
+    h+='<h2>How creative did today feel?</h2>';
+    h+='<p class="sub">Not what you finished. How creative it <b>felt</b> from the inside.</p>';
+    h+='<div class="dial">';
+    h+='<input type="range" id="cdial" min="1" max="5" step="1" value="'+N.cre+'" aria-label="How creative did today feel">';
+    h+='<div class="crscale"><span>1 Flat</span><span>2</span><span>3</span><span>4</span><span>5 On fire</span></div>';
+    h+='</div>';
+    h+='<p class="crnum" id="cnum">'+(N.crePlaced?'<b style="color:var(--ember)">'+N.cre+'</b>':'<b style="color:var(--ink-3)">&mdash;</b>')+'<span>'+(N.crePlaced?CRE_WORD[N.cre-1]:'Slide it')+'</span></p>';
+    if(PROJ.length){
+      h+='<p class="sub" style="margin-top:6px">Which felt most creative? Star up to two.</p>';
+      h+='<div class="chiprow">';
+      PROJ.forEach(function(nm){ h+='<button class="chip star'+(N.stars.indexOf(nm)>-1?' on':'')+'" data-pr="'+esc(nm)+'">'+esc(nm)+'</button>'; });
+      h+='</div>';
+    }else{
+      h+='<p class="tiny" style="margin-top:6px">No projects on your list yet. Add the first one below.</p>';
+    }
+    h+='<div class="ownrow" style="margin-top:8px"><input class="own" id="prown" placeholder="Add a project to the list" autocomplete="off">';
+    h+='<button class="chip" data-praddb>Add</button></div>';
+    h+='<div class="foot"><button class="btn" data-go="things">Now the good bits</button>';
+    h+='<p class="gateline" id="gate1">'+(N.crePlaced?'Ready.':'Slide it when you are ready \u2014 or skip this one.')+'</p>';
+    h+='<button class="skiplink" data-go="skipcreative">Skip this one tonight</button></div>';
   }
 
   /* ---------- the three things ---------- */
@@ -1232,6 +1314,7 @@ function render(){
     if(!N.items.length) h+='<p class="tiny">No three things tonight. The day still counts.</p>';
     if(N.words.length) h+='<div class="item"><span class="c">Tonight you were</span><span class="t">'+N.words.join(' &middot; ')+'</span></div>';
     if(energyText()) h+='<div class="item"><span class="c">What put something back</span><span class="t">'+esc(energyText())+'</span></div>';
+    if(N.crePlaced) h+='<div class="item"><span class="c">How creative today felt</span><span class="t">'+N.cre+' of 5 \u2014 '+CRE_WORD[N.cre-1]+(N.stars.length?' \u00b7 '+esc(N.stars.join(' &amp; ')):'')+'</span></div>';
     if(N.ownQ.trim()&&N.ownV!==null) h+='<div class="item"><span class="c">Your own question</span><span class="t">'+esc(N.ownQ.trim())+' &mdash; '+(N.ownV+1)+' of 5</span></div>';
     h+='<div class="tally">';
     h+='<div><b>'+S.hist.length+'</b><span>things noticed</span></div>';
@@ -1244,6 +1327,16 @@ function render(){
       if(w) h+='<p class="tiny">Most caught word so far: <b style="color:var(--ink-2)">'+w+'</b>.</p>';
     }else{
       h+='<p class="tiny">A few more nights and the shapes start showing up here.</p>';
+    }
+
+    if(LEAGUE.length){
+      h+='<p class="sect">Where the spark has been</p>';
+      h+='<div class="crleague">';
+      LEAGUE.slice(0,5).forEach(function(r){
+        h+='<div class="crrow"><b>'+esc(r.project)+'</b><em>'+r.nights_starred+' night'+(r.nights_starred===1?'':'s')+
+           (r.avg_score_when_starred?' \u00b7 avg '+r.avg_score_when_starred:'')+'</em></div>';
+      });
+      h+='</div>';
     }
 
     h+='<p class="sect">Where the day went</p>';
@@ -1518,6 +1611,27 @@ function bind(){
     N.energyNote=et.value;
     paintEnergyGate();
   });
+  var cd=document.getElementById('cdial');
+  if(cd) cd.addEventListener('input',function(){
+    N.cre=parseInt(cd.value,10); N.crePlaced=true;
+    var o=document.getElementById('cnum');
+    if(o) o.innerHTML='<b style="color:var(--ember)">'+N.cre+'</b><span>'+CRE_WORD[N.cre-1]+'</span>';
+    var g=document.getElementById('gate1');
+    if(g){ g.textContent='Ready.'; g.classList.remove('hot'); }
+  });
+  stage.querySelectorAll('[data-pr]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var nm=b.getAttribute('data-pr'), at=N.stars.indexOf(nm);
+      if(at>-1){ N.stars.splice(at,1); b.classList.remove('on'); return; }
+      if(N.stars.length>=2){ gateSay('Two is the most \u2014 unstar one first.'); return; }
+      N.stars.push(nm); b.classList.add('on');
+    });
+  });
+  var pab=stage.querySelector('[data-praddb]');
+  if(pab) pab.addEventListener('click',addProject);
+  var pai=document.getElementById('prown');
+  if(pai) pai.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); addProject(); } });
+
   var mi=document.getElementById('mins');
   if(mi) mi.addEventListener('input',function(){ N.mins=mi.value.replace(/[^0-9]/g,'').slice(0,3); mi.value=N.mins; });
 
@@ -1580,14 +1694,15 @@ function bind(){
 
 function act(a){
   if(a==='begin'){ N=newNight(); view='field'; render(); return; }
-  if(a==='short'){ N=newNight(); N.skipped=['field','words','tags','energy']; view='pick'; render(); return; }
+  if(a==='short'){ N=newNight(); N.skipped=['field','words','tags','energy','creative']; view='pick'; render(); return; }
   if(a==='field'){ view='field'; render(); return; }
 
   /* skips - the section is simply left out of tonight */
   if(a==='skipfield'){ mark('field'); N.band=null; N.placed=false; view='words'; render(); return; }
   if(a==='skipwords'){ mark('words'); N.words=[]; view='tags'; render(); return; }
   if(a==='skiptags'){  mark('tags'); N.withw=[]; N.wherew=null; view='energy'; render(); return; }
-  if(a==='skipenergy'){ mark('energy'); N.energy=[]; N.energyNote=''; view='pick'; render(); return; }
+  if(a==='skipenergy'){ mark('energy'); N.energy=[]; N.energyNote=''; view='creative'; render(); return; }
+  if(a==='skipcreative'){ mark('creative'); N.crePlaced=false; N.stars=[]; view='pick'; render(); return; }
   if(a==='skipthings'){
     mark('things');
     N.extra=EXTRAS[S.nights%EXTRAS.length]; N.etext=''; view='extra'; render(); return;
@@ -1602,8 +1717,12 @@ function act(a){
     view='tags'; render(); return;
   }
   if(a==='energy'){ view='energy'; render(); return; }
-  if(a==='things'){
+  if(a==='creative'){
     if(!(N.energy.length||N.energyNote.trim())){ gateSay('Tap one or write a line \u2014 or skip this one.'); return; }
+    view='creative'; render(); return;
+  }
+  if(a==='things'){
+    if(!N.crePlaced){ gateSay('Slide it first \u2014 or skip this one.'); return; }
     view='pick'; render(); return;
   }
   if(a==='enough'){
@@ -1641,6 +1760,7 @@ function act(a){
     S.nights++; save(); burst(46); view='done'; render();
     saveQuestions();
     loadBlocks().then(function(){ return loadDay(); }).then(function(){ drawDay(); saveCheckin(); });
+    saveCreative().then(function(){ return loadProjects(); }).then(function(){ if(view==='done') render(); });
     loadTomorrow().then(function(){ drawTomorrow(); });
     tickHabit().then(function(ok){
       var f=document.getElementById('tickline');
