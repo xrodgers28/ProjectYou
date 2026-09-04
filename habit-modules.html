@@ -92,7 +92,7 @@
   .rback:hover{background:var(--acc);color:#fff}
   .shelf .rback{width:auto;margin:0;flex:none;padding:5px 11px;font-size:10.5px}
 
-  /* ===== THE COUNTER COLUMN (v6.11) — quick-tap inputs, left of the cards.
+  /* ===== THE COUNTER COLUMN (v6.14) — quick-tap inputs, left of the cards.
      INVERTED Sep 3: bright is what is still to do, done fades — the same way a
      ticked cue card dims. Coffee is the one exception, see the note by .rcup. ===== */
   /* ===== (v5.7 note kept)
@@ -117,10 +117,24 @@
   .rcofrow{gap:3px}
   .rplan{display:block;width:27px;height:27px}
   .rgl{display:block;width:18px;height:30px}
-  /* half a second with a small bounce at the end, his pick */
-  .rgl .wtr{transform:translateY(0);transition:transform .5s cubic-bezier(.28,1.28,.52,1)}
+  /* the pour: slower now, .95s, with a small settle at the end */
+  .rgl .wtr{transform:translateY(0);transition:transform .95s cubic-bezier(.32,1.14,.5,1)}
   .rgl.on .wtr{transform:translateY(82px)}
-  @media (prefers-reduced-motion:reduce){.rgl .wtr{transition:none}}
+  /* the sway: the surface tilts a degree or so, forever, so a glass with water
+     in it reads as liquid rather than a blue block. Pivots on the middle of the
+     surface, which is how real water in a glass moves. */
+  .rgl .wsw{transform-box:view-box;transform-origin:30px 20px;
+      animation:wsway 5.6s ease-in-out infinite}
+  @keyframes wsway{0%,100%{transform:rotate(-1.1deg)}50%{transform:rotate(1.1deg)}}
+  /* a tap slops it harder, then it settles back to the gentle sway */
+  .rgl.slosh .wsw{animation:wslosh 1.5s cubic-bezier(.33,.9,.42,1) 1}
+  .rgl.slosh .wsw{animation-fill-mode:none}
+  @keyframes wslosh{
+    0%{transform:rotate(0)} 16%{transform:rotate(-4.4deg)} 38%{transform:rotate(3deg)}
+    58%{transform:rotate(-2deg)} 76%{transform:rotate(1.2deg)} 100%{transform:rotate(-1.1deg)}}
+  @media (prefers-reduced-motion:reduce){
+    .rgl .wtr{transition:none}
+    .rgl .wsw,.rgl.slosh .wsw{animation:none}}
   .rwrow{gap:3px}
   .rplus{font-size:8px;font-weight:800;color:#4f8fc4}
   .rbadge{position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;border-radius:50%;font-size:7px;
@@ -362,7 +376,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.13</span>
+    <span class="pn-ver">v6.14</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -789,10 +803,10 @@ var RAIL = (function(){
       '</clipPath></defs>'+
       '<ellipse cx="30" cy="96.4" rx="18" ry="2.4" fill="#243447" opacity=".13"/>'+
       '<path d="M6 11 L12.6 89 Q13 94 17.6 94 L42.4 94 Q47 94 47.4 89 L54 11 Z" fill="#f2f7fa"/>'+
-      '<g clip-path="url(#c'+id+')"><g class="wtr">'+
-        '<rect x="0" y="16" width="60" height="80" fill="#4ec3ea"/>'+
-        '<rect x="0" y="16" width="60" height="3.4" fill="#8fdcf3"/>'+
-      '</g></g>'+
+      '<g clip-path="url(#c'+id+')"><g class="wtr"><g class="wsw">'+
+        '<rect x="-25" y="16" width="110" height="86" fill="#4ec3ea"/>'+
+        '<rect x="-25" y="16" width="110" height="3.4" fill="#8fdcf3"/>'+
+      '</g></g></g>'+
       '<path d="M6 11 L12.6 89 Q13 94 17.6 94 L42.4 94 Q47 94 47.4 89 L54 11" fill="none" '+
         'stroke="#9dadbb" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>'+
       '<rect x="3.4" y="6.4" width="53.2" height="7" rx="3.5" fill="#b3c0cc"/>'+
@@ -924,11 +938,19 @@ var RAIL = (function(){
     if(R.cups.length) await tick('Coffee',true,{mins:1,count:R.cups.length,label:'cups'});
     else await tick('Coffee',false);
   }
-  function paintWater(){
+  function paintWater(was){
     if(!el) return;
     var t=el.querySelector('[data-wt]'); if(!t) return;
     t.querySelectorAll('[data-w]').forEach(function(b,i){
-      var g=b.querySelector('.rgl'); if(g) g.classList.toggle('on', i<R.glasses);
+      var g=b.querySelector('.rgl'); if(!g) return;
+      var nowOn=i<R.glasses, wasOn=(was!=null)&&(i<was);
+      g.classList.toggle('on', nowOn);
+      /* only the glass that actually changed gets slopped about */
+      if(was!=null && nowOn!==wasOn){
+        g.classList.remove('slosh'); void g.offsetWidth; g.classList.add('slosh');
+        clearTimeout(g._sloshT);
+        g._sloshT=setTimeout(function(){ g.classList.remove('slosh'); }, 1550);
+      }
     });
     var tile=t.closest('.rt'), v=tile&&tile.querySelector('.rv');
     if(v) v.textContent = R.glasses>=4 ? '' : R.glasses+' of 4';
@@ -936,7 +958,7 @@ var RAIL = (function(){
     if(pl){ pl.textContent='+'+Math.max(0,R.glasses-4); pl.hidden = !(R.glasses>4); }
   }
   async function setWater(n){
-    var d=today(), was=R.glasses; R.glasses=n; paintWater();
+    var d=today(), was=R.glasses; R.glasses=n; paintWater(was);
     if(n>was){ var rows=[]; for(var i=was;i<n;i++) rows.push({day:d}); await sb.from('water_glasses').insert(rows); }
     else { var ex2=await sb.from('water_glasses').select('id').eq('day',d).order('at',{ascending:false}).limit(was-n);
            if(ex2.data&&ex2.data.length) await sb.from('water_glasses').delete().in('id',ex2.data.map(function(r){return r.id;})); }
