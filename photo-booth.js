@@ -1,4 +1,8 @@
-/* Photo Booth strip v1.0 — the week of morning photos, as one slim line that opens.
+/* Photo Booth strip v1.1 — the week of morning photos, as one slim line that opens.
+   v1.1: tapping an empty square no longer opens a bare file box. It opens a sheet of the
+   pictures already read off the Mac's Photos app (public.recent_photos, refreshed hourly),
+   newest first, with that day's shots at the top. Tap one and it is filed. The file box is
+   still there as a fallback for anything older than the feed reaches.
    Self-contained on purpose: it talks to the database over plain fetch and needs NOTHING
    from the page it sits on (no window.supabase, no shared client). That is the lesson from
    needs-you.js v1.0, which worked everywhere except the one page it was built for.
@@ -29,6 +33,26 @@
   }
   function publicUrl(path) {
     return URL_BASE + "/storage/v1/object/public/photobooth/" + path.split("/").map(encodeURIComponent).join("/");
+  }
+  function mealsUrl(path) {
+    return URL_BASE + "/storage/v1/object/public/meals/" + path.split("/").map(encodeURIComponent).join("/");
+  }
+  /* his day runs 2am to 2am, so a picture taken at half past midnight belongs to
+     the day before. Same rule as py_day() in the database, kept in step by hand. */
+  function pyDayOf(iso) {
+    var t = new Date(iso).getTime();
+    if (isNaN(t)) return "";
+    return new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t - 7200000));
+  }
+  function clockOf(iso) {
+    try {
+      return new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "numeric", minute: "2-digit" }).format(new Date(iso)).toLowerCase().replace(/\s/g, "");
+    } catch (e) { return ""; }
+  }
+  function shortDay(iso) {
+    var d = new Date(iso + "T12:00:00Z");
+    var m = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    return m[d.getUTCMonth()] + " " + d.getUTCDate();
   }
   function api(path, opts) {
     opts = opts || {};
@@ -106,6 +130,27 @@
     ".pbx-lbt b{display:block;font-size:16px;color:#1f2a44}",
     ".pbx-lbt span{font-size:11.5px;color:#68737f}",
     ".pbx-lbb{margin:0 16px 16px;padding:9px 14px;font:inherit;font-size:14px;border:1px solid #e2e6ea;background:#f5f7fa;color:#1f2a44;border-radius:6px;cursor:pointer}",
+    /* the add-a-photo sheet. Its own [hidden] rule is deliberate: a display rule in a
+       class beats the hidden attribute, which is how the lightbox once rendered on load. */
+    ".pbx-sh{position:fixed;inset:0;background:rgba(16,22,29,.78);display:flex;align-items:flex-end;justify-content:center;z-index:9100}",
+    ".pbx-sh[hidden]{display:none}",
+    "@media (min-width:640px){.pbx-sh{align-items:center;padding:22px}}",
+    ".pbx-shc{background:#fff;width:100%;max-width:560px;max-height:86vh;display:flex;flex-direction:column;border-radius:12px 12px 0 0;overflow:hidden;box-shadow:0 -12px 50px rgba(0,0,0,.35)}",
+    "@media (min-width:640px){.pbx-shc{border-radius:12px}}",
+    ".pbx-shh{padding:14px 16px 10px;border-bottom:1px solid #eef1f4}",
+    ".pbx-shh b{display:block;font-size:16px;color:#1f2a44}",
+    ".pbx-shh span{font-size:11.5px;color:#68737f}",
+    ".pbx-shg{padding:12px 16px;overflow-y:auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}",
+    "@media (min-width:480px){.pbx-shg{grid-template-columns:repeat(4,1fr)}}",
+    ".pbx-p{padding:0;border:0;background:none;cursor:pointer;text-align:center}",
+    ".pbx-p img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;border-radius:6px;background:#f0f2f5;box-shadow:0 0 0 1px #e2e6ea}",
+    ".pbx-p:hover img{box-shadow:0 0 0 2px #3f6f8f}",
+    ".pbx-p.busy{opacity:.45}",
+    ".pbx-p i{font-style:normal;display:block;font-size:10px;color:#68737f;margin-top:3px;font-variant-numeric:tabular-nums}",
+    ".pbx-shn{grid-column:1/-1;font-size:12px;color:#68737f;line-height:1.5;padding:2px 0 4px}",
+    ".pbx-shf{display:flex;gap:8px;padding:11px 16px 14px;border-top:1px solid #eef1f4}",
+    ".pbx-shf button{flex:1;padding:10px 12px;font:inherit;font-size:13.5px;border-radius:7px;cursor:pointer;border:1px solid #e2e6ea;background:#f5f7fa;color:#1f2a44}",
+    ".pbx-shf button.gh{background:#fff;color:#68737f}",
     "@media (prefers-reduced-motion:reduce){.pbx-shade,.pbx-chev{transition:none}}"
   ].join("");
 
@@ -230,7 +275,7 @@
       '<span class="pbx-sp"></span>' +
       '<span class="pbx-hint">' + (open ? "tap to close" : "tap to open") + "</span></button>" +
       '<div class="pbx-shade"><div class="pbx-in">' + g + band +
-      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.0</span></div>' +
+      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.1</span></div>' +
       "</div></div></div>"
     );
     return node;
@@ -255,18 +300,131 @@
     } catch (e) { cb(file); }
   }
 
+  /* Everything already read off the Mac's Photos app. The Log Meal page shows only the
+     meal_ok ones (taken from 11am, his rule); Photo Booth wants the mornings too, so it
+     asks for the lot. If this cannot be read the sheet simply falls back to a file box. */
+  function recentPhotos() {
+    return api("/rest/v1/recent_photos?select=asset_uuid,taken_at,photo_path,lat,lng&order=taken_at.desc")
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .catch(function () { return []; });
+  }
+
+  /* ---- the add-a-photo sheet ------------------------------------------------------- */
+  var RECENT = [];      /* what the Mac's Photos app has sent across, newest first */
+  var PENDING = null;   /* which empty square is waiting to be filled */
+  var SHEET = null, PICKER = null;
+
+  function tile(p) {
+    return '<button class="pbx-p" data-pick="' + p.asset_uuid + '">' +
+      '<img loading="lazy" alt="" src="' + mealsUrl(p.photo_path) + '">' +
+      "<i>" + shortDay(pyDayOf(p.taken_at)) + " " + clockOf(p.taken_at) + "</i></button>";
+  }
+
+  function closeSheet() { if (SHEET) SHEET.hidden = true; PENDING = null; }
+
+  function openSheet(job) {
+    ensureSheet();
+    PENDING = job;
+    var mine = RECENT.filter(function (p) { return pyDayOf(p.taken_at) === job.day; });
+    var rest = RECENT.filter(function (p) { return pyDayOf(p.taken_at) !== job.day; });
+    document.getElementById("pbx-shT").textContent = SHORT[job.series];
+    document.getElementById("pbx-shS").textContent = longDay(job.day) + " · tap a picture to add it";
+    var g = "";
+    if (!RECENT.length) {
+      g = '<p class="pbx-shn">Nothing has come across from your Photos app yet. Use Choose a file below.</p>';
+    } else if (mine.length) {
+      g = '<p class="pbx-shn">From your Photos app, taken ' + shortDay(job.day) + '</p>' + mine.map(tile).join("");
+      if (rest.length) g += '<p class="pbx-shn">Everything else, newest first</p>' + rest.map(tile).join("");
+    } else {
+      g = '<p class="pbx-shn">Nothing from ' + shortDay(job.day) + ' has reached your Photos app feed yet, so here is everything it has, newest first. It refreshes every hour.</p>' + rest.map(tile).join("");
+    }
+    var grid = document.getElementById("pbx-shG");
+    grid.innerHTML = g;
+    grid.scrollTop = 0;
+    SHEET.hidden = false;
+  }
+
+  function ensureSheet() {
+    if (SHEET) return;
+    PICKER = el('<input type="file" accept="image/*" id="pbx-file" style="position:absolute;left:-9999px">');
+    document.body.appendChild(PICKER);
+    SHEET = el('<div class="pbx-sh" id="pbx-sh" hidden><div class="pbx-shc">' +
+      '<div class="pbx-shh"><b id="pbx-shT"></b><span id="pbx-shS"></span></div>' +
+      '<div class="pbx-shg" id="pbx-shG"></div>' +
+      '<div class="pbx-shf"><button id="pbx-shF">Choose a file instead</button>' +
+      '<button class="gh" id="pbx-shX">Cancel</button></div></div></div>');
+    document.body.appendChild(SHEET);
+
+    SHEET.addEventListener("click", function (e) {
+      if (e.target === SHEET || e.target.id === "pbx-shX") { closeSheet(); return; }
+      if (e.target.id === "pbx-shF") { PICKER.value = ""; PICKER.click(); return; }
+      var b = e.target.closest && e.target.closest("[data-pick]");
+      if (!b || !PENDING) return;
+      var id = b.getAttribute("data-pick"), p = null;
+      for (var i = 0; i < RECENT.length; i++) if (RECENT[i].asset_uuid === id) p = RECENT[i];
+      if (!p) return;
+      var job = PENDING; PENDING = null;
+      b.classList.add("busy");
+      fetch(mealsUrl(p.photo_path)).then(function (r) {
+        if (!r.ok) throw new Error("blob");
+        return r.blob();
+      }).then(function (blob) {
+        return fileIt(job, blob, p, b);
+      }).catch(function () { b.classList.remove("busy"); PENDING = job; });
+    });
+
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSheet(); });
+
+    PICKER.addEventListener("change", function () {
+      if (!PENDING || !PICKER.files || !PICKER.files[0]) return;
+      var job = PENDING; PENDING = null;
+      if (job.btn) job.btn.classList.add("busy");
+      shrink(PICKER.files[0], function (blob) { fileIt(job, blob, null, job.btn); });
+    });
+  }
+
+  function fileIt(job, blob, meta, btn) {
+    var path = job.series + "/" + job.day + "/" + uuid() + ".jpg";
+    return api("/storage/v1/object/photobooth/" + path.split("/").map(encodeURIComponent).join("/"), {
+      method: "POST",
+      headers: { "Content-Type": "image/jpeg", "x-upsert": "true" },
+      body: blob
+    }).then(function (r) {
+      if (!r.ok) throw new Error("upload");
+      /* the database stamps a new row with the moment the file arrived. When the picture
+         came from his Photos app we know when it was really taken, so put that back, along
+         with where he was. It also lets the Photos feed drop it from the meal row. */
+      if (!meta || !meta.taken_at) return null;
+      return api("/rest/v1/photo_shots?path=eq." + encodeURIComponent(path), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Prefer: "return=minimal" },
+        body: JSON.stringify({ shot_at: meta.taken_at, lat: meta.lat, lng: meta.lng })
+      }).catch(function () { return null; });
+    }).then(function () {
+      closeSheet();
+      start();
+    }).catch(function () {
+      if (btn) btn.classList.remove("busy");
+      PENDING = job;
+    });
+  }
+
   function start() {
     var host = mount();
     if (!host) return;
 
-    api("/rest/v1/rpc/photo_week", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "{}"
-    }).then(function (r) {
-      if (!r.ok) throw new Error("no");
-      return r.json();
-    }).then(function (rows) {
+    Promise.all([
+      api("/rest/v1/rpc/photo_week", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}"
+      }).then(function (r) {
+        if (!r.ok) throw new Error("no");
+        return r.json();
+      }),
+      recentPhotos()
+    ]).then(function (both) {
+      var rows = both[0], recent = both[1] || [];
       if (!rows || !rows.length) return;
 
       var style = document.getElementById("pbx-css");
@@ -292,9 +450,8 @@
         document.addEventListener("keydown", function (e) { if (e.key === "Escape") lb.hidden = true; });
       }
 
-      var picker = el('<input type="file" accept="image/*" style="position:absolute;left:-9999px">');
-      document.body.appendChild(picker);
-      var pending = null;
+      RECENT = recent;
+      ensureSheet();
 
       node.addEventListener("click", function (e) {
         var o = e.target.closest("[data-open]");
@@ -307,23 +464,7 @@
           return;
         }
         var a = e.target.closest("[data-add]");
-        if (a) { pending = { series: a.getAttribute("data-add"), day: a.getAttribute("data-day"), btn: a }; picker.value = ""; picker.click(); }
-      });
-
-      picker.addEventListener("change", function () {
-        if (!pending || !picker.files || !picker.files[0]) return;
-        var job = pending; pending = null;
-        job.btn.classList.add("busy");
-        shrink(picker.files[0], function (blob) {
-          var path = job.series + "/" + job.day + "/" + uuid() + ".jpg";
-          api("/storage/v1/object/photobooth/" + path.split("/").map(encodeURIComponent).join("/"), {
-            method: "POST",
-            headers: { "Content-Type": "image/jpeg", "x-upsert": "true" },
-            body: blob
-          }).then(function (r) {
-            if (r.ok) start(); else job.btn.classList.remove("busy");
-          }).catch(function () { job.btn.classList.remove("busy"); });
-        });
+        if (a) openSheet({ series: a.getAttribute("data-add"), day: a.getAttribute("data-day"), btn: a });
       });
     }).catch(function () { /* silent by design */ });
   }
