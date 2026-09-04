@@ -129,6 +129,7 @@
 #deck .bd{padding:29px 19px 5px;flex:1;display:flex;flex-direction:column}
 #deck .step{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-weight:800}
 #deck .big{font-size:21px;font-weight:700;line-height:1.22;margin-top:12px;color:var(--ink)}
+#deck .src{font-size:12.5px;color:#9aa6b4;margin-top:10px;font-style:italic}
 #deck .mean{font-size:14px;color:#5b6472;line-height:1.35;margin-top:12px}
 #deck .date.bottom{margin-top:auto;text-align:center;color:#b9c0cc;font-size:10.5px;font-weight:400;padding-top:14px}
 #deck .foot{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:1px solid #eef1f5}
@@ -170,7 +171,7 @@
 
   <div id="great" class="hidden">
     <div class="wrap">
-      <div class="secbar"><h1>Great Quotes</h1><span class="ver">v1.9</span><span class="date"></span></div>
+      <div class="secbar"><h1>Great Quotes</h1><span class="ver">v2.0</span><span class="date"></span></div>
       <div style="font-size:13px;color:var(--muted);margin:2px 0 12px">Quotes you sent over from the AI board. Your curated shortlist.</div>
       <div class="count" id="gcount"></div>
       <div class="grid" id="ggrid"></div>
@@ -179,7 +180,7 @@
 
   <div id="browse" class="hidden">
     <div class="wrap">
-    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v1.9</span><span class="date"></span></div>
+    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v2.0</span><span class="date"></span></div>
       <div class="add">
         <b>Add a phrase</b>
         <div class="r">
@@ -199,7 +200,7 @@
       <div class="grid" id="grid"></div>
     </div>
   </div>
-  <div class="badge">Things Worth Knowing v1.9</div>
+  <div class="badge">Things Worth Knowing v2.0</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -270,7 +271,7 @@ async function stampSeen(){
    being dealt every day on the AI Insights card. It now leads this deck every
    day and appears on no other cue card. Only change PIN_CAT if the group is
    renamed in the library itself. */
-const PIN_CAT='Untranslatable Words';
+const PIN_CAT='Clever Phrases';
 function buildDaily(){
   const seed=etToday();
   const byCat={};
@@ -356,9 +357,27 @@ async function favFun(i){
 }
 const TWK_ICON='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
 const TWK_STARP='<path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.7l6.1-.9z"/>';
-const CATLABEL={'Untranslatable Words':'Clever Phrases','Work & Business':'Little Known Facts'};
+/* Sep 4 2026, Scott: "It should only be clever phrases, remove untranslatable words."
+   The ten phrases are now tagged Clever Phrases in the library itself, so the alias
+   for them is gone. One name end to end. */
+const CATLABEL={'Work & Business':'Little Known Facts'};
+/* THE SOURCE LINE. Where this phrase came from, in small grey italic under the
+   meaning. source_module is the honest record: manual means Scott put it in
+   himself, ai_deck means it arrived on the AI Insights card, james-clear means
+   it was sent over from the 3-2-1 module. */
+function twkSrc(q){
+  var m=(q&&q.source_module)||'';
+  var lab='', href='';
+  if(q&&q.author){ lab=q.author; }
+  else if(m==='ai_deck'){ lab='The AI Insights card'; href='ai.html'; }
+  else if(m==='james-clear'){ lab='James Clear, 3-2-1'; href='james-clear.html'; }
+  else if(m==='manual'){ lab='Your own Clever Phrases library'; }
+  else { lab='Written for Project YOU'; }
+  var inner=href?('<a href="'+href+'" style="color:inherit;text-decoration:underline">'+esc(lab)+'</a>'):esc(lab);
+  return '<div class="src">Source &middot; '+inner+'</div>';
+}
 function catLabel(c){return CATLABEL[c]||c;}
-function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div><span class="ver">v1.9</span></div>';}
+function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div><span class="ver">v2.0</span></div>';}
 function renderDaily(){
   const total=DAILY.length;
   const ds=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -406,6 +425,7 @@ function renderDaily(){
   const nextLabel=(dIdx===total-1?'Review':'Next');
   let bd='<div class="step">'+esc(catLabel(d.cat))+'</div><div class="big">'+esc(q.text)+'</div>';
   if(q.meaning) bd+='<div class="mean">'+esc(q.meaning)+'</div>';
+  bd+=twkSrc(q);
   bd+='<div class="date bottom">'+ds+'</div>';
   deck.innerHTML='<div class="card" style="--acc:#7a4f9c;--tint:#efeaf4">'+twkHd()+star+'<div class="bd">'+bd+'</div>'+
     '<div class="foot"><span class="'+backCls+'" '+backOn+'>Back</span><span class="next" onclick="dgo(1)">'+nextLabel+'</span></div></div>';
