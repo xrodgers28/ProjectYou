@@ -455,7 +455,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v1.8</span>
+    <span id="ver" class="ver">v1.9</span>
   </div>
 </div>
 
@@ -688,13 +688,37 @@ function hhmm(m){
    was seeing his walking twice. The minutes are not double counted - every
    minute carries exactly one tag - but the page now says so out loud. */
 var DAYB=null;
+/* Did Scott's walks, runs and rides actually arrive today? His own to-do asked for
+   this: "Nightly wrap should include did Strava come in or not?". Worth saying
+   plainly, because BOTH Strava and Apple Health are pushed from his phone - no job
+   here can go and fetch them, so a silent gap is his to fix, not the site's. */
+var STRV=null;
 async function loadBlocks(){
   if(!cloud) return null;
   try{
     var r=await sb.from('day_blocks').select('cat,title,mins').eq('day',DAY());
-    if(r.error||!r.data) return null;
-    DAYB=r.data; return DAYB;
-  }catch(e){ return null; }
+    if(!r.error&&r.data) DAYB=r.data;
+  }catch(e){}
+  try{
+    var a=await sb.from('todos').select('task,actual_minutes,est_minutes,source_project')
+                  .eq('for_date',DAY()).eq('source_project','strava');
+    if(!a.error&&a.data) STRV=a.data;
+  }catch(e){}
+  return DAYB;
+}
+function stravaLine(){
+  if(!STRV) return '';
+  if(!STRV.length){
+    return '<p class="tiny">Nothing came in from Strava today. Strava and Apple Health are both pushed from your phone, so nothing here can go and fetch them \u2014 if you walked, run the export on your phone.</p>';
+  }
+  var mins=0, miles=0;
+  STRV.forEach(function(a){
+    mins+=(a.actual_minutes||a.est_minutes||0);
+    var m=/\(([\d.]+)\s*mi\)/.exec(a.task||'');
+    if(m) miles+=parseFloat(m[1]);
+  });
+  return '<p class="tiny">Strava came in \u2014 '+STRV.length+' activit'+(STRV.length===1?'y':'ies')+
+         (miles?', '+(Math.round(miles*10)/10)+' mi':'')+(mins?', '+dur(mins):'')+'.</p>';
 }
 function walkMins(){
   if(!DAYB) return 0;
@@ -729,6 +753,7 @@ function drawDay(){
   if(w>0){
     h+='<p class="tiny">'+dur(w)+' of your to-do time was walking, which also ticks your Walk habit \u2014 so you are seeing the same walk in two rows.</p>';
   }
+  h+=stravaLine();
   if((DAYT.other||0)===0 && (DAYT.open||0)>60){
     h+='<p class="tiny">Personal reads 0 because nothing personal was on a calendar. Most of \u201cStill open\u201d is that time.</p>';
   }
