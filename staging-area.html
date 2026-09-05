@@ -75,6 +75,9 @@
   .cf.hi{background:var(--green)} .cf.mid{background:var(--orange)} .cf.lo{background:var(--red)}
   .main{flex:1;min-width:0}
   .title{color:var(--head);font-weight:650;font-size:13.5px;line-height:1.35}
+  .title .hltext{outline:none;cursor:text;border-radius:4px;padding:1px 3px;margin:-1px -3px}
+  .title .hltext:hover{background:rgba(0,0,0,.045)}
+  .title .hltext:focus{background:rgba(230,168,0,.16)}
   /* ---- the pinwheel: one tap sends a capture to Project You Ideas ----
      The same seven Clarity Compass vanes as the one on Todays Tasks, drawn as inline
      SVG rather than the logo PNG so it costs no image request. It sits INSIDE the
@@ -240,7 +243,7 @@
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link on">Staging<br>Area</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v0.8</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
 
   <div class="wrap">
-    <h1>Staging Area <span class="ver">v0.8</span> <span class="date" id="today"></span></h1>
+    <h1>Staging Area <span class="ver">v0.9</span> <span class="date" id="today"></span></h1>
     <p class="lede">Every idea (<b>Popcorn</b> 🍿) dictated to Drafts arrives here, and <b>waits</b>. Nothing reaches Todays Tasks until you say so. Claude proposes a destination for each; you <b>approve</b> it, reroute it, spin it to <b>Project You Ideas</b> with the pinwheel, or <b>dismiss</b> it. Every choice trains the next guess &mdash; shaky ones sit on top.</p>
 
     <div class="toprow"><button class="pullbtn" id="pullnow" title="Run the Drafts sweep right now instead of waiting for the next 2-hour run"><span class="sp">&#10227;</span> Pull from Drafts now</button><span class="saved" id="save"><span class="dt"></span> saved</span></div>
@@ -584,7 +587,27 @@ function rowNode(r){
   const row=document.createElement('div'); row.className='row'; row.dataset.id=r.id;
   const cf=document.createElement('span'); cf.className='cf '+confOf(r); row.appendChild(cf);
   const main=document.createElement('div'); main.className='main';
-  const title=document.createElement('div'); title.className='title'; title.textContent=cleanHeadline(r);
+  const title=document.createElement('div'); title.className='title';
+  const hltext=document.createElement('span'); hltext.className='hltext'; hltext.contentEditable='true'; hltext.spellcheck=false;
+  hltext.textContent=cleanHeadline(r);
+  hltext.title='Click to fix the text — it came straight from your dictation';
+  hltext.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();hltext.blur();} if(e.key==='Escape'){e.preventDefault();hltext.textContent=cleanHeadline(r);hltext.blur();} };
+  hltext.onclick=e=>e.stopPropagation();
+  hltext.onblur=async()=>{
+    const before=cleanHeadline(r);
+    const after=(hltext.textContent||'').replace(/\s+/g,' ').trim();
+    if(!after){ hltext.textContent=before; return; }
+    if(after===before) return;
+    hltext.textContent=after;
+    r.task=after; await patch(r.id,{task:after});
+    // Keep the 🍿 Popcorn link alive: the raw dictation is matched by headline text,
+    // so the matching inbox row's headline has to move to the new words too.
+    try{
+      const { error } = await sb.from('inbox').update({ headline: after }).eq('headline', before);
+      if(!error){ if(before in RAW){ RAW[after]=RAW[before]; } }
+    }catch(e){ /* headline edit already saved; the popcorn link is a nice-to-have */ }
+  };
+  title.appendChild(hltext);
   title.appendChild(pinwheelNode(r));   // trails the headline, same as on Todays Tasks
   main.appendChild(title);
   const rl=readLine(r); if(rl){const rd=document.createElement('div');rd.className='read';rd.textContent=rl;main.appendChild(rd);}
