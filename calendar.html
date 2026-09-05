@@ -208,7 +208,11 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 .y27row .tc{flex:none;font-size:9px;font-weight:700;color:#fff;background:#B58A2A;border-radius:8px;padding:0 5px}
 .y27empty{font-size:11px;color:#9a9a90;padding:4px 2px}
 .hidden-box{margin-top:12px;border-top:1px solid #eee;padding-top:8px}
-.hidden-box .hh{font-size:10px;font-weight:700;color:#9a9a90;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px}
+.hidden-box .hh{font-size:10px;font-weight:700;color:#9a9a90;margin-bottom:4px;text-transform:uppercase;letter-spacing:.4px;cursor:pointer;user-select:none}
+.hidden-box .hh .tri{display:inline-block;width:1em;transition:transform .15s}
+.hidden-box.open .hh .tri{transform:rotate(90deg)}
+.hidden-box #hiddenList{display:none}
+.hidden-box.open #hiddenList{display:block}
 .hrow{display:flex;align-items:center;gap:6px;font-size:11px;color:#9a9a90;padding:2px}
 .hrow span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hrow button{margin-left:auto;font:inherit;font-size:10px;border:1px solid #d7d7cf;background:#fff;border-radius:5px;padding:1px 6px;cursor:pointer}
@@ -342,12 +346,12 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v3.4</span>
+  <span class="pn-ver">v3.5</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.4</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.5</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Live events sit dimmed because they are tour dates you are tracking; star one to say you are going and it comes forward. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
 </div>
 
@@ -391,7 +395,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
       </div>
     </div>
 
-    <div class="hidden-box" id="hiddenBox" style="display:none"><div class="hh">Hidden events</div><div id="hiddenList"></div></div>
+    <div class="hidden-box" id="hiddenBox" style="display:none"><div class="hh" id="hiddenHead" title="Tap to show or hide the list"><span class="tri">▸</span> Hidden events <span id="hiddenCount"></span></div><div id="hiddenList"></div></div>
   </div>
 </div>
 
@@ -428,7 +432,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Calendar v3.4 =====
+/* ===== Project YOU · Calendar v3.5 =====
    Events live in public.calendar_events, layers in public.calendar_categories.
    New in v1.2: sign-in (the Google feed brings personal appointments onto this
    page, so it can no longer be open to anyone with the URL), plain-English add
@@ -803,9 +807,12 @@ function renderRail(){
   wireDrag(r);
   const hb=document.getElementById('hiddenBox'),hl=document.getElementById('hiddenList');
   const hid=EVENTS.filter(e=>e.hidden);
-  if(hid.length){hb.style.display='block';hl.innerHTML=hid.map(e=>'<div class="hrow"><span>'+esc(labelOf(e))+'</span><button data-un="'+e.id+'">Restore</button></div>').join('');
+  if(hid.length){hb.style.display='block';document.getElementById('hiddenCount').textContent='('+hid.length+')';hl.innerHTML=hid.map(e=>'<div class="hrow"><span>'+esc(labelOf(e))+'</span><button data-un="'+e.id+'">Restore</button></div>').join('');
     hl.querySelectorAll('button').forEach(b=>b.onclick=()=>setHidden(+b.dataset.un,false));}
   else{hb.style.display='none';hl.innerHTML='';}
+  /* Sep 5 2026, Scott: the hidden list stays folded by default; tap the heading to open it. */
+  const hh=document.getElementById('hiddenHead');
+  if(hh&&!hh.dataset.wired){hh.dataset.wired='1';hh.onclick=()=>hb.classList.toggle('open');}
 }
 
 /* Native drag reorder for the layer list; eight rows do not need a library, and
