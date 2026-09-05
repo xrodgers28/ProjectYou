@@ -716,7 +716,7 @@
   }
 
   /* ============================================================================
-     CALENDAR COLUMN  ·  v5.72
+     CALENDAR COLUMN  ·  v5.73
      Ported from /tmp/calendar-drag-prototype.html, the frozen visual spec Scott
      approved: "everything in the mock you made is exactly as I want it".
      Every class here is prefixed cx- so nothing can collide with the board,
@@ -1270,7 +1270,7 @@ async function showApp(email, session) {
   // startsWith, not ===, so #wheel/2026-08-21 repaints too. The module-init handler
   // opens the view before there is anything in `todos` to draw; this is the repaint.
   if ((location.hash || '').startsWith('#wheel')) { WHEEL_OFFSET = wheelHashOffset(); await loadTimeLog(); setWheelView(true); }
-  try { const V = '5.18'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
+  try { const V = '5.19'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
   cxInit();
 }
@@ -5031,7 +5031,7 @@ function setWheelView(show){
 
 
 /* ============================================================================
-   CALENDAR COLUMN  ·  v5.72
+   CALENDAR COLUMN  ·  v5.73
    The visual spec is /tmp/calendar-drag-prototype.html, frozen on Scott's word:
    "everything in the mock you made is exactly as I want it can we please be
    careful not to do anything that changes the core functionality you have built".
@@ -5444,27 +5444,35 @@ function cxDrawGrid() {
          '<span class="cxx" data-cxx="' + b.id + '">&times;</span>' +
          '<span class="cxrz" data-cxrz="' + b.id + '"></span></div>';
   });
-  /* A RUN GETS ONE CHIP. Blocks that were laid down inside the same minute are a run:
-     a clear-out, or a batch of cue cards ticked one after another. Three or more of
-     them get a single chip sitting just above the top of the run, and tapping it takes
-     the whole run off. The database now refuses to make a clear-out run at all, but
-     habits still tick in runs on purpose, so this stays worth having. */
-  const cxRuns = {};
-  cxBlocks.forEach(b => {
-    if (!b.todo_id || !b.created_at || b.id < 0) return;
-    const k = String(b.created_at).slice(0, 16);
-    (cxRuns[k] = cxRuns[k] || []).push(b);
+  /* A CLEAR-OUT RUN GETS ONE CHIP.
+     Sep 4 2026, Scott: fourteen blocks landed on his afternoon in fifty seconds and
+     "they were so many and small I could not tap the xs".
+     THE TEST HAD TO BE TIGHTENED THE SAME NIGHT AND IT MATTERS. Grouping by the minute
+     they were created put ONE chip over twenty-seven blocks, because the board's
+     catch-up pass writes the whole day at once - his real habits included. A chip that
+     could wipe an evening of finished cue cards in one tap is worse than no chip.
+     So a run is now three or more blocks that are ALL ordinary to-dos, never habits,
+     laid END TO END with no gap: the actual shape a clear-out makes and nothing else. */
+  const cxRunSrc = cxBlocks
+    .filter(b => b.todo_id && b.id > 0 && b.cat === 'todo')
+    .slice().sort((a, b) => a.start_min - b.start_min);
+  let cxChain = [];
+  const cxChainChip = () => {
+    if (cxChain.length < 3) { cxChain = []; return; }
+    h += '<div class="cxrun" data-cxrun="' + cxChain.map(x => x.id).join(',') + '"' +
+         ' style="top:' + Math.max(0, cxY(cxChain[0].start_min) - 17) + 'px"' +
+         ' title="Take all ' + cxChain.length + ' of these off your day">&times; Clear these ' +
+         cxChain.length + '</div>';
+    cxChain = [];
+  };
+  cxRunSrc.forEach(b => {
+    if (!cxChain.length) { cxChain = [b]; return; }
+    const prev = cxChain[cxChain.length - 1];
+    if (Math.abs(b.start_min - (prev.start_min + prev.mins)) <= 1) { cxChain.push(b); return; }
+    cxChainChip();
+    cxChain = [b];
   });
-  Object.keys(cxRuns).forEach(k => {
-    const g = cxRuns[k];
-    if (g.length < 3) return;
-    let topMin = g[0].start_min;
-    g.forEach(x => { if (x.start_min < topMin) topMin = x.start_min; });
-    h += '<div class="cxrun" data-cxrun="' + g.map(x => x.id).join(',') + '"' +
-         ' style="top:' + Math.max(0, cxY(topMin) - 17) + 'px"' +
-         ' title="Take all ' + g.length + ' of these off your day">&times; Clear these ' +
-         g.length + '</div>';
-  });
+  cxChainChip();
   if (cxIsToday()) {
     const n = cxNowMin();
     /* Past midnight the day on screen has ended, so the line rests on its bottom edge
