@@ -716,7 +716,7 @@
   }
 
   /* ============================================================================
-     CALENDAR COLUMN  ·  v5.71
+     CALENDAR COLUMN  ·  v5.72
      Ported from /tmp/calendar-drag-prototype.html, the frozen visual spec Scott
      approved: "everything in the mock you made is exactly as I want it".
      Every class here is prefixed cx- so nothing can collide with the board,
@@ -926,13 +926,19 @@
   .cxblk.over i{color:#b09468}
   .cxblk.done{border-left-color:#6aab86;background:#e7f3ec}
   .cxblk.done b{color:#2c5a41;text-decoration:line-through;text-decoration-color:#a8cbb7}
-  .cxblk .cxx{position:absolute;top:0;right:2px;font-size:13px;color:#a9b6cc;cursor:pointer;
-    line-height:1.15;padding:0 2px}
+  /* Scott, Sep 4 2026: "the entries were so many and small I could not tap the xs".
+     It was a 13px pale grey glyph with a 2px pad, which is a target of about ten
+     pixels across on a block eight pixels tall. It is now a real square that fills
+     the height of a slim block, in a colour that can actually be seen. */
+  .cxblk .cxx{position:absolute;top:0;right:0;width:24px;height:22px;
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;color:#6d7c8f;cursor:pointer;line-height:1;padding:0}
+  .cxblk.slim .cxx{height:100%}
   /* Scott, Aug 25: "items in the calendar get a tick box in the upper right corner
      of each item so I can tick they are done". It has no idea of its own about what
      done means - it clicks the to-do's own checkbox, so there stays ONE definition
      of finished and the board, the wheel and the streaks cannot drift apart. */
-  .cxblk .cxtk{position:absolute;top:2px;right:17px;width:13px;height:13px;border-radius:3px;
+  .cxblk .cxtk{position:absolute;top:2px;right:28px;width:14px;height:14px;border-radius:3px;
     border:1.5px solid #b9c3d4;background:rgba(255,255,255,.85);cursor:pointer;z-index:4;
     display:flex;align-items:center;justify-content:center}
   .cxblk .cxtk:hover{border-color:#6aab86}
@@ -941,7 +947,15 @@
   .cxblk.done .cxtk{background:#6aab86;border-color:#6aab86}
   .cxblk.done .cxtk::after{content:'';width:6px;height:3px;border-left:1.7px solid #fff;
     border-bottom:1.7px solid #fff;transform:rotate(-45deg) translate(0px,-1px)}
-  .cxblk .cxx:hover{color:#c0453b}
+  .cxblk .cxx:hover{color:#fff;background:#c0453b}
+  /* ONE CHIP CLEARS A WHOLE RUN. Sep 4 2026: fourteen blocks landed on his afternoon
+     in fifty seconds and every one of them had to be tapped off separately. Blocks
+     laid down inside the same minute now get a single chip that takes the lot. */
+  .cxrun{position:absolute;right:10px;height:16px;line-height:16px;padding:0 8px;
+    border-radius:99px;background:#c0453b;color:#fff;font-size:10.5px;font-weight:600;
+    cursor:pointer;z-index:6;white-space:nowrap;letter-spacing:.01em;
+    box-shadow:0 1px 3px rgba(35,49,64,.28)}
+  .cxrun:hover{filter:brightness(1.12)}
   .cxblk .cxrz{position:absolute;left:0;right:0;bottom:0;height:5px;cursor:ns-resize}
   .cxblk .cxrz::after{content:'';position:absolute;left:50%;bottom:1px;width:14px;height:2px;
     margin-left:-7px;border-radius:2px;background:#c3cede;opacity:0}
@@ -1256,7 +1270,7 @@ async function showApp(email, session) {
   // startsWith, not ===, so #wheel/2026-08-21 repaints too. The module-init handler
   // opens the view before there is anything in `todos` to draw; this is the repaint.
   if ((location.hash || '').startsWith('#wheel')) { WHEEL_OFFSET = wheelHashOffset(); await loadTimeLog(); setWheelView(true); }
-  try { const V = '5.17'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
+  try { const V = '5.18'; if (localStorage.getItem('ci_version') !== V) { toast('✨ Updated to the latest version'); localStorage.setItem('ci_version', V); } } catch (e) {}
   subscribe();
   cxInit();
 }
@@ -4996,7 +5010,7 @@ function setWheelView(show){
 
 
 /* ============================================================================
-   CALENDAR COLUMN  ·  v5.71
+   CALENDAR COLUMN  ·  v5.72
    The visual spec is /tmp/calendar-drag-prototype.html, frozen on Scott's word:
    "everything in the mock you made is exactly as I want it can we please be
    careful not to do anything that changes the core functionality you have built".
@@ -5408,6 +5422,27 @@ function cxDrawGrid() {
            (b.done ? 'Untick it' : 'Tick it off as done') + '"></span>' : '') +
          '<span class="cxx" data-cxx="' + b.id + '">&times;</span>' +
          '<span class="cxrz" data-cxrz="' + b.id + '"></span></div>';
+  });
+  /* A RUN GETS ONE CHIP. Blocks that were laid down inside the same minute are a run:
+     a clear-out, or a batch of cue cards ticked one after another. Three or more of
+     them get a single chip sitting just above the top of the run, and tapping it takes
+     the whole run off. The database now refuses to make a clear-out run at all, but
+     habits still tick in runs on purpose, so this stays worth having. */
+  const cxRuns = {};
+  cxBlocks.forEach(b => {
+    if (!b.todo_id || !b.created_at || b.id < 0) return;
+    const k = String(b.created_at).slice(0, 16);
+    (cxRuns[k] = cxRuns[k] || []).push(b);
+  });
+  Object.keys(cxRuns).forEach(k => {
+    const g = cxRuns[k];
+    if (g.length < 3) return;
+    let topMin = g[0].start_min;
+    g.forEach(x => { if (x.start_min < topMin) topMin = x.start_min; });
+    h += '<div class="cxrun" data-cxrun="' + g.map(x => x.id).join(',') + '"' +
+         ' style="top:' + Math.max(0, cxY(topMin) - 17) + 'px"' +
+         ' title="Take all ' + g.length + ' of these off your day">&times; Clear these ' +
+         g.length + '</div>';
   });
   if (cxIsToday()) {
     const n = cxNowMin();
@@ -6041,6 +6076,18 @@ async function cxTick(id) {
   if (error) { b.done = !b.done; cxDraw(); toast('Could not save that tick'); }
 }
 
+/* Sep 4 2026. Clears every block in one run at once. It removes the blocks from the
+   day only - the to-dos themselves are untouched, still ticked, still on the board. */
+async function cxRemoveRun(csv) {
+  const ids = String(csv || '').split(',').map(Number).filter(n => n > 0);
+  if (!ids.length) return;
+  cxBlocks = cxBlocks.filter(b => ids.indexOf(b.id) < 0);
+  cxDraw();
+  const { error } = await sb.from('day_blocks').delete().in('id', ids);
+  if (error) { toast('Could not clear those'); await cxLoadDay(cxDay); cxDraw(); return; }
+  toast(ids.length + ' taken off your day');
+}
+
 async function cxRemove(id) {
   cxBlocks = cxBlocks.filter(b => b.id !== id);
   cxDraw();
@@ -6497,6 +6544,7 @@ function cxWire() {
     const rz = e.target.closest('[data-cxrz]'); if (rz) { cxStartDrag(e, 'resize', +rz.dataset.cxrz); return; }
     const tk = e.target.closest('[data-cxtk]');
     if (tk) { cxTick(+tk.dataset.cxtk); return; }
+    const rn = e.target.closest('[data-cxrun]'); if (rn) { cxRemoveRun(rn.dataset.cxrun); return; }
     const x = e.target.closest('[data-cxx]'); if (x) { cxRemove(+x.dataset.cxx); return; }
     const bl = e.target.closest('[data-cxb]'); if (bl) { cxStartDrag(e, 'move', +bl.dataset.cxb); return; }
     /* the meeting menu: its own buttons first, then a meeting, then anywhere else closes it */
