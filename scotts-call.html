@@ -29,6 +29,8 @@
   /* the Project YOU pinwheel, same vanes as index.html and the Staging Area, with the rollover spin Scott asked to keep */
   .pinw{width:15px;height:15px;cursor:pointer;opacity:.95;transition:opacity .15s ease,transform .25s ease;display:inline-block;vertical-align:-3px;margin-right:4px}
   .pinw:hover{opacity:1;transform:rotate(90deg)}
+  .pinw.sm{width:13px;height:13px;margin-right:5px;vertical-align:-2px}
+  .dd .o:hover .pinw.sm{transform:rotate(90deg)}
   .pinw.spin{animation:pinwspin .5s ease-out}
   @keyframes pinwspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
 
@@ -193,7 +195,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v1.2</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Scott's Call <span class="ver">v1.3</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -235,7 +237,7 @@
             <dt>The binoculars</dt><dd>Look before you file: opens the destination page in a window on top.</dd>
       <dt>Approve · Log it · Dismiss</dt><dd>The button changes with the home. Approve files a to-do or a build item. Log it records a thing that happened and never makes a to-do: a film goes to Movies and a 🎬 square on the tracker, a person to Connections and a Social Fitness square, a habit ticks the worksheet, a meal goes to the Meal log, an appointment to the Calendar and on to Google. Dismiss moves it to a recoverable bin.</dd>
       <dt>🌙 · ×</dt><dd>Top right of every row. The moon sends it straight to the Midnight Run (Claude's List, Tonight). The × kills it, with Undo.</dd>
-      <dt>more ▾</dt><dd>Park it, the 🎡 pinwheel (straight to Project You Ideas), Make it a rule, Dismiss.</dd>
+      <dt>more ▾</dt><dd>▶ Do it now (approves it to Claude's List, Now, and asks the runner to start), 🌙 send it to tonight's Midnight Run, Park it, straight to Project You Ideas, Make it a rule, Dismiss.</dd>
       <dt>🍿 Popcorn · 💬 comment · est · act</dt><dd>Popcorn shows your dictation word for word, even when one dictation became several rows. Comment rides along with your tap and I remember it. Est is my guess at minutes, act is yours after.</dd>
       <dt>The green strip after a tap</dt><dd>Says what was filed and where, with Undo and a correction box. Ten seconds, then it folds into the Archive.</dd>
       <dt>📷 Add a photo</dt><dd>A screenshot, a menu, a page of a book. It lands here as a waiting note with the picture; I read it at the next slot and write the note under it.</dd>
@@ -257,7 +259,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.2 · Sep 6, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.3 · Sep 6, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -285,7 +287,7 @@ const LOGS={
   'log:meal':{label:'Log it: meal eaten',page:'log-meal.html'},
   'log:event':{label:'Calendar: add the event',page:'calendar.html'}
 };
-const CL={'cl:now:quick':{label:"Claude's List: Now, Quick",shelf:'now',run:'quick'},'cl:now:background':{label:"Claude's List: Now, Background",shelf:'now',run:'background'},'cl:tonight':{label:"Claude's List: Tonight",shelf:'tonight',run:'overnight'},'cl:later':{label:"Claude's List: Later, write me a brief",shelf:'later',run:'brief'}};
+const CL={'cl:now:quick':{label:"Claude's List: Now, Quick (next hourly run)",shelf:'now',run:'quick'},'cl:now:background':{label:"Claude's List: Now, Background (next hourly run)",shelf:'now',run:'background'},'cl:tonight':{label:"Claude's List: Tonight",shelf:'tonight',run:'overnight'},'cl:later':{label:"Claude's List: Later, write me a brief",shelf:'later',run:'brief'}};
 const PAGE_FOR={day:'index.html',cl:'claudes-list.html',park:'scotts-call.html'};
 let CAP=[],DELIV=[],RULES=[],MINE=[],PARKED=[],ARCH=[],RAW={},RAWID={},HABITS=[],SELECT=false,SEL=new Set(),FOLDS={parked:false,arch:false},toastT=null,DEST={};
 
@@ -535,10 +537,11 @@ function openDest(anchor,r){
   items.push('sep',{lab:"Claude's List"});Object.keys(CL).forEach(k=>items.push({l:CL[k].label.replace("Claude's List: ",''),on:cur===k,fn:()=>setDest(r,k)}));
   items.push('sep',{lab:'Boards'});Object.keys(MODULES).forEach(m=>items.push({l:m,on:cur==='mod:'+m,fn:()=>setDest(r,'mod:'+m)}));
   items.push('sep',{lab:'Log it, a thing that happened'});Object.keys(LOGS).forEach(k=>items.push({l:LOGS[k].label.replace('Log it: ','')+(LOGS[k].also?' · 2 places':''),on:cur===k,fn:()=>setDest(r,k)}));
-  items.push('sep',{lab:'Other'},{l:'🎡 Project You Ideas',on:cur==='ideas',fn:()=>setDest(r,'ideas')},{l:'🅿️ Park it',on:cur==='park',fn:()=>setDest(r,'park')},{l:'Dismiss',on:cur==='dismiss',fn:()=>setDest(r,'dismiss')});
+  items.push('sep',{lab:'Other'},{l:PINW_SM+'Project You Ideas',on:cur==='ideas',fn:()=>setDest(r,'ideas')},{l:'🅿️ Park it',on:cur==='park',fn:()=>setDest(r,'park')},{l:'Dismiss',on:cur==='dismiss',fn:()=>setDest(r,'dismiss')});
   openDD(anchor,items);
 }
-function openMore(anchor,r){openDD(anchor,[{l:'🅿️ Park it',fn:()=>act(r,'park')},{l:'🎡 Straight to Project You Ideas',fn:()=>act(r,'ideas')},{l:'📏 Make it a rule',fn:()=>makeRule(r)},'sep',{l:'Dismiss',cls:'danger',fn:()=>act(r,'dismiss')}]);}
+async function doItNow(r){await act(r,'cl:now:quick');try{await sb.from('board_meta').upsert({key:'run_now_requested',val:{at:new Date().toISOString(),from:'scotts-call',txt:r.task||''},updated_at:new Date().toISOString()},{onConflict:'key'});}catch(e){}toast('On Claude\u2019s List, Now, and I asked the runner to start at its next hourly check.');}
+function openMore(anchor,r){openDD(anchor,[{l:'▶ Do it now (Claude\u2019s List, Now)',fn:()=>doItNow(r)},{l:'🌙 Send to tonight\u2019s Midnight Run',fn:()=>act(r,'cl:tonight')},'sep',{l:'🅿️ Park it',fn:()=>act(r,'park')},{l:PINW_SM+'Straight to Project You Ideas',fn:()=>act(r,'ideas')},{l:'📏 Make it a rule',fn:()=>makeRule(r)},'sep',{l:'Dismiss',cls:'danger',fn:()=>act(r,'dismiss')}]);}
 function openBulk(btn){if(!SEL.size){toast('Tick some rows first.');return;}
   openDD(btn,[{lab:'Do with '+SEL.size},{l:'✓ Approve as guessed',fn:()=>bulk('approve')},{l:'🅿️ Park them',fn:()=>bulk('park')},{l:'Dismiss them',cls:'danger',fn:()=>bulk('dismiss')}]);}
 function toggleSelect(){SELECT=!SELECT;if(!SELECT)SEL.clear();document.getElementById('selbtn').classList.toggle('on',SELECT);document.getElementById('selbtn').textContent=SELECT?'☑ Selecting':'☐ Select several';render();}
@@ -680,6 +683,7 @@ async function runNow(){
   toast('Asked for a run. The day runner checks on the hour: '+wait+'. Results land on Scott\'s Call.');
 }
 function draftsSetup(){alert('One-time setup, on the Mac or iPhone where Drafts lives:\n\n1. Open Drafts, then Actions, then the + button, and name the new action exactly:\n     Sweep to ProjectYou\n\n2. Add a Script step and paste in the sweep script (Claude has it for you).\n\n3. Come back here and press Pull from Drafts now.\n\nIf nothing happens when you press the button, Drafts is not installed on this device, or the action name does not match exactly. The every-2-hour sweep still runs either way.');}
+const PINW_SM='<svg viewBox="0 0 24 24" class="pinw sm"><g transform="translate(12,12)"><path d="M0 0 L0 -10 A10 10 0 0 1 7.8 -6.2 Z" fill="#e8a0b8"/><path d="M0 0 L7.8 -6.2 A10 10 0 0 1 9.7 2.2 Z" fill="#f0b58f"/><path d="M0 0 L9.7 2.2 A10 10 0 0 1 4.3 9 Z" fill="#ead98f"/><path d="M0 0 L4.3 9 A10 10 0 0 1 -4.3 9 Z" fill="#8ec5a0"/><path d="M0 0 L-4.3 9 A10 10 0 0 1 -9.7 2.2 Z" fill="#8fd0c4"/><path d="M0 0 L-9.7 2.2 A10 10 0 0 1 -7.8 -6.2 Z" fill="#a9c8e8"/><path d="M0 0 L-7.8 -6.2 A10 10 0 0 1 0 -10 Z" fill="#cbb0e0"/></g></svg>';
 const PINWHEEL='<svg viewBox="0 0 24 24" class="pinw"><g transform="translate(12,12)"><path d="M0 0 L0 -10 A10 10 0 0 1 7.8 -6.2 Z" fill="#e8a0b8"/><path d="M0 0 L7.8 -6.2 A10 10 0 0 1 9.7 2.2 Z" fill="#f0b58f"/><path d="M0 0 L9.7 2.2 A10 10 0 0 1 4.3 9 Z" fill="#ead98f"/><path d="M0 0 L4.3 9 A10 10 0 0 1 -4.3 9 Z" fill="#8ec5a0"/><path d="M0 0 L-4.3 9 A10 10 0 0 1 -9.7 2.2 Z" fill="#8fd0c4"/><path d="M0 0 L-9.7 2.2 A10 10 0 0 1 -7.8 -6.2 Z" fill="#a9c8e8"/><path d="M0 0 L-7.8 -6.2 A10 10 0 0 1 0 -10 Z" fill="#cbb0e0"/></g></svg>';
 function projIcon(p){return p==='Project YOU'?'🎡':p==='TreadWell'?'🥾':p==='Amazon'?'💼':'';}
 function projNode(p,onTap){if(p==='Project YOU'){const w=el('span','proj');w.innerHTML=PINWHEEL;w.title=onTap?'Project YOU. Tap: straight to Project You Ideas':'Project YOU';const sv=w.firstChild;sv.addEventListener('click',e=>{e.stopPropagation();sv.classList.remove('spin');void sv.offsetWidth;sv.classList.add('spin');if(onTap)setTimeout(onTap,450);});return w;}const i=projIcon(p);if(!i)return null;const e=el('span','proj',i);e.title=p;return e;}
