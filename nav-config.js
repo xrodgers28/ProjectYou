@@ -5,18 +5,25 @@
      or a dropdown {label, children:[{label, href}, ...]}.
    - Any item can be given a "children" list to turn it into a sub-nav. */
 window.NAV_CONFIG = {
+  /* Sep 6 2026, Scott: the input system became two pages. "Staging Area" in the
+     bar now opens Scott's Call (everything waiting on him); Claude's List sits
+     beside it (everything waiting on Claude). All ToDos and Midnight Run came
+     off the bar; both old pages stay reachable from the "previous versions"
+     line at the bottom of the new pages. Calendar moved into this group so the
+     grey CALENDAR label could go. */
   "To Do List": [
     { "label": "Todays<br>Tasks", "href": "index.html" },
-    { "label": "Staging<br>Area", "href": "staging-area.html" },
-    { "label": "All<br>ToDos", "href": "all-todos.html" }
+    { "label": "Staging<br>Area", "href": "scotts-call.html" },
+    { "label": "Claude's<br>List", "href": "claudes-list.html" },
+    { "label": "Calendar", "href": "calendar.html" }
   ],
   /* Calendar (Aug 29 2026, Scott). ONE slot in the top bar, in line with the
      sub-nav principle: the bar holds sections, and the two ways of looking at
      the calendar - the running list and the week grid - are a tab strip on the
      page itself, built from CAL_NAV further down this file. */
-  "Calendar": [
-    { "label": "Calendar", "href": "calendar.html" }
-  ],
+  /* Sep 6 2026: emptied, the link lives in To Do List now. An empty group is
+     hidden by the tidy-up at the bottom of this file. */
+  "Calendar": [],
   "Habit Modules": [
     { "label": "Cue Cards", "href": "habit-modules.html" },
     { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" }
@@ -46,8 +53,7 @@ window.NAV_CONFIG = {
      thing you look up rather than a place you go, so it lives as a card on
      mission.html under "Maps & dashboards". Do not put it back in the bar. */
   "Editors": [
-    { "label": "Daily<br>Habits", "href": "daily-template.html" },
-    { "label": "Midnight<br>Run", "href": "midnight-run-v2.html" }
+    { "label": "Daily<br>Habits", "href": "daily-template.html" }
   ],
   "Operating System": [
     { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
@@ -64,7 +70,6 @@ window.NAV_CONFIG = {
    When a group name here has a URL, navpatch.js renders its grey label as a
    clickable link (and marks it active on that page). */
 window.NAV_GROUP_LINKS = {
-  "Calendar": "calendar.html",
   "Habit Modules": "habit-modules.html",
   "Parking Lot": "connections.html"
 };
@@ -327,3 +332,10 @@ window.ONDARK_INK = "#d6dce4";
   else arm();
   window.addEventListener('load',fix);
 }catch(e){ if(window.console) console.log('section version sync skipped',e); }})();
+
+
+/* Sep 6 2026: hide any nav group that ended up with no links (Calendar moved
+   into To Do List). Runs after navpatch has filled the bar. */
+document.addEventListener('DOMContentLoaded',function(){
+  try{document.querySelectorAll('.pynav .pn-group').forEach(function(g){var l=g.querySelector('.pn-links');if(l&&!l.children.length)g.style.display='none';});}catch(e){}
+});
