@@ -195,7 +195,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v1.3</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Scott's Call <span class="ver">v1.4</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -259,7 +259,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.3 · Sep 6, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.4 · Sep 6, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -583,15 +583,13 @@ async function act(r,k,quiet){
     const title=head.replace(/^watched\s+/i,'').replace(/\s+last night.*$/i,'').replace(/[,.]\s*\d.*$/,'').trim()||head;
     const {data:created,error}=await sb.from('movies').insert({title,kind:'movie',status:'watched',watched_on:todayET(),rating:rating?+rating:null,notes:note||null,raw_input:RAW[head]||head}).select().single();
     if(error){toast('Could not log the film: '+error.message);CAP.push(r);render();return;}
-    const q=await sb.from('qs_log').insert({date:todayET(),group:'Recreational Health',tracker:'Movies',unit:'boolean',value:1,status:'done',note:title,source:'scotts-call:'+String(created.id).slice(0,8)}).select().single();
     await sb.from('todos').delete().eq('id',r.id);
-    if(!quiet)receipt(r,'Logged '+title+' as watched'+(rating?', '+rating+' stars':'')+', '+fmtDate(new Date().toISOString())+'. Seen on Movies and a 🎬 square on the tracker','movies.html',async()=>{await sb.from('movies').delete().eq('id',created.id);if(q.data)await sb.from('qs_log').delete().eq('id',q.data.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('movies').update({notes:v}).eq('id',created.id));return;}
+    if(!quiet)receipt(r,'Logged '+title+' as watched'+(rating?', '+rating+' stars':'')+', '+fmtDate(new Date().toISOString())+'. Seen on Movies and a 🎬 square on the tracker','movies.html',async()=>{await sb.from('movies').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('movies').update({notes:v}).eq('id',created.id));return;}
   if(k==='log:person'){const who=prompt('Who did you see? (name or names)',head.match(/saw\s+([A-Z][^,.]*)/)?.[1]||'');if(!who)return;const snap=snapOf(r);await logEvent(r,'approve',label);removeCap(r);render();
     const {data:created,error}=await sb.from('connections').insert({person:who.trim(),kind:'other',notes:note||head,happened_on:todayET(),planned:false,source:'scotts-call'}).select().single();
     if(error){toast('Could not log the meeting: '+error.message);CAP.push(r);render();return;}
-    const q=await sb.from('qs_log').insert({date:todayET(),group:'Social Well-Being',tracker:'Social Fitness',unit:'boolean',value:1,status:'done',note:who.trim(),source:'scotts-call:'+String(created.id).slice(0,8)}).select().single();
     await sb.from('todos').delete().eq('id',r.id);
-    if(!quiet)receipt(r,'Logged a meeting with '+who.trim()+', '+fmtDate(new Date().toISOString())+', on Connections and a Social Fitness square on the tracker','connections.html',async()=>{await sb.from('connections').delete().eq('id',created.id);if(q.data)await sb.from('qs_log').delete().eq('id',q.data.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('connections').update({notes:v}).eq('id',created.id));return;}
+    if(!quiet)receipt(r,'Logged a meeting with '+who.trim()+', '+fmtDate(new Date().toISOString())+', on Connections and a Social Fitness square on the tracker','connections.html',async()=>{await sb.from('connections').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('connections').update({notes:v}).eq('id',created.id));return;}
   if(k==='log:habit'){return logHabit(r);}
   if(k==='log:meal'){const name=prompt('What did you eat? (short name)',head.replace(/^(i\s+)?(ate|had|lunch was|dinner was|breakfast was)\s*/i,'').trim()||head);if(!name)return;const slot=prompt('Which meal? breakfast, lunch, dinner or snack','lunch')||null;const snap=snapOf(r);await logEvent(r,'approve',label);removeCap(r);render();
     const {data:created,error}=await sb.from('meals').insert({name:name.trim(),note:note||null,day:todayET(),status:'new',source:'scotts-call',slot:slot?slot.trim().toLowerCase():null}).select().single();
