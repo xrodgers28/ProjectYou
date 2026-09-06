@@ -136,8 +136,8 @@
   .wkarr[disabled]{opacity:.35;cursor:default}
   .wkd{flex:1;text-align:center;padding:4px 0 5px;border-radius:6px;cursor:pointer;background:none;border:none;font-family:inherit}
   .wkd:hover{background:#f2f5f9}
-  .wkd .l{display:block;font-size:8.5px;font-weight:800;color:#a9b2bd;letter-spacing:.4px}
-  .wkd .n{display:block;font-size:12px;font-weight:700;color:#5b6472;margin-top:1px;font-variant-numeric:tabular-nums}
+  .wkd .l{display:block;font-size:9.5px;font-weight:800;color:#a9b2bd;letter-spacing:.3px;font-variant-numeric:tabular-nums}
+  .wkd .n{display:block;font-size:10.5px;font-weight:700;color:#5b6472;margin-top:1px;font-variant-numeric:tabular-nums}
   .wkd.today{background:#c0453b}
   .wkd.today .l,.wkd.today .n{color:#fff}
   .wkd.today:hover{background:#b03f36}
@@ -209,7 +209,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link on">YouMatics</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.8</span>
+    <span class="pn-ver">v1.9</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -275,7 +275,7 @@
    the top is drawn by the shared health-strip.js, which mounts into the empty
    #bodystrip-mount div above and makes its own py_body_latest call.
    No library, no CDN: plain fetch against PostgREST.
-   v1.8 - Sep 6, 2026
+   v1.9 - Sep 6, 2026
 --------------------------------------------------------------------------- */
 (function () {
   'use strict';
@@ -546,6 +546,10 @@
    v1.8, Sep 6 2026: the stack order is his priority order, bottom up: Habits,
    Project You, Amazon, Personal, then Your to-dos, Still open on top. Same order
    in the legend and in the Month bars; The balance stacks 'yours' the same way.
+   v1.9, Sep 6 2026: the day columns HANG FROM THE TOP so Habits sits on top and
+   Still open at the bottom; the strip above the chart is a WEEK picker now, one
+   block per week (Monday's date), the current week in red, and the headline is
+   the picked week's totals.
 
    Two views of one set of numbers, toggled:
      "Your week"    - seven columns, what a typical Monday, Tuesday, Wednesday
@@ -591,7 +595,7 @@
   var rows = [], view = 'thisweek', weekBack = 0;   /* weekBack: 0 = the week we are in, 1 = last week */
   try { view = localStorage.getItem('py_dayview') || 'thisweek'; } catch (e) {}
   if (view !== 'month' && view !== 'balance' && view !== 'thisweek') view = 'thisweek';
-  var selDay = null, monthBack = 0;   /* selDay: the day the strip has picked; null = today */
+  var monthBack = 0;
   var FIRST_TRUE = '2026-08-25';   /* the day Todays Tasks started writing the record its own way */
   /* the 2am-to-2am day we are in, Eastern: the one definition the site uses, or the same rule inline */
   function todayKey() {
@@ -643,18 +647,19 @@
      for that day, no averaging. Arrows step back a week at a time. */
   function drawThisWeek(all) {
     var W = 900, H = 300, PAD = 34, TOP = 12, base = H - 48, cw = (W - PAD) / 7;
-    var today = todayKey(), mon = addDays(mondayOf(today), -7 * weekBack), sel = selDay || today;
+    var today = todayKey(), mon = addDays(mondayOf(today), -7 * weekBack);
     var byDay = {}; all.forEach(function (r) { byDay[r.day] = r; });
     var out = ['<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;min-width:520px;height:300px">'];
+    /* the scale reads from the top, because the bars hang from the top */
     [4, 8, 12, 16].forEach(function (hh) {
-      var y = TOP + base - (hh * 60 / SPAN) * base;
+      var y = TOP + (hh * 60 / SPAN) * base;
       out.push('<line x1="' + PAD + '" y1="' + y + '" x2="' + W + '" y2="' + y + '" stroke="#eef1f6"/>');
       out.push(txt(PAD - 5, y + 3, 8.5, '#c3cad3', 'end', 700, hh + 'h'));
     });
     for (var w = 0; w < 7; w++) {
-      var key = addDays(mon, w), r = byDay[key], x = PAD + w * cw, y = TOP + base;
+      var key = addDays(mon, w), r = byDay[key], x = PAD + w * cw, y = TOP;
       var isToday = key === today, future = key > today;
-      if (key === sel) out.push('<rect x="' + (x + 3) + '" y="' + (TOP - 6) + '" width="' + (cw - 6) + '" height="' + (base + 42) + '" rx="8" fill="#f1f5fa" stroke="#dbe4f0"/>');
+      if (isToday) out.push('<rect x="' + (x + 3) + '" y="' + (TOP - 6) + '" width="' + (cw - 6) + '" height="' + (base + 42) + '" rx="8" fill="#f1f5fa" stroke="#dbe4f0"/>');
       if (!r) {
         out.push('<rect x="' + (x + 7) + '" y="' + TOP + '" width="' + (cw - 14) + '" height="' + base + '" rx="4" fill="#f6f8fb"/>');
         out.push(txt(x + cw / 2, TOP + base / 2, 9.5, '#c3cad3', 'middle', 700, future ? 'not yet' : 'nothing on record'));
@@ -662,13 +667,13 @@
         for (var i = 0; i < B.length; i++) {
           var h = (r[B[i].k] / SPAN) * base;
           if (h <= 0) continue;
-          y -= h;
           var tip = dlong(r) + ' \u00b7 ' + B[i].name + ' \u00b7 ' + hlab(r[B[i].k]) + '|' + srcword(r);
           out.push('<rect x="' + (x + 7) + '" y="' + y.toFixed(1) + '" width="' + (cw - 14) +
                    '" height="' + h.toFixed(1) + '" rx="2" fill="' + B[i].c + '" data-tip="' + tip + '"/>');
           if (h >= 15)
             out.push(txt(x + cw / 2, y + h / 2 + 3.5, B[i].k === 'amz' ? 11.5 : 10, DARKON[B[i].k] ? '#1f2a44' : '#fff',
                          'middle', 800, hlab(r[B[i].k])).replace('<text ', '<text pointer-events="none" '));
+          y += h;
         }
       }
       out.push(txt(x + cw / 2, H - 24, 12, isToday ? '#c07a1a' : '#1f2a44', 'middle', 800,
@@ -870,38 +875,36 @@
     var today = todayKey();
     if (view === 'thisweek') {
       var mon = addDays(mondayOf(today), -7 * weekBack), sun = addDays(mon, 6);
-      if (!selDay || selDay < mon || selDay > sun) selDay = (today >= mon && today <= sun) ? today : sun;
       chart.innerHTML = drawThisWeek(trueRows);
       var wk = trueRows.filter(function (r) { return r.day >= mon && r.day <= sun; });
-      var byD = {}; wk.forEach(function (r) { byD[r.day] = r; });
-      var sr = byD[selDay];
-      /* the strip: M 31 T 1 ... S 6, today in red, the picked day outlined */
-      var h = '<div class="wkrow"><button class="wkarr" id="wkprev" type="button" aria-label="Previous week"' +
-              (addDays(mon, -7) < mondayOf(FIRST_TRUE) ? ' disabled' : '') + '>&#9664;</button>';
-      for (var i = 0; i < 7; i++) {
-        var k = addDays(mon, i);
-        h += '<button class="wkd' + (k === today ? ' today' : '') + (k === selDay && k !== today ? ' sel' : '') + (byD[k] ? '' : ' none') +
-             '" type="button" data-day="' + k + '"><span class="l">' + DAYNAMES[i].charAt(0) + '</span><span class="n">' + (+k.slice(8)) + '</span></button>';
+      /* the strip: ONE BLOCK PER WEEK (Scott, Sep 6), the eight most recent, the
+         current week in red, the picked week outlined; arrows page by eight weeks */
+      var thisMon = mondayOf(today), firstMon = mondayOf(FIRST_TRUE);
+      var page = Math.floor(weekBack / 8), lastBack = page * 8;   /* the block on the right */
+      var h = '<div class="wkrow"><button class="wkarr" id="wkprev" type="button" aria-label="Earlier weeks"' +
+              (addDays(thisMon, -7 * (lastBack + 8)) < firstMon ? ' disabled' : '') + '>&#9664;</button>';
+      for (var i = 7; i >= 0; i--) {
+        var wb = lastBack + i, m = addDays(thisMon, -7 * wb), onRecord = m >= firstMon || addDays(m, 6) >= firstMon;
+        var hasRows = trueRows.some(function (r) { return r.day >= m && r.day <= addDays(m, 6); });
+        h += '<button class="wkd' + (wb === 0 ? ' today' : '') + (wb === weekBack && wb !== 0 ? ' sel' : '') + (hasRows ? '' : ' none') +
+             '" type="button" data-week="' + wb + '" title="Week of ' + shortDate(m, true) + '"><span class="l">' +
+             m.slice(5, 7).replace(/^0/, '') + '/' + (+m.slice(8)) + '</span><span class="n">' + (wb === 0 ? 'now' : '-' + wb + 'w') + '</span></button>';
       }
-      h += '<button class="wkarr" id="wknext" type="button" aria-label="Next week"' + (weekBack === 0 ? ' disabled' : '') + '>&#9654;</button></div>';
+      h += '<button class="wkarr" id="wknext" type="button" aria-label="Later weeks"' + (page === 0 ? ' disabled' : '') + '>&#9654;</button></div>';
       var mine = wk.reduce(function (s0, r) { return s0 + mineOf(r); }, 0);
       var amzT = wk.reduce(function (s0, r) { return s0 + r.amz; }, 0);
       var pyT = wk.reduce(function (s0, r) { return s0 + r.py; }, 0);
-      var selName = (function () { var q = selDay.split('-'); return new Date(Date.UTC(+q[0], +q[1] - 1, +q[2])).toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'long', month: 'short', day: 'numeric' }); })();
-      h += '<div class="wkfoot"><span class="d">' + selName + '</span><span class="f">' +
-           (sr ? hlab(sr.open) + ' free' : 'nothing on record') +
-           ' \u00b7 week: ' + hlab(mine) + ' yours, ' + hlab(amzT) + ' Amazon, Project You ' + hlab(pyT) + '</span></div>';
+      var openT = wk.reduce(function (s0, r) { return s0 + r.open; }, 0);
+      h += '<div class="wkfoot"><span class="d">Week of ' + shortDate(mon) + ' to ' + shortDate(sun, true) + (weekBack === 0 ? ' \u00b7 this week' : '') + '</span><span class="f">' +
+           (wk.length ? hlab(openT) + ' free \u00b7 ' + wk.length + ' day' + (wk.length === 1 ? '' : 's') + ' on record' : 'nothing on record') + '</span></div>';
       strip.innerHTML = h;
       drawHoursWent(wk, mon, today);
-      /* headline: the picked day, the same six numbers Todays Tasks shows for it */
-      if (sr) {
-        big.textContent = hlab(mineOf(sr)) + ' yours \u00b7 ' + hlab(sr.amz) + ' Amazon';
-        sub.textContent = dlong(sr) + ' \u00b7 Project You ' + hlab(sr.py) + ' \u00b7 Habits ' + hlab(sr.hab) + ' \u00b7 To-dos ' + hlab(sr.todo) +
-                          ' \u00b7 Personal ' + hlab(sr.other) + ' \u00b7 Still open ' + hlab(sr.open);
-      } else {
-        big.textContent = '\u2014';
-        sub.textContent = selName + ' \u00b7 nothing on record' + (selDay > today ? ' yet' : '');
-      }
+      /* headline: the picked week's totals */
+      big.textContent = wk.length ? (hlab(mine) + ' yours \u00b7 ' + hlab(amzT) + ' Amazon') : '\u2014';
+      sub.textContent = shortDate(mon) + ' to ' + shortDate(sun, true) +
+        (wk.length ? ' \u00b7 Project You ' + hlab(pyT) + ' \u00b7 Habits ' + hlab(wk.reduce(function (s0, r) { return s0 + r.hab; }, 0)) +
+                     ' \u00b7 Personal ' + hlab(wk.reduce(function (s0, r) { return s0 + r.other; }, 0)) +
+                     ' \u00b7 To-dos ' + hlab(wk.reduce(function (s0, r) { return s0 + r.todo; }, 0)) : ' \u00b7 nothing on record');
       key.innerHTML = B.map(function (b) {
         return el('span', {}, '<b style="background:' + b.c + '"></b>' + b.name);
       }).join('');
@@ -962,9 +965,9 @@
   document.getElementById('weeknext').addEventListener('click', function () { if (monthBack > 0) { monthBack--; render(); } });
   document.getElementById('wkstrip').addEventListener('click', function (e) {
     var t = e.target.closest ? e.target.closest('button') : null; if (!t || t.disabled) return;
-    if (t.id === 'wkprev') { weekBack++; selDay = null; render(); return; }
-    if (t.id === 'wknext') { if (weekBack > 0) { weekBack--; selDay = null; render(); } return; }
-    if (t.dataset.day) { selDay = t.dataset.day; render(); }
+    if (t.id === 'wkprev') { weekBack = (Math.floor(weekBack / 8) + 1) * 8; render(); return; }
+    if (t.id === 'wknext') { weekBack = Math.max(0, (Math.floor(weekBack / 8) - 1) * 8 + 7); render(); return; }
+    if (t.dataset.week != null) { weekBack = +t.dataset.week; render(); }
   });
 
   function load() {
