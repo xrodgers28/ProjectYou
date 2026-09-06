@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scott's Call · ProjectYou</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@600;700&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@600;700&family=Archivo+Narrow:wght@400;700&display=swap">
 <style>
   :root{--ink:#1f2a44;--muted:#5b6472;--dim:#9aa3ae;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--chip:#eef2f8;--good:#1e8e5a;--hot:#c0453b;--amber:#b8801f;--claude:#8a5a9c}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -18,8 +18,22 @@
   .fl{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd}
   .chip{font-size:12px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;font-family:inherit}
   .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
-  .chip.static{cursor:default}
+  .chip.static{cursor:default;background:none;border:0;padding:5px 2px;color:var(--muted);font-weight:600}
   .chip.static b{color:var(--ink)}
+  .chip.static+.chip.static::before{content:"·";color:#c4cad2;margin-right:8px}
+  .chip.pull{background:#4aa8ef;border-color:#4aa8ef;color:#fff}
+  .chip.pull:hover{background:#2f97e6}
+  .pullhint{font-size:11px;color:#8a929c;margin:4px 0 0}
+  .pullhint a{color:var(--accent);text-decoration:underline;cursor:pointer}
+  .proj{font-size:12px;margin:0 4px 0 0;vertical-align:middle;cursor:default}
+  .moon{position:absolute;top:2px;right:22px;width:18px;height:16px;line-height:14px;text-align:center;border:1px solid transparent;border-radius:99px;background:none;font-size:11px;cursor:pointer;padding:0;opacity:.45}
+  .moon:hover,.moon.on{opacity:1;background:#2b3a52;border-color:#2b3a52}
+  .features.tiny{font-family:"Archivo Narrow","Arial Narrow",Arial,sans-serif}
+  .features.tiny h2{font-size:13px;margin:0 0 2px}
+  .features.tiny p{font-size:11px;margin:0 0 4px}
+  .features.tiny .eb{font-size:10px;margin:6px 0 2px}
+  .features.tiny dl{font-size:11px;gap:0 10px;line-height:1.25}
+  .features.tiny dt,.features.tiny dd{padding:0;margin:0}
   .savestate{margin-left:auto;font-size:11.5px;color:#9aa6b4;min-width:60px;text-align:right}
   .savestate.saved{color:var(--good)} .savestate.err{color:var(--hot)}
   .board{margin-top:14px}
@@ -111,10 +125,16 @@
   .rightgrp .peek{justify-self:start}
   .tag.dest.log{border-color:#bfe3cf;color:var(--good)}
   .tag.dest.me{border-color:#d9c9e4;color:var(--claude)}
+  .alts{grid-column:1/3;display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap}
+  .tag.dest.alt{border-style:dashed;color:#6b7a89;font-weight:600;max-width:150px}
+  .tag.dest.alt:hover{border-color:var(--accent);color:var(--accent);border-style:solid}
+  .prev{font-size:10.5px;color:#9aa3ae;margin:6px 0 0}
+  .prev a{color:#8a929c}
+  .sec.forclaude .sech{color:var(--claude);border-bottom-color:#e8dff0}
   .dot{width:8px;height:8px;border-radius:99px;display:inline-block;margin:0 5px 0 0;vertical-align:middle}
   .dot.lo{background:var(--hot)}.dot.mid{background:var(--amber)}.dot.hi{background:var(--good)}
   .rightgrp.four{grid-template-columns:auto auto}
-  .peek{flex:0 0 auto;width:22px;height:20px;border:none;background:none;cursor:pointer;font-size:13px;line-height:1;border-radius:6px;padding:0}
+  .peek{flex:0 0 auto;width:22px;height:20px;display:inline-flex;align-items:center;justify-content:center;border:none;background:none;cursor:pointer;font-size:13px;line-height:1;border-radius:6px;padding:0}
   .peek:hover{background:#eef2f8}
   .morebtn{font-family:inherit;font-size:10px;font-weight:800;color:#8a929c;background:#fff;border:1px solid #dfe4ea;border-radius:999px;padding:2px 8px;cursor:pointer;white-space:nowrap}
   .morebtn:hover{color:var(--accent);border-color:var(--accent)}
@@ -163,7 +183,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v0.3</span></h1>
+  <h1>Scott's Call <span class="ver">v0.6</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table: where every note goes ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -171,10 +191,11 @@
     <span class="chip static" id="c-rules"><b>0</b> rules</span>
     <span class="chip static" id="c-mine"><b>0</b> only you</span>
     <button class="chip" id="selbtn" onclick="toggleSelect()">☐ Select several</button>
-    <button class="chip" onclick="pullDrafts()">⟳ Pull from Drafts now</button>
+    <button class="chip pull" id="pullnow" onclick="pullDrafts()">⟳ Pull from Drafts now</button>
     <button class="chip" onclick="load(true)">⟳</button>
     <span class="savestate" id="save">loading…</span>
   </div>
+  <p class="pullhint" id="pullhint">Opens Drafts and runs your <b>Sweep to ProjectYou</b> action. Several tasks in one note get split into separate rows. <a id="pullsetup" onclick="draftsSetup()">Setup</a></p>
   <div class="sel-bar" id="selbar">
     <span class="lab"><span id="selcount">0</span> selected</span>
     <span class="ddwrap"><button class="chip on" onclick="openBulk(this)">Do with them ▾</button></span>
@@ -188,39 +209,44 @@
   <div class="fold" onclick="toggleFold('arch')">🗄️ Archive <span class="cnt" id="arch-line">your last 40 calls</span><span class="r" id="arch-r">open ▸</span></div>
   <div class="foldbody" id="fold-arch"></div>
 
-  <div class="features">
-    <h2>Features</h2>
-    <p>What every button on this page does to your note.</p>
+  <div class="features tiny">
+    <h2>How this page works</h2>
+    <p>Every note you dictate into Drafts lands here and waits. Nothing files itself. The <a href="input-routing.html">routing table</a> shows where each kind of note goes.</p>
     <div class="eb">A waiting note</div>
     <dl>
-      <dt>● red · amber · green</dt><dd>How sure I am about the home I picked. Red sorts to the top: read it properly. Green groups under Looks clear and can be cleared in one tap.</dd>
-      <dt>The headline</dt><dd>Tap the words to fix a garbled voice note. Saves when you click away; the raw dictation stays under Popcorn untouched.</dd>
-      <dt>→ home ▾</dt><dd>Where it goes. One list, grouped: Your day, Claude's List, the Boards, Log it, Other. The one I picked shows first; change it and Approve follows.</dd>
-      <dt>🔭</dt><dd>Look before you file: opens the destination page in a window so you can see where the note will land.</dd>
-      <dt>Approve · Log it · Dismiss</dt><dd>The button changes with the home. Approve files a to-do or a build item. Log it records a thing that happened (a habit tick, a film watched, a person met) and never makes a to-do. Dismiss moves it to a recoverable bin.</dd>
+      <dt>For you · For Claude</dt><dd>Two groups: things for your day and your lists, and things Claude builds or answers. In each, the shaky guesses sit on top and the sure ones can be approved in one tap.</dd>
+      <dt>● red · amber · green</dt><dd>How sure I am about the home I picked. Red means read it properly.</dd>
+      <dt>→ home ▾ and the two grey tags</dt><dd>The filled tag is my guess. The two dashed ones are my runners-up: tap one and it becomes the pick, no menu. The ▾ opens the full list.</dd>
+      <dt>🎡 🥾 💼</dt><dd>Which project the note belongs to: Project YOU, TreadWell, Amazon. No icon means personal.</dd>
+      <dt>The headline</dt><dd>Tap the words to fix a garbled voice note. Under it, the note interpreted in one to four plain sentences. Popcorn keeps your exact words.</dd>
+            <dt>The binoculars</dt><dd>Look before you file: opens the destination page in a window on top.</dd>
+      <dt>Approve · Log it · Dismiss</dt><dd>The button changes with the home. Approve files a to-do or a build item. Log it records a thing that happened and never makes a to-do: a film goes to Movies and a 🎬 square on the tracker, a person to Connections and a Social Fitness square, a habit ticks the worksheet, a meal goes to the Meal log, an appointment to the Calendar and on to Google. Dismiss moves it to a recoverable bin.</dd>
+      <dt>🌙 · ×</dt><dd>Top right of every row. The moon sends it straight to the Midnight Run (Claude's List, Tonight). The × kills it, with Undo.</dd>
       <dt>more ▾</dt><dd>Park it, the 🎡 pinwheel (straight to Project You Ideas), Make it a rule, Dismiss.</dd>
-      <dt>🍿 Popcorn · 💬 comment · est · act</dt><dd>The same strip as the Staging Area. Popcorn shows your dictation word for word. Comment opens a box; what you type rides along with your tap and I remember it. Est is my guess at minutes, act is yours after; both travel with the note.</dd>
-      <dt>The green strip after a tap</dt><dd>Says exactly what was filed and where, with Undo and a box for a correction. Ten seconds, then it folds into the Archive.</dd>
+      <dt>🍿 Popcorn · 💬 comment · est · act</dt><dd>Popcorn shows your dictation word for word, even when one dictation became several rows. Comment rides along with your tap and I remember it. Est is my guess at minutes, act is yours after.</dd>
+      <dt>The green strip after a tap</dt><dd>Says what was filed and where, with Undo and a correction box. Ten seconds, then it folds into the Archive.</dd>
+      <dt>⟳ Pull from Drafts now</dt><dd>Opens Drafts and runs your Sweep to ProjectYou action. Several tasks in one note get split into separate rows. Otherwise the sweep runs every two hours on its own.</dd>
     </dl>
     <div class="eb">Delivered by Claude</div>
     <dl>
       <dt>Got It</dt><dd>You have seen it. Files it into the Archive.</dd>
-      <dt>Needs a fix</dt><dd>Say what is wrong; it becomes a Quick item on the Now shelf of Claude's List and the original is filed.</dd>
-      <dt>Do this · Tell me more · I did it · I read this · Kill this task</dt><dd>The five buttons, on briefs and questions only. Do this and Tell me more keep the row open because work is still owed.</dd>
+      <dt>Needs a fix</dt><dd>Say what is wrong; it becomes a Quick item on the Now shelf of Claude's List.</dd>
+      <dt>Do this · Tell me more · I did it · I read this · Kill this task</dt><dd>The five buttons, on briefs and questions. Do this and Tell me more keep the row open because work is still owed.</dd>
     </dl>
     <div class="eb">The rest</div>
     <dl>
       <dt>Add to the rules?</dt><dd>Yes folds the rule into your working rules at the next RAP. No drops it.</dd>
-      <dt>Only you can do this</dt><dd>Your own items. I did it files them; Give it to Claude hands one over.</dd>
+      <dt>Only you can do this</dt><dd>Your own items. I did it files them; the moon or Give it to Claude hands one over.</dd>
       <dt>🅿️ Parking Lot</dt><dd>The one and only. Undecided things wait here until you move them.</dd>
       <dt>☐ Select several</dt><dd>Tick boxes and one menu at the top: approve as guessed, park, or dismiss a batch.</dd>
     </dl>
   </div>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v0.3 · Sep 6, 2026</span></footer>
+  <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v0.6 · Sep 7, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
-<div class="overlay" id="peek" onclick="if(event.target===this)closePeek()"><div class="peekbox"><div class="peekhead">🔭 Where it goes: <b id="peektitle"></b><span id="peeksub" style="color:#8a929c"></span><button class="x" onclick="closePeek()">Close</button></div><iframe id="peekframe" title="Destination preview"></iframe></div></div>
+<div class="overlay" id="peek" onclick="if(event.target===this)closePeek()"><div class="peekbox"><div class="peekhead">Where it goes: <b id="peektitle"></b><span id="peeksub" style="color:#8a929c"></span><button class="x" onclick="closePeek()">Close</button></div><iframe id="peekframe" title="Destination preview"></iframe></div></div>
 
 <script>
 const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
@@ -234,17 +260,19 @@ const MODULES={
   '🎬 Movie List':{table:'movies',page:'movies.html',label:'Movie List',row:(h,note,d)=>({title:h,kind:'movie',status:'want to watch',notes:note||null,watch_on:d||null})},
   '💬 Clever Phrase':{table:'quotes',page:'quotes.html',label:'Clever Phrases',row:(h,note)=>({text:h,meaning:note||null,is_new:true,source_module:'staging'})},
   '✈️ Future Travel':{table:'future_travel',page:'future-travel.html',label:'Future Travel',row:(h,note)=>({place:h,kind:'destination',notes:note||null})},
-  '👋 Friends Visit':{table:'connections',page:'connections.html',label:'Social',row:(h,note,d)=>({person:h,kind:'other',notes:note||null,happened_on:d||null})}
+  '👋 Friends Visit':{table:'connections',page:'connections.html',label:'Social',row:(h,note,d)=>({person:h,kind:'other',notes:note||null,happened_on:d||null,planned:true,source:'scotts-call'})}
 };
 /* Log it homes: things that HAPPENED. Never a to-do. */
 const LOGS={
   'log:movie':{label:'Log it: film watched',page:'movies.html'},
   'log:person':{label:'Log it: person met',page:'connections.html'},
-  'log:habit':{label:'Log it: habit done',page:'habit-worksheets.html'}
+  'log:habit':{label:'Log it: habit done',page:'habit-worksheets.html'},
+  'log:meal':{label:'Log it: meal eaten',page:'log-meal.html'},
+  'log:event':{label:'Calendar: add the event',page:'calendar.html'}
 };
 const CL={'cl:now:quick':{label:"Claude's List: Now, Quick",shelf:'now',run:'quick'},'cl:now:background':{label:"Claude's List: Now, Background",shelf:'now',run:'background'},'cl:tonight':{label:"Claude's List: Tonight",shelf:'tonight',run:'overnight'},'cl:later':{label:"Claude's List: Later, write me a brief",shelf:'later',run:'brief'}};
 const PAGE_FOR={day:'index.html',cl:'claudes-list.html',park:'scotts-call.html'};
-let CAP=[],DELIV=[],RULES=[],MINE=[],PARKED=[],ARCH=[],RAW={},HABITS=[],SELECT=false,SEL=new Set(),FOLDS={parked:false,arch:false},toastT=null,DEST={};
+let CAP=[],DELIV=[],RULES=[],MINE=[],PARKED=[],ARCH=[],RAW={},RAWID={},HABITS=[],SELECT=false,SEL=new Set(),FOLDS={parked:false,arch:false},toastT=null,DEST={};
 
 /* ---------- auth ---------- */
 async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)onLogin(session);}
@@ -263,7 +291,7 @@ async function load(quiet){
     sb.from('todos').select('*').eq('staged',true).eq('done',false).order('created_at',{ascending:false}),
     sb.from('session_todos').select('*').is('deleted_at',null).is('archived_at',null).order('position',{ascending:true}),
     sb.from('rule_candidates').select('*').eq('decision','pending').order('created_at',{ascending:true}),
-    sb.from('inbox').select('text,headline').not('headline','is',null).order('created_at',{ascending:false}).limit(400),
+    sb.from('inbox').select('id,text,headline').not('headline','is',null).order('created_at',{ascending:false}).limit(400),
     sb.from('todos').select('*').eq('section',PARK).eq('done',false).eq('staged',false).order('created_at',{ascending:false}).limit(100),
     sb.from('worksheet_rows').select('id,habit,area,section,minutes').eq('is_active',true).neq('retired',true).order('area').order('habit'),
     sb.from('staging_events').select('*').order('decided_at',{ascending:false}).limit(40)
@@ -275,13 +303,49 @@ async function load(quiet){
   MINE=st.filter(r=>isScott(r)&&!DELIV.includes(r)&&(r.shelf||'')!=='parked'&&r.cat!=='Parking Lot');
   PARKED=[...(e.data||[]).map(r=>({kind:'todo',r})),...st.filter(r=>(r.shelf||'')==='parked'||r.cat==='Parking Lot').map(r=>({kind:'st',r}))];
   RULES=c.data||[];
-  RAW={};(d.data||[]).forEach(x=>{const h=(x.headline||'').trim();if(h&&!RAW[h])RAW[h]=x.text||'';});
+  RAW={};RAWID={};(d.data||[]).forEach(x=>{RAWID[x.id]=x.text||'';const h=(x.headline||'').trim();if(h&&!RAW[h])RAW[h]=x.text||'';});
   HABITS=f.data||[];ARCH=g.data||[];
   CAP.forEach(r=>{if(!DEST[r.id])DEST[r.id]=guessKey(r);});
   render();setSave('Saved');
 }
 function confOf(r){const c=(r.stage_conf||'').toLowerCase();return c.startsWith('h')?'hi':c.startsWith('l')?'lo':'mid';}
-function guessKey(r){
+/* v0.5: the arrival tag (stage_kind) picks the home and the two runners-up.
+   Option B, Scott Sep 6: the guess shows filled, two grey runners-up beside it, tap one to switch. */
+const KIND_ROUTE={
+  task:['day:Core To-Dos',"day:Tomorrow's Core To-Dos",'park'],
+  waiting:['day:⏳ Waiting On','day:Core To-Dos','park'],
+  work:['day:Work/Amazon','day:Core To-Dos',"day:Tomorrow's Core To-Dos"],
+  someday:['park','day:Core To-Dos','ideas'],
+  build:['cl:now:background','cl:tonight','cl:later'],
+  bug:['cl:now:quick','cl:tonight','cl:now:background'],
+  idea:['cl:later','ideas','park'],
+  question:['cl:now:quick','cl:later','day:Core To-Dos'],
+  rule:['rule','cl:later','day:Core To-Dos'],
+  watched:['log:movie','mod:🎬 Movie List','day:Recreational Health'],
+  met:['log:person','mod:👋 Friends Visit','day:Social Well-Being'],
+  habit:['log:habit','day:Physical Health','day:Core To-Dos'],
+  meal:['log:meal','day:Physical Health','day:Core To-Dos'],
+  watch:['mod:🎬 Movie List','log:movie','day:Recreational Health'],
+  'plan-to-see':['mod:👋 Friends Visit','log:person','day:Social Well-Being'],
+  travel:['mod:✈️ Future Travel','day:Core To-Dos','park'],
+  phrase:['mod:💬 Clever Phrase','day:Core To-Dos','park'],
+  event:['log:event','day:Core To-Dos',"day:Tomorrow's Core To-Dos"]
+};
+const FOR_CLAUDE=new Set(['build','bug','idea','question','rule']);
+function isForClaude(r){const k=(r.stage_kind||'').toLowerCase();if(KIND_ROUTE[k])return FOR_CLAUDE.has(k);return r.stage_board==='alltodos';}
+function routeFor(r){
+  const k=(r.stage_kind||'').toLowerCase();const g=r.stage_guess||'';
+  if(KIND_ROUTE[k]){const rt=KIND_ROUTE[k].slice();
+    // a day-section guess from the interpreter beats the generic day slot
+    if(['task','waiting','work','event','meal'].includes(k)&&g&&DAY_SECTIONS.includes(g)&&rt[0].startsWith('day:'))rt[0]='day:'+g;
+    if(k==='build'&&r.stage_cat&&/bug/i.test(r.stage_cat))rt[0]='cl:now:quick';
+    return rt;}
+  const p=guessKeyLegacy(r);
+  return [p,p.startsWith('cl:')?'cl:tonight':"day:Tomorrow's Core To-Dos",'park'];
+}
+function runnerUps(r){const cur=DEST[r.id]||guessKey(r);return routeFor(r).filter(k=>k!==cur).slice(0,2);}
+function guessKey(r){return routeFor(r)[0];}
+function guessKeyLegacy(r){
   const g=r.stage_guess||'';
   if(r.stage_board==='alltodos')return 'cl:now:background';
   if(MODULES[g])return 'mod:'+g;
@@ -293,7 +357,7 @@ function destLabel(k){
   if(k.startsWith('day:'))return 'Your day: '+k.slice(4);
   if(k.startsWith('mod:'))return 'Boards: '+MODULES[k.slice(4)].label;
   if(CL[k])return CL[k].label; if(LOGS[k])return LOGS[k].label;
-  if(k==='park')return 'Park it'; if(k==='dismiss')return 'Dismiss'; if(k==='ideas')return 'Project You Ideas';
+  if(k==='park')return 'Park it'; if(k==='dismiss')return 'Dismiss'; if(k==='ideas')return 'Project You Ideas'; if(k==='rule')return 'Make it a rule';
   return k;
 }
 function destPage(k){
@@ -307,10 +371,14 @@ function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function render(){
   const b=document.getElementById('board');b.innerHTML='';
-  const shaky=CAP.filter(r=>confOf(r)!=='hi'), clear=CAP.filter(r=>confOf(r)==='hi');
-  b.appendChild(section('Read these first',shaky.length+' · my guess is shaky',shaky.map(capRow),'Nothing shaky. Every waiting note has a confident home.',null,shaky.length));
-  const ap=el('button','chip','✓ Approve all as guessed');ap.style.cssText='margin-left:auto;padding:2px 9px;font-size:11px';ap.onclick=()=>approveAll(clear);
-  b.appendChild(section('Looks clear',String(clear.length),clear.map(capRow),'Nothing waiting.',clear.length?ap:null));
+  const order={lo:0,mid:1,hi:2};const byConf=(a,c)=>order[confOf(a)]-order[confOf(c)];
+  const you=CAP.filter(r=>!isForClaude(r)).sort(byConf), me=CAP.filter(r=>isForClaude(r)).sort(byConf);
+  [['For you',you,''],['For Claude',me,'forclaude']].forEach(([title,list,cls])=>{
+    const shaky=list.filter(r=>confOf(r)!=='hi').length, sure=list.filter(r=>confOf(r)==='hi');
+    const ap=el('button','chip','✓ Approve the '+sure.length+' sure ones as guessed');ap.style.cssText='margin-left:auto;padding:2px 9px;font-size:11px';ap.onclick=()=>approveAll(sure);
+    const sec=section(title,list.length+(shaky?' · '+shaky+' shaky on top':'')+(sure.length?' · '+sure.length+' sure':''),list.map(capRow),title==='For you'?'Nothing waiting for you.':'Nothing waiting for Claude.',sure.length?ap:null);
+    if(cls)sec.classList.add(cls);b.appendChild(sec);
+  });
   b.appendChild(section('Delivered by Claude, for your call',String(DELIV.length),DELIV.map(delivRow),'Nothing delivered since your last visit.'));
   b.appendChild(section('Add to the rules?',String(RULES.length),RULES.map(ruleRow),'No rules waiting.'));
   const ms=section('Only you can do this',MINE.length+' · your own items',MINE.map(mineRow),'Nothing only you can do. Enjoy it.');ms.classList.add('dim');b.appendChild(ms);
@@ -332,7 +400,7 @@ function toggleFold(k){FOLDS[k]=!FOLDS[k];document.getElementById('fold-'+k).cla
 
 function headlineNode(r,onSave){
   const t=el('div','txt');
-  const dot=el('span','dot '+confOf(r));t.appendChild(dot);
+  const dot=el('span','dot '+confOf(r));t.appendChild(dot);{const pn=projNode(r.stage_project);if(pn)t.appendChild(pn);}
   const sp=el('span','',esc(r.task||''));sp.contentEditable='true';sp.spellcheck=false;sp.title='Tap to edit';
   sp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();sp.blur();}if(e.key==='Escape'){sp.textContent=r.task;sp.blur();}});
   sp.addEventListener('blur',()=>{const v=sp.textContent.trim();if(v&&v!==r.task)onSave(v);});
@@ -347,11 +415,13 @@ function capRow(r){
   const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto auto';
   const k=DEST[r.id]||guessKey(r);const kind=destKind(k);
   const dt=el('button','tag dest'+(kind==='log'?' log':CL[k]?' me':''),'→ '+esc(destLabel(k))+' ▾');dt.title='Where it goes, tap to change';dt.onclick=()=>openDest(dt,r);rg.appendChild(dt);
-  const pk=el('button','peek','🔭');pk.title='Look at where it will land';pk.onclick=()=>peek(k,r);rg.appendChild(pk);
+  const pk=el('button','peek');pk.innerHTML='<svg viewBox="0 0 48 48" width="17" height="17" fill="#3f6f8f"><rect x="14" y="8" width="7" height="9" rx="2"/><rect x="27" y="8" width="7" height="9" rx="2"/><path d="M12 15h8v12h8V15h8l7 13v6H5v-6z"/><circle cx="13" cy="35" r="9"/><circle cx="35" cy="35" r="9"/><circle cx="13" cy="35" r="4" fill="#fff" opacity=".85"/><circle cx="35" cy="35" r="4" fill="#fff" opacity=".85"/></svg>';pk.title='Look at where it will land';pk.onclick=()=>peek(k,r);rg.appendChild(pk);
   const pb=el('button','btnp'+(kind==='log'?' log':kind==='dismiss'?' ghost':''),kind==='log'?'Log it':kind==='dismiss'?'Dismiss':'Approve');pb.onclick=()=>act(r,k);rg.appendChild(pb);
   const mb=el('button','morebtn','more ▾');mb.onclick=()=>openMore(mb,r);rg.appendChild(mb);
+  {const alts=runnerUps(r);if(alts.length){const ad=el('div','alts');alts.forEach(a=>{const b=el('button','tag dest alt','or '+esc(destLabel(a)));b.title='My runner-up. Tap to pick it';b.onclick=()=>setDest(r,a);ad.appendChild(b);});rg.appendChild(ad);}}
   top.appendChild(rg);li.appendChild(top);
   {const kx=el('button','kill','×');kx.type='button';kx.title='Kill this';kx.onclick=e=>{e.stopPropagation();act(r,'dismiss');};li.appendChild(kx);}
+  moonBtn(li,(DEST[r.id]||'')==='cl:tonight','Send to the Midnight Run (Claude\'s List, Tonight)',()=>act(r,'cl:tonight'));
   const note=(r.staging_note||'').trim();
   if(note&&!/interpreter offline/i.test(note))li.appendChild(el('div','note sum',esc(note)));
   /* the Staging Area strip, verbatim: Popcorn · comment · est · act */
@@ -361,7 +431,7 @@ function capRow(r){
   est.onchange=()=>patchTodo(r.id,{est_minutes:est.value===''?null:+est.value});act.onchange=()=>patchTodo(r.id,{actual_minutes:act.value===''?null:+act.value});
   tb.append(el('label','','est'),est,el('label','','act'),act,el('label','','min'));
   links.append(pop,el('span','sep','·'),cmt,el('span','sep','·'),tb);li.appendChild(links);
-  const raw=el('div','rawbox hidden');raw.innerHTML='<b>🍿 Popcorn · raw draft</b>'+(RAW[(r.task||'').trim()]?esc(RAW[(r.task||'').trim()]):'<span style="font-style:normal;color:#aab2bd">No raw dictation stored for this note.</span>');li.appendChild(raw);
+  const raw=el('div','rawbox hidden');raw.innerHTML='<b>🍿 Popcorn · raw draft</b>'+((r.inbox_id&&RAWID[r.inbox_id])?esc(RAWID[r.inbox_id]):RAW[(r.task||'').trim()]?esc(RAW[(r.task||'').trim()]):'<span style="font-style:normal;color:#aab2bd">No raw dictation stored for this note.</span>');li.appendChild(raw);
   pop.onclick=()=>{const h=raw.classList.toggle('hidden');pop.textContent=h?'🍿 Popcorn':'🍿 Hide Popcorn';};
   const cbox=el('div','cmtbox hidden');const ta=el('textarea');ta.placeholder='Tell me what is off, or where it really belongs.';ta.value=/interpreter offline/i.test(r.staging_note||'')?'':(r.staging_note||'');
   const crow=el('div','cmtrow');const hint=el('span','cmthint','Claude re-files per your note and remembers it.');const mic=el('button','cmtmic','🎤');mic.type='button';crow.append(hint,mic);cbox.append(ta,crow);li.appendChild(cbox);
@@ -373,7 +443,7 @@ function capRow(r){
 function delivRow(r){
   const li=el('li','item');const brief=/^brief:/i.test(r.txt||'')||r.kind==='idea';
   const top=el('div','toprow');top.appendChild(el('span','h',''));
-  const t=el('div','txt',esc(r.txt||''));top.appendChild(t);
+  const t=el('div','txt');{const pn=projNode(r.project);if(pn)t.appendChild(pn);}t.appendChild(document.createTextNode(r.txt||''));top.appendChild(t);
   const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto';
   const meta=el('span','tag st',brief?'a question':('built '+fmtDate(r.updated_at||r.created_at)));
   const btns=el('div');btns.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end';
@@ -398,7 +468,8 @@ function ruleRow(r){
 }
 function mineRow(r,parked){
   const li=el('li','item');const top=el('div','toprow');top.appendChild(el('span','h',''));
-  const t=el('div','txt',esc(r.txt||''));top.appendChild(t);
+  const t=el('div','txt');{const pn=projNode(r.project);if(pn)t.appendChild(pn);}t.appendChild(document.createTextNode(r.txt||''));top.appendChild(t);
+  moonBtn(li,false,'Hand it to Claude for the Midnight Run tonight',async()=>{await save(r.id,{own:'Claude',shelf:'tonight',run_mode:'overnight',kind:r.kind||'feature'});toast('On the Midnight Run tonight, on Claude’s List.');load(true);});
   const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto auto auto';
   if(r.est_minutes)rg.appendChild(el('span','tag est','['+r.est_minutes+']'));
   const d=el('button','btnp ghost','I did it');d.onclick=()=>archiveST(r,'I did it');rg.appendChild(d);
@@ -455,7 +526,7 @@ function openBulk(btn){if(!SEL.size){toast('Tick some rows first.');return;}
   openDD(btn,[{lab:'Do with '+SEL.size},{l:'✓ Approve as guessed',fn:()=>bulk('approve')},{l:'🅿️ Park them',fn:()=>bulk('park')},{l:'Dismiss them',cls:'danger',fn:()=>bulk('dismiss')}]);}
 function toggleSelect(){SELECT=!SELECT;if(!SELECT)SEL.clear();document.getElementById('selbtn').classList.toggle('on',SELECT);document.getElementById('selbtn').textContent=SELECT?'☑ Selecting':'☐ Select several';render();}
 async function bulk(what){const ids=[...SEL];for(const id of ids){const r=CAP.find(x=>x.id===id);if(!r)continue;await act(r,what==='approve'?(DEST[r.id]||guessKey(r)):what,true);}SEL.clear();toast('Done: '+ids.length);render();}
-async function approveAll(list){for(const r of list){await act(r,DEST[r.id]||guessKey(r),true);}toast('Filed '+list.length+' as guessed');render();}
+async function approveAll(list){if(!list.length)return;for(const r of list){await act(r,DEST[r.id]||guessKey(r),true);}toast('Filed '+list.length+' as guessed');render();}
 
 /* ---------- 🔭 look before you file ---------- */
 function peek(k,r){
@@ -474,11 +545,12 @@ function removeCap(r){CAP=CAP.filter(x=>x.id!==r.id);}
 async function act(r,k,quiet){
   const note=(r.staging_note||'').trim();const head=(r.task||'').trim();const label=destLabel(k);
   if(k==='dismiss'){await logEvent(r,'dismiss',DISMISSED);removeCap(r);render();const ok=await patchTodo(r.id,{staged:false,section:DISMISSED,subsection:null});if(ok&&!quiet)receipt(r,'Dismissed, in the recoverable bin',null,()=>patchTodo(r.id,{staged:true,section:INBOX}),true);return;}
+  if(k==='rule'){const text=prompt('The rule, in your words:',r.task||'');if(!text)return;const {error}=await sb.from('rule_candidates').insert({text,rationale:'Proposed from Scott’s Call, '+new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'America/New_York'})});if(error){toast('Could not save: '+error.message);return;}await logEvent(r,'rule','rule_candidates');await patchTodo(r.id,{staged:false,section:DISMISSED});removeCap(r);toast('Proposed as a rule. It is in Add to the rules? below.');load(true);return;}
   if(k==='park'){await logEvent(r,'park',PARK);removeCap(r);render();const ok=await patchTodo(r.id,{staged:false,section:PARK,subsection:null});if(ok&&!quiet)receipt(r,'Parked',null,()=>patchTodo(r.id,{staged:true,section:INBOX}));load(true);return;}
   if(k==='ideas'||k.startsWith('day:')){const sec=k==='ideas'?IDEAS:k.slice(4);await logEvent(r,'approve',label);removeCap(r);render();
     const ok=await patchTodo(r.id,{staged:false,section:sec,subsection:null,stage_guess:sec});if(ok&&!quiet)receipt(r,'Filed to '+sec+' on Todays Tasks','index.html',()=>patchTodo(r.id,{staged:true,section:INBOX}),false,v=>patchTodo(r.id,{staging_note:v}));return;}
   if(CL[k]){await logEvent(r,'send_board',label);const snap=snapOf(r);removeCap(r);render();
-    const {data:created,error}=await sb.from('session_todos').insert({cat:'📥 Inbox',txt:head,note:note||null,summary:note||null,own:'Claude',kind:'feature',kind_proposed:true,shelf:CL[k].shelf,run_mode:CL[k].run,area:'Project YOU',est_minutes:r.est_minutes||null,position:0,shelf_pos:0,done:false}).select().single();
+    const {data:created,error}=await sb.from('session_todos').insert({cat:'📥 Inbox',txt:head,note:note||null,summary:note||null,own:'Claude',kind:'feature',kind_proposed:true,shelf:CL[k].shelf,run_mode:CL[k].run,area:'Project YOU',project:r.stage_project||'Project YOU',est_minutes:r.est_minutes||null,position:0,shelf_pos:0,done:false}).select().single();
     if(error){toast('Could not send to Claude’s List: '+error.message);CAP.push(r);render();return;}
     await sb.from('todos').delete().eq('id',r.id);
     if(!quiet)receipt(r,'On Claude’s List, '+CL[k].label.replace("Claude's List: ",''),'claudes-list.html',async()=>{await sb.from('session_todos').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>save(created.id,{note:v}));return;}
@@ -491,14 +563,27 @@ async function act(r,k,quiet){
     const title=head.replace(/^watched\s+/i,'').replace(/\s+last night.*$/i,'').replace(/[,.]\s*\d.*$/,'').trim()||head;
     const {data:created,error}=await sb.from('movies').insert({title,kind:'movie',status:'watched',watched_on:todayET(),rating:rating?+rating:null,notes:note||null,raw_input:RAW[head]||head}).select().single();
     if(error){toast('Could not log the film: '+error.message);CAP.push(r);render();return;}
+    const q=await sb.from('qs_log').insert({date:todayET(),group:'Recreational Health',tracker:'Movies',unit:'boolean',value:1,status:'done',note:title,source:'scotts-call:'+String(created.id).slice(0,8)}).select().single();
     await sb.from('todos').delete().eq('id',r.id);
-    if(!quiet)receipt(r,'Logged '+title+' as watched'+(rating?', '+rating+' stars':'')+', '+fmtDate(new Date().toISOString()),'movies.html',async()=>{await sb.from('movies').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('movies').update({notes:v}).eq('id',created.id));return;}
+    if(!quiet)receipt(r,'Logged '+title+' as watched'+(rating?', '+rating+' stars':'')+', '+fmtDate(new Date().toISOString())+'. Seen on Movies and a 🎬 square on the tracker','movies.html',async()=>{await sb.from('movies').delete().eq('id',created.id);if(q.data)await sb.from('qs_log').delete().eq('id',q.data.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('movies').update({notes:v}).eq('id',created.id));return;}
   if(k==='log:person'){const who=prompt('Who did you see? (name or names)',head.match(/saw\s+([A-Z][^,.]*)/)?.[1]||'');if(!who)return;const snap=snapOf(r);await logEvent(r,'approve',label);removeCap(r);render();
     const {data:created,error}=await sb.from('connections').insert({person:who.trim(),kind:'other',notes:note||head,happened_on:todayET(),planned:false,source:'scotts-call'}).select().single();
     if(error){toast('Could not log the meeting: '+error.message);CAP.push(r);render();return;}
+    const q=await sb.from('qs_log').insert({date:todayET(),group:'Social Well-Being',tracker:'Social Fitness',unit:'boolean',value:1,status:'done',note:who.trim(),source:'scotts-call:'+String(created.id).slice(0,8)}).select().single();
     await sb.from('todos').delete().eq('id',r.id);
-    if(!quiet)receipt(r,'Logged a meeting with '+who.trim()+', '+fmtDate(new Date().toISOString())+', on the Connections board','connections.html',async()=>{await sb.from('connections').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('connections').update({notes:v}).eq('id',created.id));return;}
+    if(!quiet)receipt(r,'Logged a meeting with '+who.trim()+', '+fmtDate(new Date().toISOString())+', on Connections and a Social Fitness square on the tracker','connections.html',async()=>{await sb.from('connections').delete().eq('id',created.id);if(q.data)await sb.from('qs_log').delete().eq('id',q.data.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('connections').update({notes:v}).eq('id',created.id));return;}
   if(k==='log:habit'){return logHabit(r);}
+  if(k==='log:meal'){const name=prompt('What did you eat? (short name)',head.replace(/^(i\s+)?(ate|had|lunch was|dinner was|breakfast was)\s*/i,'').trim()||head);if(!name)return;const slot=prompt('Which meal? breakfast, lunch, dinner or snack','lunch')||null;const snap=snapOf(r);await logEvent(r,'approve',label);removeCap(r);render();
+    const {data:created,error}=await sb.from('meals').insert({name:name.trim(),note:note||null,day:todayET(),status:'new',source:'scotts-call',slot:slot?slot.trim().toLowerCase():null}).select().single();
+    if(error){toast('Could not log the meal: '+error.message);CAP.push(r);render();return;}
+    await sb.from('todos').delete().eq('id',r.id);
+    if(!quiet)receipt(r,'Logged '+name.trim()+' as today\'s '+(slot||'meal')+' on the Meal log','log-meal.html',async()=>{await sb.from('meals').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('meals').update({note:v}).eq('id',created.id));return;}
+  if(k==='log:event'){const date=prompt('Which day? (YYYY-MM-DD)',todayET());if(!date||!/^\d{4}-\d{2}-\d{2}$/.test(date)){toast('Needs a day like 2026-09-12');return;}const t=prompt('Start time? (like 14:00, or leave empty)','')||'';const snap=snapOf(r);await logEvent(r,'approve',label);removeCap(r);render();
+    const row={title:head,date,start_time:/^\d{1,2}:\d{2}$/.test(t)?t:null,cat:'Personal',notes:note||null,source:'spoken',gcal_status:'queued'};
+    const {data:created,error}=await sb.from('calendar_events').insert(row).select().single();
+    if(error){toast('Could not add the event: '+error.message);CAP.push(r);render();return;}
+    await sb.from('todos').delete().eq('id',r.id);
+    if(!quiet)receipt(r,'Added '+head+' to the Calendar for '+fmtDate(date+'T12:00:00')+(row.start_time?' at '+row.start_time:'')+', queued for Google','calendar.html',async()=>{await sb.from('calendar_events').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('calendar_events').update({notes:v}).eq('id',created.id));return;}
 }
 function todayET(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(Date.now()-2*3600000));const g=t=>p.find(x=>x.type===t).value;return g('year')+'-'+g('month')+'-'+g('day');}
 async function logHabit(r){
@@ -553,6 +638,10 @@ async function giveClaude(r){await save(r.id,{own:'Claude',shelf:r.shelf||'now',
 async function delST(r){if(await save(r.id,{deleted_at:new Date().toISOString()})){load(true);toastUndo('Deleted.',async()=>{await save(r.id,{deleted_at:null});load(true);});}}
 
 /* ---------- drafts, mic, toast ---------- */
+function draftsSetup(){alert('One-time setup, on the Mac or iPhone where Drafts lives:\n\n1. Open Drafts, then Actions, then the + button, and name the new action exactly:\n     Sweep to ProjectYou\n\n2. Add a Script step and paste in the sweep script (Claude has it for you).\n\n3. Come back here and press Pull from Drafts now.\n\nIf nothing happens when you press the button, Drafts is not installed on this device, or the action name does not match exactly. The every-2-hour sweep still runs either way.');}
+function projIcon(p){return p==='Project YOU'?'🎡':p==='TreadWell'?'🥾':p==='Amazon'?'💼':'';}
+function projNode(p){const i=projIcon(p);if(!i)return null;const e=el('span','proj',i);e.title=p;return e;}
+function moonBtn(li,on,title,fn){const m=el('button','moon'+(on?' on':''),'🌙');m.type='button';m.title=title;m.onclick=e=>{e.stopPropagation();fn();};li.appendChild(m);}
 function pullDrafts(){try{window.location.href='drafts://x-callback-url/runAction?action=Sweep%20to%20ProjectYou';}catch(e){}toast('Asked Drafts to sweep. Checking for new notes…');let n=0;const t=setInterval(()=>{load(true);if(++n>5)clearInterval(t);},5000);}
 function wireMic(btn,ta,r,cbox,onStop){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){btn.style.display='none';return;}
