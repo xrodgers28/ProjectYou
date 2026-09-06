@@ -169,10 +169,6 @@
   .hwleg{display:grid;grid-template-columns:auto auto auto;gap:0 12px}
   .hwleg b{display:block;font-size:13px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums}
   .hwleg span{display:block;font-size:8.5px;font-weight:800;letter-spacing:.5px;color:#a9b2bd;text-transform:uppercase;margin-top:2px}
-  .hwdays{font-size:8.5px;font-weight:800;letter-spacing:.5px;color:#a9b2bd;text-transform:uppercase}
-  .hwsq{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-  .hwsq div{height:8px;border-radius:2px}
-  .hwsq span{display:block;text-align:center;font-size:8px;font-weight:800;letter-spacing:.4px;color:#a9b2bd;margin-top:3px}
   @media(max-width:700px){ .hwbody{flex-direction:column} .hwright{padding-left:0;border-left:none;border-top:1px solid #f0f3f7;padding-top:10px} }
   .weeknav{display:flex;align-items:center;gap:8px;margin:-4px 0 8px}
   .weeknav button{font-family:inherit;font-size:10px;color:var(--accent);background:#fff;border:1.5px solid #dfe5ee;
@@ -209,7 +205,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link on">YouMatics</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.9</span>
+    <span class="pn-ver">v1.10</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -733,34 +729,24 @@
 
   /* ------------------------------------------- where the hours went -----------
      Scott's three priorities in his order: habits, Project YOU, Amazon. The week's
-     hours on a 40 h scale (Amazon carries a cap tick at 40 h), a small ring of the
-     hours tracked across the three, and one square a day: green when the day went
-     in his order. THE RULE, plain: habits started before Amazon did (or there was no
-     Amazon that day) AND Project YOU got some time. Time of day for Project YOU is
-     not in the rule because his Project YOU hours are mostly evenings, after work. */
+     hours on a 40 h scale (Amazon carries a cap tick at 40 h), and a small ring of
+     the hours tracked across the three. (The day-by-day "order of the day" green/red
+     squares and their rule were removed Sep 6, 2026 per Scott: not a judgment call
+     he wants tracked.) */
   var PRI = [
     { k:'hab', name:'Habits and habit building', c:'#1e8e5a' },
     { k:'py',  name:'Building Project YOU',      c:'#e8a0b8' },
     { k:'amz', name:'Amazon',                    c:'#e8912f', cap: 40 * 60 }
   ];
-  function rightOrder(r) {
-    if (!r) return null;
-    if (!(r.hab > 0) || !(r.py > 0)) return false;
-    if (r.first_amz == null) return true;
-    return r.first_hab != null && r.first_hab < r.first_amz;
-  }
-  function tmin(m) { if (m == null) return null; var h = Math.floor(m / 60), mm = m % 60, ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return h + (mm ? ':' + (mm < 10 ? '0' : '') + mm : '') + ap; }
   function drawHoursWent(wk, mon, today) {
     var box = document.getElementById('hourswent');
     var byD = {}; wk.forEach(function (r) { byD[r.day] = r; });
     var tot = {}; PRI.forEach(function (p) { tot[p.k] = wk.reduce(function (s0, r) { return s0 + r[p.k]; }, 0); });
     var dayN = {}; PRI.forEach(function (p) { dayN[p.k] = wk.filter(function (r) { return r[p.k] > 0; }).length; });
     var all = tot.hab + tot.py + tot.amz;
-    var judged = 0, right = 0;
-    for (var i = 0; i < 7; i++) { var k = addDays(mon, i), v = rightOrder(byD[k]); if (v !== null) { judged++; if (v) right++; } }
     var SCALE = 40 * 60;
     var title = weekBack === 0 ? 'This week so far' : 'Week of ' + shortDate(mon);
-    var h = '<div class="hwhead"><b>' + title + '</b><span>in the order of your priorities \u00b7 right order <i>' + right + ' of ' + judged + '</i> day' + (judged === 1 ? '' : 's') + '</span></div>';
+    var h = '<div class="hwhead"><b>' + title + '</b><span>in the order of your priorities</span></div>';
     h += '<div class="hwbody"><div class="hwleft">';
     PRI.forEach(function (p, i) {
       var pct = Math.min(100, tot[p.k] / SCALE * 100);
@@ -781,15 +767,7 @@
     h += '<div class="hwring">' + ring + '<div class="hwleg">' +
          PRI.map(function (p) { return '<div><b style="color:' + p.c + '">' + hlab(tot[p.k]) + '</b><span>' + (p.k === 'hab' ? 'Habits' : p.k === 'py' ? 'Project YOU' : 'Amazon') + '</span></div>'; }).join('') +
          '</div></div>';
-    h += '<div class="hwdays" title="Green: habits started before Amazon did (or no Amazon that day), and Project YOU got time. Hover a square for the day\'s times.">Order of the day \u00b7 green = went in your order</div><div class="hwsq">';
-    for (var j = 0; j < 7; j++) {
-      var kk = addDays(mon, j), r = byD[kk], v = rightOrder(r), col = v === null ? '#e6eaf0' : v ? '#1e8e5a' : '#c0453b';
-      var why = !r ? (kk > today ? 'not yet' : 'nothing on record') :
-                'habits ' + (r.hab > 0 ? tmin(r.first_hab) : 'none') + ' \u00b7 Project YOU ' + (r.py > 0 ? tmin(r.first_py) : 'none') +
-                ' \u00b7 Amazon ' + (r.amz > 0 ? tmin(r.first_amz) : 'none') + (kk === today ? ' \u00b7 so far' : '');
-      h += '<div title="' + dlong({ day: kk }) + ': ' + why + '"><div style="background:' + col + '"></div><span>' + DAYNAMES[j].toUpperCase() + '</span></div>';
-    }
-    h += '</div></div></div>';
+    h += '</div></div>';
     box.innerHTML = h; box.classList.add('on');
   }
 
