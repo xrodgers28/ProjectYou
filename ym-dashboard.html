@@ -128,6 +128,12 @@
   @keyframes dayspin{to{transform:rotate(360deg)}}
   .daystamp{font-size:11px;color:#8a8f99;font-weight:700;margin-top:8px;min-height:14px}
   .daystamp.err{color:#c0453b}
+  .daywrap{position:relative}
+  .daytip{position:absolute;pointer-events:none;background:#1f2a44;color:#fff;font-size:11.5px;font-weight:700;
+    padding:6px 9px;border-radius:7px;white-space:nowrap;box-shadow:0 4px 14px rgba(31,42,68,.18);
+    transform:translate(-50%,-115%);display:none;z-index:5;font-variant-numeric:tabular-nums}
+  .daytip span{display:block;font-weight:600;color:#c9d2e0;font-size:10.5px;margin-top:1px}
+  .daywrap rect[data-tip]{cursor:default}
   .daybig{font-size:24px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
   .daysub{font-size:11px;color:#8a8f99;font-weight:700;margin-top:3px}
   .daywrap{overflow-x:auto}
@@ -151,7 +157,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link on">YouMatics</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.2</span>
+    <span class="pn-ver">v1.3</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -209,7 +215,7 @@
    the top is drawn by the shared health-strip.js, which mounts into the empty
    #bodystrip-mount div above and makes its own py_body_latest call.
    No library, no CDN: plain fetch against PostgREST.
-   v1.2 - Sep 6, 2026
+   v1.3 - Sep 6, 2026
 --------------------------------------------------------------------------- */
 (function () {
   'use strict';
@@ -459,6 +465,9 @@
 <script>
 /* ---------------------------------------------------------------------------
    Where the days go.  v1.0, Aug 25 2026.  v1.2, Sep 6 2026: the Refresh button.
+   v1.3, Sep 6 2026: Todays Tasks is the source of truth, so the page recounts every
+   day since Aug 25 the way that page counts them, on open and on the button; and
+   every segment shows its hours, on the bar where there is room and on hover always.
 
    Two views of one set of numbers, toggled:
      "Your week"    - seven columns, what a typical Monday, Tuesday, Wednesday
@@ -493,9 +502,11 @@
     { k:'open',  name:'Still open',  c:'#e6eaf0' }
   ];
   var MINE = ['hab', 'todo', 'py', 'other'];
+  var DARKON = { open: true, py: true };     /* light fills take dark text */
   var SPAN = 1020;                      /* 6am to 11pm, the counted window */
   var THIN = 120;                       /* under two hours accounted for is not a day */
   var DAYNAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  var DAYFULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
   var rows = [], view = 'week';
   try { view = localStorage.getItem('py_dayview') || 'week'; } catch (e) {}
@@ -512,6 +523,15 @@
   /* parsed as UTC, so a date never slides a day either way */
   function dow(r) { var p = r.day.split('-'); return (new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay() + 6) % 7; }
   function dlabel(r) { var p = r.day.split('-'); return (+p[2]) + '/' + (+p[1]); }
+  function dlong(r) {
+    var p = r.day.split('-'), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+    return d.toLocaleDateString('en-US', { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric' });
+  }
+  function srcword(r) {
+    return r.source === 'page' ? 'written by Todays Tasks as the day happened' :
+           r.source === 'refresh' ? 'counted the way Todays Tasks counts it' :
+           'rebuilt once from your calendar and logged time';
+  }
   function el(tag, attrs, inner) {
     var a = '';
     for (var k in attrs) a += ' ' + k + '="' + attrs[k] + '"';
@@ -550,10 +570,14 @@
           var h = (a[B[i].k] / SPAN) * base;
           if (h <= 0) continue;
           y -= h;
+          var tip = DAYNAMES[w] + ' \u00b7 ' + B[i].name + ' \u00b7 ' + hlab(a[B[i].k]) +
+                    '|averaged over ' + a.n + ' ' + DAYFULL[w] + (a.n === 1 ? '' : 's');
           out.push('<rect x="' + (x + 7) + '" y="' + y.toFixed(1) + '" width="' + (cw - 14) +
-                   '" height="' + h.toFixed(1) + '" rx="2" fill="' + B[i].c + '"/>');
-          if (B[i].k === 'amz' && h > 20)
-            out.push(txt(x + cw / 2, y + h / 2 + 4, 11.5, '#fff', 'middle', 800, hlab(a.amz)));
+                   '" height="' + h.toFixed(1) + '" rx="2" fill="' + B[i].c + '" data-tip="' + tip + '"/>');
+          /* hours on the bar wherever the band is tall enough to hold them */
+          if (h >= 15)
+            out.push(txt(x + cw / 2, y + h / 2 + 3.5, B[i].k === 'amz' ? 11.5 : 10, DARKON[B[i].k] ? '#1f2a44' : '#fff',
+                         'middle', 800, hlab(a[B[i].k])).replace('<text ', '<text pointer-events="none" '));
         }
       }
       out.push(txt(x + cw / 2, H - 24, 12, '#1f2a44', 'middle', 800, DAYNAMES[w]));
@@ -587,12 +611,20 @@
       MINE.forEach(function (k) {
         var h = up(r[k]); if (h <= 0) return;
         y -= h;
+        var bk = B.filter(function (b) { return b.k === k; })[0];
         out.push('<rect x="' + (x + 1.5) + '" y="' + y.toFixed(1) + '" width="' + (bw - 3) +
-                 '" height="' + h.toFixed(1) + '" rx="1" fill="' + (B.filter(function (b) { return b.k === k; })[0].c) + '"/>');
+                 '" height="' + h.toFixed(1) + '" rx="1" fill="' + bk.c +
+                 '" data-tip="' + dlong(r) + ' \u00b7 ' + bk.name + ' \u00b7 ' + hlab(r[k]) + '|' + srcword(r) + '"/>');
+        if (h >= 14 && bw >= 30)
+          out.push(txt(x + bw / 2, y + h / 2 + 3, 9, DARKON[k] ? '#1f2a44' : '#fff', 'middle', 800, hlab(r[k])).replace('<text ', '<text pointer-events="none" '));
       });
       var ha = dn(r.amz);
-      if (ha > 0) out.push('<rect x="' + (x + 1.5) + '" y="' + MID + '" width="' + (bw - 3) +
-                           '" height="' + ha.toFixed(1) + '" rx="1" fill="#e8912f"/>');
+      if (ha > 0) {
+        out.push('<rect x="' + (x + 1.5) + '" y="' + MID + '" width="' + (bw - 3) +
+                 '" height="' + ha.toFixed(1) + '" rx="1" fill="#e8912f" data-tip="' + dlong(r) + ' \u00b7 Amazon \u00b7 ' + hlab(r.amz) + '|' + srcword(r) + '"/>');
+        if (ha >= 14 && bw >= 30)
+          out.push(txt(x + bw / 2, MID + ha / 2 + 3, 9, '#fff', 'middle', 800, hlab(r.amz)).replace('<text ', '<text pointer-events="none" '));
+      }
       if (i === 0 || i === real.length - 1 || i === Math.floor(real.length / 2))
         out.push(txt(x + bw / 2, H - 8, 8.5, '#aab2bd', 'middle', 700, dlabel(r)));
     });
@@ -603,10 +635,10 @@
       return (PAD + i * bw + bw / 2).toFixed(1) + ' ' + (MID - up(v)).toFixed(1);
     }).join(' L');
     if (real.length > 1) {
-      out.push('<path d="M' + pts + '" fill="none" stroke="#fff" stroke-width="4.5" opacity=".9" stroke-linejoin="round"/>');
-      out.push('<path d="M' + pts + '" fill="none" stroke="#1f2a44" stroke-width="2" stroke-linejoin="round"/>');
+      out.push('<path d="M' + pts + '" fill="none" stroke="#fff" stroke-width="4.5" opacity=".9" stroke-linejoin="round" pointer-events="none"/>');
+      out.push('<path d="M' + pts + '" fill="none" stroke="#1f2a44" stroke-width="2" stroke-linejoin="round" pointer-events="none"/>');
     }
-    out.push('<line x1="' + PAD + '" y1="' + MID + '" x2="' + W + '" y2="' + MID + '" stroke="#1f2a44" stroke-width="1.5"/>');
+    out.push('<line x1="' + PAD + '" y1="' + MID + '" x2="' + W + '" y2="' + MID + '" stroke="#1f2a44" stroke-width="1.5" pointer-events="none"/>');
     out.push(txt(PAD + 4, 13, 9, '#3f8fa0', 'start', 800, 'YOURS'));
     out.push(txt(PAD + 4, H - 20, 9, '#c07a1a', 'start', 800, 'AMAZON'));
     out.push('</svg>');
@@ -656,18 +688,17 @@
     }
 
     var thin = rows.length - real.length;
-    var live = rows.filter(function (r) { return r.source === 'page'; }).length;
-    var fresh = rows.filter(function (r) { return r.source === 'refresh'; }).length;
+    var live = rows.filter(function (r) { return r.source === 'page' || r.source === 'refresh'; }).length;
+    var old = rows.length - live;
     document.getElementById('daycov').innerHTML =
       '<b>' + real.length + ' day' + (real.length === 1 ? '' : 's') + ' with a real record</b>, out of ' +
       rows.length + ' that have anything on them at all' +
       (thin ? '.  The other ' + thin + ' hold less than two hours between them and are left out, ' +
               'because averaging them in would quietly halve every number here' : '') + '.  ' +
-      (live ? live + ' of them were written by Todays Tasks as the day happened' +
-              (fresh ? ', ' + fresh + ' ' + (fresh === 1 ? 'was' : 'were') + ' recounted with the Refresh button' : '') +
-              '; the rest were rebuilt once from your calendar, your logged time and your ticked tasks.'
-            : 'All of these were rebuilt from your calendar, your logged time and your ticked tasks. ' +
-              'From now on Todays Tasks writes the day down as it happens.');
+      (live ? live + ' of them (every day since Aug 25, 2026) are counted exactly the way Todays Tasks counts them, ' +
+              'so a day you re-arrange there changes here too' +
+              (old ? '; the ' + old + ' before that were rebuilt once from your calendar, your logged time and your ticked tasks.' : '.')
+            : 'All of these were rebuilt once from your calendar, your logged time and your ticked tasks.');
     document.getElementById('daynote2').textContent =
       view === 'week' ? 'averaged over the days that have a record' : 'one column a day, most recent on the right';
   }
@@ -695,12 +726,30 @@
       render();
     });
   }
-  load().catch(function (e) {
+  function loadFail() {
     document.getElementById('daychart').innerHTML =
       '<p style="font-size:12.5px;color:#c0453b;padding:18px 2px">Could not load your days just now. ' +
       'The rest of the page is unaffected.</p>';
     document.getElementById('daynote2').textContent = '';
-  });
+  }
+
+  /* hover: every band says what it is and how long, in one small tag */
+  (function () {
+    var wrap = document.getElementById('daychart');
+    var tipEl = document.createElement('div'); tipEl.className = 'daytip'; wrap.appendChild(tipEl);
+    wrap.addEventListener('mousemove', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-tip]') : null;
+      if (!t) { tipEl.style.display = 'none'; return; }
+      if (tipEl.parentNode !== wrap) wrap.appendChild(tipEl);   /* a redraw wipes it */
+      var parts = t.getAttribute('data-tip').split('|');
+      tipEl.innerHTML = parts[0] + (parts[1] ? '<span>' + parts[1] + '</span>' : '');
+      var box = wrap.getBoundingClientRect();
+      tipEl.style.left = (e.clientX - box.left + wrap.scrollLeft) + 'px';
+      tipEl.style.top = (e.clientY - box.top) + 'px';
+      tipEl.style.display = 'block';
+    });
+    wrap.addEventListener('mouseleave', function () { tipEl.style.display = 'none'; });
+  })();
 
   /* ------------------------------------------------------------ refresh ----
      v1.2, Sep 6 2026. Todays Tasks only writes today's row while it is open, so
@@ -718,11 +767,11 @@
     var time = d.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(' ', '');
     return date + ' \u00b7 ' + time + ' EST';
   }
-  btn.addEventListener('click', function () {
-    if (btn.disabled) return;
+  function recount(onOpen) {
+    if (btn.disabled) return Promise.resolve();
     btn.disabled = true; btn.classList.add('busy');
-    stamp.className = 'daystamp'; stamp.textContent = 'Recounting today from your calendar\u2026';
-    fetch(REFRESH, {
+    stamp.className = 'daystamp'; stamp.textContent = 'Counting your days the way Todays Tasks counts them\u2026';
+    return fetch(REFRESH, {
       method: 'POST',
       headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },
       body: '{}'
@@ -730,15 +779,20 @@
       .then(function (res) {
         return load().then(function () {
           stamp.textContent = 'Recounted ' + stampTime(res && res.as_of) +
-            (res && res.days ? ' \u00b7 ' + res.days + ' day' + (res.days === 1 ? '' : 's') + ' updated' : ' \u00b7 nothing on record to recount');
+            (res && res.days ? ' \u00b7 ' + res.days + ' day' + (res.days === 1 ? '' : 's') + ' since Aug 25, 2026' : ' \u00b7 nothing on record to recount') +
+            ' \u00b7 matches Todays Tasks';
         });
       })
       .catch(function () {
         stamp.className = 'daystamp err';
-        stamp.textContent = 'Could not recount just now. The chart still shows the last record.';
+        stamp.textContent = 'Could not recount just now. The chart shows the last record instead.';
+        if (onOpen) return load().catch(loadFail);
       })
       .then(function () { btn.disabled = false; btn.classList.remove('busy'); });
-  });
+  }
+  btn.addEventListener('click', function () { recount(false); });
+  /* on open: recount first, so the chart never sits on a stale day */
+  recount(true);
 })();
 </script>
 <script src="health-strip.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script>
