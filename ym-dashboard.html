@@ -128,6 +128,12 @@
   @keyframes dayspin{to{transform:rotate(360deg)}}
   .daystamp{font-size:11px;color:#8a8f99;font-weight:700;margin-top:8px;min-height:14px}
   .daystamp.err{color:#c0453b}
+  .weeknav{display:flex;align-items:center;gap:8px;margin:-4px 0 8px}
+  .weeknav button{font-family:inherit;font-size:10px;color:var(--accent);background:#fff;border:1.5px solid #dfe5ee;
+    width:26px;height:24px;border-radius:8px;cursor:pointer;line-height:1}
+  .weeknav button:hover{border-color:var(--accent)}
+  .weeknav button[disabled]{opacity:.35;cursor:default}
+  .weeknav span{font-size:11.5px;font-weight:800;color:#5b6472;letter-spacing:.2px}
   .daywrap{position:relative}
   .daytip{position:absolute;pointer-events:none;background:#1f2a44;color:#fff;font-size:11.5px;font-weight:700;
     padding:6px 9px;border-radius:7px;white-space:nowrap;box-shadow:0 4px 14px rgba(31,42,68,.18);
@@ -157,7 +163,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link on">YouMatics</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.3</span>
+    <span class="pn-ver">v1.4</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -192,11 +198,17 @@
         <div><div class="daybig" id="daybig">&mdash;</div><div class="daysub" id="daysub">&nbsp;</div></div>
         <div class="dayctl">
           <div class="segbar" id="dayseg">
-            <button data-dayview="week" class="on">Your week</button>
+            <button data-dayview="thisweek" class="on">This week</button>
+            <button data-dayview="week">Typical week</button>
             <button data-dayview="balance">The balance</button>
           </div>
           <button class="dayrefresh" id="dayrefresh" type="button" title="Recount today and yesterday from your calendar, your wheel and your ticked tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>Refresh</button>
         </div>
+      </div>
+      <div class="weeknav" id="weeknav">
+        <button id="weekprev" type="button" aria-label="Previous week">&#9664;</button>
+        <span id="weeklabel">this week</span>
+        <button id="weeknext" type="button" aria-label="Next week">&#9654;</button>
       </div>
       <div class="daywrap" id="daychart"></div>
       <div class="daykey" id="daykey"></div>
@@ -215,7 +227,7 @@
    the top is drawn by the shared health-strip.js, which mounts into the empty
    #bodystrip-mount div above and makes its own py_body_latest call.
    No library, no CDN: plain fetch against PostgREST.
-   v1.3 - Sep 6, 2026
+   v1.4 - Sep 6, 2026
 --------------------------------------------------------------------------- */
 (function () {
   'use strict';
@@ -468,6 +480,11 @@
    v1.3, Sep 6 2026: Todays Tasks is the source of truth, so the page recounts every
    day since Aug 25 the way that page counts them, on open and on the button; and
    every segment shows its hours, on the bar where there is room and on hover always.
+   v1.4, Sep 6 2026: THIS WEEK is the first view, one column per real day with its
+   date, stepping back a week at a time. Scott: 'project you hours are way off' - he
+   was reading Saturday's average (four Saturdays, three with no Project You at all)
+   against one real Saturday. The typical-week average now only uses days counted
+   the Todays Tasks way (Aug 25 on); the 13 rebuilt days before that are out.
 
    Two views of one set of numbers, toggled:
      "Your week"    - seven columns, what a typical Monday, Tuesday, Wednesday
@@ -508,9 +525,24 @@
   var DAYNAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
   var DAYFULL = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
-  var rows = [], view = 'week';
-  try { view = localStorage.getItem('py_dayview') || 'week'; } catch (e) {}
-  if (view !== 'week' && view !== 'balance') view = 'week';
+  var rows = [], view = 'thisweek', weekBack = 0;   /* weekBack: 0 = the week we are in, 1 = last week */
+  try { view = localStorage.getItem('py_dayview') || 'thisweek'; } catch (e) {}
+  if (view !== 'week' && view !== 'balance' && view !== 'thisweek') view = 'thisweek';
+  var FIRST_TRUE = '2026-08-25';   /* the day Todays Tasks started writing the record its own way */
+  /* the 2am-to-2am day we are in, Eastern: the one definition the site uses, or the same rule inline */
+  function todayKey() {
+    if (window.PY && typeof window.PY.today === 'function') { try { return window.PY.today(); } catch (e) {} }
+    var d = new Date(Date.now() - 2 * 3600 * 1000);
+    var f = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+    return f;
+  }
+  function addDays(key, n) { var p = key.split('-'); var d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n)); return d.toISOString().slice(0, 10); }
+  function mondayOf(key) { var p = key.split('-'); var w = (new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).getUTCDay() + 6) % 7; return addDays(key, -w); }
+  function shortDate(key, withYear) {
+    var p = key.split('-'), d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+    var o = { timeZone: 'UTC', month: 'short', day: 'numeric' }; if (withYear) o.year = 'numeric';
+    return d.toLocaleDateString('en-US', o);
+  }
 
   function hlab(m) {
     m = Math.round(m);
@@ -589,6 +621,48 @@
     return out.join('');
   }
 
+  /* ------------------------------------------------- A1, this week ---------
+     One column per real day, Monday to Sunday, the numbers Todays Tasks shows
+     for that day, no averaging. Arrows step back a week at a time. */
+  function drawThisWeek(all) {
+    var W = 900, H = 300, PAD = 34, TOP = 12, base = H - 48, cw = (W - PAD) / 7;
+    var today = todayKey(), mon = addDays(mondayOf(today), -7 * weekBack);
+    var byDay = {}; all.forEach(function (r) { byDay[r.day] = r; });
+    var out = ['<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;min-width:520px;height:300px">'];
+    [4, 8, 12, 16].forEach(function (hh) {
+      var y = TOP + base - (hh * 60 / SPAN) * base;
+      out.push('<line x1="' + PAD + '" y1="' + y + '" x2="' + W + '" y2="' + y + '" stroke="#eef1f6"/>');
+      out.push(txt(PAD - 5, y + 3, 8.5, '#c3cad3', 'end', 700, hh + 'h'));
+    });
+    for (var w = 0; w < 7; w++) {
+      var key = addDays(mon, w), r = byDay[key], x = PAD + w * cw, y = TOP + base;
+      var isToday = key === today, future = key > today;
+      if (isToday) out.push('<rect x="' + (x + 3) + '" y="' + (TOP - 6) + '" width="' + (cw - 6) + '" height="' + (base + 42) + '" rx="8" fill="#f1f5fa"/>');
+      if (!r) {
+        out.push('<rect x="' + (x + 7) + '" y="' + TOP + '" width="' + (cw - 14) + '" height="' + base + '" rx="4" fill="#f6f8fb"/>');
+        out.push(txt(x + cw / 2, TOP + base / 2, 9.5, '#c3cad3', 'middle', 700, future ? 'not yet' : 'nothing on record'));
+      } else {
+        for (var i = 0; i < B.length; i++) {
+          var h = (r[B[i].k] / SPAN) * base;
+          if (h <= 0) continue;
+          y -= h;
+          var tip = dlong(r) + ' \u00b7 ' + B[i].name + ' \u00b7 ' + hlab(r[B[i].k]) + '|' + srcword(r);
+          out.push('<rect x="' + (x + 7) + '" y="' + y.toFixed(1) + '" width="' + (cw - 14) +
+                   '" height="' + h.toFixed(1) + '" rx="2" fill="' + B[i].c + '" data-tip="' + tip + '"/>');
+          if (h >= 15)
+            out.push(txt(x + cw / 2, y + h / 2 + 3.5, B[i].k === 'amz' ? 11.5 : 10, DARKON[B[i].k] ? '#1f2a44' : '#fff',
+                         'middle', 800, hlab(r[B[i].k])).replace('<text ', '<text pointer-events="none" '));
+        }
+      }
+      out.push(txt(x + cw / 2, H - 24, 12, isToday ? '#c07a1a' : '#1f2a44', 'middle', 800,
+                   DAYNAMES[w] + ' ' + shortDate(key) + (isToday ? ' \u00b7 today' : '')));
+      out.push(txt(x + cw / 2, H - 10, 9.5, '#8a8f99', 'middle', 700,
+        r ? (hlab(mineOf(r)) + ' yours') : '&#183;'));
+    }
+    out.push('</svg>');
+    return out.join('');
+  }
+
   /* -------------------------------------------------------- A3, the balance - */
   function drawBalance(real) {
     var W = 900, H = 268, PAD = 34, MID = 132;
@@ -647,7 +721,11 @@
 
   /* ------------------------------------------------------------- render ----- */
   function render() {
-    var real = rows.filter(function (r) { return accounted(r) >= THIN; });
+    /* Only days counted the Todays Tasks way take part. The days before Aug 25 were
+       rebuilt from other records, never tracked Project You or habits, and dragged
+       every average down. */
+    var trueRows = rows.filter(function (r) { return r.day >= FIRST_TRUE; });
+    var real = trueRows.filter(function (r) { return accounted(r) >= THIN; });
     var chart = document.getElementById('daychart');
     var key = document.getElementById('daykey');
     var big = document.getElementById('daybig');
@@ -660,7 +738,25 @@
       return;
     }
 
-    if (view === 'week') {
+    var nav = document.getElementById('weeknav');
+    nav.style.display = view === 'thisweek' ? '' : 'none';
+    if (view === 'thisweek') {
+      chart.innerHTML = drawThisWeek(trueRows);
+      var today = todayKey(), mon = addDays(mondayOf(today), -7 * weekBack), sun = addDays(mon, 6);
+      var wk = trueRows.filter(function (r) { return r.day >= mon && r.day <= sun; });
+      var mine = wk.reduce(function (s, r) { return s + mineOf(r); }, 0);
+      var amzT = wk.reduce(function (s, r) { return s + r.amz; }, 0);
+      var pyT = wk.reduce(function (s, r) { return s + r.py; }, 0);
+      big.textContent = wk.length ? (hlab(mine) + ' yours \u00b7 ' + hlab(amzT) + ' Amazon') : '\u2014';
+      sub.textContent = shortDate(mon) + ' to ' + shortDate(sun, true) +
+        (wk.length ? ' \u00b7 ' + wk.length + ' day' + (wk.length === 1 ? '' : 's') + ' on record \u00b7 Project You ' + hlab(pyT) : ' \u00b7 nothing on record');
+      document.getElementById('weeklabel').textContent = weekBack === 0 ? 'this week' : weekBack === 1 ? 'last week' : weekBack + ' weeks ago';
+      document.getElementById('weeknext').disabled = weekBack === 0;
+      document.getElementById('weekprev').disabled = addDays(mon, -7) < mondayOf(FIRST_TRUE);
+      key.innerHTML = B.map(function (b) {
+        return el('span', {}, '<b style="background:' + b.c + '"></b>' + b.name);
+      }).join('');
+    } else if (view === 'week') {
       chart.innerHTML = drawWeek(real);
       var heavy = null, light = null;
       for (var w = 0; w < 7; w++) {
@@ -687,20 +783,17 @@
         el('span', {}, '<b style="background:#1f2a44"></b>the seven-day balance');
     }
 
-    var thin = rows.length - real.length;
-    var live = rows.filter(function (r) { return r.source === 'page' || r.source === 'refresh'; }).length;
-    var old = rows.length - live;
+    var thin = trueRows.length - real.length;
+    var old = rows.length - trueRows.length;
     document.getElementById('daycov').innerHTML =
-      '<b>' + real.length + ' day' + (real.length === 1 ? '' : 's') + ' with a real record</b>, out of ' +
-      rows.length + ' that have anything on them at all' +
-      (thin ? '.  The other ' + thin + ' hold less than two hours between them and are left out, ' +
-              'because averaging them in would quietly halve every number here' : '') + '.  ' +
-      (live ? live + ' of them (every day since Aug 25, 2026) are counted exactly the way Todays Tasks counts them, ' +
-              'so a day you re-arrange there changes here too' +
-              (old ? '; the ' + old + ' before that were rebuilt once from your calendar, your logged time and your ticked tasks.' : '.')
-            : 'All of these were rebuilt once from your calendar, your logged time and your ticked tasks.');
+      '<b>' + trueRows.length + ' day' + (trueRows.length === 1 ? '' : 's') + ' on record since Aug 25, 2026</b>, ' +
+      'each counted exactly the way Todays Tasks counts it, so a day you re-arrange there changes here too.  ' +
+      'This week shows every one of them.  The typical week averages the ' + real.length + ' that hold two hours or more' +
+      (thin ? ' (the other ' + thin + ' would quietly halve every number)' : '') + '.  ' +
+      (old ? 'The ' + old + ' days before Aug 25 were rebuilt from other records, never tracked Project You or habits, and are left off this chart.' : '');
     document.getElementById('daynote2').textContent =
-      view === 'week' ? 'averaged over the days that have a record' : 'one column a day, most recent on the right';
+      view === 'thisweek' ? 'the same numbers Todays Tasks shows for each day' :
+      view === 'week' ? 'a typical day of each name, averaged since Aug 25, 2026' : 'one column a day, most recent on the right';
   }
 
   document.getElementById('dayseg').addEventListener('click', function (e) {
@@ -715,6 +808,8 @@
   Array.prototype.forEach.call(document.querySelectorAll('#dayseg button'), function (x) {
     x.classList.toggle('on', x.dataset.dayview === view);
   });
+  document.getElementById('weekprev').addEventListener('click', function () { weekBack++; render(); });
+  document.getElementById('weeknext').addEventListener('click', function () { if (weekBack > 0) { weekBack--; render(); } });
 
   function load() {
     return fetch(RPC, {
