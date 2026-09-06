@@ -1,0 +1,567 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scott's Call · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--dim:#9aa3ae;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--chip:#eef2f8;--good:#1e8e5a;--hot:#c0453b;--amber:#b8801f;--claude:#8a5a9c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.4}
+  .wrap{max-width:820px;margin:0 auto;padding:20px 16px 70px}
+  h1{font-size:24px;color:var(--accent)}
+  h1 .ver{font-size:12px;color:#9aa6b4;font-weight:700;margin-left:6px;vertical-align:middle}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:6px;line-height:1.5;max-width:660px}
+  .toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .fl{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd}
+  .chip{font-size:12px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;font-family:inherit}
+  .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .chip.static{cursor:default}
+  .chip.static b{color:var(--ink)}
+  .savestate{margin-left:auto;font-size:11.5px;color:#9aa6b4;min-width:60px;text-align:right}
+  .savestate.saved{color:var(--good)} .savestate.err{color:var(--hot)}
+  .board{margin-top:14px}
+  .sec{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px 4px}
+  .sec.dim{background:#f7f8fa}
+  .sech{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);padding:0 4px 4px;border-bottom:2px solid #e7ecf3}
+  .sech .cnt{font-size:11px;color:#aab2bd;font-weight:700;letter-spacing:0;text-transform:none}
+  .sec.dim .sech{color:#7b8493;border-bottom-color:#e3e7ec}
+  ul.rows{list-style:none}
+  li.item{padding:4px 6px;border-bottom:1px solid #eef1f5;position:relative}
+  li.item:last-child{border-bottom:0}
+  li.item:hover{background:#f8fafc}
+  li.item.sortable-ghost{background:#eef3fb;outline:1px dashed #b9cdec}
+  li.item.sel{background:#eef3fb}
+  li.item.q{box-shadow:inset 3px 0 0 var(--hot)}
+  li.item.building{box-shadow:inset 3px 0 0 var(--good);background:#f5faf7}
+  .sec.dim li.item .txt,li.item.dim .txt{color:#7b8493}
+  .sec.dim li.item .tag{opacity:.75}
+  .toprow{display:grid;grid-template-columns:13px minmax(0,1fr) auto;align-items:start;gap:3px 7px}
+  @media(max-width:640px){.toprow{grid-template-columns:13px minmax(0,1fr)}.rightgrp{grid-column:2;justify-items:start}}
+  .rightgrp{display:grid;grid-template-columns:auto auto 20px;grid-auto-rows:min-content;gap:3px 5px;justify-items:end;align-items:center;padding-top:1px}
+  .rightgrp .more{grid-column:3;grid-row:1/3;align-self:center}
+  .rightgrp .tag.st{padding-left:7px}
+  .h{width:13px;color:#c9cdd3;cursor:grab;font-size:12px;user-select:none;padding-top:2px}
+  .cb{flex:0 0 auto;width:15px;height:15px;margin:0}
+  .txt{flex:1 1 auto;font-family:-apple-system,"Helvetica Neue",Arial,Helvetica,sans-serif;font-size:12.5px;font-weight:500;outline:none;padding:1px 3px;border-radius:5px;min-width:120px;word-break:break-word;color:var(--ink)}
+  .txt:focus{background:#fffef2;box-shadow:inset 0 0 0 1px #e3d9a6}
+  .tag{flex:0 0 auto;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;border-radius:999px;padding:2px 7px;cursor:pointer;color:#fff;background:#aab2bd;white-space:nowrap;border:1px solid transparent;font-family:inherit}
+  .tag.shelf{background:#fff;color:var(--ink);border-color:#cfd4da}
+  .tag.kind{background:#fff;color:var(--muted);border-color:#dfe4ea}
+  .tag.kind.prop{border-style:dashed}
+  .tag.kind.maint{color:#8a929c}
+  .tag.kind.idea{color:var(--amber);border-color:#e6cf9a}
+  .tag.run{background:#fff;color:var(--claude);border-color:#d9c9e4}
+  .tag.st{background:transparent;color:#aab2bd;padding-left:0;cursor:default}
+  .tag.st.build{color:var(--good)}
+  .tag.st.q{color:var(--hot)}
+  .tag.st.done{color:var(--good)}
+  .more{flex:0 0 auto;width:20px;height:20px;border:none;background:none;color:#aab2bd;cursor:pointer;font-size:15px;border-radius:6px;line-height:1;font-family:inherit}
+  .more:hover{color:var(--accent);background:#eef2f8}
+  .note{font-size:11px;color:#6b7280;margin:0 0 1px 41px;padding:0 3px;line-height:1.3;word-break:break-word;cursor:pointer}
+  .note.sum{color:#5b6472;font-size:11.5px;white-space:pre-wrap}
+  .note.clamp{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+  .noteedit{width:calc(100% - 41px);margin:3px 0 2px 41px;font-family:inherit;font-size:12px;padding:5px 7px;border:1px solid #e3d9a6;border-radius:6px;background:#fffef2;color:var(--ink);resize:vertical;min-height:44px}
+  .dd{position:absolute;z-index:40;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(31,42,68,.18);padding:6px 0;min-width:190px}
+  .dd .o{display:block;width:100%;text-align:left;font-family:inherit;font-size:13.5px;font-weight:700;color:var(--ink);background:none;border:0;padding:8px 16px;cursor:pointer;white-space:nowrap}
+  .dd .o:hover{background:#eef2f8;color:var(--accent)}
+  .dd .o.on{color:var(--accent)}
+  .dd .o.danger{color:var(--hot)}
+  .dd .lab{display:block;font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;padding:4px 16px 2px}
+  .dd .sep{height:1px;background:#eef1f5;margin:4px 0}
+  .ddwrap{position:relative;display:inline-block}
+  .fold{margin-top:12px;background:#f7f8fa;border:1px solid var(--line);border-radius:12px;padding:8px 10px;display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#7b8493;cursor:pointer}
+  .fold .cnt{font-size:11px;color:#aab2bd;font-weight:700;letter-spacing:0;text-transform:none}
+  .fold .r{margin-left:auto;font-size:11px;color:#aab2bd;font-weight:700;letter-spacing:0;text-transform:none}
+  .foldbody{display:none;margin-top:-6px}
+  .foldbody .sec{border-top-left-radius:0;border-top-right-radius:0;margin-top:0}
+  .foldbody.open{display:block}
+  .empty{color:#aab2bd;font-size:13px;padding:10px 8px}
+  .sel-bar{position:sticky;top:0;z-index:25;background:#fff;border:1px solid var(--accent);border-radius:12px;padding:8px 12px;display:none;gap:6px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .sel-bar.on{display:flex}
+  .sel-bar .lab{font-size:12px;font-weight:800;color:var(--ink);margin-right:4px}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none;display:flex;align-items:center;gap:2px;z-index:50;max-width:92vw}
+  .toast.show{opacity:1}
+  .toast button{margin-left:10px;background:transparent;border:1px solid rgba(255,255,255,.55);color:#fff;font-weight:800;font-size:11.5px;border-radius:6px;padding:2px 9px;cursor:pointer;font-family:inherit}
+  .features{margin-top:34px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .features h2{font-size:15px;color:var(--accent);margin-bottom:4px}
+  .features .eb{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;margin:12px 0 4px}
+  .features dl{display:grid;grid-template-columns:max-content 1fr;gap:3px 14px;font-size:12.5px}
+  .features dt{font-weight:800;color:var(--accent)}
+  .features dd{color:var(--muted)}
+  .features p{font-size:12.5px;color:var(--muted)}
+  footer{margin-top:24px;padding-top:12px;border-top:1px solid var(--line);font-size:11px;color:#9aa6b4;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .hidden{display:none!important}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #loginErr{color:var(--hot);font-size:12.5px;min-height:16px}
+  .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff}
+  .btnp{font-family:inherit;font-size:11px;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid var(--accent);background:var(--accent);color:#fff;cursor:pointer;white-space:nowrap}
+  .btnp.log{background:var(--good);border-color:var(--good)}
+  .btnp.ghost{background:#fff;color:var(--accent)}
+  .btnp.five{background:#fff;color:var(--ink);border-color:#cfd4da;font-weight:700}
+  .btnp.five.go{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btnp:disabled{opacity:.5;cursor:default}
+  .tag.dest{background:#fff;color:var(--ink);border-color:#cfd4da;text-transform:none;letter-spacing:0;font-size:10px;max-width:320px;overflow:hidden;text-overflow:ellipsis}
+  .rightgrp .peek{justify-self:start}
+  .tag.dest.log{border-color:#bfe3cf;color:var(--good)}
+  .tag.dest.me{border-color:#d9c9e4;color:var(--claude)}
+  .dot{width:8px;height:8px;border-radius:99px;display:inline-block;margin:0 5px 0 0;vertical-align:middle}
+  .dot.lo{background:var(--hot)}.dot.mid{background:var(--amber)}.dot.hi{background:var(--good)}
+  .rightgrp.four{grid-template-columns:auto auto}
+  .peek{flex:0 0 auto;width:22px;height:20px;border:none;background:none;cursor:pointer;font-size:13px;line-height:1;border-radius:6px;padding:0}
+  .peek:hover{background:#eef2f8}
+  .morebtn{font-family:inherit;font-size:10px;font-weight:800;color:#8a929c;background:#fff;border:1px solid #dfe4ea;border-radius:999px;padding:2px 8px;cursor:pointer;white-space:nowrap}
+  .morebtn:hover{color:var(--accent);border-color:var(--accent)}
+  .links{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:2px 0 1px 41px;font-size:11px;color:#8a929c;font-weight:700}
+  .links .lnk{color:var(--accent);cursor:pointer}
+  .links .lnk:hover{text-decoration:underline}
+  .links .sep{color:#cfd6df}
+  .tbox{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#8a929c;font-weight:600}
+  .estbox,.actbox{flex:0 0 auto;width:34px;padding:1px 4px;border:1px solid #d9dce1;border-radius:5px;font:inherit;font-size:11px;text-align:center;color:#4d4d4d;background:#fff}
+  .estbox:focus,.actbox:focus{outline:none;border-color:#9aa0a8;background:#fffef2}
+  .rawbox{margin:5px 0 3px 41px;background:#f7f8fa;border:1px solid var(--line);border-left:3px solid #cdd3db;border-radius:7px;padding:7px 11px;font-size:12px;color:#5b6472;font-style:italic}
+  .rawbox b{font-style:normal;color:#8a929c;font-weight:700;font-size:10px;letter-spacing:.05em;text-transform:uppercase;display:block;margin-bottom:2px}
+  .cmtbox{margin:5px 0 3px 41px;background:#f7f8fa;border:1px solid var(--line);border-radius:9px;padding:9px 10px}
+  .cmtbox textarea{width:100%;border:0;background:transparent;resize:vertical;font:inherit;font-size:12.5px;color:var(--ink);outline:none;line-height:1.45;min-height:36px}
+  .cmtrow{display:flex;align-items:center;justify-content:space-between;margin-top:7px;gap:8px}
+  .cmthint{font-size:11px;color:#8a929c}
+  .cmtmic{border:1px solid #d9dce1;background:#fff;border-radius:8px;font-size:14px;line-height:1;padding:5px 10px;cursor:pointer}
+  .cmtmic.on{background:#fdecec;border-color:#e6b3b3}
+  .receipt{margin:3px 0 3px 41px;padding:5px 9px;background:#eaf6ef;border:1px solid #bfe3cf;border-radius:8px;font-size:11.5px;color:var(--ink);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .receipt.grey{background:#f3f4f6;border-color:#dfe4ea}
+  .receipt input{flex:1;min-width:160px;font-family:inherit;font-size:11px;padding:3px 7px;border:1px solid #cfe3d6;border-radius:6px;background:#fff}
+  .receipt a{color:var(--accent);font-weight:700}
+  .pen{font-size:10px;color:#c9cdd3;margin-left:4px;font-weight:400}
+  .overlay{position:fixed;inset:0;background:rgba(31,42,68,.45);z-index:60;display:none;align-items:center;justify-content:center;padding:20px}
+  .overlay.on{display:flex}
+  .peekbox{background:#fff;border-radius:14px;width:min(960px,96vw);height:min(720px,90vh);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+  .peekhead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:13px}
+  .peekhead b{color:var(--accent)}
+  .peekhead .x{margin-left:auto;font-family:inherit;font-size:13px;font-weight:800;border:1px solid var(--line);background:#fff;border-radius:8px;padding:4px 10px;cursor:pointer}
+  .peekbox iframe{flex:1;border:0;width:100%}
+  .sech .act{margin-left:auto;display:flex;gap:6px}
+  .sec.you .sech{color:var(--good)}
+  .datebox{font:inherit;font-size:11px;padding:2px 5px;border:1px solid #d9dce1;border-radius:5px;background:#fff;color:#4d4d4d}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div id="login">
+  <h1 style="font-size:18px">Scott's Call</h1>
+  <p class="sub">Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="Email" autocomplete="username">
+  <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+  <div id="loginErr"></div>
+  <button class="btn" onclick="signIn()">Sign in</button>
+</div>
+
+<div id="app" class="hidden">
+  <h1>Scott's Call <span class="ver">v0.1</span></h1>
+  <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
+  <div class="toolbar">
+    <span class="chip static" id="c-wait"><b>0</b> waiting</span>
+    <span class="chip static" id="c-deliv"><b>0</b> delivered</span>
+    <span class="chip static" id="c-rules"><b>0</b> rules</span>
+    <span class="chip static" id="c-mine"><b>0</b> only you</span>
+    <button class="chip" id="selbtn" onclick="toggleSelect()">☐ Select several</button>
+    <button class="chip" onclick="pullDrafts()">⟳ Pull from Drafts now</button>
+    <button class="chip" onclick="load(true)">⟳</button>
+    <span class="savestate" id="save">loading…</span>
+  </div>
+  <div class="sel-bar" id="selbar">
+    <span class="lab"><span id="selcount">0</span> selected</span>
+    <span class="ddwrap"><button class="chip on" onclick="openBulk(this)">Do with them ▾</button></span>
+    <button class="chip" onclick="toggleSelect()">Done</button>
+  </div>
+
+  <div class="board" id="board"></div>
+
+  <div class="fold" onclick="toggleFold('parked')">🅿️ Parking Lot <span class="cnt" id="parked-line">0</span><span class="r" id="parked-r">open ▸</span></div>
+  <div class="foldbody" id="fold-parked"></div>
+  <div class="fold" onclick="toggleFold('arch')">🗄️ Archive <span class="cnt" id="arch-line">your last 40 calls</span><span class="r" id="arch-r">open ▸</span></div>
+  <div class="foldbody" id="fold-arch"></div>
+
+  <div class="features">
+    <h2>Features</h2>
+    <p>What every button on this page does to your note.</p>
+    <div class="eb">A waiting note</div>
+    <dl>
+      <dt>● red · amber · green</dt><dd>How sure I am about the home I picked. Red sorts to the top: read it properly. Green groups under Looks clear and can be cleared in one tap.</dd>
+      <dt>The headline</dt><dd>Tap the words to fix a garbled voice note. Saves when you click away; the raw dictation stays under Popcorn untouched.</dd>
+      <dt>→ home ▾</dt><dd>Where it goes. One list, grouped: Your day, Claude's List, the Boards, Log it, Other. The one I picked shows first; change it and Approve follows.</dd>
+      <dt>🔭</dt><dd>Look before you file: opens the destination page in a window so you can see where the note will land.</dd>
+      <dt>Approve · Log it · Dismiss</dt><dd>The button changes with the home. Approve files a to-do or a build item. Log it records a thing that happened (a habit tick, a film watched, a person met) and never makes a to-do. Dismiss moves it to a recoverable bin.</dd>
+      <dt>more ▾</dt><dd>Park it, the 🎡 pinwheel (straight to Project You Ideas), Make it a rule, Dismiss.</dd>
+      <dt>🍿 Popcorn · 💬 comment · est · act</dt><dd>The same strip as the Staging Area. Popcorn shows your dictation word for word. Comment opens a box; what you type rides along with your tap and I remember it. Est is my guess at minutes, act is yours after; both travel with the note.</dd>
+      <dt>The green strip after a tap</dt><dd>Says exactly what was filed and where, with Undo and a box for a correction. Ten seconds, then it folds into the Archive.</dd>
+    </dl>
+    <div class="eb">Delivered by Claude</div>
+    <dl>
+      <dt>Got It</dt><dd>You have seen it. Files it into the Archive.</dd>
+      <dt>Needs a fix</dt><dd>Say what is wrong; it becomes a Quick item on the Now shelf of Claude's List and the original is filed.</dd>
+      <dt>Do this · Tell me more · I did it · I read this · Kill this task</dt><dd>The five buttons, on briefs and questions only. Do this and Tell me more keep the row open because work is still owed.</dd>
+    </dl>
+    <div class="eb">The rest</div>
+    <dl>
+      <dt>Add to the rules?</dt><dd>Yes folds the rule into your working rules at the next RAP. No drops it.</dd>
+      <dt>Only you can do this</dt><dd>Your own items. I did it files them; Give it to Claude hands one over.</dd>
+      <dt>🅿️ Parking Lot</dt><dd>The one and only. Undecided things wait here until you move them.</dd>
+      <dt>☐ Select several</dt><dd>Tick boxes and one menu at the top: approve as guessed, park, or dismiss a batch.</dd>
+    </dl>
+  </div>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v0.1 · Sep 6, 2026</span></footer>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="overlay" id="peek" onclick="if(event.target===this)closePeek()"><div class="peekbox"><div class="peekhead">🔭 Where it goes: <b id="peektitle"></b><span id="peeksub" style="color:#8a929c"></span><button class="x" onclick="closePeek()">Close</button></div><iframe id="peekframe" title="Destination preview"></iframe></div></div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.",
+  "UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM"].join("");
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const V='0.1';
+const INBOX='📥 Inbox · uncategorized captures', PARK='🅿️ Parking Lot', DISMISSED='🗑️ Dismissed', IDEAS='🎡 Project You Ideas';
+const DAY_SECTIONS=['Core To-Dos',"Tomorrow's Core To-Dos",'After Core','⏳ Waiting On','🧩 New projects to build','Work/Amazon','Tracking','💬 Asa topics','🎓 Carson College','Physical Health','Mental Fitness','Emotional Health','Social Well-Being','Environmental Health','Recreational Health','Sense of Purpose (Ikigai)','Scotts Uniqueness',IDEAS];
+const MODULES={
+  '🎬 Movie List':{table:'movies',page:'movies.html',label:'Movie List',row:(h,note,d)=>({title:h,kind:'movie',status:'want to watch',notes:note||null,watch_on:d||null})},
+  '💬 Clever Phrase':{table:'quotes',page:'quotes.html',label:'Clever Phrases',row:(h,note)=>({text:h,meaning:note||null,is_new:true,source_module:'staging'})},
+  '✈️ Future Travel':{table:'future_travel',page:'future-travel.html',label:'Future Travel',row:(h,note)=>({place:h,kind:'destination',notes:note||null})},
+  '👋 Friends Visit':{table:'connections',page:'connections.html',label:'Social',row:(h,note,d)=>({person:h,kind:'other',notes:note||null,happened_on:d||null})}
+};
+/* Log it homes: things that HAPPENED. Never a to-do. */
+const LOGS={
+  'log:movie':{label:'Log it: film watched',page:'movies.html'},
+  'log:person':{label:'Log it: person met',page:'connections.html'},
+  'log:habit':{label:'Log it: habit done',page:'habit-worksheets.html'}
+};
+const CL={'cl:now:quick':{label:"Claude's List: Now, Quick",shelf:'now',run:'quick'},'cl:now:background':{label:"Claude's List: Now, Background",shelf:'now',run:'background'},'cl:tonight':{label:"Claude's List: Tonight",shelf:'tonight',run:'overnight'},'cl:later':{label:"Claude's List: Later, write me a brief",shelf:'later',run:'brief'}};
+const PAGE_FOR={day:'index.html',cl:'claudes-list.html',park:'scotts-call.html'};
+let CAP=[],DELIV=[],RULES=[],MINE=[],PARKED=[],ARCH=[],RAW={},HABITS=[],SELECT=false,SEL=new Set(),FOLDS={parked:false,arch:false},toastT=null,DEST={};
+
+/* ---------- auth ---------- */
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)onLogin(session);}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}onLogin(data.session);}
+async function onLogin(session){try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');
+  await load();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')load(true);});}
+
+/* ---------- data ---------- */
+function isScott(r){return /^scott$/i.test(r.own||'');}
+async function load(quiet){
+  if(!quiet)setSave('loading…');
+  const [a,b,c,d,e,f,g]=await Promise.all([
+    sb.from('todos').select('*').eq('staged',true).eq('done',false).order('created_at',{ascending:false}),
+    sb.from('session_todos').select('*').is('deleted_at',null).is('archived_at',null).order('position',{ascending:true}),
+    sb.from('rule_candidates').select('*').eq('decision','pending').order('created_at',{ascending:true}),
+    sb.from('inbox').select('text,headline').not('headline','is',null).order('created_at',{ascending:false}).limit(400),
+    sb.from('todos').select('*').eq('section',PARK).eq('done',false).eq('staged',false).order('created_at',{ascending:false}).limit(100),
+    sb.from('worksheet_rows').select('id,habit,area,section,minutes').eq('is_active',true).neq('retired',true).order('area').order('habit'),
+    sb.from('staging_events').select('*').order('decided_at',{ascending:false}).limit(40)
+  ]);
+  if(a.error){setSave('Error');toast('Load error: '+a.error.message);return;}
+  CAP=(a.data||[]);
+  const st=(b.data||[]).filter(r=>!r.done);
+  DELIV=st.filter(r=>r.cat==='⭐ This Session'||/^brief:/i.test(r.txt||''));
+  MINE=st.filter(r=>isScott(r)&&!DELIV.includes(r)&&(r.shelf||'')!=='parked'&&r.cat!=='Parking Lot');
+  PARKED=[...(e.data||[]).map(r=>({kind:'todo',r})),...st.filter(r=>(r.shelf||'')==='parked'||r.cat==='Parking Lot').map(r=>({kind:'st',r}))];
+  RULES=c.data||[];
+  RAW={};(d.data||[]).forEach(x=>{const h=(x.headline||'').trim();if(h&&!RAW[h])RAW[h]=x.text||'';});
+  HABITS=f.data||[];ARCH=g.data||[];
+  CAP.forEach(r=>{if(!DEST[r.id])DEST[r.id]=guessKey(r);});
+  render();setSave('Saved');
+}
+function confOf(r){const c=(r.stage_conf||'').toLowerCase();return c.startsWith('h')?'hi':c.startsWith('l')?'lo':'mid';}
+function guessKey(r){
+  const g=r.stage_guess||'';
+  if(r.stage_board==='alltodos')return 'cl:now:background';
+  if(MODULES[g])return 'mod:'+g;
+  if(g===PARK)return 'park';
+  if(g&&DAY_SECTIONS.includes(g))return 'day:'+g;
+  return 'day:Core To-Dos';
+}
+function destLabel(k){
+  if(k.startsWith('day:'))return 'Your day: '+k.slice(4);
+  if(k.startsWith('mod:'))return 'Boards: '+MODULES[k.slice(4)].label;
+  if(CL[k])return CL[k].label; if(LOGS[k])return LOGS[k].label;
+  if(k==='park')return 'Park it'; if(k==='dismiss')return 'Dismiss'; if(k==='ideas')return 'Project You Ideas';
+  return k;
+}
+function destPage(k){
+  if(k.startsWith('day:'))return 'index.html'; if(k.startsWith('mod:'))return MODULES[k.slice(4)].page;
+  if(CL[k])return 'claudes-list.html'; if(LOGS[k])return LOGS[k].page; if(k==='ideas')return 'index.html'; return 'scotts-call.html';
+}
+function destKind(k){return LOGS[k]?'log':k==='dismiss'?'dismiss':'approve';}
+
+/* ---------- render ---------- */
+function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;}
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function render(){
+  const b=document.getElementById('board');b.innerHTML='';
+  const shaky=CAP.filter(r=>confOf(r)!=='hi'), clear=CAP.filter(r=>confOf(r)==='hi');
+  b.appendChild(section('Read these first',shaky.length+' · my guess is shaky',shaky.map(capRow),'Nothing shaky. Every waiting note has a confident home.',null,shaky.length));
+  const ap=el('button','chip','✓ Approve all as guessed');ap.style.cssText='margin-left:auto;padding:2px 9px;font-size:11px';ap.onclick=()=>approveAll(clear);
+  b.appendChild(section('Looks clear',String(clear.length),clear.map(capRow),'Nothing waiting.',clear.length?ap:null));
+  b.appendChild(section('Delivered by Claude, for your call',String(DELIV.length),DELIV.map(delivRow),'Nothing delivered since your last visit.'));
+  b.appendChild(section('Add to the rules?',String(RULES.length),RULES.map(ruleRow),'No rules waiting.'));
+  const ms=section('Only you can do this',MINE.length+' · your own items',MINE.map(mineRow),'Nothing only you can do. Enjoy it.');ms.classList.add('dim');b.appendChild(ms);
+  document.getElementById('c-wait').innerHTML='<b>'+CAP.length+'</b> waiting';
+  document.getElementById('c-deliv').innerHTML='<b>'+DELIV.length+'</b> delivered';
+  document.getElementById('c-rules').innerHTML='<b>'+RULES.length+'</b> rules';
+  document.getElementById('c-mine').innerHTML='<b>'+MINE.length+'</b> only you';
+  document.getElementById('parked-line').textContent=PARKED.length+' · the one and only · nothing here moves until you say';
+  fillFold('parked',PARKED.map(p=>p.kind==='todo'?parkedTodoRow(p.r):mineRow(p.r,true)),'The Parking Lot is empty.');
+  fillFold('arch',ARCH.map(archRow),'No calls made yet.');
+  document.getElementById('selbar').classList.toggle('on',SELECT);document.getElementById('selcount').textContent=SEL.size;
+}
+function section(title,cnt,rows,emptyMsg,actNode,warn){
+  const s=el('div','sec');const h=el('div','sech',esc(title)+' <span class="cnt">'+esc(cnt)+'</span>');if(actNode)h.appendChild(actNode);s.appendChild(h);
+  const ul=el('ul','rows');if(!rows.length)ul.appendChild(el('li','empty',emptyMsg));rows.forEach(r=>ul.appendChild(r));s.appendChild(ul);return s;
+}
+function fillFold(k,rows,emptyMsg){const b=document.getElementById('fold-'+k);b.innerHTML='';const sec=el('div','sec dim');if(!rows.length){sec.appendChild(el('div','empty',emptyMsg));}else{const ul=el('ul','rows');rows.forEach(r=>ul.appendChild(r));sec.appendChild(ul);}b.appendChild(sec);}
+function toggleFold(k){FOLDS[k]=!FOLDS[k];document.getElementById('fold-'+k).classList.toggle('open',FOLDS[k]);document.getElementById(k+'-r').textContent=FOLDS[k]?'close ▾':'open ▸';}
+
+function headlineNode(r,onSave){
+  const t=el('div','txt');
+  const dot=el('span','dot '+confOf(r));t.appendChild(dot);
+  const sp=el('span','',esc(r.task||''));sp.contentEditable='true';sp.spellcheck=false;sp.title='Tap to edit';
+  sp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();sp.blur();}if(e.key==='Escape'){sp.textContent=r.task;sp.blur();}});
+  sp.addEventListener('blur',()=>{const v=sp.textContent.trim();if(v&&v!==r.task)onSave(v);});
+  t.appendChild(sp);t.appendChild(el('span','pen','✎'));return t;
+}
+function capRow(r){
+  const li=el('li','item'+(confOf(r)==='lo'?' q':'')+(SEL.has(r.id)?' sel':''));li.dataset.id=r.id;
+  const top=el('div','toprow');
+  if(SELECT){const cb=el('input','cb');cb.type='checkbox';cb.checked=SEL.has(r.id);cb.onchange=()=>{cb.checked?SEL.add(r.id):SEL.delete(r.id);li.classList.toggle('sel',cb.checked);document.getElementById('selcount').textContent=SEL.size;};top.appendChild(cb);}
+  else top.appendChild(el('span','h','⠿'));
+  top.appendChild(headlineNode(r,async v=>{const old=r.task;r.task=v;await patchTodo(r.id,{task:v});try{await sb.from('inbox').update({headline:v}).eq('headline',old);if(RAW[old]){RAW[v]=RAW[old];}}catch(e){}}));
+  const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto auto';
+  const k=DEST[r.id]||guessKey(r);const kind=destKind(k);
+  const dt=el('button','tag dest'+(kind==='log'?' log':CL[k]?' me':''),'→ '+esc(destLabel(k))+' ▾');dt.title='Where it goes, tap to change';dt.onclick=()=>openDest(dt,r);rg.appendChild(dt);
+  const pk=el('button','peek','🔭');pk.title='Look at where it will land';pk.onclick=()=>peek(k,r);rg.appendChild(pk);
+  const pb=el('button','btnp'+(kind==='log'?' log':kind==='dismiss'?' ghost':''),kind==='log'?'Log it':kind==='dismiss'?'Dismiss':'Approve');pb.onclick=()=>act(r,k);rg.appendChild(pb);
+  const mb=el('button','morebtn','more ▾');mb.onclick=()=>openMore(mb,r);rg.appendChild(mb);
+  top.appendChild(rg);li.appendChild(top);
+  const note=(r.staging_note||'').trim();
+  if(note&&!/interpreter offline/i.test(note))li.appendChild(el('div','note sum',esc(note)));
+  /* the Staging Area strip, verbatim: Popcorn · comment · est · act */
+  const links=el('div','links');
+  const pop=el('span','lnk','🍿 Popcorn');const cmt=el('span','lnk','💬 comment');
+  const tb=el('span','tbox');const est=el('input','estbox');est.value=r.est_minutes==null?'':r.est_minutes;est.placeholder='–';est.title='My guess at minutes';const act=el('input','actbox');act.value=r.actual_minutes==null?'':r.actual_minutes;act.placeholder='–';act.title='Your actual minutes, after';
+  est.onchange=()=>patchTodo(r.id,{est_minutes:est.value===''?null:+est.value});act.onchange=()=>patchTodo(r.id,{actual_minutes:act.value===''?null:+act.value});
+  tb.append(el('label','','est'),est,el('label','','act'),act,el('label','','min'));
+  links.append(pop,el('span','sep','·'),cmt,el('span','sep','·'),tb);li.appendChild(links);
+  const raw=el('div','rawbox hidden');raw.innerHTML='<b>🍿 Popcorn · raw draft</b>'+(RAW[(r.task||'').trim()]?esc(RAW[(r.task||'').trim()]):'<span style="font-style:normal;color:#aab2bd">No raw dictation stored for this note.</span>');li.appendChild(raw);
+  pop.onclick=()=>{const h=raw.classList.toggle('hidden');pop.textContent=h?'🍿 Popcorn':'🍿 Hide Popcorn';};
+  const cbox=el('div','cmtbox hidden');const ta=el('textarea');ta.placeholder='Tell me what is off, or where it really belongs.';ta.value=/interpreter offline/i.test(r.staging_note||'')?'':(r.staging_note||'');
+  const crow=el('div','cmtrow');const hint=el('span','cmthint','Claude re-files per your note and remembers it.');const mic=el('button','cmtmic','🎤');mic.type='button';crow.append(hint,mic);cbox.append(ta,crow);li.appendChild(cbox);
+  cmt.onclick=()=>{const h=cbox.classList.toggle('hidden');if(!h)ta.focus();};
+  ta.onblur=()=>{const v=(ta.value||'').trim();if(v!==((r.staging_note||'').trim())){r.staging_note=v;patchTodo(r.id,{staging_note:v});}};
+  wireMic(mic,ta,r,cbox);
+  return li;
+}
+function delivRow(r){
+  const li=el('li','item');const brief=/^brief:/i.test(r.txt||'')||r.kind==='idea';
+  const top=el('div','toprow');top.appendChild(el('span','h',''));
+  const t=el('div','txt',esc(r.txt||''));top.appendChild(t);
+  const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto';
+  const meta=el('span','tag st',brief?'a question':('built '+fmtDate(r.updated_at||r.created_at)));
+  const btns=el('div');btns.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end';
+  if(brief){
+    [['Do this','go',()=>five(r,'Do this')],['Tell me more','',()=>five(r,'Tell me more')],['I did it','',()=>five(r,'I did it')],['I read this','',()=>five(r,'I read this')],['Kill this task','',()=>five(r,'Kill this task')]].forEach(([l,c,f])=>{const b=el('button','btnp five '+c,l);b.onclick=f;btns.appendChild(b);});
+  } else {
+    const g=el('button','btnp log','Got It');g.onclick=()=>gotIt(r);const n=el('button','btnp ghost','Needs a fix');n.onclick=()=>needsFix(r);btns.append(g,n);
+  }
+  rg.append(meta,btns);top.appendChild(rg);li.appendChild(top);
+  const s=(r.summary||r.note||'').replace(/^Was: [^\n]*\n*/,'').trim();if(s)li.appendChild(el('div','note sum',esc(s.length>300?s.slice(0,300)+'…':s)));
+  li.appendChild(commentLine(r,'session'));
+  return li;
+}
+function ruleRow(r){
+  const li=el('li','item');const top=el('div','toprow');top.appendChild(el('span','h',''));top.appendChild(el('div','txt',esc(r.text||'')));
+  const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto auto auto';rg.append(el('span','tag st','proposed '+fmtDate(r.created_at)));
+  const y=el('button','btnp log','Yes');y.onclick=()=>decideRule(r,'accepted');const n=el('button','btnp ghost','No');n.onclick=()=>decideRule(r,'rejected');rg.append(y,n);top.appendChild(rg);li.appendChild(top);
+  if(r.rationale)li.appendChild(el('div','note sum',esc(r.rationale)));
+  return li;
+}
+function mineRow(r,parked){
+  const li=el('li','item');const top=el('div','toprow');top.appendChild(el('span','h',''));
+  const t=el('div','txt',esc(r.txt||''));top.appendChild(t);
+  const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto auto auto';
+  if(r.est_minutes)rg.appendChild(el('span','tag est','['+r.est_minutes+']'));
+  const d=el('button','btnp ghost','I did it');d.onclick=()=>archiveST(r,'I did it');rg.appendChild(d);
+  const mb=el('button','morebtn','more ▾');mb.onclick=()=>openDD(mb,[{l:parked?'↩ Back to Only you':'🅿️ Park it',fn:()=>parkST(r,!parked)},{l:'→ Give it to Claude',fn:()=>giveClaude(r)},'sep',{l:'× Delete',cls:'danger',fn:()=>delST(r)}]);rg.appendChild(mb);
+  top.appendChild(rg);li.appendChild(top);
+  const s=(r.summary||r.note||'').replace(/^Was: [^\n]*\n*/,'').trim();if(s)li.appendChild(el('div','note sum',esc(s.length>220?s.slice(0,220)+'…':s)));
+  return li;
+}
+function parkedTodoRow(r){
+  const li=el('li','item');const top=el('div','toprow');top.appendChild(el('span','h',''));top.appendChild(el('div','txt',esc(r.task||'')));
+  const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto auto';
+  const u=el('button','btnp ghost','Back to waiting');u.onclick=async()=>{await patchTodo(r.id,{staged:true,section:INBOX});toast('Back in the waiting list.');load(true);};
+  const mb=el('button','morebtn','more ▾');mb.onclick=()=>openDD(mb,[{l:'Dismiss',fn:async()=>{await patchTodo(r.id,{section:DISMISSED});load(true);}}]);rg.append(u,mb);top.appendChild(rg);li.appendChild(top);return li;
+}
+function archRow(e){
+  const li=el('li','item');const top=el('div','toprow');top.appendChild(el('span','h',''));
+  top.appendChild(el('div','txt',esc(e.headline||'')));
+  const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto';rg.appendChild(el('span','tag st',esc((e.action||'')+' · '+(e.chosen||'')+' · '+fmtDate(e.decided_at))));top.appendChild(rg);li.appendChild(top);return li;
+}
+function commentLine(r,kind){
+  const links=el('div','links');const cmt=el('span','lnk','💬 comment');links.appendChild(cmt);
+  const cbox=el('div','cmtbox hidden');const ta=el('textarea');ta.placeholder='A comment that goes with your tap (optional).';ta.value=r.review_comment||'';
+  const crow=el('div','cmtrow');crow.append(el('span','cmthint','Rides along with whatever you tap on this row.'));const mic=el('button','cmtmic','🎤');mic.type='button';crow.appendChild(mic);cbox.append(ta,crow);
+  cmt.onclick=()=>{const h=cbox.classList.toggle('hidden');if(!h)ta.focus();};
+  ta.onblur=async()=>{const v=(ta.value||'').trim();if(v!==(r.review_comment||'')){r.review_comment=v;await save(r.id,{review_comment:v});}};
+  wireMic(mic,ta,{id:r.id},cbox,v=>{r.review_comment=v;save(r.id,{review_comment:v});});
+  const wrap=el('div');wrap.append(links,cbox);return wrap;
+}
+function fmtDate(s){if(!s)return '';const d=new Date(s);return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric'}).format(d);}
+
+/* ---------- menus ---------- */
+function closeDrops(){document.querySelectorAll('.dd').forEach(e=>e.remove());document.querySelectorAll('[data-ddopen]').forEach(a=>a.removeAttribute('data-ddopen'));}
+function openDD(anchor,items){
+  const was=anchor.dataset.ddopen==='1';closeDrops();if(was)return;anchor.dataset.ddopen='1';
+  const d=el('div','dd');
+  items.forEach(it=>{if(it==='sep'){d.appendChild(el('div','sep'));return;}if(it.lab){d.appendChild(el('span','lab',it.lab));return;}
+    const b=el('button','o'+(it.on?' on':'')+(it.cls?' '+it.cls:''),it.l);b.onclick=e=>{e.stopPropagation();closeDrops();it.fn();};d.appendChild(b);});
+  document.body.appendChild(d);const r=anchor.getBoundingClientRect();let left=r.left+window.scrollX;const w=d.offsetWidth;if(left+w>window.scrollX+document.documentElement.clientWidth-8)left=r.right+window.scrollX-w;
+  d.style.left=Math.max(8,left)+'px';d.style.top=(r.bottom+window.scrollY+4)+'px';d.style.maxHeight='70vh';d.style.overflowY='auto';
+}
+function setDest(r,k){DEST[r.id]=k;render();}
+function openDest(anchor,r){
+  const cur=DEST[r.id];const items=[{lab:'Your day'}];
+  DAY_SECTIONS.forEach(s=>items.push({l:s,on:cur==='day:'+s,fn:()=>setDest(r,'day:'+s)}));
+  items.push('sep',{lab:"Claude's List"});Object.keys(CL).forEach(k=>items.push({l:CL[k].label.replace("Claude's List: ",''),on:cur===k,fn:()=>setDest(r,k)}));
+  items.push('sep',{lab:'Boards'});Object.keys(MODULES).forEach(m=>items.push({l:m,on:cur==='mod:'+m,fn:()=>setDest(r,'mod:'+m)}));
+  items.push('sep',{lab:'Log it, a thing that happened'});Object.keys(LOGS).forEach(k=>items.push({l:LOGS[k].label.replace('Log it: ',''),on:cur===k,fn:()=>setDest(r,k)}));
+  items.push('sep',{lab:'Other'},{l:'🎡 Project You Ideas',on:cur==='ideas',fn:()=>setDest(r,'ideas')},{l:'🅿️ Park it',on:cur==='park',fn:()=>setDest(r,'park')},{l:'Dismiss',on:cur==='dismiss',fn:()=>setDest(r,'dismiss')});
+  openDD(anchor,items);
+}
+function openMore(anchor,r){openDD(anchor,[{l:'🅿️ Park it',fn:()=>act(r,'park')},{l:'🎡 Straight to Project You Ideas',fn:()=>act(r,'ideas')},{l:'📏 Make it a rule',fn:()=>makeRule(r)},'sep',{l:'Dismiss',cls:'danger',fn:()=>act(r,'dismiss')}]);}
+function openBulk(btn){if(!SEL.size){toast('Tick some rows first.');return;}
+  openDD(btn,[{lab:'Do with '+SEL.size},{l:'✓ Approve as guessed',fn:()=>bulk('approve')},{l:'🅿️ Park them',fn:()=>bulk('park')},{l:'Dismiss them',cls:'danger',fn:()=>bulk('dismiss')}]);}
+function toggleSelect(){SELECT=!SELECT;if(!SELECT)SEL.clear();document.getElementById('selbtn').classList.toggle('on',SELECT);document.getElementById('selbtn').textContent=SELECT?'☑ Selecting':'☐ Select several';render();}
+async function bulk(what){const ids=[...SEL];for(const id of ids){const r=CAP.find(x=>x.id===id);if(!r)continue;await act(r,what==='approve'?(DEST[r.id]||guessKey(r)):what,true);}SEL.clear();toast('Done: '+ids.length);render();}
+async function approveAll(list){for(const r of list){await act(r,DEST[r.id]||guessKey(r),true);}toast('Filed '+list.length+' as guessed');render();}
+
+/* ---------- 🔭 look before you file ---------- */
+function peek(k,r){
+  const page=destPage(k);document.getElementById('peektitle').textContent=destLabel(k);document.getElementById('peeksub').textContent=' · '+page;
+  document.getElementById('peekframe').src=page+'?peek=1&cb='+Date.now();document.getElementById('peek').classList.add('on');
+}
+function closePeek(){document.getElementById('peek').classList.remove('on');document.getElementById('peekframe').src='about:blank';}
+
+/* ---------- acting on a note ---------- */
+async function patchTodo(id,fields){fields.updated_at=new Date().toISOString();setSave('Saving…');const {error}=await sb.from('todos').update(fields).eq('id',id);setSave(error?'Error':'Saved');if(error)toast('Save failed: '+error.message);return !error;}
+async function save(id,fields){fields.updated_at=new Date().toISOString();setSave('Saving…');const {error}=await sb.from('session_todos').update(fields).eq('id',id);setSave(error?'Error':'Saved');if(error)toast('Save failed: '+error.message);return !error;}
+function setSave(s){const e=document.getElementById('save');e.className='savestate '+(s==='Saved'?'saved':s==='Error'?'err':'');e.textContent=s;}
+function snapOf(r){return {staged:true,section:r.section,subsection:r.subsection,task:r.task,position:r.position,stage_conf:r.stage_conf,stage_guess:r.stage_guess,staging_note:r.staging_note,est_minutes:r.est_minutes,actual_minutes:r.actual_minutes,bucket:r.bucket,status:r.status,stage_board:r.stage_board,stage_cat:r.stage_cat,stage_own:r.stage_own,stage_date:r.stage_date};}
+async function logEvent(r,action,chosen){const guessed=destLabel(guessKey(r));const ev={todo_id:r.id,headline:(r.task||'').slice(0,300),guessed,chosen:chosen||guessed,conf:confOf(r),action,agreed:(action==='approve'&&chosen===guessed),est_minutes:r.est_minutes==null?null:r.est_minutes,actual_minutes:r.actual_minutes==null?null:r.actual_minutes};try{await sb.from('staging_events').insert(ev);}catch(e){}}
+function removeCap(r){CAP=CAP.filter(x=>x.id!==r.id);}
+async function act(r,k,quiet){
+  const note=(r.staging_note||'').trim();const head=(r.task||'').trim();const label=destLabel(k);
+  if(k==='dismiss'){await logEvent(r,'dismiss',DISMISSED);removeCap(r);render();const ok=await patchTodo(r.id,{staged:false,section:DISMISSED,subsection:null});if(ok&&!quiet)receipt(r,'Dismissed, in the recoverable bin',null,()=>patchTodo(r.id,{staged:true,section:INBOX}),true);return;}
+  if(k==='park'){await logEvent(r,'park',PARK);removeCap(r);render();const ok=await patchTodo(r.id,{staged:false,section:PARK,subsection:null});if(ok&&!quiet)receipt(r,'Parked',null,()=>patchTodo(r.id,{staged:true,section:INBOX}));load(true);return;}
+  if(k==='ideas'||k.startsWith('day:')){const sec=k==='ideas'?IDEAS:k.slice(4);await logEvent(r,'approve',label);removeCap(r);render();
+    const ok=await patchTodo(r.id,{staged:false,section:sec,subsection:null,stage_guess:sec});if(ok&&!quiet)receipt(r,'Filed to '+sec+' on Todays Tasks','index.html',()=>patchTodo(r.id,{staged:true,section:INBOX}),false,v=>patchTodo(r.id,{staging_note:v}));return;}
+  if(CL[k]){await logEvent(r,'send_board',label);const snap=snapOf(r);removeCap(r);render();
+    const {data:created,error}=await sb.from('session_todos').insert({cat:'📥 Inbox',txt:head,note:note||null,summary:note||null,own:'Claude',kind:'feature',kind_proposed:true,shelf:CL[k].shelf,run_mode:CL[k].run,area:'Project YOU',est_minutes:r.est_minutes||null,position:0,shelf_pos:0,done:false}).select().single();
+    if(error){toast('Could not send to Claude’s List: '+error.message);CAP.push(r);render();return;}
+    await sb.from('todos').delete().eq('id',r.id);
+    if(!quiet)receipt(r,'On Claude’s List, '+CL[k].label.replace("Claude's List: ",''),'claudes-list.html',async()=>{await sb.from('session_todos').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>save(created.id,{note:v}));return;}
+  if(k.startsWith('mod:')){const M=MODULES[k.slice(4)];await logEvent(r,'approve',label);const snap=snapOf(r);removeCap(r);render();
+    const {data:created,error}=await sb.from(M.table).insert(M.row(head,note,r.stage_date||null)).select().single();
+    if(error){toast('Could not file to '+M.label+': '+error.message);CAP.push(r);render();return;}
+    await sb.from('todos').delete().eq('id',r.id);
+    if(!quiet)receipt(r,'Filed to '+M.label,M.page,async()=>{await sb.from(M.table).delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from(M.table).update({notes:v}).eq('id',created.id));return;}
+  if(k==='log:movie'){const rating=prompt('Stars out of 5? (leave empty if none)','');const snap=snapOf(r);await logEvent(r,'approve',label);removeCap(r);render();
+    const title=head.replace(/^watched\s+/i,'').replace(/\s+last night.*$/i,'').replace(/[,.]\s*\d.*$/,'').trim()||head;
+    const {data:created,error}=await sb.from('movies').insert({title,kind:'movie',status:'watched',watched_on:todayET(),rating:rating?+rating:null,notes:note||null,raw_input:RAW[head]||head}).select().single();
+    if(error){toast('Could not log the film: '+error.message);CAP.push(r);render();return;}
+    await sb.from('todos').delete().eq('id',r.id);
+    if(!quiet)receipt(r,'Logged '+title+' as watched'+(rating?', '+rating+' stars':'')+', '+fmtDate(new Date().toISOString()),'movies.html',async()=>{await sb.from('movies').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('movies').update({notes:v}).eq('id',created.id));return;}
+  if(k==='log:person'){const who=prompt('Who did you see? (name or names)',head.match(/saw\s+([A-Z][^,.]*)/)?.[1]||'');if(!who)return;const snap=snapOf(r);await logEvent(r,'approve',label);removeCap(r);render();
+    const {data:created,error}=await sb.from('connections').insert({person:who.trim(),kind:'other',notes:note||head,happened_on:todayET(),planned:false,source:'scotts-call'}).select().single();
+    if(error){toast('Could not log the meeting: '+error.message);CAP.push(r);render();return;}
+    await sb.from('todos').delete().eq('id',r.id);
+    if(!quiet)receipt(r,'Logged a meeting with '+who.trim()+', '+fmtDate(new Date().toISOString())+', on the Connections board','connections.html',async()=>{await sb.from('connections').delete().eq('id',created.id);const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}},false,v=>sb.from('connections').update({notes:v}).eq('id',created.id));return;}
+  if(k==='log:habit'){return logHabit(r);}
+}
+function todayET(){const p=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(Date.now()-2*3600000));const g=t=>p.find(x=>x.type===t).value;return g('year')+'-'+g('month')+'-'+g('day');}
+async function logHabit(r){
+  /* pick the habit, then the day(s). Today ticks the existing row; a past day gets its own row, inserted then ticked, so the log trigger fires. */
+  const anchor=document.querySelector('li[data-id="'+r.id+'"] .btnp')||document.body;
+  const items=[{lab:'Which habit?'}];HABITS.forEach(h=>items.push({l:h.habit+' · '+h.area,fn:()=>pickDays(r,h)}));openDD(anchor,items);
+}
+function pickDays(r,h){
+  const s=prompt('Which day(s)? Type dates like 2026-09-05, comma separated. Leave empty for today.','');if(s===null)return;
+  const days=(s.trim()?s.split(',').map(x=>x.trim()).filter(Boolean):[todayET()]);const mins=prompt('Minutes? (optional)','');
+  tickHabit(r,h,days,mins?+mins:null);
+}
+async function tickHabit(r,h,days,mins){
+  const snap=snapOf(r);await logEvent(r,'approve','Log it: '+h.habit);removeCap(r);render();const made=[];
+  for(const day of days){
+    const isToday=day===todayET();let rowId=null;
+    if(isToday){const {data}=await sb.from('todos').select('id,done').eq('is_habit',true).eq('ws_id',h.id).eq('done',false).gte('created_at',new Date(Date.now()-36*3600000).toISOString()).limit(1);if(data&&data[0])rowId=data[0].id;}
+    if(!rowId){const at=day+'T16:00:00Z';const {data:ins,error}=await sb.from('todos').insert({section:h.area,subsection:h.section,task:h.habit,is_habit:true,ws_id:h.id,done:false,source_project:'scotts-call',created_at:at,for_date:day,est_minutes:h.minutes||null}).select().single();if(error){toast('Could not log '+h.habit+' for '+day+': '+error.message);continue;}rowId=ins.id;made.push(rowId);}
+    const upd={done:true,done_at:isToday?new Date().toISOString():day+'T16:00:00Z'};if(mins)upd.actual_minutes=mins;
+    const {error:e2}=await sb.from('todos').update(upd).eq('id',rowId);if(e2)toast('Tick failed for '+day+': '+e2.message);else if(!made.includes(rowId))made.push('t:'+rowId);
+  }
+  await sb.from('todos').delete().eq('id',r.id);
+  receipt(r,'Logged '+h.habit+' as done for '+days.map(d=>fmtDate(d+'T12:00:00')).join(', ')+(mins?' · '+mins+' min':''),'habit-worksheets.html',async()=>{for(const m of made){if(String(m).startsWith('t:'))await sb.from('todos').update({done:false,done_at:null}).eq('id',String(m).slice(2));else await sb.from('todos').delete().eq('id',m);}const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}});
+}
+function receipt(r,msg,page,undoFn,grey,noteFn){
+  const board=document.getElementById('board');const s=el('div','receipt'+(grey?' grey':''));
+  s.appendChild(el('span','',(grey?'— ':'✓ ')+esc(msg)+' · <b>“'+esc((r.task||'').slice(0,48))+'”</b>'+(page?' · <a href="'+page+'">open ›</a>':'')));
+  const u=el('button','btnp ghost','Undo');u.onclick=async()=>{s.remove();await undoFn();toast('Back in the waiting list.');};s.appendChild(u);
+  if(noteFn){const i=el('input');i.placeholder='Add a correction or note… (optional)';i.onchange=async()=>{if(i.value.trim()){await noteFn(i.value.trim());toast('Saved on the filed item.');}};s.appendChild(i);}
+  board.insertBefore(s,board.firstChild);setTimeout(()=>{if(s.parentNode)s.remove();},12000);
+}
+async function makeRule(r){const text=prompt('The rule, in your words:',r.task||'');if(!text)return;const {error}=await sb.from('rule_candidates').insert({text,rationale:'Proposed from Scott’s Call',scope:'global',decision:'pending'});if(error){toast('Could not propose the rule: '+error.message);return;}toast('Rule proposed. It shows under Add to the rules.');load(true);}
+
+/* ---------- delivered, rules, mine ---------- */
+async function gotIt(r){if(await save(r.id,{done:true,done_at:new Date().toISOString(),archived_at:new Date().toISOString(),approved:true})){DELIV=DELIV.filter(x=>x.id!==r.id);render();toastUndo('Got It. Filed.',async()=>{await save(r.id,{done:false,done_at:null,archived_at:null});load(true);});}}
+async function needsFix(r){const what=prompt('What needs fixing?',r.review_comment||'');if(!what)return;
+  const {error}=await sb.from('session_todos').insert({cat:'🔧 Add a new task',txt:'Fix: '+r.txt,note:what,summary:what,own:'Claude',kind:'feature',shelf:'now',run_mode:'quick',area:r.area||r.cat,position:0,shelf_pos:0,done:false});
+  if(error){toast('Could not add the fix: '+error.message);return;}
+  await save(r.id,{done:true,done_at:new Date().toISOString(),archived_at:new Date().toISOString(),review_comment:what});toast('Fix added to the Now shelf on Claude’s List. Original filed.');load(true);}
+async function five(r,which){
+  const c=(r.review_comment||'').trim();const stamp=fmtDate(new Date().toISOString());
+  const line='Scott: '+which+(c?' · '+c:'')+' ('+stamp+')';
+  if(which==='Do this'){await save(r.id,{cat:'📥 Inbox',own:'Claude',kind:'feature',shelf:'now',run_mode:'background',note:((r.note||'')+'\n\n'+line).trim()});toast('Go. It is on the Now shelf of Claude’s List.');}
+  else if(which==='Tell me more'){await save(r.id,{run_status:'needs_input',note:((r.note||'')+'\n\n'+line).trim()});toast('I will come back with more before anything moves.');}
+  else {await save(r.id,{done:true,done_at:new Date().toISOString(),archived_at:new Date().toISOString(),review_comment:line});toast(which+'. Filed.');}
+  load(true);
+}
+async function decideRule(r,d){const {error}=await sb.from('rule_candidates').update({decision:d,decided_at:new Date().toISOString()}).eq('id',r.id);if(error){toast('Could not save: '+error.message);return;}RULES=RULES.filter(x=>x.id!==r.id);render();toastUndo(d==='accepted'?'Yes. Folds into your rules at the next RAP.':'No. Dropped.',async()=>{await sb.from('rule_candidates').update({decision:'pending',decided_at:null}).eq('id',r.id);load(true);});}
+async function archiveST(r,why){if(await save(r.id,{done:true,done_at:new Date().toISOString(),archived_at:new Date().toISOString(),review_comment:why})){MINE=MINE.filter(x=>x.id!==r.id);render();toastUndo('Filed.',async()=>{await save(r.id,{done:false,done_at:null,archived_at:null});load(true);});}}
+async function parkST(r,park){await save(r.id,park?{shelf:'parked',run_status:'parked'}:{shelf:'now',run_status:null});load(true);}
+async function giveClaude(r){await save(r.id,{own:'Claude',shelf:r.shelf||'now',kind:r.kind||'feature'});toast('Handed to Claude. It is on Claude’s List.');load(true);}
+async function delST(r){if(await save(r.id,{deleted_at:new Date().toISOString()})){load(true);toastUndo('Deleted.',async()=>{await save(r.id,{deleted_at:null});load(true);});}}
+
+/* ---------- drafts, mic, toast ---------- */
+function pullDrafts(){try{window.location.href='drafts://x-callback-url/runAction?action=Sweep%20to%20ProjectYou';}catch(e){}toast('Asked Drafts to sweep. Checking for new notes…');let n=0;const t=setInterval(()=>{load(true);if(++n>5)clearInterval(t);},5000);}
+function wireMic(btn,ta,r,cbox,onStop){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){btn.style.display='none';return;}
+  let rec=null,listening=false;
+  btn.onclick=e=>{e.preventDefault();e.stopPropagation();if(listening){stop();return;}rec=new SR();rec.lang='en-US';rec.interimResults=true;rec.continuous=true;ta.value='';let finalTxt='';
+    rec.onresult=ev=>{let interim='';for(let i=ev.resultIndex;i<ev.results.length;i++){const t=ev.results[i][0].transcript;if(ev.results[i].isFinal)finalTxt+=t;else interim+=t;}ta.value=(finalTxt+interim).replace(/\s+/g,' ').trim();};
+    rec.onerror=()=>{toast('Mic unavailable');stop();};rec.onend=()=>{if(listening)stop();};
+    try{rec.start();listening=true;btn.classList.add('on');btn.textContent='⏹';ta.focus();}catch(err){}};
+  function stop(){listening=false;btn.classList.remove('on');btn.textContent='🎤';try{rec&&rec.stop();}catch(e){}const v=(ta.value||'').trim();if(onStop)onStop(v);else{r.staging_note=v;patchTodo(r.id,{staging_note:v});}cbox.classList.add('hidden');toast('Saved your note');}
+}
+function toast(m){const t=document.getElementById('toast');t.innerHTML='';t.appendChild(el('span','',esc(m)));t.classList.add('show');t.style.pointerEvents='none';clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),4000);}
+function toastUndo(m,fn){const t=document.getElementById('toast');t.innerHTML='';t.appendChild(el('span','',esc(m)));const b=el('button','','Undo');b.onclick=()=>{t.classList.remove('show');t.style.pointerEvents='none';fn();};t.appendChild(b);t.classList.add('show');t.style.pointerEvents='auto';clearTimeout(toastT);toastT=setTimeout(()=>{t.classList.remove('show');t.style.pointerEvents='none';},10000);}
+document.addEventListener('click',e=>{if(!e.target.closest('.dd')&&!e.target.closest('[data-ddopen]'))closeDrops();});
+document.getElementById('pass').addEventListener('keydown',e=>{if(e.key==='Enter')signIn();});
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>
