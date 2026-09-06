@@ -117,6 +117,17 @@
   .segbar button.on{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(31,42,68,.10)}
   .dayhead{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;
     flex-wrap:wrap;margin-bottom:14px}
+  .dayctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .dayrefresh{font-family:inherit;font-size:11.5px;font-weight:800;letter-spacing:.2px;color:var(--accent);
+    background:#fff;border:1.5px solid #dfe5ee;padding:6px 12px;border-radius:10px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;line-height:1}
+  .dayrefresh:hover{border-color:var(--accent)}
+  .dayrefresh[disabled]{opacity:.55;cursor:default}
+  .dayrefresh svg{width:12px;height:12px;display:block}
+  .dayrefresh.busy svg{animation:dayspin .9s linear infinite}
+  @keyframes dayspin{to{transform:rotate(360deg)}}
+  .daystamp{font-size:11px;color:#8a8f99;font-weight:700;margin-top:8px;min-height:14px}
+  .daystamp.err{color:#c0453b}
   .daybig{font-size:24px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
   .daysub{font-size:11px;color:#8a8f99;font-weight:700;margin-top:3px}
   .daywrap{overflow-x:auto}
@@ -140,7 +151,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link on">YouMatics</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.1</span>
+    <span class="pn-ver">v1.2</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -173,13 +184,17 @@
     <div class="panel">
       <div class="dayhead">
         <div><div class="daybig" id="daybig">&mdash;</div><div class="daysub" id="daysub">&nbsp;</div></div>
-        <div class="segbar" id="dayseg">
-          <button data-dayview="week" class="on">Your week</button>
-          <button data-dayview="balance">The balance</button>
+        <div class="dayctl">
+          <div class="segbar" id="dayseg">
+            <button data-dayview="week" class="on">Your week</button>
+            <button data-dayview="balance">The balance</button>
+          </div>
+          <button class="dayrefresh" id="dayrefresh" type="button" title="Recount today and yesterday from your calendar, your wheel and your ticked tasks"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>Refresh</button>
         </div>
       </div>
       <div class="daywrap" id="daychart"></div>
       <div class="daykey" id="daykey"></div>
+      <div class="daystamp" id="daystamp"></div>
       <p class="daynote" id="daycov"></p>
     </div>
 
@@ -194,7 +209,7 @@
    the top is drawn by the shared health-strip.js, which mounts into the empty
    #bodystrip-mount div above and makes its own py_body_latest call.
    No library, no CDN: plain fetch against PostgREST.
-   v1.1 - Aug 25, 2026
+   v1.2 - Sep 6, 2026
 --------------------------------------------------------------------------- */
 (function () {
   'use strict';
@@ -443,7 +458,7 @@
 
 <script>
 /* ---------------------------------------------------------------------------
-   Where the days go.  v1.0, Aug 25 2026.
+   Where the days go.  v1.0, Aug 25 2026.  v1.2, Sep 6 2026: the Refresh button.
 
    Two views of one set of numbers, toggled:
      "Your week"    - seven columns, what a typical Monday, Tuesday, Wednesday
@@ -642,13 +657,15 @@
 
     var thin = rows.length - real.length;
     var live = rows.filter(function (r) { return r.source === 'page'; }).length;
+    var fresh = rows.filter(function (r) { return r.source === 'refresh'; }).length;
     document.getElementById('daycov').innerHTML =
       '<b>' + real.length + ' day' + (real.length === 1 ? '' : 's') + ' with a real record</b>, out of ' +
       rows.length + ' that have anything on them at all' +
       (thin ? '.  The other ' + thin + ' hold less than two hours between them and are left out, ' +
               'because averaging them in would quietly halve every number here' : '') + '.  ' +
-      (live ? live + ' of them were written by Todays Tasks as the day happened; the rest were rebuilt ' +
-              'once from your calendar, your logged time and your ticked tasks.'
+      (live ? live + ' of them were written by Todays Tasks as the day happened' +
+              (fresh ? ', ' + fresh + ' ' + (fresh === 1 ? 'was' : 'were') + ' recounted with the Refresh button' : '') +
+              '; the rest were rebuilt once from your calendar, your logged time and your ticked tasks.'
             : 'All of these were rebuilt from your calendar, your logged time and your ticked tasks. ' +
               'From now on Todays Tasks writes the day down as it happens.');
     document.getElementById('daynote2').textContent =
@@ -668,18 +685,59 @@
     x.classList.toggle('on', x.dataset.dayview === view);
   });
 
-  fetch(RPC, {
-    method: 'POST',
-    headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ p_days: 120 })
-  }).then(function (r) { return r.json(); }).then(function (d) {
-    rows = (d || []).filter(function (r) { return r && r.day; });
-    render();
-  }).catch(function (e) {
+  function load() {
+    return fetch(RPC, {
+      method: 'POST',
+      headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_days: 120 })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      rows = (d || []).filter(function (r) { return r && r.day; });
+      render();
+    });
+  }
+  load().catch(function (e) {
     document.getElementById('daychart').innerHTML =
       '<p style="font-size:12.5px;color:#c0453b;padding:18px 2px">Could not load your days just now. ' +
       'The rest of the page is unaffected.</p>';
     document.getElementById('daynote2').textContent = '';
+  });
+
+  /* ------------------------------------------------------------ refresh ----
+     v1.2, Sep 6 2026. Todays Tasks only writes today's row while it is open, so
+     this page could sit on a stale day. The button asks the database to recount
+     today and yesterday (2am-to-2am days) straight from the calendar, the wheel
+     blocks, the logged time and the ticked tasks, with the same rule Todays Tasks
+     uses, honouring the titles he removed and the calendars he switched off. Then
+     it reloads the chart and stamps when it did so. ONE call: public.py_day_refresh(). */
+  var REFRESH = 'https://arnjntspmrhigodlssbn.supabase.co/rest/v1/rpc/py_day_refresh';
+  var btn = document.getElementById('dayrefresh');
+  var stamp = document.getElementById('daystamp');
+  function stampTime(iso) {
+    var d = iso ? new Date(iso) : new Date();
+    var date = d.toLocaleDateString('en-US', { timeZone: 'America/New_York', month: 'short', day: 'numeric', year: 'numeric' });
+    var time = d.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' }).toLowerCase().replace(' ', '');
+    return date + ' \u00b7 ' + time + ' EST';
+  }
+  btn.addEventListener('click', function () {
+    if (btn.disabled) return;
+    btn.disabled = true; btn.classList.add('busy');
+    stamp.className = 'daystamp'; stamp.textContent = 'Recounting today from your calendar\u2026';
+    fetch(REFRESH, {
+      method: 'POST',
+      headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },
+      body: '{}'
+    }).then(function (r) { if (!r.ok) throw new Error('refresh ' + r.status); return r.json(); })
+      .then(function (res) {
+        return load().then(function () {
+          stamp.textContent = 'Recounted ' + stampTime(res && res.as_of) +
+            (res && res.days ? ' \u00b7 ' + res.days + ' day' + (res.days === 1 ? '' : 's') + ' updated' : ' \u00b7 nothing on record to recount');
+        });
+      })
+      .catch(function () {
+        stamp.className = 'daystamp err';
+        stamp.textContent = 'Could not recount just now. The chart still shows the last record.';
+      })
+      .then(function () { btn.disabled = false; btn.classList.remove('busy'); });
   });
 })();
 </script>
