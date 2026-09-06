@@ -131,7 +131,9 @@
   .rightgrp .peek{justify-self:start}
   .tag.dest.log{border-color:#bfe3cf;color:var(--good)}
   .tag.dest.me{border-color:#d9c9e4;color:var(--claude)}
-  .alts{grid-column:1/3;display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap}
+  .rightgrp.two{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .rr{display:flex;gap:4px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+  .tag.kindw{background:#f7f8fa;color:#6b7a89;border-color:#e3e7ee;text-transform:none;letter-spacing:0;font-size:10px}
   .tag.dest.alt{border-style:dashed;color:#6b7a89;font-weight:600;max-width:150px}
   .tag.dest.alt:hover{border-color:var(--accent);color:var(--accent);border-style:solid}
   .prev{font-size:10.5px;color:#9aa3ae;margin:6px 0 0}
@@ -189,7 +191,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v0.9</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Scott's Call <span class="ver">v1.0</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -250,7 +252,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v0.9 · Sep 6, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.0 · Sep 6, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -420,13 +422,13 @@ function capRow(r){
   if(SELECT){const cb=el('input','cb');cb.type='checkbox';cb.checked=SEL.has(r.id);cb.onchange=()=>{cb.checked?SEL.add(r.id):SEL.delete(r.id);li.classList.toggle('sel',cb.checked);document.getElementById('selcount').textContent=SEL.size;};top.appendChild(cb);}
   else top.appendChild(el('span','h','⠿'));
   top.appendChild(headlineNode(r,async v=>{const old=r.task;r.task=v;await patchTodo(r.id,{task:v});try{await sb.from('inbox').update({headline:v}).eq('headline',old);if(RAW[old]){RAW[v]=RAW[old];}}catch(e){}}));
-  const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto auto';
+  const rg=el('div','rightgrp two');const r1=el('div','rr'),r2=el('div','rr');rg.append(r1,r2);
   const k=DEST[r.id]||guessKey(r);const kind=destKind(k);
-  const dt=el('button','tag dest'+(kind==='log'?' log':CL[k]?' me':''),'→ '+esc(destLabel(k))+' ▾');dt.title='Where it goes, tap to change';dt.onclick=()=>openDest(dt,r);rg.appendChild(dt);
-  const pk=el('button','peek');pk.innerHTML='<svg viewBox="0 0 48 48" width="17" height="17" fill="#3f6f8f"><rect x="14" y="8" width="7" height="9" rx="2"/><rect x="27" y="8" width="7" height="9" rx="2"/><path d="M12 15h8v12h8V15h8l7 13v6H5v-6z"/><circle cx="13" cy="35" r="9"/><circle cx="35" cy="35" r="9"/><circle cx="13" cy="35" r="4" fill="#fff" opacity=".85"/><circle cx="35" cy="35" r="4" fill="#fff" opacity=".85"/></svg>';pk.title='Look at where it will land';pk.onclick=()=>peek(k,r);rg.appendChild(pk);
-  const pb=el('button','btnp'+(kind==='log'?' log':kind==='dismiss'?' ghost':''),kind==='log'?'Log it':kind==='dismiss'?'Dismiss':'Approve');pb.onclick=()=>act(r,k);rg.appendChild(pb);
-  const mb=el('button','morebtn','more ▾');mb.onclick=()=>openMore(mb,r);rg.appendChild(mb);
-  {const alts=runnerUps(r);if(alts.length){const ad=el('div','alts');alts.forEach(a=>{const b=el('button','tag dest alt','or '+esc(destLabel(a)));b.title='My runner-up. Tap to pick it';b.onclick=()=>setDest(r,a);ad.appendChild(b);});rg.appendChild(ad);}}
+  const dt=el('button','tag dest'+(kind==='log'?' log':CL[k]?' me':''),'→ '+esc(destLabel(k))+' ▾');dt.title='Where it goes, tap to change';dt.onclick=()=>openDest(dt,r);{const kd=(r.stage_kind||'').toLowerCase();if(kd){const kt=el('span','tag kindw',esc(kd));kt.title='What kind of note this is';r1.appendChild(kt);}}r1.appendChild(dt);
+  const pk=el('button','peek');pk.innerHTML='<svg viewBox="0 0 48 48" width="17" height="17" fill="#3f6f8f"><rect x="14" y="8" width="7" height="9" rx="2"/><rect x="27" y="8" width="7" height="9" rx="2"/><path d="M12 15h8v12h8V15h8l7 13v6H5v-6z"/><circle cx="13" cy="35" r="9"/><circle cx="35" cy="35" r="9"/><circle cx="13" cy="35" r="4" fill="#fff" opacity=".85"/><circle cx="35" cy="35" r="4" fill="#fff" opacity=".85"/></svg>';pk.title='Look at where it will land';pk.onclick=()=>peek(k,r);r1.appendChild(pk);
+  const pb=el('button','btnp'+(kind==='log'?' log':kind==='dismiss'?' ghost':''),kind==='log'?'Log it':kind==='dismiss'?'Dismiss':'Approve');pb.onclick=()=>act(r,k);
+  const mb=el('button','morebtn','more ▾');mb.onclick=()=>openMore(mb,r);
+  {runnerUps(r).forEach(a=>{const b=el('button','tag dest alt','or '+esc(destLabel(a)));b.title='My runner-up. Tap to pick it';b.onclick=()=>setDest(r,a);r2.appendChild(b);});r2.append(pb,mb);}
   top.appendChild(rg);li.appendChild(top);
   {const kx=el('button','kill','×');kx.type='button';kx.title='Kill this';kx.onclick=e=>{e.stopPropagation();act(r,'dismiss');};li.appendChild(kx);}
   moonBtn(li,(DEST[r.id]||'')==='cl:tonight','Send to the Midnight Run (Claude\'s List, Tonight)',()=>act(r,'cl:tonight'));
