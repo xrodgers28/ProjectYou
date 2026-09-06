@@ -134,7 +134,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Claude's List <span class="ver">v1.2</span> <a href="scotts-call.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">Scott's Call: waiting on you ›</a></h1>
+  <h1>Claude's List <span class="ver">v1.3</span> <a href="scotts-call.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">Scott's Call: waiting on you ›</a></h1>
   <p class="sub">What I am doing, in the order I will do it. Each row carries its shelf and how it runs; tap either tag to change it, drag to reorder or move. Nothing here needs a tap from you unless you want to change it.</p>
   <div class="toolbar">
     <span class="chip static" id="c-now"><b>0</b> now</span>
@@ -157,6 +157,8 @@
   <div class="fold" onclick="toggleFold('maint')">🔩 Maintenance <span class="cnt" id="maint-line">0 open</span><span class="r" id="maint-r">open ▸</span></div>
   <div class="foldbody" id="fold-maint"></div>
 
+  <div class="fold" onclick="toggleFold('deliv')">📬 Delivered, on Scott's Call for your Got It <span class="cnt" id="deliv-line">0</span><span class="r" id="deliv-r">open ▸</span></div>
+  <div class="foldbody" id="fold-deliv"></div>
   <div class="fold" onclick="toggleFold('done')">✓ Done this week <span class="cnt" id="done-line">0</span><span class="r" id="done-r">open ▸</span></div>
   <div class="foldbody" id="fold-done"></div>
 
@@ -194,7 +196,7 @@
   <p class="prev" style="font-size:10.5px;color:#9aa3ae;margin:6px 0 0">Previous versions, kept as a backup: <a href="all-todos.html" style="color:#8a929c">All ToDos</a> · <a href="midnight-run-v2.html" style="color:#8a929c">Midnight Run</a> · <a href="staging-area.html" style="color:#8a929c">Staging Area</a></p>
   <footer>
     <span>Project You · Claude's List · rows read live from the to-do database</span>
-    <span>v1.2 · Sep 6, 2026</span>
+    <span>v1.3 · Sep 6, 2026</span>
   </footer>
 </div>
 </div>
@@ -206,7 +208,7 @@ const SUPABASE_KEY=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
   "UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM"].join("");
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const PINWHEEL='<svg viewBox="0 0 24 24" class="pinw"><g transform="translate(12,12)"><path d="M0 0 L0 -10 A10 10 0 0 1 7.8 -6.2 Z" fill="#e8a0b8"/><path d="M0 0 L7.8 -6.2 A10 10 0 0 1 9.7 2.2 Z" fill="#f0b58f"/><path d="M0 0 L9.7 2.2 A10 10 0 0 1 4.3 9 Z" fill="#ead98f"/><path d="M0 0 L4.3 9 A10 10 0 0 1 -4.3 9 Z" fill="#8ec5a0"/><path d="M0 0 L-4.3 9 A10 10 0 0 1 -9.7 2.2 Z" fill="#8fd0c4"/><path d="M0 0 L-9.7 2.2 A10 10 0 0 1 -7.8 -6.2 Z" fill="#a9c8e8"/><path d="M0 0 L-7.8 -6.2 A10 10 0 0 1 0 -10 Z" fill="#cbb0e0"/></g></svg>';
-const V='1.2';
+const V='1.3';
 const SHELVES=[
   {k:'now',    icon:'⚡', name:'Now',     sub:'next slot'},
   {k:'tonight',icon:'🌙', name:'Tonight', sub:'Midnight Run 4:00am EST'},
@@ -217,7 +219,7 @@ const RUN_LABEL={quick:'Quick',background:'Background',overnight:'Overnight',bri
 const RUN_CYCLE=['quick','background','overnight','brief'];
 const KIND_CYCLE=['feature','maintenance','idea'];
 const KIND_LABEL={feature:'Feature',maintenance:'Maintenance',idea:'Idea'};
-let ROWS=[],DONE=[],SELECT=false,SEL=new Set(),OPEN={},FOLDS={maint:false,parked:false,done:false},lastUndo=null,toastT=null;
+let ROWS=[],DONE=[],SELECT=false,SEL=new Set(),OPEN={},FOLDS={maint:false,parked:false,done:false,deliv:false},lastUndo=null,toastT=null;
 
 /* ---------- time helpers, Eastern ---------- */
 function etParts(d){const f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit',hour12:true,month:'short',day:'numeric',year:'numeric'});return f.format(d||new Date()).replace(', ',' · ').replace(' AM','am').replace(' PM','pm');}
@@ -256,7 +258,9 @@ async function load(quiet){
 function shelfOf(r){ if(r.shelf) return r.shelf; if(r.kind==='idea') return 'later'; if(r.run_status==='parked'||r.cat==='Parking Lot') return 'parked'; if(r.lane==='queue_run') return 'tonight'; return 'now'; }
 function kindOf(r){ return r.kind||'feature'; }
 function runOf(r){ if(r.run_mode) return r.run_mode; return shelfOf(r)==='tonight'?'overnight':shelfOf(r)==='later'?'brief':'background'; }
+function isDelivered(r){return r.cat==='⭐ This Session'||r.code_status==='complete';}
 function statusOf(r){
+  if(isDelivered(r)) return ['✓ delivered, your Got It','done'];
   if(r.run_status==='running'||r.code_status==='running') return ['⚙ building','build'];
   if(r.run_status==='needs_input') return ['❓ has a question','q'];
   if(r.run_status==='done'||r.done) return ['✓ done','done'];
@@ -268,8 +272,9 @@ function estOf(r){ if(r.est_minutes) return r.est_minutes; const m=(r.txt||'').m
 function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function render(){
-  const live=ROWS.filter(r=>kindOf(r)!=='maintenance'&&shelfOf(r)!=='parked');
-  const maint=ROWS.filter(r=>kindOf(r)==='maintenance'&&shelfOf(r)!=='parked');
+  const delivered=ROWS.filter(r=>isDelivered(r)&&shelfOf(r)!=='parked');
+  const live=ROWS.filter(r=>!isDelivered(r)&&kindOf(r)!=='maintenance'&&shelfOf(r)!=='parked');
+  const maint=ROWS.filter(r=>!isDelivered(r)&&kindOf(r)==='maintenance'&&shelfOf(r)!=='parked');
   const parkedCount=ROWS.filter(r=>shelfOf(r)==='parked').length;
   const host=document.getElementById('shelves');host.innerHTML='';
   const counts={now:0,tonight:0,later:0};
@@ -296,6 +301,8 @@ function render(){
   document.getElementById('maint-line').textContent=maint.length+' open · '+mDone+' done this week · you only hear about these if one has a question';
   document.getElementById('c-parked').textContent=parkedCount+' parked, on Scott\'s Call';
   document.getElementById('done-line').textContent=DONE.length+' · each one went to Scott\'s Call for your Got It';
+  document.getElementById('deliv-line').textContent=delivered.length+' · built, waiting for your Got It or Needs a fix on Scott\'s Call';
+  fillFold('deliv',delivered,'Nothing delivered right now.',true);
   fillFold('maint',maint,'No maintenance open.');
   fillFold('done',DONE,'Nothing finished in the last seven days.',true);
   document.getElementById('selbar').classList.toggle('on',SELECT);
