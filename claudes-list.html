@@ -43,7 +43,7 @@
   .rightgrp{display:flex;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end;padding-top:2px}
   .h{width:13px;color:#c9cdd3;cursor:grab;font-size:12px;user-select:none;padding-top:2px}
   .cb{flex:0 0 auto;width:15px;height:15px;margin:0}
-  .txt{flex:1 1 auto;font-size:13px;font-weight:400;outline:none;padding:1px 3px;border-radius:5px;min-width:120px;word-break:break-word;color:var(--ink)}
+  .txt{flex:1 1 auto;font-family:-apple-system,"Helvetica Neue",Arial,Helvetica,sans-serif;font-size:12.5px;font-weight:500;outline:none;padding:1px 3px;border-radius:5px;min-width:120px;word-break:break-word;color:var(--ink)}
   .txt:focus{background:#fffef2;box-shadow:inset 0 0 0 1px #e3d9a6}
   .tag{flex:0 0 auto;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.03em;border-radius:999px;padding:2px 7px;cursor:pointer;color:#fff;background:#aab2bd;white-space:nowrap;border:1px solid transparent;font-family:inherit}
   .tag.shelf{background:#fff;color:var(--ink);border-color:#cfd4da}
@@ -111,13 +111,14 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Claude's List <span class="ver">v0.3</span></h1>
+  <h1>Claude's List <span class="ver">v0.4</span></h1>
   <p class="sub">What I am doing, in the order I will do it. Each row carries its shelf and how it runs; tap either tag to change it, drag to reorder or move. Nothing here needs a tap from you unless you want to change it.</p>
   <div class="toolbar">
     <span class="chip static" id="c-now"><b>0</b> now</span>
     <span class="chip static" id="c-tonight"><b>0</b> tonight</span>
     <span class="chip static" id="c-later"><b>0</b> later</span>
     <span class="chip static" id="c-next"></span>
+    <span class="chip static" id="c-parked" title="Parked items wait on you, so they live on Scott's Call"></span>
     <button class="chip" id="selbtn" onclick="toggleSelect()">☐ Select several</button>
     <button class="chip" onclick="load(true)">⟳</button>
     <span class="savestate" id="save">loading…</span>
@@ -133,9 +134,6 @@
   <div class="fold" onclick="toggleFold('maint')">🔩 Maintenance <span class="cnt" id="maint-line">0 open</span><span class="r" id="maint-r">open ▸</span></div>
   <div class="foldbody" id="fold-maint"></div>
 
-  <div class="fold" onclick="toggleFold('parked')">🅿️ Parking Lot <span class="cnt" id="parked-line">0</span><span class="r" id="parked-r">open ▸</span></div>
-  <div class="foldbody" id="fold-parked"></div>
-
   <div class="fold" onclick="toggleFold('done')">✓ Done this week <span class="cnt" id="done-line">0</span><span class="r" id="done-r">open ▸</span></div>
   <div class="foldbody" id="fold-done"></div>
 
@@ -146,7 +144,7 @@
     <dl>
       <dt>⚡ Now</dt><dd>Worked in the next day slot: 10am, 1pm or 4pm Eastern. The header shows which slot is next.</dd>
       <dt>🌙 Tonight</dt><dd>The Midnight Run, 4:00am Eastern. New pages, anything touching a daily-use page, anything risky.</dd>
-      <dt>💡 Later</dt><dd>Ideas. Each gets a one-page brief overnight, delivered to Scott's Call; only your go turns it into work.</dd>
+      <dt>💡 Later</dt><dd>Ideas. Each gets a one-page brief overnight, delivered to Scott's Call; only your go turns it into work. Parked things are different: they are undecided, so they wait on you, on Scott's Call, not here.</dd>
     </dl>
     <div class="eb">Tags on a row</div>
     <dl>
@@ -165,15 +163,14 @@
     <div class="eb">Folded at the bottom</div>
     <dl>
       <dt>🔩 Maintenance</dt><dd>Site upkeep you do not need to process. Counts only, tap to open.</dd>
-      <dt>🅿️ Parking Lot</dt><dd>The one Parking Lot. Nothing here gets built until it moves to a shelf.</dd>
-      <dt>✓ Done this week</dt><dd>What I finished in the last seven days.</dd>
+            <dt>✓ Done this week</dt><dd>What I finished in the last seven days.</dd>
     </dl>
     <p style="margin-top:12px">Everything saves live. Every drag, chip and note writes straight to the database the moment you make it.</p>
   </div>
 
   <footer>
     <span>Project You · Claude's List · rows read live from the to-do database</span>
-    <span>v0.3 · Sep 6, 2026</span>
+    <span>v0.4 · Sep 6, 2026</span>
   </footer>
 </div>
 </div>
@@ -184,13 +181,13 @@ const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
 const SUPABASE_KEY=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.",
   "UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM"].join("");
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const V='0.3';
+const V='0.4';
 const SHELVES=[
   {k:'now',    icon:'⚡', name:'Now',     sub:'next slot'},
   {k:'tonight',icon:'🌙', name:'Tonight', sub:'Midnight Run 4:00am EST'},
   {k:'later',  icon:'💡', name:'Later',   sub:'ideas, each gets a one-page brief overnight'}
 ];
-const SHELF_LABEL={now:'⚡ Now',tonight:'🌙 Tonight',later:'💡 Later',parked:'🅿️ Parking Lot'};
+const SHELF_LABEL={now:'⚡ Now',tonight:'🌙 Tonight',later:'💡 Later',parked:'🅿️ Parked, on Scott\'s Call'};
 const RUN_LABEL={quick:'Quick',background:'Background',overnight:'Overnight',brief:'Brief'};
 const RUN_CYCLE=['quick','background','overnight','brief'];
 const KIND_CYCLE=['feature','maintenance','idea'];
@@ -246,8 +243,9 @@ function estOf(r){ if(r.est_minutes) return r.est_minutes; const m=(r.txt||'').m
 function el(tag,cls,html){const e=document.createElement(tag);if(cls)e.className=cls;if(html!==undefined)e.innerHTML=html;return e;}
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function render(){
-  const live=ROWS.filter(r=>kindOf(r)!=='maintenance');
-  const maint=ROWS.filter(r=>kindOf(r)==='maintenance');
+  const live=ROWS.filter(r=>kindOf(r)!=='maintenance'&&shelfOf(r)!=='parked');
+  const maint=ROWS.filter(r=>kindOf(r)==='maintenance'&&shelfOf(r)!=='parked');
+  const parkedCount=ROWS.filter(r=>shelfOf(r)==='parked').length;
   const host=document.getElementById('shelves');host.innerHTML='';
   const counts={now:0,tonight:0,later:0};
   SHELVES.forEach(s=>{
@@ -267,13 +265,11 @@ function render(){
   document.getElementById('c-tonight').innerHTML='<b>'+counts.tonight+'</b> tonight';
   document.getElementById('c-later').innerHTML='<b>'+counts.later+'</b> later';
   document.getElementById('c-next').textContent='next slot '+nextSlot();
-  const parked=ROWS.filter(r=>shelfOf(r)==='parked'&&kindOf(r)!=='maintenance');
   const mDone=DONE.filter(r=>kindOf(r)==='maintenance').length;
   document.getElementById('maint-line').textContent=maint.length+' open · '+mDone+' done this week · you only hear about these if one has a question';
-  document.getElementById('parked-line').textContent=parked.length+' parked · nothing here gets built until it moves to a shelf';
+  document.getElementById('c-parked').textContent=parkedCount+' parked, on Scott\'s Call';
   document.getElementById('done-line').textContent=DONE.length+' · each one went to Scott\'s Call for your Got It';
   fillFold('maint',maint,'No maintenance open.');
-  fillFold('parked',parked,'The Parking Lot is empty.');
   fillFold('done',DONE,'Nothing finished in the last seven days.',true);
   document.getElementById('selbar').classList.toggle('on',SELECT);
   document.getElementById('selcount').textContent=SEL.size;
@@ -282,7 +278,7 @@ function fillFold(k,rows,emptyMsg,ro){
   const b=document.getElementById('fold-'+k);b.innerHTML='';
   const sec=el('div','sec dim');
   if(!rows.length){sec.appendChild(el('div','empty',emptyMsg));b.appendChild(sec);return;}
-  const list=el('ul','rows');list.dataset.shelf=(k==='parked'?'parked':'');
+  const list=el('ul','rows');list.dataset.shelf='';
   rows.forEach(r=>list.appendChild(card(r,ro)));
   sec.appendChild(list);b.appendChild(sec);
   if(!ro) new Sortable(list,{group:'shelves',handle:'.h',animation:120,delay:120,delayOnTouchOnly:true,onEnd:onDrag});
@@ -310,7 +306,7 @@ function card(r,ro){
   rg.appendChild(el('span','tag st '+stCls,stTxt));
   if(!ro){const m=el('button','more','…');m.title='More';m.onclick=()=>toggleDrop(c,r,'menu');rg.appendChild(m);}
   top.appendChild(rg);c.appendChild(top);
-  const noteTxt=(r.note||'').trim();
+  const noteTxt=(r.note||'').replace(/^Was: [^\n]*\n*/,'').trim();
   if(noteTxt){const s=el('div','note'+(OPEN[r.id]?'':' clamp'),esc(noteTxt));s.title='Tap to read all';s.onclick=()=>{OPEN[r.id]=!OPEN[r.id];s.classList.toggle('clamp',!OPEN[r.id]);};c.appendChild(s);}
   return c;
 }
@@ -336,7 +332,7 @@ function toggleDrop(c,r,which){
       {l:'⚡ Now',on:shelfOf(r)==='now',fn:()=>moveTo(r,'now')},
       {l:'🌙 Tonight',on:shelfOf(r)==='tonight',fn:()=>moveTo(r,'tonight')},
       {l:'💡 Later',on:shelfOf(r)==='later',fn:()=>moveTo(r,'later')},
-      {l:'🅿️ Parking Lot',on:shelfOf(r)==='parked',fn:()=>moveTo(r,'parked')},
+      {l:'🅿️ Park it (goes to Scott\'s Call)',fn:()=>moveTo(r,'parked')},
       'sep',{l:'↩ Give it back to me',fn:()=>giveBack(r)}]);
   } else if(which==='kind'){
     openDD(anchor,[{lab:'This is'}].concat(KIND_CYCLE.map(k=>({l:KIND_LABEL[k],on:kindOf(r)===k,fn:async()=>{const upd={kind:k,kind_proposed:false};if(k==='idea'&&shelfOf(r)!=='parked'){upd.shelf='later';upd.run_mode='brief';}await save(r.id,upd);Object.assign(r,upd);render();}}))));
@@ -348,7 +344,7 @@ function toggleDrop(c,r,which){
 function openBulk(btn){
   if(!SEL.size){toast('Tick some rows first.');return;}
   openDD(btn,[{lab:'Move '+SEL.size+' to'},
-    {l:'⚡ Now',fn:()=>bulkMove('now')},{l:'🌙 Tonight',fn:()=>bulkMove('tonight')},{l:'💡 Later',fn:()=>bulkMove('later')},{l:'🅿️ Parking Lot',fn:()=>bulkMove('parked')},
+    {l:'⚡ Now',fn:()=>bulkMove('now')},{l:'🌙 Tonight',fn:()=>bulkMove('tonight')},{l:'💡 Later',fn:()=>bulkMove('later')},{l:'🅿️ Park them (go to Scott\'s Call)',fn:()=>bulkMove('parked')},
     'sep',{lab:'Mark as'},{l:'Feature',fn:()=>bulkKind('feature')},{l:'🔩 Maintenance',fn:()=>bulkKind('maintenance')},{l:'💡 Idea',fn:()=>bulkKind('idea')},
     'sep',{l:'↩ Give them back to me',fn:()=>bulkGive()}]);
 }
