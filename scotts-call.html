@@ -28,7 +28,9 @@
   .sech .cnt{font-size:11px;color:#aab2bd;font-weight:700;letter-spacing:0;text-transform:none}
   .sec.dim .sech{color:#7b8493;border-bottom-color:#e3e7ec}
   ul.rows{list-style:none}
-  li.item{padding:4px 6px;border-bottom:1px solid #eef1f5;position:relative}
+  li.item{padding:4px 22px 4px 6px;border-bottom:1px solid #eef1f5;position:relative}
+.kill{position:absolute;top:3px;right:4px;width:16px;height:16px;line-height:14px;text-align:center;border:1px solid transparent;border-radius:99px;background:none;color:#b9c0c9;font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:0}
+.kill:hover{color:#fff;background:var(--hot);border-color:var(--hot)}
   li.item:last-child{border-bottom:0}
   li.item:hover{background:#f8fafc}
   li.item.sortable-ghost{background:#eef3fb;outline:1px dashed #b9cdec}
@@ -160,7 +162,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v0.1</span></h1>
+  <h1>Scott's Call <span class="ver">v0.2</span></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -213,7 +215,7 @@
       <dt>☐ Select several</dt><dd>Tick boxes and one menu at the top: approve as guessed, park, or dismiss a batch.</dd>
     </dl>
   </div>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v0.1 · Sep 6, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v0.2 · Sep 6, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -348,6 +350,7 @@ function capRow(r){
   const pb=el('button','btnp'+(kind==='log'?' log':kind==='dismiss'?' ghost':''),kind==='log'?'Log it':kind==='dismiss'?'Dismiss':'Approve');pb.onclick=()=>act(r,k);rg.appendChild(pb);
   const mb=el('button','morebtn','more ▾');mb.onclick=()=>openMore(mb,r);rg.appendChild(mb);
   top.appendChild(rg);li.appendChild(top);
+  {const kx=el('button','kill','×');kx.type='button';kx.title='Kill this';kx.onclick=e=>{e.stopPropagation();act(r,'dismiss');};li.appendChild(kx);}
   const note=(r.staging_note||'').trim();
   if(note&&!/interpreter offline/i.test(note))li.appendChild(el('div','note sum',esc(note)));
   /* the Staging Area strip, verbatim: Popcorn · comment · est · act */
@@ -379,6 +382,7 @@ function delivRow(r){
     const g=el('button','btnp log','Got It');g.onclick=()=>gotIt(r);const n=el('button','btnp ghost','Needs a fix');n.onclick=()=>needsFix(r);btns.append(g,n);
   }
   rg.append(meta,btns);top.appendChild(rg);li.appendChild(top);
+  {const kx=el('button','kill','×');kx.type='button';kx.title='Kill this';kx.onclick=e=>{e.stopPropagation();brief?five(r,'Kill this task'):delST(r);};li.appendChild(kx);}
   const s=(r.summary||r.note||'').replace(/^Was: [^\n]*\n*/,'').trim();if(s)li.appendChild(el('div','note sum',esc(s.length>300?s.slice(0,300)+'…':s)));
   li.appendChild(commentLine(r,'session'));
   return li;
@@ -387,6 +391,7 @@ function ruleRow(r){
   const li=el('li','item');const top=el('div','toprow');top.appendChild(el('span','h',''));top.appendChild(el('div','txt',esc(r.text||'')));
   const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto auto auto';rg.append(el('span','tag st','proposed '+fmtDate(r.created_at)));
   const y=el('button','btnp log','Yes');y.onclick=()=>decideRule(r,'accepted');const n=el('button','btnp ghost','No');n.onclick=()=>decideRule(r,'rejected');rg.append(y,n);top.appendChild(rg);li.appendChild(top);
+  {const kx=el('button','kill','×');kx.type='button';kx.title='Kill this';kx.onclick=e=>{e.stopPropagation();decideRule(r,'rejected');};li.appendChild(kx);}
   if(r.rationale)li.appendChild(el('div','note sum',esc(r.rationale)));
   return li;
 }
@@ -398,6 +403,7 @@ function mineRow(r,parked){
   const d=el('button','btnp ghost','I did it');d.onclick=()=>archiveST(r,'I did it');rg.appendChild(d);
   const mb=el('button','morebtn','more ▾');mb.onclick=()=>openDD(mb,[{l:parked?'↩ Back to Only you':'🅿️ Park it',fn:()=>parkST(r,!parked)},{l:'→ Give it to Claude',fn:()=>giveClaude(r)},'sep',{l:'× Delete',cls:'danger',fn:()=>delST(r)}]);rg.appendChild(mb);
   top.appendChild(rg);li.appendChild(top);
+  {const kx=el('button','kill','×');kx.type='button';kx.title='Kill this';kx.onclick=e=>{e.stopPropagation();delST(r);};li.appendChild(kx);}
   const s=(r.summary||r.note||'').replace(/^Was: [^\n]*\n*/,'').trim();if(s)li.appendChild(el('div','note sum',esc(s.length>220?s.slice(0,220)+'…':s)));
   return li;
 }
@@ -405,7 +411,7 @@ function parkedTodoRow(r){
   const li=el('li','item');const top=el('div','toprow');top.appendChild(el('span','h',''));top.appendChild(el('div','txt',esc(r.task||'')));
   const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto auto';
   const u=el('button','btnp ghost','Back to waiting');u.onclick=async()=>{await patchTodo(r.id,{staged:true,section:INBOX});toast('Back in the waiting list.');load(true);};
-  const mb=el('button','morebtn','more ▾');mb.onclick=()=>openDD(mb,[{l:'Dismiss',fn:async()=>{await patchTodo(r.id,{section:DISMISSED});load(true);}}]);rg.append(u,mb);top.appendChild(rg);li.appendChild(top);return li;
+  const mb=el('button','morebtn','more ▾');mb.onclick=()=>openDD(mb,[{l:'Dismiss',fn:async()=>{await patchTodo(r.id,{section:DISMISSED});load(true);}}]);rg.append(u,mb);top.appendChild(rg);li.appendChild(top);{const kx=el('button','kill','×');kx.type='button';kx.title='Kill this';kx.onclick=e=>{e.stopPropagation();(async()=>{await patchTodo(r.id,{section:DISMISSED});toast('Dismissed.');load(true);})();};li.appendChild(kx);}return li;
 }
 function archRow(e){
   const li=el('li','item');const top=el('div','toprow');top.appendChild(el('span','h',''));
