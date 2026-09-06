@@ -37,6 +37,12 @@
 .moon{position:absolute;top:2px;right:22px;width:18px;height:16px;line-height:14px;text-align:center;border:1px solid transparent;border-radius:99px;background:none;font-size:11px;cursor:pointer;padding:0;opacity:.45}
 .moon:hover,.moon.on{opacity:1;background:#2b3a52;border-color:#2b3a52}
 .proj{font-size:12px;margin:0 4px 0 0;vertical-align:middle;cursor:default}
+  /* the Project YOU pinwheel, same vanes as index.html and the Staging Area, with the rollover spin Scott asked to keep */
+  .pinw{width:15px;height:15px;cursor:pointer;opacity:.95;transition:opacity .15s ease,transform .25s ease;display:inline-block;vertical-align:-3px;margin-right:4px}
+  .pinw:hover{opacity:1;transform:rotate(90deg)}
+  .pinw.spin{animation:pinwspin .5s ease-out}
+  @keyframes pinwspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+
   .sech{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--accent);padding:0 4px 4px;border-bottom:2px solid #e7ecf3}
   .sech .cnt{font-size:11px;color:#aab2bd;font-weight:700;letter-spacing:0;text-transform:none}
   .sec.dim .sech{color:#7b8493;border-bottom-color:#e3e7ec}
@@ -128,7 +134,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Claude's List <span class="ver">v1.1</span></h1>
+  <h1>Claude's List <span class="ver">v1.2</span> <a href="scotts-call.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">Scott's Call: waiting on you ›</a></h1>
   <p class="sub">What I am doing, in the order I will do it. Each row carries its shelf and how it runs; tap either tag to change it, drag to reorder or move. Nothing here needs a tap from you unless you want to change it.</p>
   <div class="toolbar">
     <span class="chip static" id="c-now"><b>0</b> now</span>
@@ -188,7 +194,7 @@
   <p class="prev" style="font-size:10.5px;color:#9aa3ae;margin:6px 0 0">Previous versions, kept as a backup: <a href="all-todos.html" style="color:#8a929c">All ToDos</a> · <a href="midnight-run-v2.html" style="color:#8a929c">Midnight Run</a> · <a href="staging-area.html" style="color:#8a929c">Staging Area</a></p>
   <footer>
     <span>Project You · Claude's List · rows read live from the to-do database</span>
-    <span>v1.1 · Sep 6, 2026</span>
+    <span>v1.2 · Sep 6, 2026</span>
   </footer>
 </div>
 </div>
@@ -199,7 +205,8 @@ const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
 const SUPABASE_KEY=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.",
   "UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM"].join("");
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const V='1.1';
+const PINWHEEL='<svg viewBox="0 0 24 24" class="pinw"><g transform="translate(12,12)"><path d="M0 0 L0 -10 A10 10 0 0 1 7.8 -6.2 Z" fill="#e8a0b8"/><path d="M0 0 L7.8 -6.2 A10 10 0 0 1 9.7 2.2 Z" fill="#f0b58f"/><path d="M0 0 L9.7 2.2 A10 10 0 0 1 4.3 9 Z" fill="#ead98f"/><path d="M0 0 L4.3 9 A10 10 0 0 1 -4.3 9 Z" fill="#8ec5a0"/><path d="M0 0 L-4.3 9 A10 10 0 0 1 -9.7 2.2 Z" fill="#8fd0c4"/><path d="M0 0 L-9.7 2.2 A10 10 0 0 1 -7.8 -6.2 Z" fill="#a9c8e8"/><path d="M0 0 L-7.8 -6.2 A10 10 0 0 1 0 -10 Z" fill="#cbb0e0"/></g></svg>';
+const V='1.2';
 const SHELVES=[
   {k:'now',    icon:'⚡', name:'Now',     sub:'next slot'},
   {k:'tonight',icon:'🌙', name:'Tonight', sub:'Midnight Run 4:00am EST'},
@@ -312,7 +319,7 @@ function card(r,ro){
   if(SELECT&&!ro){const cb=el('input','cb');cb.type='checkbox';cb.checked=SEL.has(r.id);cb.onchange=()=>{cb.checked?SEL.add(r.id):SEL.delete(r.id);c.classList.toggle('sel',cb.checked);document.getElementById('selcount').textContent=SEL.size;};top.appendChild(cb);}
   else top.appendChild(el('span','h',ro?'':'⠿'));
   const t=el('div','txt',esc(r.txt||''));
-  {const pi=r.project==='TreadWell'?'🥾':r.project==='Amazon'?'💼':(r.project==='Project YOU'||!r.project)?'🎡':'';if(pi){const pn=el('span','proj',pi);pn.title=r.project||'Project YOU';pn.contentEditable='false';t.insertBefore(pn,t.firstChild);}}
+  {const isPY=(r.project==='Project YOU'||!r.project);const pi=r.project==='TreadWell'?'🥾':r.project==='Amazon'?'💼':'';if(isPY||pi){const pn=el('span','proj');if(isPY){pn.innerHTML=PINWHEEL;const sv=pn.firstChild;sv.addEventListener('click',e=>{e.stopPropagation();sv.classList.remove('spin');void sv.offsetWidth;sv.classList.add('spin');});}else pn.textContent=pi;pn.title=r.project||'Project YOU';pn.contentEditable='false';t.insertBefore(pn,t.firstChild);}}
   if(!ro){t.contentEditable='true';t.spellcheck=false;t.title='Tap to edit';
     t.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();t.blur();}if(e.key==='Escape'){[...t.childNodes].forEach(n=>{if(!(n.classList&&n.classList.contains('proj')))n.remove();});t.appendChild(document.createTextNode(r.txt||''));t.blur();}});
     t.addEventListener('blur',async()=>{const v=[...t.childNodes].filter(n=>!(n.classList&&n.classList.contains('proj'))).map(n=>n.textContent).join('').trim();if(v&&v!==r.txt){await save(r.id,{txt:v});r.txt=v;}});}
