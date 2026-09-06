@@ -35,7 +35,7 @@ window.NAV_CONFIG = {
     { "label": "YouMatics", "href": "qs-dashboard.html" },
     /* Sep 6 2026, Scott. The end-of-week review: three scores, the habit grid,
        the quiz built from the week's dealt cards, and next week's goals. */
-    { "label": "Weekly<br>Review", "href": "weekly-review.html" },
+    { "label": "The PY Week<br>in Review", "href": "weekly-review.html" },
     { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" }
   ],
   /* Displayed as LISTS - see NAV_GROUP_RENAME below. The key stays "Parking Lot"
@@ -263,7 +263,7 @@ window.PAGE_VERSIONS = {
   "habit-worksheets.html": "v2.9",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
-  "qs-dashboard.html": "v3.0",
+  "qs-dashboard.html": "v3.2",
   "reconciliation.html": "v1.0",
   "recreational.html": "v1.3",
   "session-tracker-2026-08-18-compass-sources-shipped.html": "v1.0",

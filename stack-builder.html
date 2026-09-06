@@ -178,8 +178,8 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>Stack Builder</h1><span class="ver">v1.0</span><span class="date" id="builtOn"></span>
-    <span class="weeknav"><a class="btn" href="weekly-review.html">Weekly Review</a><a class="btn" href="habit-worksheets.html">Habit Worksheets</a><a class="btn" id="signout">sign out</a></span>
+  <div class="secbar"><h1>Stack Builder</h1><span class="ver">v1.1</span><span class="date" id="builtOn"></span>
+    <span class="weeknav"><a class="btn" href="weekly-review.html">The PY Week in Review</a><a class="btn" href="habit-worksheets.html">Habit Worksheets</a><a class="btn" id="signout">sign out</a></span>
   </div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading your habits...</span></div>
 
@@ -195,8 +195,8 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
         <div class="palette" id="palette"></div>
         <div class="stacks" id="stacks"></div>
       </div>
-      <div class="btns"><button class="xbtn" id="publish">Publish to Weekly Review</button><button class="xbtn sec" id="add">+ New stack</button><span class="hint" id="saved"></span></div>
-      <div class="tinynote">Publishing saves your stacks to the database. The Weekly Review shows each one as vertical dominoes with a square for every day the whole stack got done. A habit can sit in one stack only. The "after I …" line is optional.</div>
+      <div class="btns"><button class="xbtn" id="publish">Publish to The PY Week in Review</button><button class="xbtn sec" id="add">+ New stack</button><span class="hint" id="saved"></span></div>
+      <div class="tinynote">Publishing saves your stacks to the database. The PY Week in Review shows each one as vertical dominoes with a square for every day the whole stack got done. A habit can sit in one stack only. The "after I …" line is optional.</div>
     </div>
 
     <div class="card blockcard">
@@ -211,13 +211,13 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 <script>
 /* Stack Builder v1.0, Project YOU. Sep 6, 2026.
    Scott drags habit blocks into stack rows and publishes them to public.habit_stacks.
-   The Weekly Review reads that table and shows each stack as vertical dominoes with a square per day the whole stack got done.
+   The PY Week in Review reads that table and shows each stack as vertical dominoes with a square per day the whole stack got done.
    Blocks: one per habit, icon inside (wsicons/<icon>.webp from the worksheet, grey placeholder marks otherwise), border in the Compass colour. */
 const SUPABASE_URL='https://arnjntspmrhigodlssbn.supabase.co';
 const SUPABASE_KEY='sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
-const VERSION='v1.0';
+const VERSION='v1.1';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const ORDER=['Physical Health','Mental Fitness','Sense of Purpose','Emotional Health','Social Well-Being','Environmental Health','Recreational Health','Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -289,7 +289,7 @@ function render(){
   el('out').value=o.join('\n');
   el('stackN').textContent=S.stacks.filter(s=>s.h.length).length;el('habN').textContent=S.stacks.reduce((a,s)=>a+s.h.length,0);
   el('saved').textContent=DIRTY?'Changes not published yet':(S.stacks.some(s=>s.published)?'Published '+new Date(Math.max(...S.stacks.filter(s=>s.published).map(s=>new Date(s.published).getTime()))).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' EST':'Nothing published yet');
-  el('foot').textContent='Project YOU · Stack Builder '+VERSION+' · habits read live from your worksheets and habit log · stacks saved to the database when you publish · the Weekly Review shows them as vertical dominoes.';
+  el('foot').textContent='Project YOU · Stack Builder '+VERSION+' · habits read live from your worksheets and habit log · stacks saved to the database when you publish · The PY Week in Review shows them as vertical dominoes.';
   wire();
 }
 function touch(){DIRTY=true;picked=null;render();}
@@ -328,7 +328,7 @@ el('publish').addEventListener('click',async()=>{
     const gone=(ex||[]).map(r=>r.id).filter(id=>!keepIds.has(id));
     if(gone.length){const {error}=await sb.from('habit_stacks').delete().in('id',gone);if(error)throw error;}
     for(const r of rows){const body=Object.assign({},r);if(!body.id)delete body.id;const {data,error}=await sb.from('habit_stacks').upsert(body,{onConflict:'id'}).select('id').single();if(error)throw error;const s=keep[r.position];s.id=data.id;s.published=now;}
-    S.stacks=keep.length?keep:S.stacks;DIRTY=false;render();status('Published '+keep.length+' stack'+(keep.length===1?'':'s')+' · the Weekly Review shows them now');
+    S.stacks=keep.length?keep:S.stacks;DIRTY=false;render();status('Published '+keep.length+' stack'+(keep.length===1?'':'s')+' · The PY Week in Review shows them now');
   }catch(e){el('saved').textContent='Could not publish: '+e.message;console.error(e);}
 });
 el('copy').addEventListener('click',()=>{const t=el('out');t.select();try{document.execCommand('copy');}catch(e){}if(navigator.clipboard)navigator.clipboard.writeText(t.value);el('copied').textContent='Copied.';});
