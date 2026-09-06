@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Winners and Losers · Project YOU</title>
+<link rel="icon" href="project-you-logo.png">
+<script src="py-day.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-solo{font-weight:800;color:#3f6f8f;text-decoration:none;font-size:12px;padding:4px 8px;border-radius:8px;margin-left:5px;border-left:1px solid #edf0f4;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-solo:hover{background:#eef2f8}
+.pn-solo.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+
+:root{--bg:#f4f6f9;--card:#fff;--line:#e3e7ee;--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--accent:#3f6f8f;--good:#1e8e5a;--goodbg:#e9f5ef;--warn:#a9741a;--warnbg:#fdf6e6;--bad:#c0453b;--badbg:#fbeeec;--pypink:#fbeaf1;--pyline:#e8a0b8}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45}
+.hidden{display:none!important}
+#login{max-width:340px;margin:70px auto;padding:22px;border:1px solid var(--line);border-radius:12px;background:#fff}
+#login h2{margin:0 0 6px;font-size:21px}#login p{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+#login input{width:100%;padding:9px 10px;margin:0 0 9px;border:1px solid #cfd3d9;border-radius:7px;font-size:14px;font-family:inherit}
+#login button{width:100%;padding:9px;border:0;border-radius:7px;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit}
+#msg{font-size:12.5px;margin-top:6px;color:var(--muted)}#msg.err{color:var(--bad)}
+.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px 0;max-width:1000px;margin:0 auto}
+.secbar h1{font-size:24px;color:var(--accent);margin:0;font-weight:800}
+.secbar .ver{font-size:11px;font-weight:800;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+.secbar .date{font-size:11.5px;color:var(--faint);font-weight:700}
+.weeknav{margin-left:auto;display:flex;align-items:center;gap:8px}
+.weeklabel{font-size:12.5px;font-weight:700;color:var(--muted);min-width:150px;text-align:center}
+.btn{border:1px solid #cfd3d9;background:#fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#333;text-decoration:none}
+.status{max-width:1000px;margin:4px auto 0;padding:0 16px;font-size:11.5px;color:var(--faint);font-weight:700}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#37a169;margin-right:5px;vertical-align:middle}
+.dot.bad{background:var(--bad)}
+.page{max-width:1000px;margin:0 auto;padding:12px 16px 40px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 0 rgba(31,42,68,.04)}
+.block{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.row-between{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.kick{font-size:10.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.title{font-size:24px;font-weight:800;color:var(--accent);line-height:1.1}
+.titlesub{font-size:14px;font-weight:400;color:var(--muted)}
+.minicard{padding:8px 14px;display:flex;align-items:center;gap:12px}
+.tiny{font-size:8px;font-weight:800;letter-spacing:.5px;color:#aab2bd;text-transform:uppercase}
+.n26{font-size:26px;font-weight:800;line-height:1}.n26sub{font-size:14px;color:var(--faint);font-weight:700}
+.vsep{width:1px;height:30px;background:var(--line)}
+.hdrnums{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;border-top:3px solid var(--ink);border-bottom:1px solid var(--line);padding:10px 0}
+.hdrnums .cap{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.hdrnums .big{display:flex;align-items:baseline;gap:6px}
+.hdrnums .big b{font-size:54px;font-weight:800;line-height:.9;letter-spacing:-2px;font-variant-numeric:tabular-nums}
+.hdrnums .big i{font-style:normal;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+.hdrnums .bad b{color:var(--bad)}.hdrnums .blue b{color:var(--accent)}
+.wheels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.wheel{padding:10px 14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left;min-height:0}.wheelpic{flex:none;line-height:0}.wheeltext{display:flex;flex-direction:column;gap:3px;min-width:0}
+.wheel.green{background:var(--goodbg)}.wheel.dark{background:var(--ink);color:#fff}
+.lab{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.lab.green{color:var(--good)}.lab.gold{color:#c6a63f}.labsub{font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)}
+.n30{font-size:30px;font-weight:800;line-height:1}.n30 small{font-size:12.5px;font-weight:400;color:var(--muted)}
+.sub{font-size:12.5px;color:var(--muted);line-height:1.35}.sub.light{color:#c9d0dc}
+.cta{background:#c6a63f;color:var(--ink);font-weight:800;font-size:13px;padding:7px 14px;border-radius:9px;text-decoration:none;margin-top:4px;align-self:flex-start}
+.h2{font-size:21px;font-weight:700}.h2row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.hoursrow{display:flex;gap:22px;align-items:center}
+.lanes{flex:1;display:grid;grid-template-columns:34px 1fr 150px;gap:6px 14px;align-items:center}
+.lanes .num{font-size:30px;font-weight:800;line-height:1}.lanes .lanename{font-size:14px;font-weight:700}.lanes .lanename span{font-weight:400;color:var(--muted)}
+.lanes .bar{height:14px;background:var(--bg);border-radius:4px;position:relative;margin-top:3px}.lanes .bar i{display:block;height:14px;border-radius:4px}
+.lanes .cap40{position:absolute;top:-4px;bottom:-4px;left:100%;width:2px;background:var(--ink)}
+.lanes .hatch{background:repeating-linear-gradient(135deg,var(--bad) 0 5px,var(--badbg) 5px 10px)}
+.lanes .val{text-align:right;font-size:30px;font-weight:800;line-height:1}.lanes .val small{font-size:12.5px;font-weight:400;color:var(--muted)}
+.hoursright{width:300px;flex:none;border-left:1px solid var(--line);padding-left:18px}
+.donutrow{display:flex;gap:10px;align-items:center}.donutlegend{display:flex;flex-direction:column;gap:6px}.donutlegend b{font-size:20px;font-weight:800;line-height:1;display:block}
+.orderstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:4px}.orderstrip div{text-align:center}.orderstrip i{display:block;height:6px;margin-bottom:3px}.orderstrip span{font-size:8px;letter-spacing:1px;color:var(--muted)}
+.daynotes{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}.daynotes div{border-top:3px solid var(--good);padding-top:4px}.daynotes div.x{border-top-color:var(--bad)}.daynotes b{display:block;font-size:8px;letter-spacing:.5px;color:var(--good)}.daynotes div.x b{color:var(--bad)}.daynotes span{font-size:11.5px;line-height:1.2}
+.gridrow{display:flex;gap:18px;align-items:flex-start}.gridwrap{flex:1;min-width:0;overflow-x:auto}
+#habitGrid{border-collapse:collapse;width:100%}#habitGrid th,#habitGrid td{border:1px solid var(--line);padding:0 6px;font-size:11px;height:30px;vertical-align:middle}
+#habitGrid th{font-size:8px;font-weight:800;letter-spacing:.5px;color:#aab2bd;height:18px;text-align:center}#habitGrid th.l{text-align:left;white-space:nowrap;width:1%}
+#habitGrid td.sec{width:84px;padding:5px 6px;vertical-align:top;border-left:4px solid}#habitGrid td.sec div{font-size:9.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;line-height:1.15}
+#habitGrid td.name{white-space:nowrap;width:1%}#habitGrid td.c{text-align:center;padding:0;background:#fff}
+#habitGrid td.c img,#habitGrid td.c svg{width:20px;height:20px;object-fit:contain;vertical-align:middle;opacity:.72;filter:grayscale(1)}#habitGrid td.c:hover img{opacity:1;filter:none}
+#habitGrid td.empty{font-size:11px;color:var(--faint);font-style:italic;height:26px}
+.rightcol{width:290px;flex:none}
+.scroller{max-height:222px;overflow-y:auto;padding-right:4px}.scroller::-webkit-scrollbar{width:6px}.scroller::-webkit-scrollbar-thumb{background:#cfd3d9;border-radius:3px}
+.star{display:flex;gap:8px;align-items:flex-start;padding:5px 4px 5px 0;border-bottom:1px solid #edf0f4;min-height:42px}
+.badge{display:inline-flex;width:24px;height:24px;border-radius:7px;align-items:center;justify-content:center;flex:none;color:#fff;cursor:default}.badge span{width:12px;height:12px;display:inline-flex}.badge svg{width:12px;height:12px}
+.star .t{font-size:12.5px;font-weight:700;line-height:1.25}.star .d{font-size:11.5px;color:var(--muted);line-height:1.25}
+.vote{display:flex;gap:8px;align-items:baseline;padding:2px 0;border-bottom:1px solid #edf0f4}.vote b{font-size:14px;font-weight:800;color:var(--accent);width:26px;flex:none;font-variant-numeric:tabular-nums}.vote span{font-size:12px;line-height:1.2}.vote i{font-style:normal;color:var(--faint);font-size:11px}
+.tinynote{font-size:11px;color:var(--faint);line-height:1.3;margin-top:4px}
+.compassrow{display:flex;gap:20px;align-items:center;border-top:1px solid var(--line);padding-top:10px}.compassdial{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px}.tickbars{flex:1}
+.tb{display:grid;grid-template-columns:130px 1fr 30px;gap:8px;align-items:center;padding:3px 0;border-bottom:1px solid #edf0f4;font-size:11.5px}.tb i{display:block;height:9px;background:var(--bg)}.tb i b{display:block;height:9px}.tb span{text-align:right;font-variant-numeric:tabular-nums}
+.stacks{display:flex;gap:20px;padding:4px 0 2px}.stack{flex:1;display:flex;flex-direction:column;gap:6px;border-left:2px solid var(--line);padding-left:14px}.stack .sn{font-size:13px;font-weight:700}
+.domino{display:flex;align-items:center;gap:10px;margin-top:6px}.domino .tile{width:44px;height:44px;border-radius:9px;background:#fff;border:1.5px solid;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 0 rgba(31,42,68,.12);flex:none}.domino .tile img,.domino .tile svg{width:28px;height:28px;object-fit:contain}.domino span{font-size:12.5px}
+.wlwrap{overflow-x:auto}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11px}.legend span{display:inline-flex;align-items:center;gap:5px}.legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.round{border:1px solid var(--line);border-radius:9px;padding:12px 14px;margin-bottom:10px}.round .rh{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;margin-bottom:4px}.round h3{margin:0;font-size:15px;font-weight:800}.round .pts{font-size:11.5px;color:var(--faint);font-weight:700}
+.q{border-top:1px solid #edf0f4;padding:10px 0}.q:first-of-type{border-top:0}.prompt{font-size:15px;font-weight:700;margin:0 0 6px}.hint{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center}
+.pbtn{font-family:inherit;font-size:13px;padding:7px 12px;border:1px solid #cfd3d9;border-radius:7px;background:#fff;color:var(--ink);cursor:pointer;min-height:34px;text-align:left}
+.pbtn:hover{border-color:var(--muted)}.pbtn.right{background:var(--goodbg);border-color:var(--good)}.pbtn.wrong{background:var(--badbg);border-color:var(--bad)}.pbtn.picked{outline:3px solid #6f8fbe}.pbtn.done{background:var(--goodbg);border-color:var(--good);cursor:default}.pbtn.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.pairs{display:grid;grid-template-columns:1fr 1fr;gap:6px}.pairs .pbtn{white-space:normal;line-height:1.3}
+.result{font-size:12px;color:var(--muted);margin-top:4px;font-weight:700}.result.good{color:var(--good)}.result.miss{color:var(--bad)}
+input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:1px solid #cfd3d9;border-radius:7px;width:100%;color:var(--ink)}textarea{min-height:150px;font-size:12px;line-height:1.45}
+.slider{display:flex;align-items:center;gap:10px;margin:6px 0}.slider input{flex:1}
+.scorebox{border-left:5px solid var(--accent);background:#eef2f7;border-radius:8px;padding:10px 14px}
+.goal{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:9px 12px;margin-bottom:6px;cursor:pointer}.goal.on{border-color:var(--good);background:var(--goodbg)}.goal .box{width:20px;height:20px;border:2px solid var(--muted);border-radius:4px;flex:none;display:flex;align-items:center;justify-content:center;font-size:13px}.goal.on .box{background:var(--good);border-color:var(--good);color:#fff}.goal b{font-size:13.5px}.goal .why{font-size:12px;color:var(--muted)}
+.lastgoal{display:flex;gap:8px;align-items:center;font-size:12.5px;padding:4px 0;border-bottom:1px solid #edf0f4}.lastgoal .pbtn{min-height:28px;padding:4px 9px;font-size:12px}
+.foot{font-size:11.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:8px;line-height:1.4}
+@media(max-width:760px){.wheels,.hdrnums{grid-template-columns:repeat(2,minmax(0,1fr))}.hoursrow,.gridrow,.compassrow,.stacks{flex-direction:column}.hoursright{width:auto;border-left:0;padding-left:0}.rightcol{width:auto}.daynotes{grid-template-columns:repeat(4,minmax(0,1fr))}}
+
+
+/* winners-losers.html v1.0 */
+.n26.bad{color:var(--bad)}
+.wlwrap svg{display:block;margin:0 auto}
+.wlwrap circle.dotc{cursor:pointer;transition:r .1s}
+.wlwrap circle.dotc:hover{stroke:var(--ink);stroke-width:1.5}
+.tip{position:fixed;z-index:50;background:var(--ink);color:#fff;font-size:12px;line-height:1.3;padding:6px 9px;border-radius:7px;pointer-events:none;max-width:240px;box-shadow:0 4px 14px rgba(31,42,68,.25)}
+.tip b{display:block;font-size:12.5px}
+.rank{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px}
+.rk{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:8px;font-size:12.5px;padding:3px 0;border-bottom:1px solid var(--line)}
+.rk i{width:12px;height:12px;border-radius:50%;display:inline-block}
+.rk .bar{display:flex;gap:2px;align-items:center}
+.rk .bar b{display:inline-block;height:8px;border-radius:2px}
+.rk .n{font-size:11px;color:var(--muted);font-weight:700;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+@media(max-width:760px){.rank{grid-template-columns:1fr}}
+
+</style>
+</head>
+<body>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link on">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.2</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+<div id="login">
+  <h2>Winners and Losers</h2>
+  <p>Sign in with your Project YOU login to load your habits.</p>
+  <input id="email" type="email" placeholder="you@email.com" autocomplete="username">
+  <input id="password" type="password" placeholder="password" autocomplete="current-password">
+  <button id="signin">Load my habits</button>
+  <div id="msg"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="secbar"><h1>Winners and Losers</h1><span class="ver">v1.0</span><span class="date" id="builtOn"></span>
+    <span class="weeknav"><a class="btn" id="prevWin">&#9664; Earlier</a><span id="winLabel" class="weeklabel"></span><a class="btn" id="nextWin">Later &#9654;</a><a class="btn" id="signout">sign out</a></span>
+  </div>
+  <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading...</span></div>
+
+  <div id="page" class="page">
+    <div class="row-between">
+      <div><div class="kick">YouMatics · Winners and Losers</div><div class="title">Habits done above the line, <span class="titlesub">habits missed below it, one dot each, fourteen days at a time.</span></div></div>
+      <div class="card minicard"><div><div class="tiny">DONE</div><div class="n26" id="upN">0</div></div><div class="vsep"></div><div><div class="tiny">MISSED</div><div class="n26 bad" id="dnN">0</div></div><div class="vsep"></div><div><div class="tiny">DAYS PRESENT</div><div class="n26" id="presN">0<span class="n26sub">/14</span></div></div></div>
+    </div>
+
+    <div class="card block">
+      <div class="h2row"><div class="h2">The last fourteen days</div><div class="sub">hover or tap a dot to see which habit it is · the redder the dot, the longer the run of misses</div></div>
+      <div class="wlwrap" id="wl"></div>
+      <div class="legend" id="wlLegend"></div>
+      <div class="tinynote">A habit counts as missed only on a day you showed up at all. Days with no ticks are left blank, never scored as zero. Habits that have not been ticked in the last two weeks are not held against you. Coffee and Water are counters, not habits, and are left out.</div>
+    </div>
+
+    <div class="card block">
+      <div class="h2row"><div class="h2">Who won, who lost</div><div class="sub">every habit that appears above, ranked by done minus missed</div></div>
+      <div class="rank" id="rank"></div>
+    </div>
+
+    <div class="foot" id="foot"></div>
+  </div>
+</div>
+<div id="tip" class="tip hidden"></div>
+
+<script>
+/* Winners and Losers v1.0, Project YOU (YouMatics). Sep 6, 2026.
+   Moved here from the Weekly Review at Scott's request, with a rollover on every dot.
+   Everything is read from the database at load. The day is PY.today() / PY.day(), 2am to 2am Eastern. */
+const SUPABASE_URL='https://arnjntspmrhigodlssbn.supabase.co';
+const SUPABASE_KEY='sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
+const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
+const VERSION='v1.0';
+const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
+const COUNTERS=['Coffee','Water'];
+const PHOTO=['Train platform','Bell','What I Woke Up To','Photo Booth'];
+const QUICK=['Social'];
+let AREACOL={'Physical Health':'#c05f7a','Environmental Health':'#4fa08a','Social Well-Being':'#5b8fce','Recreational Health':'#e0975a','Sense of Purpose':'#cf9088','Mental Fitness':'#c6a63f','Emotional Health':'#7d81c2','Project YOU':'#3f6f8f','Not sure yet':'#8a93a1'};
+const MISS=['#f2cf5b','#e0975a','#c0453b'];
+function addDays(s,n){const p=s.split('-').map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2]+n));return d.toISOString().slice(0,10);}
+function dow(s){const p=s.split('-').map(Number);return new Date(Date.UTC(p[0],p[1]-1,p[2])).getUTCDay();}
+function fmt(s,withYear){const p=s.split('-').map(Number);const M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return M[p[1]-1]+' '+p[2]+(withYear?', '+p[0]:'');}
+function dname(s){return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dow(s)];}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function el(id){return document.getElementById(id);}
+
+let END; /* last day of the 14-day window */
+let D={},C={};
+async function boot(){const {data}=await sb.auth.getSession();if(data.session)showApp();}
+el('signin').onclick=async()=>{const email=el('email').value.trim(),password=el('password').value;if(!email||!password){msg('Enter your email and password.','err');return;}msg('Signing in...','');const {error}=await sb.auth.signInWithPassword({email,password});if(error){msg(error.message,'err');return;}showApp();};
+el('password').addEventListener('keydown',e=>{if(e.key==='Enter')el('signin').click();});
+el('signout').onclick=async()=>{await sb.auth.signOut();location.reload();};
+el('prevWin').onclick=()=>{END=addDays(END,-14);load();};
+el('nextWin').onclick=()=>{if(END<PY.today()){END=addDays(END,14);if(END>PY.today())END=PY.today();load();}};
+function msg(t,c){const m=el('msg');m.textContent=t;m.className=c||'';}
+function status(t,bad){el('statustext').textContent=t;el('statusdot').className='dot'+(bad?' bad':'');}
+function showApp(){el('login').classList.add('hidden');el('app').classList.remove('hidden');END=PY.today();el('builtOn').textContent=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})+' EST';load();}
+
+async function load(){
+  const days=[];for(let i=13;i>=0;i--)days.push(addDays(END,-i));
+  const ws=days[0],we=days[13],from=addDays(ws,-14);
+  el('winLabel').textContent=fmt(ws)+' to '+fmt(we,true);
+  el('nextWin').style.visibility=(END<PY.today())?'visible':'hidden';
+  status('Loading '+fmt(ws)+' to '+fmt(we)+'...');
+  try{
+    const [qs,wr,areas]=await Promise.all([
+      sb.from('qs_log').select('date,"group",tracker,logged_at').gte('date',from).lte('date',we).limit(5000),
+      sb.from('worksheet_rows').select('habit,area,qs_tracker,count_on,is_active,retired').eq('is_active',true),
+      sb.from('kg_areas').select('label,color')
+    ]);
+    const bad=[qs,wr,areas].filter(x=>x.error);if(bad.length)throw new Error(bad.map(x=>x.error.message).join('; '));
+    (areas.data||[]).forEach(a=>{if(a.color)AREACOL[a.label]=a.color;});
+    D={days,ws,we,from,qs:qs.data||[],wr:wr.data||[]};
+    compute();render();
+    status('Live · '+D.qs.filter(r=>r.date>=ws).length+' ticks read for these fourteen days');
+  }catch(e){status('Could not load: '+e.message,true);console.error(e);}
+}
+
+function compute(){
+  const {days,ws,we}=D;const all=D.qs;
+  const isCounter=t=>COUNTERS.includes(t)||D.wr.some(w=>w.qs_tracker===t&&w.count_on);
+  const excl=t=>isCounter(t)||PHOTO.includes(t)||QUICK.includes(t);
+  /* tracker -> area (most common group) */
+  const gc={};all.forEach(r=>{gc[r.tracker]=gc[r.tracker]||{};gc[r.tracker][r.group]=(gc[r.tracker][r.group]||0)+1;});
+  const areaOf={};Object.keys(gc).forEach(t=>{let best=null,n=-1;Object.keys(gc[t]).forEach(g=>{if(g==='Not sure yet')return;if(gc[t][g]>n){n=gc[t][g];best=g;}});areaOf[t]=best||Object.keys(gc[t])[0];});
+  /* daily set: same rule as the Weekly Review. Worksheet habits with a tick in the window, plus anything ticked 5+ days, and it must have a tick in the last two weeks shown */
+  const dset={};all.forEach(r=>{if(excl(r.tracker))return;dset[r.tracker]=dset[r.tracker]||new Set();dset[r.tracker].add(r.date);});
+  const daily=new Set();
+  D.wr.forEach(w=>{if(w.qs_tracker&&!excl(w.qs_tracker)&&!(w.retired===true)&&dset[w.qs_tracker])daily.add(w.qs_tracker);});
+  Object.keys(dset).forEach(t=>{if(dset[t].size>=5)daily.add(t);});
+  [...daily].forEach(t=>{if(!all.some(r=>r.tracker===t&&r.date>=ws&&r.date<=we))daily.delete(t);});
+  const firstTick={};all.forEach(r=>{if(!firstTick[r.tracker]||r.date<firstTick[r.tracker])firstTick[r.tracker]=r.date;});
+  /* dots */
+  const missRun={};let upN=0,dnN=0;const perHabit={};
+  const wl=days.map(d=>{const present=all.some(r=>r.date===d);const up=[];const seen=new Set();all.filter(r=>r.date===d&&!isCounter(r.tracker)).forEach(r=>{if(seen.has(r.tracker))return;seen.add(r.tracker);const area=areaOf[r.tracker]||'Not sure yet';up.push({t:r.tracker,area,col:AREACOL[area]||AREACOL['Not sure yet']});if(daily.has(r.tracker)){perHabit[r.tracker]=perHabit[r.tracker]||{up:0,dn:0,area};perHabit[r.tracker].up++;}});upN+=up.length;
+    const dn=[];daily.forEach(t=>{const start=firstTick[t]||ws;if(d<start)return;if(seen.has(t)){missRun[t]=0;return;}if(present){missRun[t]=(missRun[t]||0)+1;dn.push({t,run:missRun[t],col:MISS[Math.min(2,missRun[t]-1)],area:areaOf[t]||'Not sure yet'});perHabit[t]=perHabit[t]||{up:0,dn:0,area:areaOf[t]||'Not sure yet'};perHabit[t].dn++;}});
+    dn.sort((a,b)=>a.run-b.run);dnN+=dn.length;return {d,present,up,dn};});
+  C={wl,daily,perHabit,upN,dnN,present:days.filter(d=>all.some(r=>r.date===d)).length};
+}
+
+function render(){
+  el('upN').textContent=C.upN;el('dnN').textContent=C.dnN;el('presN').innerHTML=C.present+'<span class="n26sub">/14</span>';
+  const R=7,STEP=17,W=56;const maxup=Math.max(1,...C.wl.map(x=>x.up.length)),maxdn=Math.max(1,...C.wl.map(x=>x.dn.length));
+  const Hup=maxup*STEP+10,Hdn=maxdn*STEP+10,zero=Hup+24,width=64+C.wl.length*W+10,height=zero+Hdn+34;
+  let s='<svg width="'+width+'" height="'+height+'" viewBox="0 0 '+width+' '+height+'"><line x1="54" y1="'+zero+'" x2="'+(width-10)+'" y2="'+zero+'" stroke="#1f2a44" stroke-width="1.5"/>';
+  C.wl.forEach((x,i)=>{const cx=64+i*W+W/2;
+    if(!x.present)s+='<text x="'+cx+'" y="'+(zero-6)+'" text-anchor="middle" font-family="Arial" font-size="9" fill="#9aa6b4">no ticks</text>';
+    x.up.forEach((u,j)=>{s+='<circle class="dotc" cx="'+cx+'" cy="'+(zero-9-j*STEP)+'" r="'+R+'" fill="'+u.col+'" data-tip="'+esc(u.t)+'|'+esc(u.area)+' · done '+dname(x.d)+' '+fmt(x.d)+'"></circle>';});
+    x.dn.forEach((m,j)=>{s+='<circle class="dotc" cx="'+cx+'" cy="'+(zero+9+j*STEP)+'" r="'+R+'" fill="'+m.col+'" data-tip="'+esc(m.t)+'|missed '+dname(x.d)+' '+fmt(x.d)+(m.run>1?' · '+m.run+' days in a row':'')+'"></circle>';});
+    s+='<text x="'+cx+'" y="'+(zero+Hdn+18)+'" text-anchor="middle" font-family="Arial" font-size="10" font-weight="700" fill="#5b6472">'+dname(x.d).toUpperCase()+'</text><text x="'+cx+'" y="'+(zero+Hdn+30)+'" text-anchor="middle" font-family="Arial" font-size="9" fill="#9aa6b4">'+fmt(x.d)+'</text>';
+    if(dow(x.d)===1&&i>0)s+='<line x1="'+(64+i*W)+'" y1="14" x2="'+(64+i*W)+'" y2="'+(zero+Hdn+4)+'" stroke="#e3e7ee" stroke-dasharray="3 3"/>';});
+  s+='<text x="12" y="'+(zero-Hup/2)+'" transform="rotate(-90 12 '+(zero-Hup/2)+')" text-anchor="middle" font-family="Arial" font-size="9" letter-spacing="1" fill="#5b6472">HABITS DONE</text><text x="12" y="'+(zero+Hdn/2)+'" transform="rotate(-90 12 '+(zero+Hdn/2)+')" text-anchor="middle" font-family="Arial" font-size="9" letter-spacing="1" fill="#5b6472">HABITS MISSED</text></svg>';
+  el('wl').innerHTML=s;
+  el('wlLegend').innerHTML=COMPASS.map(p=>'<span><i style="background:'+AREACOL[p]+'"></i>'+esc(p)+'</span>').join('')+'<span><i style="background:'+AREACOL['Project YOU']+'"></i>Project YOU</span><span><i style="background:#f2cf5b"></i>missed once</span><span><i style="background:#e0975a"></i>missed twice</span><span><i style="background:#c0453b"></i>missed 3+ days</span>';
+  /* rollovers: hover on desktop, tap on phones */
+  const tip=el('tip');
+  const show=(e,t)=>{const p=t.split('|');tip.innerHTML='<b>'+p[0]+'</b>'+p[1];tip.classList.remove('hidden');move(e);};
+  const move=e=>{const x=(e.touches?e.touches[0].clientX:e.clientX),y=(e.touches?e.touches[0].clientY:e.clientY);tip.style.left=Math.min(x+12,window.innerWidth-250)+'px';tip.style.top=(y-44)+'px';};
+  el('wl').querySelectorAll('.dotc').forEach(c=>{c.addEventListener('mouseenter',e=>show(e,c.dataset.tip));c.addEventListener('mousemove',move);c.addEventListener('mouseleave',()=>tip.classList.add('hidden'));c.addEventListener('touchstart',e=>{show(e,c.dataset.tip);e.stopPropagation();},{passive:true});});
+  document.addEventListener('touchstart',()=>tip.classList.add('hidden'),{passive:true});
+  /* ranking */
+  const rows=Object.keys(C.perHabit).map(t=>({t,...C.perHabit[t],net:C.perHabit[t].up-C.perHabit[t].dn})).sort((a,b)=>b.net-a.net||b.up-a.up||a.t.localeCompare(b.t));
+  el('rank').innerHTML=rows.map(r=>'<div class="rk"><i style="background:'+(AREACOL[r.area]||'#8a93a1')+'" title="'+esc(r.area)+'"></i><span>'+esc(r.t)+'<div class="bar">'+'<b style="width:'+(r.up*9)+'px;background:'+(AREACOL[r.area]||'#8a93a1')+'"></b>'+(r.dn?'<b style="width:'+(r.dn*9)+'px;background:#c0453b;opacity:.75"></b>':'')+'</div></span><span class="n">'+r.up+' done · '+r.dn+' missed</span></div>').join('')||'<div class="tinynote">Nothing to rank yet.</div>';
+  el('foot').textContent='Project YOU · YouMatics · Winners and Losers '+VERSION+' · read live from your habit log and worksheets · days run 2am to 2am Eastern · missed days are never counted as zero.';
+}
+boot();
+
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
