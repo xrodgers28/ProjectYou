@@ -76,6 +76,32 @@
   .addcard .plus{font-size:32px; font-weight:300; line-height:1}
   .addcard .t{font-size:12.5px; font-weight:700; text-align:center; padding:0 16px; line-height:1.4}
 
+  /* ---------- Edit order (v3.1, Sep 6 2026) ---------- */
+  .editbar{display:flex; align-items:center; justify-content:center; gap:14px; margin-top:18px; flex-wrap:wrap}
+  .editbtn{font:inherit; font-size:12.5px; font-weight:800; letter-spacing:.3px; color:var(--accent); background:#fff;
+        border:1.5px solid var(--accent); border-radius:999px; padding:7px 16px; cursor:pointer}
+  .editbtn:hover{background:#eef2f8}
+  .editbtn.done{background:var(--accent); color:#fff}
+  .resetlink{font-size:12px; font-weight:700; color:#9aa6b4; background:none; border:none; cursor:pointer; font-family:inherit; text-decoration:underline; padding:4px}
+  .resetlink:hover{color:var(--hot)}
+  .editnote{width:100%; text-align:center; font-size:12.5px; color:var(--muted); min-height:18px}
+  .editnote.bad{color:var(--hot); font-weight:700}
+  .editnote.good{color:var(--green); font-weight:700}
+  body.editing .vcard{cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; border:1.5px dashed var(--accent)}
+  body.editing .vcard:hover{transform:none}
+  body.editing .vcard .cta{visibility:hidden}
+  .vcard .grip{display:none; position:absolute; top:10px; right:12px; color:#9aa6b4; font-size:18px; letter-spacing:1px; line-height:1}
+  body.editing .vcard .grip{display:block}
+  .vcard .arrows{display:none; position:absolute; right:10px; bottom:10px; gap:4px}
+  body.editing .vcard .arrows{display:flex}
+  .arrows button{width:34px; height:30px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--accent);
+        font-size:15px; font-weight:800; cursor:pointer; touch-action:manipulation}
+  .arrows button:hover{background:#eef2f8}
+  .arrows button:disabled{opacity:.3; cursor:default}
+  .vcard.lifted{opacity:.35}
+  .ghost{position:fixed; z-index:500; pointer-events:none; opacity:.92; transform:rotate(1.5deg); box-shadow:0 24px 60px rgba(31,42,68,.28)}
+  body.editing .addcard{opacity:.45}
+
   @media(max-width:640px){ .grid{grid-template-columns:1fr} .pagehead h1{font-size:26px} }
 </style>
 </head>
@@ -87,7 +113,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v3.0</span>
+    <span class="pn-ver">v3.1</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -165,8 +191,9 @@ async function loadCue(){
     v.stat = CUE_STATE==='ok'
       ? (CUE_STREAK===1?'1-day streak':CUE_STREAK+'-day streak')
       : 'Could not read the streak';
+    const el=document.querySelector('.vcard[data-id="cuecards"]');
+    if(el){ el.querySelector('.thumb').innerHTML=v.thumb; el.querySelector('.stat').textContent=v.stat; }
   }
-  render();
 }
 
 function tWeeks(){
@@ -281,9 +308,143 @@ const VIEWS = [
 
 const INSPIRE = `The moment you measure something, it starts to change, that's the <span class="k">Hawthorne effect</span>, and it's the whole engine here. Every tracker is a nudge; every logged day is a small n=1 experiment. One master log feeds every view below, so your scattered tracking becomes one coherent picture. <span class="k">Measure it, and it changes. Your data becomes your coach.</span>`;
 
+/* ===== Edit order, v3.1, Sep 6 2026 =====
+   "Edit order" lets Scott drag the cards into any order, or nudge them with the
+   arrows. The order is saved in the database (page_prefs) so every device shows
+   the same one. Cards this page does not know about are ignored; cards added
+   later land at the end. "Reset to original order" removes the saved order. */
+const DEFAULT_ORDER = VIEWS.map(v=>v.id);
+let ORDER = null;          /* null = the original order above */
+let EDITING = false;
+
+function orderedViews(){
+  if(!ORDER) return VIEWS.slice();
+  const known = ORDER.filter(id=>VIEWS.some(v=>v.id===id));
+  const rest = VIEWS.map(v=>v.id).filter(id=>!known.includes(id));
+  return known.concat(rest).map(id=>VIEWS.find(v=>v.id===id));
+}
+async function loadOrder(){
+  try{
+    const H={apikey:CUE_KEY,Authorization:'Bearer '+CUE_KEY};
+    const r=await fetch(CUE_SB+'/rest/v1/page_prefs?select=value&page=eq.qs-dashboard&key=eq.card_order',{headers:H});
+    const rows=await r.json();
+    const ids=rows&&rows[0]&&rows[0].value&&rows[0].value.ids;
+    if(Array.isArray(ids)&&ids.length){ ORDER=ids; if(!EDITING) render(); }
+  }catch(e){ /* no saved order, or offline: the original order stands */ }
+}
+async function saveOrder(ids){
+  const H={apikey:CUE_KEY,Authorization:'Bearer '+CUE_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'};
+  const r=await fetch(CUE_SB+'/rest/v1/page_prefs',{method:'POST',headers:H,
+    body:JSON.stringify({page:'qs-dashboard',key:'card_order',value:{ids:ids},updated_at:new Date().toISOString()})});
+  if(!r.ok) throw new Error('save failed '+r.status);
+}
+async function clearOrder(){
+  const H={apikey:CUE_KEY,Authorization:'Bearer '+CUE_KEY};
+  const r=await fetch(CUE_SB+'/rest/v1/page_prefs?page=eq.qs-dashboard&key=eq.card_order',{method:'DELETE',headers:H});
+  if(!r.ok) throw new Error('reset failed '+r.status);
+}
+function note(msg,cls){ const n=document.getElementById('editnote'); if(!n) return; n.textContent=msg||''; n.className='editnote'+(cls?' '+cls:''); }
+function domOrder(){ return Array.from(document.querySelectorAll('.grid .vcard')).map(el=>el.dataset.id); }
+function refreshArrows(){
+  const cards=Array.from(document.querySelectorAll('.grid .vcard'));
+  cards.forEach((el,i)=>{ el.querySelector('.up').disabled=(i===0); el.querySelector('.down').disabled=(i===cards.length-1); });
+}
+async function toggleEdit(){
+  const btn=document.getElementById('editbtn');
+  if(!EDITING){
+    EDITING=true; document.body.classList.add('editing');
+    btn.textContent='Done'; btn.classList.add('done');
+    document.getElementById('resetlink').style.display='inline';
+    note('Drag a card where you want it, or use the arrows. Tap Done to save.');
+    refreshArrows();
+    return;
+  }
+  const ids=domOrder();
+  btn.textContent='Saving…';
+  try{
+    await saveOrder(ids);
+    ORDER=ids;
+    EDITING=false; document.body.classList.remove('editing');
+    btn.textContent='Edit order'; btn.classList.remove('done');
+    document.getElementById('resetlink').style.display='none';
+    note('Order saved. Every device will show it this way.','good');
+    setTimeout(()=>{ if(!EDITING) note(''); },4000);
+  }catch(e){
+    btn.textContent='Done';
+    note('Could not save the order (no connection to the database). Your new order is still on screen; tap Done to try again.','bad');
+  }
+}
+async function resetOrder(){
+  const btn=document.getElementById('editbtn');
+  try{
+    await clearOrder();
+    ORDER=null; EDITING=false; document.body.classList.remove('editing');
+    render();
+    note('Back to the original order.','good');
+    setTimeout(()=>{ if(!EDITING) note(''); },4000);
+  }catch(e){ note('Could not reset (no connection to the database). Try again in a moment.','bad'); }
+}
+function nudge(el,dir){
+  const grid=el.parentNode;
+  if(dir<0 && el.previousElementSibling && el.previousElementSibling.classList.contains('vcard')) grid.insertBefore(el,el.previousElementSibling);
+  if(dir>0 && el.nextElementSibling && el.nextElementSibling.classList.contains('vcard')) grid.insertBefore(el.nextElementSibling,el);
+  refreshArrows();
+}
+/* finger and mouse drag, one code path (pointer events) */
+let DRAG=null;
+function onPointerDown(e){
+  if(!EDITING) return;
+  if(e.target.closest('.arrows')) return;
+  const el=e.target.closest('.vcard'); if(!el) return;
+  e.preventDefault();
+  DRAG={el:el, x0:e.clientX, y0:e.clientY, ghost:null, moved:false, pid:e.pointerId};
+  document.addEventListener('pointermove',onPointerMove);
+  document.addEventListener('pointerup',onPointerUp);
+  document.addEventListener('pointercancel',onPointerUp);
+}
+function onPointerMove(e){
+  if(!DRAG || e.pointerId!==DRAG.pid) return;
+  const dx=e.clientX-DRAG.x0, dy=e.clientY-DRAG.y0;
+  if(!DRAG.moved){ if(Math.abs(dx)<6&&Math.abs(dy)<6) return; DRAG.moved=true;
+    const r=DRAG.el.getBoundingClientRect();
+    const g=DRAG.el.cloneNode(true); g.classList.add('ghost'); g.classList.remove('lifted');
+    g.style.width=r.width+'px'; g.style.height=r.height+'px'; g.style.left=r.left+'px'; g.style.top=r.top+'px';
+    document.body.appendChild(g); DRAG.ghost=g; DRAG.gx=r.left; DRAG.gy=r.top;
+    DRAG.el.classList.add('lifted'); }
+  DRAG.ghost.style.left=(DRAG.gx+dx)+'px'; DRAG.ghost.style.top=(DRAG.gy+dy)+'px';
+  /* which card is the pointer over? swap places with it */
+  const cards=Array.from(document.querySelectorAll('.grid .vcard'));
+  const over=cards.find(c=>{ if(c===DRAG.el) return false; const b=c.getBoundingClientRect();
+    return e.clientX>=b.left&&e.clientX<=b.right&&e.clientY>=b.top&&e.clientY<=b.bottom; });
+  if(over){
+    const grid=over.parentNode;
+    const from=cards.indexOf(DRAG.el), to=cards.indexOf(over);
+    if(from<to) grid.insertBefore(DRAG.el,over.nextSibling); else grid.insertBefore(DRAG.el,over);
+    refreshArrows();
+  }
+  /* keep the page scrolling when the finger nears the top or bottom */
+  const m=60, vh=window.innerHeight;
+  if(e.clientY<m) window.scrollBy(0,-12); else if(e.clientY>vh-m) window.scrollBy(0,12);
+}
+function onPointerUp(e){
+  if(!DRAG || e.pointerId!==DRAG.pid) return;
+  if(DRAG.ghost) DRAG.ghost.remove();
+  DRAG.el.classList.remove('lifted');
+  DRAG=null;
+  document.removeEventListener('pointermove',onPointerMove);
+  document.removeEventListener('pointerup',onPointerUp);
+  document.removeEventListener('pointercancel',onPointerUp);
+}
+function onCardClick(e){
+  if(!EDITING) return;
+  e.preventDefault();
+  const a=e.target.closest('.arrows button'); const el=e.target.closest('.vcard');
+  if(a&&el) nudge(el, a.classList.contains('up')?-1:1);
+}
+
 function render(){
-  const cards = VIEWS.map(v=>{
-    return `<a class="vcard" href="${v.opens}" style="--hc:${v.color}; --hcb:${v.bg}">
+  const cards = orderedViews().map(v=>{
+    return `<a class="vcard" href="${v.opens}" data-id="${v.id}" style="--hc:${v.color}; --hcb:${v.bg}">
       <div class="thumb">${v.thumb}</div>
       <div class="body">
         <div class="kick">${v.kick}</div>
@@ -291,7 +452,9 @@ function render(){
         <div class="tg">${v.tag}</div>
         <span class="stat">${v.stat}</span>
         <span class="cta">open →</span>
-      </div></a>`;
+      </div>
+      <span class="grip" aria-hidden="true">⋮⋮</span>
+      <span class="arrows"><button type="button" class="up" aria-label="Move up">↑</button><button type="button" class="down" aria-label="Move down">↓</button></span></a>`;
   }).join('');
   const add = `<div class="addcard"><span class="plus">+</span><span class="t">More views land here, Monthly Grid, Annual Dot-Grids, Living Ecosystem map</span></div>`;
   document.getElementById('stage').innerHTML = `
@@ -299,10 +462,22 @@ function render(){
       <div class="greet">Quantified Self</div>
       <h1><span class="em">Measure It</span>, and It Changes</h1>
       <p class="inspire">${INSPIRE}</p>
+      <div class="editbar">
+        <button type="button" class="editbtn${EDITING?' done':''}" id="editbtn">${EDITING?'Done':'Edit order'}</button>
+        <button type="button" class="resetlink" id="resetlink" style="display:${EDITING?'inline':'none'}">Reset to original order</button>
+        <div class="editnote" id="editnote"></div>
+      </div>
     </div>
     <div class="grid">${cards}${add}</div>`;
+  document.getElementById('editbtn').addEventListener('click',toggleEdit);
+  document.getElementById('resetlink').addEventListener('click',resetOrder);
+  const grid=document.querySelector('.grid');
+  grid.addEventListener('pointerdown',onPointerDown);
+  grid.addEventListener('click',onCardClick);
+  if(EDITING) refreshArrows();
 }
 render();
+loadOrder();
 loadCue();
 </script>
 
