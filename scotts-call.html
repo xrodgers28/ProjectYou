@@ -183,7 +183,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v0.7</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table: where every note goes ›</a></h1>
+  <h1>Scott's Call <span class="ver">v0.8</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -192,6 +192,7 @@
     <span class="chip static" id="c-mine"><b>0</b> only you</span>
     <button class="chip" id="selbtn" onclick="toggleSelect()">☐ Select several</button>
     <button class="chip pull" id="pullnow" onclick="pullDrafts()">⟳ Pull from Drafts now</button>
+    <label class="chip" title="Add a photo as a note: a screenshot, a menu, a page of a book. Claude reads it at the next slot." style="cursor:pointer">📷 Add a photo<input type="file" accept="image/*" id="photoin" style="display:none" onchange="addPhoto(this)"></label>
     <button class="chip" onclick="load(true)">⟳</button>
     <span class="savestate" id="save">loading…</span>
   </div>
@@ -225,6 +226,7 @@
       <dt>more ▾</dt><dd>Park it, the 🎡 pinwheel (straight to Project You Ideas), Make it a rule, Dismiss.</dd>
       <dt>🍿 Popcorn · 💬 comment · est · act</dt><dd>Popcorn shows your dictation word for word, even when one dictation became several rows. Comment rides along with your tap and I remember it. Est is my guess at minutes, act is yours after.</dd>
       <dt>The green strip after a tap</dt><dd>Says what was filed and where, with Undo and a correction box. Ten seconds, then it folds into the Archive.</dd>
+      <dt>📷 Add a photo</dt><dd>A screenshot, a menu, a page of a book. It lands here as a waiting note with the picture; I read it at the next slot and write the note under it.</dd>
       <dt>⟳ Pull from Drafts now</dt><dd>Opens Drafts and runs your Sweep to ProjectYou action. Several tasks in one note get split into separate rows. Otherwise the sweep runs every two hours on its own.</dd>
     </dl>
     <div class="eb">Delivered by Claude</div>
@@ -242,7 +244,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v0.7 · Sep 6, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v0.8 · Sep 6, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -424,6 +426,7 @@ function capRow(r){
   moonBtn(li,(DEST[r.id]||'')==='cl:tonight','Send to the Midnight Run (Claude\'s List, Tonight)',()=>act(r,'cl:tonight'));
   const note=(r.staging_note||'').trim();
   if(note&&!/interpreter offline/i.test(note))li.appendChild(el('div','note sum',esc(note)));
+  if(r.photo_url){const ph=el('a');ph.href=r.photo_url;ph.target='_blank';ph.style.cssText='display:block;margin:4px 0 4px 41px';ph.innerHTML='<img src="'+esc(r.photo_url)+'" style="max-height:90px;max-width:160px;border-radius:8px;border:1px solid #e3e7ee" alt="photo">';li.appendChild(ph);}
   /* the Staging Area strip, verbatim: Popcorn · comment · est · act */
   const links=el('div','links');
   const pop=el('span','lnk','🍿 Popcorn');const cmt=el('span','lnk','💬 comment');
@@ -594,19 +597,22 @@ async function logHabit(r){
 function pickDays(r,h){
   const s=prompt('Which day(s)? Type dates like 2026-09-05, comma separated. Leave empty for today.','');if(s===null)return;
   const days=(s.trim()?s.split(',').map(x=>x.trim()).filter(Boolean):[todayET()]);const mins=prompt('Minutes? (optional)','');
-  tickHabit(r,h,days,mins?+mins:null);
+  const guess=((r.task||'').match(/([\d,\.]+)\s*(steps|miles|km|cups|glasses|pages|reps|min)/i)||[]);
+  const num=prompt('A number for the tracker square? (like 8000 steps, 3 miles, 2 cups; leave empty for a plain tick)',guess[0]||'');
+  let value=null,unit=null;if(num&&num.trim()){const m=num.trim().match(/^([\d,\.]+)\s*(.*)$/);if(m){value=parseFloat(m[1].replace(/,/g,''));unit=(m[2]||'count').trim().toLowerCase();}}
+  tickHabit(r,h,days,mins?+mins:null,value,unit);
 }
-async function tickHabit(r,h,days,mins){
+async function tickHabit(r,h,days,mins,value,unit){
   const snap=snapOf(r);await logEvent(r,'approve','Log it: '+h.habit);removeCap(r);render();const made=[];
   for(const day of days){
     const isToday=day===todayET();let rowId=null;
     if(isToday){const {data}=await sb.from('todos').select('id,done').eq('is_habit',true).eq('ws_id',h.id).eq('done',false).gte('created_at',new Date(Date.now()-36*3600000).toISOString()).limit(1);if(data&&data[0])rowId=data[0].id;}
     if(!rowId){const at=day+'T16:00:00Z';const {data:ins,error}=await sb.from('todos').insert({section:h.area,subsection:h.section,task:h.habit,is_habit:true,ws_id:h.id,done:false,source_project:'scotts-call',created_at:at,for_date:day,est_minutes:h.minutes||null}).select().single();if(error){toast('Could not log '+h.habit+' for '+day+': '+error.message);continue;}rowId=ins.id;made.push(rowId);}
-    const upd={done:true,done_at:isToday?new Date().toISOString():day+'T16:00:00Z'};if(mins)upd.actual_minutes=mins;
+    const upd={done:true,done_at:isToday?new Date().toISOString():day+'T16:00:00Z'};if(mins)upd.actual_minutes=mins;if(value!=null){upd.count_on=true;upd.value=value;upd.count_label=unit;}
     const {error:e2}=await sb.from('todos').update(upd).eq('id',rowId);if(e2)toast('Tick failed for '+day+': '+e2.message);else if(!made.includes(rowId))made.push('t:'+rowId);
   }
   await sb.from('todos').delete().eq('id',r.id);
-  receipt(r,'Logged '+h.habit+' as done for '+days.map(d=>fmtDate(d+'T12:00:00')).join(', ')+(mins?' · '+mins+' min':''),'habit-worksheets.html',async()=>{for(const m of made){if(String(m).startsWith('t:'))await sb.from('todos').update({done:false,done_at:null}).eq('id',String(m).slice(2));else await sb.from('todos').delete().eq('id',m);}const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}});
+  receipt(r,'Logged '+h.habit+' as done for '+days.map(d=>fmtDate(d+'T12:00:00')).join(', ')+(mins?' · '+mins+' min':'')+(value!=null?' · '+value+' '+unit+' on the tracker':''),'habit-worksheets.html',async()=>{for(const m of made){if(String(m).startsWith('t:'))await sb.from('todos').update({done:false,done_at:null}).eq('id',String(m).slice(2));else await sb.from('todos').delete().eq('id',m);}const {data:back}=await sb.from('todos').insert(snap).select().single();if(back){CAP.push(back);render();}});
 }
 function receipt(r,msg,page,undoFn,grey,noteFn){
   const board=document.getElementById('board');const s=el('div','receipt'+(grey?' grey':''));
@@ -638,6 +644,19 @@ async function giveClaude(r){await save(r.id,{own:'Claude',shelf:r.shelf||'now',
 async function delST(r){if(await save(r.id,{deleted_at:new Date().toISOString()})){load(true);toastUndo('Deleted.',async()=>{await save(r.id,{deleted_at:null});load(true);});}}
 
 /* ---------- drafts, mic, toast ---------- */
+async function addPhoto(inp){
+  const f=inp.files&&inp.files[0];if(!f)return;inp.value='';
+  const cap=prompt('A few words about the photo? (optional)','')||'';
+  toast('Uploading the photo…');
+  const ext=(f.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+  const path=todayET()+'/'+Date.now()+'.'+ext;
+  const up=await sb.storage.from('captures').upload(path,f,{contentType:f.type||'image/jpeg',upsert:false});
+  if(up.error){toast('Could not upload: '+up.error.message);return;}
+  const url=sb.storage.from('captures').getPublicUrl(path).data.publicUrl;
+  const {error}=await sb.from('todos').insert({staged:true,section:INBOX,task:cap.trim()?('Photo: '+cap.trim()):'Photo: read this and tell me what it is for',staging_note:'A photo you added. I read it at the next slot and write the note here.',stage_conf:'lo',stage_kind:'task',stage_project:'Personal',stage_guess:'Core To-Dos',stage_board:'todays',photo_url:url,bucket:'today',status:'todo',est_minutes:5,position:0});
+  if(error){toast('Photo saved but the note failed: '+error.message);return;}
+  toast('Photo added to your waiting notes.');load(true);
+}
 function draftsSetup(){alert('One-time setup, on the Mac or iPhone where Drafts lives:\n\n1. Open Drafts, then Actions, then the + button, and name the new action exactly:\n     Sweep to ProjectYou\n\n2. Add a Script step and paste in the sweep script (Claude has it for you).\n\n3. Come back here and press Pull from Drafts now.\n\nIf nothing happens when you press the button, Drafts is not installed on this device, or the action name does not match exactly. The every-2-hour sweep still runs either way.');}
 function projIcon(p){return p==='Project YOU'?'🎡':p==='TreadWell'?'🥾':p==='Amazon'?'💼':'';}
 function projNode(p){const i=projIcon(p);if(!i)return null;const e=el('span','proj',i);e.title=p;return e;}
