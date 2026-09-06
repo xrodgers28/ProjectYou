@@ -195,7 +195,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v1.4</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Scott's Call <span class="ver">v1.5</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -204,7 +204,7 @@
     <span class="chip static" id="c-mine"><b>0</b> only you</span>
     <button class="chip" id="selbtn" onclick="toggleSelect()">☐ Select several</button>
     <button class="chip pull" id="pullnow" onclick="pullDrafts()">⟳ Pull from Drafts now</button>
-    <button class="chip run" onclick="runNow()" title="Ask the day runner to work the Now shelf of Claude's List at its next hourly check (10am to 6pm EST)">▶ Run now</button>
+    <button class="chip run" onclick="runNow()" title="Start the Now shelf of Claude's List: right away if a chat with Claude is open, otherwise at the top of the hour (10am to 6pm EST)">▶ Run now</button>
     <label class="chip" title="Add a photo as a note: a screenshot, a menu, a page of a book. Claude reads it at the next slot." style="cursor:pointer">📷 Add a photo<input type="file" accept="image/*" id="photoin" style="display:none" onchange="addPhoto(this)"></label>
     <button class="chip" onclick="load(true)">⟳</button>
     <span class="savestate" id="save">loading…</span>
@@ -241,7 +241,7 @@
       <dt>🍿 Popcorn · 💬 comment · est · act</dt><dd>Popcorn shows your dictation word for word, even when one dictation became several rows. Comment rides along with your tap and I remember it. Est is my guess at minutes, act is yours after.</dd>
       <dt>The green strip after a tap</dt><dd>Says what was filed and where, with Undo and a correction box. Ten seconds, then it folds into the Archive.</dd>
       <dt>📷 Add a photo</dt><dd>A screenshot, a menu, a page of a book. It lands here as a waiting note with the picture; I read it at the next slot and write the note under it.</dd>
-      <dt>▶ Run now</dt><dd>Asks the day runner to work the Now shelf of Claude's List at its next hourly check (10am to 6pm EST). Approved builds land back here under Delivered by Claude. The 4am Midnight Run takes the Tonight shelf on its own.</dd>
+      <dt>▶ Run now</dt><dd>Starts the Now shelf of Claude's List. If a chat with me is open I begin within a minute; otherwise the runner takes it at the top of the hour, 10am to 6pm EST. Approved builds land back here under Delivered by Claude. The 4am Midnight Run takes the Tonight shelf on its own.</dd>
       <dt>⟳ Pull from Drafts now</dt><dd>Opens Drafts and runs your Sweep to ProjectYou action. Several tasks in one note get split into separate rows. Otherwise the sweep runs every two hours on its own.</dd>
     </dl>
     <div class="eb">Delivered by Claude</div>
@@ -259,7 +259,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.4 · Sep 6, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.5 · Sep 6, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -675,10 +675,7 @@ async function addPhoto(inp){
 async function runNow(){
   const {error}=await sb.from('board_meta').upsert({key:'run_now_requested',val:{at:new Date().toISOString(),from:location.pathname.split('/').pop()},updated_at:new Date().toISOString()},{onConflict:'key'});
   if(error){toast('Could not ask for a run: '+error.message);return;}
-  const h=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false}).format(new Date());
-  const m=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',minute:'numeric'}).format(new Date());
-  const wait=(h>=10&&h<18)?(60-m)+' minutes at most':'at 10am EST (the day runner works 10am to 6pm)';
-  toast('Asked for a run. The day runner checks on the hour: '+wait+'. Results land on Scott\'s Call.');
+  toast('Asked for a run. If a chat with me is open I start within a minute, otherwise the runner picks it up at the top of the hour, 10am to 6pm EST.');
 }
 function draftsSetup(){alert('One-time setup, on the Mac or iPhone where Drafts lives:\n\n1. Open Drafts, then Actions, then the + button, and name the new action exactly:\n     Sweep to ProjectYou\n\n2. Add a Script step and paste in the sweep script (Claude has it for you).\n\n3. Come back here and press Pull from Drafts now.\n\nIf nothing happens when you press the button, Drafts is not installed on this device, or the action name does not match exactly. The every-2-hour sweep still runs either way.');}
 const PINW_SM='<svg viewBox="0 0 24 24" class="pinw sm"><g transform="translate(12,12)"><path d="M0 0 L0 -10 A10 10 0 0 1 7.8 -6.2 Z" fill="#e8a0b8"/><path d="M0 0 L7.8 -6.2 A10 10 0 0 1 9.7 2.2 Z" fill="#f0b58f"/><path d="M0 0 L9.7 2.2 A10 10 0 0 1 4.3 9 Z" fill="#ead98f"/><path d="M0 0 L4.3 9 A10 10 0 0 1 -4.3 9 Z" fill="#8ec5a0"/><path d="M0 0 L-4.3 9 A10 10 0 0 1 -9.7 2.2 Z" fill="#8fd0c4"/><path d="M0 0 L-9.7 2.2 A10 10 0 0 1 -7.8 -6.2 Z" fill="#a9c8e8"/><path d="M0 0 L-7.8 -6.2 A10 10 0 0 1 0 -10 Z" fill="#cbb0e0"/></g></svg>';
