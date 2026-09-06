@@ -105,6 +105,42 @@
   .toast.on{opacity:1}
   .hidden{display:none!important}
   .stamp{text-align:center;font-size:11px;color:#9aa6b4;margin-top:26px}
+
+  .ciwrap{background:#fff;border:1px solid var(--key);border-radius:13px;padding:13px 15px;margin-bottom:14px}
+  .cibtn{border:none;border-radius:10px;background:var(--acc);color:#fff;font-size:14px;font-weight:800;padding:12px 16px;width:100%;text-align:left;line-height:1.3}
+  .cibtn.due{background:var(--amber)}
+  .cibtn .sm{display:block;font-size:11.5px;font-weight:700;opacity:.9;margin-top:3px}
+  .ciwhy{font-size:12px;color:var(--muted);margin-top:9px;line-height:1.5}
+
+  .modal{position:fixed;inset:0;background:rgba(31,42,68,.45);z-index:90;display:flex;align-items:flex-start;justify-content:center;padding:16px}
+  .sheet{background:var(--bg);border-radius:16px;width:100%;max-width:640px;box-shadow:0 18px 50px rgba(31,42,68,.32);overflow:hidden}
+  .shead{background:linear-gradient(135deg,var(--acc),#3f3d70);color:#fff;padding:13px 17px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .shead h3{font-size:16px}
+  .shead .sub{font-size:11.5px;opacity:.92;margin-top:2px}
+  .sx{border:none;background:rgba(255,255,255,.22);color:#fff;border-radius:8px;font-size:12.5px;font-weight:800;padding:6px 11px;flex:none}
+  .sbody{padding:13px 15px 17px;max-height:74vh;overflow-y:auto}
+  .step{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px}
+  .step .h{font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#8a93a0;margin-bottom:8px}
+  .step .none{font-size:12.5px;color:#8a93a0}
+  .mv{font-size:13.5px;padding:7px 0;border-top:1px solid var(--line)}
+  .mv.f1{border-top:none;padding-top:0}
+  .mv .w{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .qi{border-top:1px solid var(--line);padding:10px 0}
+  .qi.f1{border-top:none;padding-top:0}
+  .qi .t{font-size:13.5px;font-weight:700}
+  .qi .s{font-size:11.5px;color:var(--amber);font-weight:700;margin-top:2px}
+  .qrow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .qrow input{flex:1;min-width:170px}
+  .picklist{max-height:220px;overflow-y:auto;border:1px solid var(--line);border-radius:10px}
+  .pk{display:flex;gap:9px;align-items:flex-start;width:100%;text-align:left;background:#fff;border:none;border-top:1px solid var(--line);padding:9px 11px}
+  .pk.f1{border-top:none}
+  .pk .dot{flex:none;width:16px;height:16px;border-radius:50%;border:2px solid #d3d9e2;margin-top:2px}
+  .pk.on{background:#f2f1fb}
+  .pk.on .dot{border-color:var(--acc);background:var(--acc);box-shadow:inset 0 0 0 3px #fff}
+  .pk .t{font-size:13.5px;font-weight:700;color:var(--ink)}
+  .pk .c{font-size:11px;color:var(--muted);margin-top:1px}
+  .obsmiss{margin-top:5px}
+  .obsmiss button{border:1px dashed var(--amber);background:#fdf3e2;color:var(--amber);font-size:11.5px;font-weight:800;border-radius:8px;padding:3px 9px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -120,11 +156,16 @@
   </div>
 
   <div class="secbar">
-    <h1>My Bucket List <span class="ver">v1.0</span></h1>
-    <p>One list, ten categories, from The Bucket List Journal by Ben Nemtin. Everything bucket-list shaped lives here, so there is never a second copy somewhere else. The daily card that feeds it is <a href="bucket-list.html" style="color:#fff"><b>Bucket List</b></a> on the Cue Cards board.</p>
+    <h1>My Bucket List <span class="ver">v1.1</span></h1>
+    <p>One list, ten categories, from The Bucket List Journal by Ben Nemtin. Everything bucket-list shaped lives here, so there is never a second copy somewhere else. The cue card that feeds it is <a href="bucket-list.html" style="color:#fff"><b>Bucket List</b></a> on the Cue Cards board.</p>
   </div>
 
   <div class="wrap" id="wrap">
+    <div class="ciwrap">
+      <button class="cibtn" id="ciBtn">Monthly check-in</button>
+      <div class="ciwhy">This list gets one check-in a month, on purpose. Bucket list items move over months, not days, so a daily nudge would only turn into noise you stop reading. The check-in takes a couple of minutes: see what moved, give the quiet ones a new step or park them, and pick the one item that is in motion next.</div>
+    </div>
+
     <div class="stats" id="stats"></div>
 
     <div class="addcard">
@@ -156,10 +197,17 @@
     <button onclick="signIn()">Sign in</button>
     <div class="err" id="gateErr"></div>
   </div>
+  <div class="modal hidden" id="ci"><div class="sheet">
+    <div class="shead">
+      <div><h3>Monthly check-in</h3><div class="sub" id="ciSub"></div></div>
+      <button class="sx" id="ciClose">Close</button>
+    </div>
+    <div class="sbody" id="ciBody"></div>
+  </div></div>
   <div class="toast" id="toast"></div>
 
 <script>
-/* ===== My Bucket List v1.0 =====
+/* ===== My Bucket List v1.1 =====
    public.bucket_list is the single home for every bucket list idea. The ten
    categories are the ten life categories in The Bucket List Journal (Ben
    Nemtin), which is source S04 in Compass Sources and the curriculum behind
@@ -168,7 +216,10 @@
    on Aug 21 2026, which is why there is no Bucket List toggle to keep in step
    any more. Anything that still looks bucket-list shaped over there shows up
    in the Candidates block at the foot of this page rather than being copied
-   silently. */
+   silently.
+   v1.1 adds the monthly check-in (public.bucket_review, one row per month) and
+   the obstacle line on every item. The check-in is deliberately monthly: these
+   items move over months, so there is no daily cue, no streak and no tick. */
 const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
 var sb=null;
@@ -181,6 +232,13 @@ const CATS=["Travel & Adventure","Giving","Intellectual","Material","Financial",
 const CANDIDATES=["Burning Man","Montreux Jazz Festival","Art Basel Miami","New Orleans Jazz Fest"];
 
 let ROWS=[], CANDS=[], FILTER='all', signedIn=false, editing=null;
+let REVIEWS=[], LASTREV=null, PICK=null, CIOPEN=false;
+
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function todayISO(){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+function fmtD(iso){if(!iso)return '';var p=String(iso).slice(0,10).split('-');return MON[+p[1]-1]+' '+(+p[2])+', '+p[0];}
+function fmtM(iso){if(!iso)return '';var p=String(iso).slice(0,10).split('-');return MON[+p[1]-1]+' '+p[0];}
+function dayGap(a,b){return Math.round((Date.parse(String(a).slice(0,10)+'T00:00:00Z')-Date.parse(String(b).slice(0,10)+'T00:00:00Z'))/86400000);}
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2400);}
@@ -189,6 +247,8 @@ async function load(){
   var r=await sb.from('bucket_list').select('*').order('category').order('position',{nullsFirst:false}).order('id');
   if(r.error){toast('Could not load the list: '+r.error.message);return;}
   ROWS=r.data||[];
+  var rv=await sb.from('bucket_review').select('*').order('month',{ascending:false});
+  REVIEWS=(rv.error?[]:(rv.data||[])); LASTREV=REVIEWS[0]||null;
   var f=await sb.from('future_travel').select('id,place,country,city,kind').in('place',CANDIDATES);
   CANDS=(f.data||[]).filter(function(x){
     return !ROWS.some(function(b){return (b.source||'').indexOf(x.place)>-1 || b.item===x.place;});
@@ -225,8 +285,10 @@ function rowHtml(r){
       '<button class="tick'+(st==='done'?' on':'')+'" data-tick="'+r.id+'" title="'+(st==='done'?'Put it back':'Cross it off')+'"></button>'+
       '<div class="rmain">'+
         '<div class="it">'+esc(r.item)+'</div>'+
-        (r.why?'<div class="meta">'+esc(r.why)+'</div>':'')+
-        (r.next_step?'<div class="meta"><b>Next:</b> '+esc(r.next_step)+'</div>':'')+
+        (r.why?'<div class="meta"><b>Why it matters:</b> '+esc(r.why)+'</div>':'')+
+        (r.obstacle?'<div class="meta"><b>What gets in the way:</b> '+esc(r.obstacle)+'</div>'
+          :(st==='active'?'<div class="obsmiss"><button data-obs="'+r.id+'">What gets in the way? Not written down yet</button></div>':''))+
+        (r.next_step?'<div class="meta"><b>Next step:</b> '+esc(r.next_step)+'</div>':'')+
         '<div class="pills">'+
           '<span class="pill '+esc(st)+'">'+esc(st==='idea'?'idea':st==='active'?'in motion':st==='done'?'crossed off':'parked')+'</span>'+
           (r.target_year?'<span class="pill yr">by '+r.target_year+'</span>':'')+
@@ -241,7 +303,8 @@ function rowHtml(r){
         (open?
         '<div class="edit">'+
           '<input class="full" data-k="item" value="'+esc(r.item)+'" placeholder="The item">'+
-          '<input class="full" data-k="why" value="'+esc(r.why)+'" placeholder="Why it is on the list">'+
+          '<input class="full" data-k="why" value="'+esc(r.why)+'" placeholder="Why it matters to you">'+
+          '<input class="full" data-k="obstacle" id="obs'+r.id+'" value="'+esc(r.obstacle)+'" placeholder="What gets in the way">'+
           '<input class="full" data-k="next_step" value="'+esc(r.next_step)+'" placeholder="The very next step, small enough for an afternoon">'+
           '<select data-k="category">'+CATS.map(function(c){return '<option'+(c===r.category?' selected':'')+'>'+esc(c)+'</option>';}).join('')+'</select>'+
           '<input data-k="target_year" type="number" min="2026" max="2080" value="'+(r.target_year||'')+'" placeholder="Target year">'+
@@ -270,6 +333,11 @@ function render(){
   document.querySelectorAll('[data-del]').forEach(function(b){b.onclick=function(){del(byId(b.dataset.del));};});
   document.querySelectorAll('[data-edit]').forEach(function(b){b.onclick=function(){var id=+b.dataset.edit;editing=(editing===id?null:id);render();};});
   document.querySelectorAll('[data-save]').forEach(function(b){b.onclick=function(){save(+b.dataset.save,b);};});
+  document.querySelectorAll('[data-obs]').forEach(function(b){b.onclick=function(){
+    var id=+b.dataset.obs; editing=id; render();
+    var el=document.getElementById('obs'+id); if(el){el.focus();el.scrollIntoView({block:'center'});}
+  };});
+  ciButton();
 
   var cbox=document.getElementById('cand');
   cbox.classList.toggle('hidden',!CANDS.length);
@@ -277,6 +345,147 @@ function render(){
     return '<div class="candrow"><div><div class="t">'+esc(c.place)+'</div><div class="s">'+esc([c.city,c.country].filter(Boolean).join(', '))+'</div></div>'+
       '<button class="mini" data-pull="'+c.id+'">Pull it across</button></div>';}).join('');
   document.querySelectorAll('[data-pull]').forEach(function(b){b.onclick=function(){pull(+b.dataset.pull);};});
+}
+
+function ciButton(){
+  var b=document.getElementById('ciBtn'); if(!b)return;
+  var t=todayISO(), thisMonth=t.slice(0,7);
+  var due=true, label='Monthly check-in, never done', sub='Nothing has been reviewed yet. Start here.';
+  if(LASTREV){
+    var lm=String(LASTREV.month).slice(0,7);
+    due = lm < thisMonth;
+    label='Monthly check-in, last done '+fmtM(LASTREV.month);
+    var months=(+thisMonth.slice(0,4)-+lm.slice(0,4))*12+(+thisMonth.slice(5,7)-+lm.slice(5,7));
+    sub = months<=0 ? 'Done for this month. Open it again any time.'
+        : months===1 ? 'One month since the last one.'
+        : months+' months since the last one.';
+  }
+  b.className='cibtn'+(due?' due':'');
+  b.innerHTML=esc(label)+'<span class="sm">'+esc(sub)+'</span>';
+  b.onclick=openCI;
+}
+
+function ciSince(){ return LASTREV&&LASTREV.reviewed_at ? String(LASTREV.reviewed_at).slice(0,10) : null; }
+function ciMoved(){ var s=ciSince();
+  return ROWS.filter(function(r){return r.status!=='done'&&r.last_moved_on&&(!s||String(r.last_moved_on)>s);}); }
+function ciFinished(){ var s=ciSince();
+  return ROWS.filter(function(r){var d=r.done_on||r.last_moved_on;return r.status==='done'&&d&&(!s||String(d)>s);}); }
+function ciQuiet(){ var t=todayISO();
+  return ROWS.filter(function(r){return r.status==='active'&&(!r.last_moved_on||dayGap(t,r.last_moved_on)>=60);}); }
+function ciPickable(){ return ROWS.filter(function(r){return r.status!=='done'&&r.status!=='parked';}); }
+
+function openCI(){
+  CIOPEN=true;
+  var act=ROWS.filter(function(r){return r.status==='active';});
+  if(PICK===null&&act.length===1)PICK=act[0].id;
+  document.getElementById('ci').classList.remove('hidden');
+  drawCI();
+}
+function closeCI(){ CIOPEN=false; document.getElementById('ci').classList.add('hidden'); }
+
+function drawCI(){
+  var moved=ciMoved(), fin=ciFinished(), quiet=ciQuiet(), pick=ciPickable(), s=ciSince();
+  document.getElementById('ciSub').textContent = s?('Everything since '+fmtD(s)):'Everything so far';
+
+  var h='';
+  h+='<div class="step"><div class="h">What moved</div>';
+  if(!moved.length&&!fin.length){
+    h+='<div class="none">Nothing has moved since the last check-in. That happens. The next two steps are the ones that matter.</div>';
+  }else{
+    var n=0;
+    fin.forEach(function(r){h+='<div class="mv'+(n++?'':' f1')+'"><b>Crossed off:</b> '+esc(r.item)+'<div class="w">'+esc(r.category)+' &middot; '+fmtD(r.done_on||r.last_moved_on)+'</div></div>';});
+    moved.forEach(function(r){h+='<div class="mv'+(n++?'':' f1')+'">'+esc(r.item)+'<div class="w">Moved '+fmtD(r.last_moved_on)+(r.next_step?' &middot; next step: '+esc(r.next_step):'')+'</div></div>';});
+  }
+  h+='</div>';
+
+  h+='<div class="step"><div class="h">Gone quiet</div>';
+  if(!quiet.length){
+    h+='<div class="none">Nothing in motion has been sitting still for 60 days. Good.</div>';
+  }else{
+    h+='<div class="none" style="margin-bottom:8px">In motion, but nothing has happened in 60 days. Give it a smaller next step, or park it. Parking is not failure, it just takes it off your mind.</div>';
+    quiet.forEach(function(r,i){
+      h+='<div class="qi'+(i?'':' f1')+'"><div class="t">'+esc(r.item)+'</div>'+
+         '<div class="s">'+(r.last_moved_on?('Last moved '+fmtD(r.last_moved_on)+', '+dayGap(todayISO(),r.last_moved_on)+' days ago'):'Never moved')+'</div>'+
+         (r.obstacle?'<div class="w" style="font-size:11.5px;color:#5b6472;margin-top:3px">What gets in the way: '+esc(r.obstacle)+'</div>':'')+
+         '<div class="qrow"><input id="qs'+r.id+'" placeholder="A new next step, small enough for an afternoon" value="">'+
+         '<button class="mini" data-qsave="'+r.id+'">Save step</button>'+
+         '<button class="mini" data-qpark="'+r.id+'">Park it</button></div></div>';
+    });
+  }
+  h+='</div>';
+
+  h+='<div class="step"><div class="h">Pick one for the coming month</div>'+
+     '<div class="none" style="margin-bottom:8px">One item in motion at a time. The one you pick becomes the item in motion, and anything else that was in motion goes back to the list. Nothing is lost.</div>'+
+     '<div class="picklist">';
+  if(!pick.length) h+='<div style="padding:11px;font-size:12.5px;color:#8a93a0">Every item is crossed off or parked. Add one first.</div>';
+  pick.forEach(function(r,i){
+    h+='<button class="pk'+(i?'':' f1')+(PICK===r.id?' on':'')+'" data-pick="'+r.id+'"><span class="dot"></span>'+
+       '<span><span class="t">'+esc(r.item)+'</span><span class="c" style="display:block">'+esc(r.category)+'</span></span></button>';
+  });
+  h+='</div></div>';
+
+  h+='<div class="step"><div class="h">Anything worth writing down</div>'+
+     '<textarea id="ciNote" rows="3" placeholder="One or two lines about how this month felt. Optional."></textarea>'+
+     '<button class="bprim" id="ciSave" style="width:100%;margin-top:9px">Save the check-in</button>'+
+     '<div class="none" style="margin-top:7px;text-align:center">No streaks, no daily tick. Next one is next month.</div></div>';
+
+  var body=document.getElementById('ciBody');
+  var keepNote=(document.getElementById('ciNote')||{}).value||'';
+  body.innerHTML=h;
+  if(keepNote)document.getElementById('ciNote').value=keepNote;
+
+  body.querySelectorAll('[data-pick]').forEach(function(b){b.onclick=function(){PICK=+b.dataset.pick;drawCI();};});
+  body.querySelectorAll('[data-qsave]').forEach(function(b){b.onclick=function(){ciStep(+b.dataset.qsave);};});
+  body.querySelectorAll('[data-qpark]').forEach(function(b){b.onclick=function(){ciPark(+b.dataset.qpark);};});
+  document.getElementById('ciSave').onclick=saveCI;
+}
+
+async function ciStep(id){
+  var el=document.getElementById('qs'+id), v=(el?el.value:'').trim();
+  if(!v){toast('Write the next step first.');return;}
+  var u=await sb.from('bucket_list').update({next_step:v}).eq('id',id).select().single();
+  if(u.error){toast('Did not save: '+u.error.message);return;}
+  Object.assign(byId(id),u.data); toast('New next step saved'); drawCI(); render();
+}
+async function ciPark(id){
+  var u=await sb.from('bucket_list').update({status:'parked'}).eq('id',id).select().single();
+  if(u.error){toast('Did not save: '+u.error.message);return;}
+  Object.assign(byId(id),u.data);
+  if(PICK===id)PICK=null;
+  toast('Parked. It is still on the list, just out of the way.'); drawCI(); render();
+}
+
+async function saveCI(){
+  var btn=document.getElementById('ciSave'); btn.disabled=true;
+  var t=todayISO(), month=t.slice(0,7)+'-01';
+  var moved=ciMoved(), fin=ciFinished(), quiet=ciQuiet();
+  var note=(document.getElementById('ciNote').value||'').trim()||null;
+
+  if(PICK){
+    var others=ROWS.filter(function(r){return r.status==='active'&&r.id!==PICK;}).map(function(r){return r.id;});
+    if(others.length){
+      var d=await sb.from('bucket_list').update({status:'idea'}).in('id',others).select();
+      if(!d.error)(d.data||[]).forEach(function(x){Object.assign(byId(x.id),x);});
+    }
+    var p=await sb.from('bucket_list').update({status:'active'}).eq('id',PICK).select().single();
+    if(!p.error)Object.assign(byId(PICK),p.data);
+  }
+
+  var ids={}; moved.concat(fin,quiet).forEach(function(r){ids[r.id]=1;}); if(PICK)ids[PICK]=1;
+  var idList=Object.keys(ids).map(Number);
+  if(idList.length){
+    var s=await sb.from('bucket_list').update({reviewed_on:t}).in('id',idList).select();
+    if(!s.error)(s.data||[]).forEach(function(x){Object.assign(byId(x.id),x);});
+  }
+
+  var row={month:month,moved:moved.length,finished:fin.length,picked:PICK,note:note,reviewed_at:new Date().toISOString()};
+  var u=await sb.from('bucket_review').upsert(row,{onConflict:'month'}).select().single();
+  btn.disabled=false;
+  if(u.error){toast('Could not save the check-in: '+u.error.message);return;}
+  REVIEWS=REVIEWS.filter(function(x){return String(x.month).slice(0,10)!==month;});
+  REVIEWS.unshift(u.data); LASTREV=REVIEWS[0];
+  closeCI(); render();
+  toast('Check-in saved. See you next month.');
 }
 
 function byId(id){id=+id;return ROWS.filter(function(r){return r.id===id;})[0];}
@@ -343,9 +552,12 @@ async function signIn(){
 async function boot(){
   document.getElementById('nCat').innerHTML=CATS.map(function(c){return '<option>'+esc(c)+'</option>';}).join('');
   document.getElementById('nAdd').onclick=add;
+  document.getElementById('ciClose').onclick=closeCI;
+  document.getElementById('ci').onclick=function(e){if(e.target.id==='ci')closeCI();};
+  document.addEventListener('keydown',function(e){if(e.key==='Escape'&&CIOPEN)closeCI();});
   document.getElementById('nItem').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();add();}});
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  document.getElementById('stamp').textContent='My Bucket List v1.0 · '+f+' · all times EST';
+  document.getElementById('stamp').textContent='My Bucket List v1.1 · '+f+' · all times EST';
   if(!sb){document.getElementById('list').innerHTML='<div class="empty">Could not reach the database. Reload to try again.</div>';return;}
   var s=await sb.auth.getSession();
   if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await load();}
