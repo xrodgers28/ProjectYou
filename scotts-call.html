@@ -44,6 +44,23 @@
   .features.tiny dt,.features.tiny dd{padding:0;margin:0}
   .savestate{margin-left:auto;font-size:11.5px;color:#9aa6b4;min-width:60px;text-align:right}
   .savestate.saved{color:var(--good)} .savestate.err{color:var(--hot)}
+  /* v1.6: Today's chats strip, one line per chat Scott opened today, read from v_chats_today */
+  .chats{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px 6px}
+  .chats .sech{justify-content:flex-start}
+  .chats .tot{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0;text-transform:none}
+  .chats .tot b{color:var(--ink)}
+  .chats ul{list-style:none;margin-top:2px}
+  .chats li{display:flex;align-items:baseline;gap:8px;padding:4px 6px;border-bottom:1px solid #eef1f5;font-size:13px}
+  .chats li:last-child{border-bottom:0}
+  .chats .t{font-size:11.5px;color:var(--dim);min-width:56px;font-variant-numeric:tabular-nums}
+  .chats .topic{flex:1;color:var(--ink)}
+  .chats .topic a{color:var(--accent);text-decoration:none;font-size:11.5px;margin-left:6px}
+  .chats .topic a:hover{text-decoration:underline}
+  .chats .min{font-size:11.5px;color:var(--muted);min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+  .chats .st{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;border-radius:999px;padding:1px 7px;min-width:64px;text-align:center}
+  .chats .st.open{background:#fff4dd;color:var(--amber)} .chats .st.wrapped{background:#e6f5ec;color:var(--good)} .chats .st.abandoned{background:#f1f3f6;color:var(--dim)}
+  .chats .empty{font-size:12px;color:var(--dim);padding:6px}
+  .chats .how{font-size:11px;color:#8a929c;margin:6px 4px 0}
   .board{margin-top:14px}
   .sec{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px 4px}
   .sec.dim{background:#f7f8fa}
@@ -195,7 +212,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v1.5</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Scott's Call <span class="ver">v1.6</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -214,6 +231,12 @@
     <span class="lab"><span id="selcount">0</span> selected</span>
     <span class="ddwrap"><button class="chip on" onclick="openBulk(this)">Do with them ▾</button></span>
     <button class="chip" onclick="toggleSelect()">Done</button>
+  </div>
+
+  <div class="chats" id="chats">
+    <div class="sech">💬 Today's chats <span class="cnt" id="chats-cnt">0</span><span class="tot" id="chats-tot"></span></div>
+    <ul id="chats-rows"></ul>
+    <p class="how">Every chat you open registers itself here on Claude's first reply, refreshes at [ST] and closes at [RAP]. Minutes are measured from the activity in the chat, not the open window: a quiet gap of over 20 minutes ends a block. The day runs 2am to 2am.</p>
   </div>
 
   <div class="board" id="board"></div>
@@ -259,7 +282,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.5 · Sep 6, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.6 · Sep 6, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -302,6 +325,20 @@ async function onLogin(session){try{await sb.realtime.setAuth(session.access_tok
 
 /* ---------- data ---------- */
 function isScott(r){return /^scott$/i.test(r.own||'');}
+function fmtClock(s){if(!s)return '';return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}).format(new Date(s)).toLowerCase().replace(' ','');}
+function fmtMins(m){m=Math.max(0,Math.round(m||0));return m>=60?Math.floor(m/60)+'h '+(m%60?m%60+'m':''):m+'m';}
+const PROJ_ICON={'Project YOU':'<svg class="pinw sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12 12 2a10 10 0 0 1 10 10z" fill="#3f6f8f"/><path d="M12 12 22 12a10 10 0 0 1-10 10z" fill="#8a5a9c"/><path d="M12 12 12 22A10 10 0 0 1 2 12z" fill="#1e8e5a"/><path d="M12 12 2 12A10 10 0 0 1 12 2z" fill="#b8801f"/></svg>','TreadWell':'🥾 ','Amazon':'💼 '};
+async function loadChats(){
+  const {data,error}=await sb.from('v_chats_today').select('*');
+  const ul=document.getElementById('chats-rows');if(!ul)return;
+  if(error){ul.innerHTML='<li class="empty">Could not read today\'s chats: '+esc(error.message)+'</li>';return;}
+  const rows=data||[];
+  document.getElementById('chats-cnt').textContent=rows.length;
+  const tot=rows.reduce((a,r)=>a+(r.active_minutes||0),0);
+  document.getElementById('chats-tot').innerHTML=rows.length?('<b>'+fmtMins(tot)+'</b> measured · '+rows.filter(r=>r.status==='open').length+' still open'):'';
+  if(!rows.length){ul.innerHTML='<li class="empty">No chats registered yet today. The first chat you open writes itself here.</li>';return;}
+  ul.innerHTML=rows.map(r=>'<li><span class="t">'+fmtClock(r.started_at)+'</span><span class="topic">'+(PROJ_ICON[r.project]||'')+esc(r.topic)+(r.tracker_url?'<a href="'+esc(r.tracker_url)+'" target="_blank">tracker ›</a>':'')+(r.session_url?'<a href="'+esc(r.session_url)+'" target="_blank">open chat ›</a>':'')+'</span><span class="min" title="Measured active minutes">'+fmtMins(r.active_minutes)+'</span><span class="st '+esc(r.status)+'">'+esc(r.status)+'</span></li>').join('');
+}
 async function load(quiet){
   if(!quiet)setSave('loading…');
   const [a,b,c,d,e,f,g]=await Promise.all([
@@ -324,6 +361,7 @@ async function load(quiet){
   HABITS=f.data||[];ARCH=g.data||[];
   CAP.forEach(r=>{if(!DEST[r.id])DEST[r.id]=guessKey(r);});
   render();setSave('Saved');
+  loadChats();
 }
 function confOf(r){const c=(r.stage_conf||'').toLowerCase();return c.startsWith('h')?'hi':c.startsWith('l')?'lo':'mid';}
 /* v0.5: the arrival tag (stage_kind) picks the home and the two runners-up.
