@@ -26,6 +26,9 @@ window.NAV_CONFIG = {
      reached from Mission Control. What is left is the hub and the wheel. */
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
+    /* Sep 6 2026, Scott. The end-of-week review: three scores, the habit grid,
+       the quiz built from the week's dealt cards, and next week's goals. */
+    { "label": "Weekly<br>Review", "href": "weekly-review.html" },
     { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" }
   ],
   /* Displayed as LISTS - see NAV_GROUP_RENAME below. The key stays "Parking Lot"
