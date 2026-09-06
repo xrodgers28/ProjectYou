@@ -119,6 +119,7 @@
   #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
   #loginErr{color:var(--hot);font-size:12.5px;min-height:16px}
   .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff}
+.chip.run{background:#2b3a52;border-color:#2b3a52;color:#fff}.chip.run:hover{background:#1f2a44}
 </style>
 </head>
 <body>
@@ -134,7 +135,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Claude's List <span class="ver">v1.3</span> <a href="scotts-call.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">Scott's Call: waiting on you ›</a></h1>
+  <h1>Claude's List <span class="ver">v1.4</span> <a href="scotts-call.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">Scott's Call: waiting on you ›</a></h1>
   <p class="sub">What I am doing, in the order I will do it. Each row carries its shelf and how it runs; tap either tag to change it, drag to reorder or move. Nothing here needs a tap from you unless you want to change it.</p>
   <div class="toolbar">
     <span class="chip static" id="c-now"><b>0</b> now</span>
@@ -143,6 +144,7 @@
     <span class="chip static" id="c-next"></span>
     <span class="chip static" id="c-parked" title="Parked items wait on you, so they live on Scott's Call"></span>
     <button class="chip" id="selbtn" onclick="toggleSelect()">☐ Select several</button>
+    <button class="chip run" onclick="runNow()" title="Ask the day runner to work the Now shelf at its next hourly check (10am to 6pm EST)">▶ Run now</button>
     <button class="chip" onclick="load(true)">⟳</button>
     <span class="savestate" id="save">loading…</span>
   </div>
@@ -196,7 +198,7 @@
   <p class="prev" style="font-size:10.5px;color:#9aa3ae;margin:6px 0 0">Previous versions, kept as a backup: <a href="all-todos.html" style="color:#8a929c">All ToDos</a> · <a href="midnight-run-v2.html" style="color:#8a929c">Midnight Run</a> · <a href="staging-area.html" style="color:#8a929c">Staging Area</a></p>
   <footer>
     <span>Project You · Claude's List · rows read live from the to-do database</span>
-    <span>v1.3 · Sep 6, 2026</span>
+    <span>v1.4 · Sep 6, 2026</span>
   </footer>
 </div>
 </div>
@@ -208,7 +210,7 @@ const SUPABASE_KEY=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
   "UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM"].join("");
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 const PINWHEEL='<svg viewBox="0 0 24 24" class="pinw"><g transform="translate(12,12)"><path d="M0 0 L0 -10 A10 10 0 0 1 7.8 -6.2 Z" fill="#e8a0b8"/><path d="M0 0 L7.8 -6.2 A10 10 0 0 1 9.7 2.2 Z" fill="#f0b58f"/><path d="M0 0 L9.7 2.2 A10 10 0 0 1 4.3 9 Z" fill="#ead98f"/><path d="M0 0 L4.3 9 A10 10 0 0 1 -4.3 9 Z" fill="#8ec5a0"/><path d="M0 0 L-4.3 9 A10 10 0 0 1 -9.7 2.2 Z" fill="#8fd0c4"/><path d="M0 0 L-9.7 2.2 A10 10 0 0 1 -7.8 -6.2 Z" fill="#a9c8e8"/><path d="M0 0 L-7.8 -6.2 A10 10 0 0 1 0 -10 Z" fill="#cbb0e0"/></g></svg>';
-const V='1.3';
+const V='1.4';
 const SHELVES=[
   {k:'now',    icon:'⚡', name:'Now',     sub:'next slot'},
   {k:'tonight',icon:'🌙', name:'Tonight', sub:'Midnight Run 4:00am EST'},
@@ -419,11 +421,19 @@ async function onDrag(ev){
   }
   render();
 }
+async function runNow(){
+  const {error}=await sb.from('board_meta').upsert({key:'run_now_requested',val:{at:new Date().toISOString(),from:location.pathname.split('/').pop()},updated_at:new Date().toISOString()},{onConflict:'key'});
+  if(error){toast('Could not ask for a run: '+error.message);return;}
+  const h=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',hour12:false}).format(new Date());
+  const m=+new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',minute:'numeric'}).format(new Date());
+  const wait=(h>=10&&h<18)?(60-m)+' minutes at most':'at 10am EST (the day runner works 10am to 6pm)';
+  toast('Asked for a run. The day runner checks on the hour: '+wait+'. Results land on Scott\'s Call.');
+}
 async function doNow(r){
   const upd={shelf:'now',run_mode:'quick',run_status:'queued',lane:'queue_run',shelf_pos:0};
   if(await save(r.id,upd)){Object.assign(r,upd);
     await sb.from('board_meta').upsert({key:'run_fixes_requested',val:{at:new Date().toISOString(),id:r.id,txt:r.txt},updated_at:new Date().toISOString()},{onConflict:'key'});
-    closeDrops();render();toast('Marked Do it now. Say "run the fixes" in any chat to fire the runner straight away.');}
+    closeDrops();render();toast('Marked Do it now. Tap ▶ Run now at the top, or wait for the next hourly check.');}
 }
 async function needsFix(r){
   const what=prompt('What needs fixing?');if(!what)return;
