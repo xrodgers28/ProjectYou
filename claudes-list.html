@@ -61,6 +61,7 @@
   .more{flex:0 0 auto;width:20px;height:20px;border:none;background:none;color:#aab2bd;cursor:pointer;font-size:15px;border-radius:6px;line-height:1;font-family:inherit}
   .more:hover{color:var(--accent);background:#eef2f8}
   .note{font-size:11px;color:#6b7280;margin:0 0 1px 41px;padding:0 3px;line-height:1.3;word-break:break-word;cursor:pointer}
+  .note.sum{color:#5b6472;font-size:11.5px;white-space:pre-wrap}
   .note.clamp{display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
   .noteedit{width:calc(100% - 41px);margin:3px 0 2px 41px;font-family:inherit;font-size:12px;padding:5px 7px;border:1px solid #e3d9a6;border-radius:6px;background:#fffef2;color:var(--ink);resize:vertical;min-height:44px}
   .dd{position:absolute;z-index:40;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(31,42,68,.18);padding:6px 0;min-width:190px}
@@ -113,7 +114,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Claude's List <span class="ver">v0.5</span></h1>
+  <h1>Claude's List <span class="ver">v0.6</span></h1>
   <p class="sub">What I am doing, in the order I will do it. Each row carries its shelf and how it runs; tap either tag to change it, drag to reorder or move. Nothing here needs a tap from you unless you want to change it.</p>
   <div class="toolbar">
     <span class="chip static" id="c-now"><b>0</b> now</span>
@@ -172,7 +173,7 @@
 
   <footer>
     <span>Project You · Claude's List · rows read live from the to-do database</span>
-    <span>v0.5 · Sep 6, 2026</span>
+    <span>v0.6 · Sep 6, 2026</span>
   </footer>
 </div>
 </div>
@@ -183,7 +184,7 @@ const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
 const SUPABASE_KEY=["eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.",
   "UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM"].join("");
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-const V='0.5';
+const V='0.6';
 const SHELVES=[
   {k:'now',    icon:'⚡', name:'Now',     sub:'next slot'},
   {k:'tonight',icon:'🌙', name:'Tonight', sub:'Midnight Run 4:00am EST'},
@@ -308,8 +309,10 @@ function card(r,ro){
   rg.appendChild(el('span','tag st '+stCls,stTxt));
   if(!ro){const m=el('button','more','…');m.title='More';m.onclick=()=>toggleDrop(c,r,'menu');rg.appendChild(m);}
   top.appendChild(rg);c.appendChild(top);
-  const noteTxt=(r.note||'').replace(/^Was: [^\n]*\n*/,'').trim();
-  if(noteTxt){const s=el('div','note'+(OPEN[r.id]?'':' clamp'),esc(noteTxt));s.title='Tap to read all';s.onclick=()=>{OPEN[r.id]=!OPEN[r.id];s.classList.toggle('clamp',!OPEN[r.id]);};c.appendChild(s);}
+  const full=(r.note||'').replace(/^Was: [^\n]*\n*/,'').trim();
+  const sum=(r.summary||'').trim();
+  if(sum){const s=el('div','note sum',esc(sum));if(full){s.title='Tap for the full detail';s.onclick=()=>{OPEN[r.id]=!OPEN[r.id];s.textContent=OPEN[r.id]?full:sum;s.classList.toggle('clamp',false);};}c.appendChild(s);}
+  else if(full){const s=el('div','note'+(OPEN[r.id]?'':' clamp'),esc(full));s.title='Tap to read all';s.onclick=()=>{OPEN[r.id]=!OPEN[r.id];s.classList.toggle('clamp',!OPEN[r.id]);};c.appendChild(s);}
   return c;
 }
 function closeDrops(){document.querySelectorAll('.dd,.noteedit').forEach(e=>e.remove());}
