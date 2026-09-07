@@ -58,7 +58,10 @@
   .chats .topic{flex:1;color:var(--ink)}
   .chats .topic a{color:var(--accent);text-decoration:none;font-size:11.5px;margin-left:6px}
   .chats .topic a:hover{text-decoration:underline}
-  .chats .min{font-size:11.5px;color:var(--muted);min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
+  .chats .min{font-size:11.5px;color:var(--muted);min-width:44px;text-align:right;font-variant-numeric:tabular-nums;cursor:pointer;border-radius:4px}
+  .chats .min:hover{color:var(--ink);background:#f1f3f6}
+  .chats .min input{width:36px;font-size:11.5px;text-align:right;font-variant-numeric:tabular-nums;border:1px solid var(--line);border-radius:4px;padding:0 3px;font-family:inherit}
+  .chats .proj{cursor:pointer;display:inline-block;vertical-align:-3px;margin-right:2px}
   .chats .st{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;border-radius:999px;padding:1px 7px;min-width:64px;text-align:center}
   .chats .st.open{background:#fff4dd;color:var(--amber)} .chats .st.wrapped{background:#e6f5ec;color:var(--good)} .chats .st.abandoned{background:#f1f3f6;color:var(--dim)}
   .chats .guess{font-size:10px;font-weight:700;color:var(--amber);border:1px dashed var(--amber);border-radius:999px;padding:0 6px;margin-left:6px;vertical-align:middle}
@@ -66,6 +69,7 @@
   .chats .step{display:inline-flex;gap:4px;margin-left:8px}
   .chats .step .chip{padding:1px 9px;font-size:13px;line-height:18px}
   .chats .step .chip:disabled{opacity:.35;cursor:default}
+  .chats .step .chip#chats-pull{font-size:11px;padding:1px 8px}
   .chats .empty{font-size:12px;color:var(--dim);padding:6px}
   .chats .how{font-size:11px;color:#8a929c;margin:6px 4px 0}
   .board{margin-top:14px}
@@ -195,6 +199,7 @@
   .pen{font-size:10px;color:#c9cdd3;margin-left:4px;font-weight:400}
   /* v2.2: Recent Photos sheet for Add a photo */
   /* v2.3: Add a to-do panel, same shell as the photo sheet */
+  /* v2.4: Today's chats — tap the project icon to cycle it, tap the minutes to fix them, Pull latest button forces an immediate refresh */
   .addbox{background:#fff;border-radius:14px;width:min(560px,96vw);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35)}
   .addbox .body{padding:14px}
   .addbox textarea{width:100%;font:inherit;font-size:14px;padding:10px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:100px}
@@ -235,7 +240,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Staging Area / Scott's Call <span class="ver">v2.3</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Staging Area / Scott's Call <span class="ver">v2.4</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -258,7 +263,7 @@
   </div>
 
   <div class="chats" id="chats">
-    <div class="sech">💬 <span id="chats-day">Today's chats</span> <span class="cnt" id="chats-cnt">0</span><span class="tot" id="chats-tot"></span><span class="step"><button class="chip" onclick="stepChats(1)" title="Earlier day">‹</button><button class="chip" id="chats-fwd" onclick="stepChats(-1)" title="Later day" disabled>›</button></span></div>
+    <div class="sech">💬 <span id="chats-day">Today's chats</span> <span class="cnt" id="chats-cnt">0</span><span class="tot" id="chats-tot"></span><span class="step"><button class="chip" onclick="stepChats(1)" title="Earlier day">‹</button><button class="chip" id="chats-fwd" onclick="stepChats(-1)" title="Later day" disabled>›</button><button class="chip" id="chats-pull" onclick="pullLatestChats()" title="Refresh right now instead of waiting up to 2 minutes. Can't reach a chat that hasn't written itself in yet, type [ST] in that chat to pull it in.">⟳ Pull latest</button></span></div>
     <ul id="chats-rows"></ul>
     <p class="how">Every chat you open, in any project, registers itself here on Claude's first reply, refreshes at [ST] and closes at [RAP]. ‹ steps back a day; the list refreshes itself every two minutes; × archives a row (kept for the weekly chart, Undo for ten seconds). A dashed <i>guessed</i> tag means I added the row from a footprint; [ST] in that chat corrects it. Minutes are measured from the activity in the chat, not the open window: a quiet gap of over 20 minutes ends a block. The day runs 2am to 2am.</p>
   </div>
@@ -307,7 +312,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Staging Area / Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v2.3 · Sep 7, 2026</span></footer>
+  <footer><span>Project You · Staging Area / Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v2.4 · Sep 7, 2026</span></footer>
 </div>
 </div>
 <div class="overlay" id="photos" onclick="if(event.target===this)closePhotos()"><div class="photobox"><div class="peekhead">📷 <b>Recent Photos</b><span class="sub" id="photos-sub"></span><button class="chip" onclick="refreshPhotos()" title="Re-read the list now and ask your Mac to read the Photos library again">⟳ Update now</button><button class="x" onclick="closePhotos()">Close</button></div><div class="pgrid" id="pgrid"></div><div class="pfoot"><span>From your Photos library, read by your Mac about once an hour. Tap a picture and it becomes a waiting note; I read it at the next slot.</span><a onclick="document.getElementById('photoin').click()">Choose a file instead</a></div></div></div>
@@ -354,7 +359,52 @@ async function onLogin(session){try{await sb.realtime.setAuth(session.access_tok
 function isScott(r){return /^scott$/i.test(r.own||'');}
 function fmtClock(s){if(!s)return '';return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}).format(new Date(s)).toLowerCase().replace(' ','');}
 function fmtMins(m){m=Math.max(0,Math.round(m||0));return m>=60?Math.floor(m/60)+'h '+(m%60?m%60+'m':''):m+'m';}
-const PROJ_ICON={'Project YOU':'<svg class="pinw sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12 12 2a10 10 0 0 1 10 10z" fill="#3f6f8f"/><path d="M12 12 22 12a10 10 0 0 1-10 10z" fill="#8a5a9c"/><path d="M12 12 12 22A10 10 0 0 1 2 12z" fill="#1e8e5a"/><path d="M12 12 2 12A10 10 0 0 1 12 2z" fill="#b8801f"/></svg>','TreadWell':'🥾 ','Amazon':'💼 '};
+const PROJ_ICON={'Project YOU':'<svg class="pinw sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12 12 2a10 10 0 0 1 10 10z" fill="#3f6f8f"/><path d="M12 12 22 12a10 10 0 0 1-10 10z" fill="#8a5a9c"/><path d="M12 12 12 22A10 10 0 0 1 2 12z" fill="#1e8e5a"/><path d="M12 12 2 12A10 10 0 0 1 12 2z" fill="#b8801f"/></svg>','TreadWell':'🥾 ','Amazon':'💼 ','Personal':'<svg class="pinw sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" fill="none" stroke="#c7ccd6" stroke-width="2.4"/></svg>'};
+const PROJ_CYCLE=['Project YOU','TreadWell','Amazon','Personal'];
+async function cycleProj(ev,id,span){
+  ev.stopPropagation();
+  const cur=span.getAttribute('data-proj')||'Personal';
+  const i=PROJ_CYCLE.indexOf(cur);
+  const next=PROJ_CYCLE[(i+1+PROJ_CYCLE.length)%PROJ_CYCLE.length];
+  span.setAttribute('data-proj',next);
+  span.innerHTML=PROJ_ICON[next]||'';
+  span.title='Project: '+next+' (tap to change)';
+  const sv=span.querySelector('svg');
+  if(sv){sv.classList.remove('spin');void sv.offsetWidth;sv.classList.add('spin');}
+  const {error}=await sb.from('chat_register').update({project:next}).eq('id',id);
+  if(error)toast('Could not change project: '+error.message);
+}
+function editMins(ev,id,span){
+  ev.stopPropagation();
+  if(span.querySelector('input'))return;
+  const cur=parseInt(span.getAttribute('data-mins')||'0',10);
+  span.onclick=null;
+  span.innerHTML='';
+  const inp=document.createElement('input');
+  inp.type='number';inp.min='0';inp.step='1';inp.value=cur;
+  span.appendChild(inp);inp.focus();inp.select();
+  let done=false;
+  const finish=async(save)=>{
+    if(done)return;done=true;
+    const v=save?Math.max(0,Math.round(parseFloat(inp.value)||0)):cur;
+    span.setAttribute('data-mins',v);
+    span.textContent=fmtMins(v);
+    span.onclick=e=>editMins(e,id,span);
+    if(save&&v!==cur){
+      const {error}=await sb.from('chat_register').update({active_minutes:v}).eq('id',id);
+      if(error){toast('Could not save time: '+error.message);}else{loadChats();}
+    }
+  };
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')finish(true);else if(e.key==='Escape')finish(false);});
+  inp.addEventListener('blur',()=>finish(true));
+}
+async function pullLatestChats(){
+  const btn=document.getElementById('chats-pull');
+  if(btn){btn.disabled=true;btn.textContent='Pulling…';}
+  await loadChats();
+  if(btn){btn.disabled=false;btn.textContent='⟳ Pull latest';}
+  toast('Refreshed. This only catches chats that have already written themselves in, type [ST] in an older chat to pull it in.');
+}
 async function archiveChat(id,btn){
   const li=btn.closest('li');const topic=li?li.querySelector('.topic').textContent.replace(/tracker ›|open chat ›|guessed/g,'').trim():'';
   const {error}=await sb.from('chat_register').update({archived_at:new Date().toISOString()}).eq('id',id);
@@ -378,7 +428,7 @@ async function loadChats(){
   const tot=rows.reduce((a,r)=>a+(r.active_minutes||0),0);
   document.getElementById('chats-tot').innerHTML=rows.length?('<b>'+fmtMins(tot)+'</b> measured · '+rows.filter(r=>r.status==='open').length+' still open'):'';
   if(!rows.length){ul.innerHTML='<li class="empty">'+(CHATS_BACK===0?'No chats registered yet today. The first chat you open writes itself here.':'No chats registered that day.')+'</li>';return;}
-  ul.innerHTML=rows.map(r=>'<li'+(r.guessed?' class="guessed"':'')+'><span class="t">'+(r.guessed?'~':'')+fmtClock(r.started_at)+'</span><span class="topic">'+(PROJ_ICON[r.project]||'')+esc(r.topic)+(r.guessed?'<span class="guess" title="Added by Claude from a footprint, not by the chat itself. Type [ST] in that chat to correct it.">guessed</span>':'')+(r.tracker_url?'<a href="'+esc(r.tracker_url)+'" target="_blank">tracker ›</a>':'')+(r.session_url?'<a href="'+esc(r.session_url)+'" target="_blank">open chat ›</a>':'')+'</span><span class="min" title="Measured active minutes">'+fmtMins(r.active_minutes)+'</span><span class="st '+esc(r.status)+'">'+esc(r.status)+'</span><button class="kill" title="Archive this chat row (Undo for ten seconds)" onclick="archiveChat('+r.id+',this)">×</button></li>').join('');
+  ul.innerHTML=rows.map(r=>'<li'+(r.guessed?' class="guessed"':'')+'><span class="t">'+(r.guessed?'~':'')+fmtClock(r.started_at)+'</span><span class="topic"><span class="proj" data-proj="'+esc(r.project||'Personal')+'" title="Project: '+esc(r.project||'Personal')+' (tap to change)" onclick="cycleProj(event,'+r.id+',this)">'+(PROJ_ICON[r.project]||PROJ_ICON['Personal'])+'</span>'+esc(r.topic)+(r.guessed?'<span class="guess" title="Added by Claude from a footprint, not by the chat itself. Type [ST] in that chat to correct it.">guessed</span>':'')+(r.tracker_url?'<a href="'+esc(r.tracker_url)+'" target="_blank">tracker ›</a>':'')+(r.session_url?'<a href="'+esc(r.session_url)+'" target="_blank">open chat ›</a>':'')+'</span><span class="min" data-mins="'+(r.active_minutes||0)+'" title="Measured active minutes (tap to fix)" onclick="editMins(event,'+r.id+',this)">'+fmtMins(r.active_minutes)+'</span><span class="st '+esc(r.status)+'">'+esc(r.status)+'</span><button class="kill" title="Archive this chat row (Undo for ten seconds)" onclick="archiveChat('+r.id+',this)">×</button></li>').join('');
 }
 async function load(quiet){
   if(!quiet)setSave('loading…');
