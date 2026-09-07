@@ -74,6 +74,8 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
 .adh{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize;z-index:4}
 .adh.l{left:0} .adh.r{right:0}
 .allday:hover .adh{box-shadow:inset 0 0 0 1px rgba(31,42,68,.28);border-radius:2px}
+/* Sep 7 2026: the Sports Teams mini crest, same svg the month page uses. */
+.lg{width:11px;height:11px;vertical-align:-2px;margin-right:4px;display:inline-block;flex:none}
 
 /* time body */
 .bodywrap{display:grid;grid-template-columns:52px 1fr;position:relative}
@@ -216,12 +218,12 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v2.4</span>
+  <span class="pn-ver">v2.5</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v2.4</span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Week</h1><span class="ver">v2.5</span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Your week on a clock face, built from the same calendar as the list view. Drag a block to move it, drag its bottom edge to make it longer, and drag an all-day bar from the top band down onto the grid to give it a time. Click a block to change its words or its colour. Everything saves itself.</p>
 </div>
 
@@ -265,6 +267,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
   <h2 id="popTitle">Edit block</h2>
   <label for="fTitle">What is it</label>
   <input type="text" id="fTitle" placeholder="Street Photography">
+  <div class="note" id="fHomeAway" style="display:none"></div>
   <div class="times">
     <div><label for="fStart">Starts</label><input type="time" id="fStart" step="900"></div>
     <div><label for="fEnd">Ends</label><input type="time" id="fEnd" step="900"></div>
@@ -295,7 +298,7 @@ body{margin:0;background:var(--bg);color:#222;font-family:-apple-system,BlinkMac
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Week view v2.4 =====
+/* ===== Project YOU · Week view v2.5 =====
    A second way of looking at the same calendar_events table the list view on
    calendar.html reads. Nothing here has its own store: a block on this grid IS
    a calendar event, so a change made here shows up on the list view and on
@@ -363,7 +366,24 @@ function subMeta(cat,sub){ return (sub&&SUBMETA[cat+'|'+sub])||{}; }
 function catLabel(c){ return (CATS[c]&&CATS[c].label)||c; }
 function subLabel(cat,sub){ return subMeta(cat,sub).label||sub; }
 function colorOf(e){ return subMeta(e.cat,e.sub).color||catOf(e.cat).color; }
-function fillOf(e){ return subMeta(e.cat,e.sub).fill||catOf(e.cat).fill; }
+/* Sep 7 2026, Scott: Sports Teams entries sit on plain white, no pale tint.
+   Everything else keeps its normal fill. */
+function fillOf(e){ if(e.cat==='Sports Teams')return '#ffffff'; return subMeta(e.cat,e.sub).fill||catOf(e.cat).fill; }
+/* Same mini crests as the month page: a tiny inline SVG, only for the Sports
+   Teams layer. Everything else on this page stays plain text, as it always
+   has. */
+var LOGOS={
+ usc:'<svg class="lg" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#990000"/><text x="10" y="14.5" font-size="11" font-weight="800" text-anchor="middle" fill="#FFC72C" font-family="Georgia,Times,serif">SC</text></svg>',
+ redsox:'<svg class="lg" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#0C2340"/><text x="10" y="14.5" font-size="11" font-weight="800" text-anchor="middle" fill="#BD3039" font-family="Georgia,Times,serif">B</text></svg>',
+ arsenal:'<svg class="lg" viewBox="0 0 20 20"><rect width="20" height="20" rx="4" fill="#EF0107"/><text x="10" y="14.5" font-size="11" font-weight="800" text-anchor="middle" fill="#FFFFFF" font-family="Georgia,Times,serif">A</text></svg>'
+};
+function crestEl(e){
+  if(e.cat!=='Sports Teams'||!e.logo||!LOGOS[e.logo])return null;
+  var s=document.createElement('span'); s.className='crest'; s.innerHTML=LOGOS[e.logo]; return s;
+}
+/* Same read: every title is "Team vs Opponent" for home or "Team @ Opponent"
+   for away, so home/away comes straight off the title. */
+function homeAwayOf(e){ if(e.cat!=='Sports Teams')return null; return /\s@\s/.test(e.title)?'Away':'Home'; }
 
 /* Monday of the week a date falls in. */
 function mondayOf(d){ var x=new Date(d.getTime()); var w=(x.getDay()+6)%7; x.setDate(x.getDate()-w); x.setHours(0,0,0,0); return x; }
@@ -578,7 +598,8 @@ function drawBand(days){
     d.style.width='calc('+((it.b-it.a+1)*100/7)+'% - 2px)';
     d.style.top=(3+it.lane*17)+'px';
     d.style.background=c.fill; d.style.borderLeftColor=c.color; d.style.color=c.color;
-    d.textContent=it.e.title||'(no title)';
+    var crB=crestEl(it.e); if(crB) d.appendChild(crB);
+    d.appendChild(document.createTextNode(it.e.title||'(no title)'));
     d.title=it.e.title+(it.e.loc?' · '+it.e.loc:'');
     d.dataset.id=it.e.id;
     d.onclick=function(){ openEditor(it.e); };
@@ -669,7 +690,8 @@ function makeBlock(it,di){
   b.style.height=Math.max(13,yOf(it.en)-yOf(it.s)-1)+'px';
   b.style.background=c.fill; b.style.borderLeftColor=c.color; b.style.color=c.color;
   b.dataset.id=e.id; b.dataset.day=di;
-  var t=el('span','t',e.title||'(no title)'); b.appendChild(t);
+  var t=el('span','t',''); var crK=crestEl(e); if(crK) t.appendChild(crK);
+  t.appendChild(document.createTextNode(e.title||'(no title)')); b.appendChild(t);
   if((it.en-it.s)>=45){ b.appendChild(el('span','tm',clock(it.s)+' – '+clock(it.en))); }
   if(locked){ b.appendChild(el('span','lockdot','\u{1F512}')); }
   if(!locked){ var gp=el('div','grip'); b.appendChild(gp); }
@@ -918,6 +940,8 @@ function openEditor(e){
   var isNew=!!e.__new;
   document.getElementById('popTitle').textContent=isNew?'New block':'Edit block';
   document.getElementById('fTitle').value=e.title||'';
+  var ha=homeAwayOf(e), haEl=document.getElementById('fHomeAway');
+  if(ha){ haEl.textContent=ha+' game'; haEl.style.display=''; } else { haEl.style.display='none'; }
   var s=isNew?toMin(e.start_time):effStart(e);
   var en=isNew?toMin(e.end_time):effEnd(e);
   var allday=(s==null);
