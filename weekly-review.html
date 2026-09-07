@@ -153,6 +153,41 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .hk-inst:hover{text-decoration:underline}
 .hk-noinst{font-size:11px;color:var(--faint);margin-left:8px;white-space:nowrap}
 .hk-title{font-family:'Sora',Arial,Helvetica,sans-serif;font-weight:700}
+
+/* Automation Scorecard, v1.0, Sep 7 2026 */
+.as-head{background:var(--ink);border-radius:10px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.as-headtext{max-width:440px}
+.as-title{font-size:17px;font-weight:800;color:#fff;margin:0 0 4px}
+.as-desc{font-size:12.5px;color:#c4cbd4;line-height:1.4}
+.as-stats{display:flex;gap:22px}
+.as-stat{text-align:center}
+.as-n{font-size:34px;font-weight:800;color:#fff;line-height:1;font-variant-numeric:tabular-nums}
+.as-n.as-good{color:#7fd6a8}
+.as-n.as-gold{color:#e8c876}
+.as-cap{font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#9aa3ad;margin-top:4px}
+.as-group{margin-top:16px}
+.as-grouphead{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+.as-bar{width:4px;height:16px;border-radius:2px}
+.as-gname{font-size:14px;font-weight:800}
+.as-gcount{font-size:11px;font-weight:700;color:var(--faint)}
+.as-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.as-item{border-radius:8px;padding:13px 15px;display:flex;flex-direction:column;gap:7px;border-left:4px solid transparent}
+.as-item.st-queued{border-left-color:#1e8e5a}
+.as-item.st-more{border-left-color:#3f6f8f}
+.as-item.st-killed{border-left-color:#c0453b}
+.as-itop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.as-ititle{font-size:14px;font-weight:800;line-height:1.25}
+.as-eff{font-size:9px;font-weight:800;padding:2px 7px;border-radius:3px;background:rgba(255,255,255,.55);white-space:nowrap}
+.as-cost{font-size:12.5px;line-height:1.4}
+.as-fix{font-size:12.5px;line-height:1.4;font-style:italic}
+.as-status{font-size:10px;font-weight:800;letter-spacing:.03em}
+.as-comment{width:100%;border:1px solid rgba(0,0,0,.15);border-radius:5px;padding:6px 8px;font-size:12.5px;background:#fff;color:var(--ink)}
+.as-btns{display:flex;gap:7px;margin-top:2px}
+.as-btn{flex:1;font-size:11.5px;font-weight:700;padding:6px 5px;border-radius:5px;cursor:pointer;font-family:inherit;border:1px solid}
+.as-btn.more{background:#fff;border-color:var(--accent);color:var(--accent)}
+.as-btn.do{background:var(--good);border-color:var(--good);color:#fff}
+.as-btn.kill{background:#fff;border-color:var(--bad);color:var(--bad)}
+@media(max-width:760px){.as-grid{grid-template-columns:1fr}.as-head{flex-direction:column;align-items:flex-start}}
 </style>
 </head>
 <body>
@@ -167,7 +202,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>The PY Week in Review</h1><span class="ver">v1.5</span><span class="date" id="builtOn"></span>
+  <div class="secbar"><h1>The PY Week in Review</h1><span class="ver">v1.6</span><span class="date" id="builtOn"></span>
     <span class="weeknav"><a class="btn" id="prevWeek">&#9664; Previous</a><span id="weekLabel" class="weeklabel"></span><a class="btn" id="nextWeek">Next &#9654;</a><a class="btn" id="signout">sign out</a></span>
   </div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading your week...</span></div>
@@ -255,6 +290,24 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
       </div>
     </div>
 
+    <!-- automation scorecard, permanent, never resets on Sunday -->
+    <div class="card block" id="asCard">
+      <div class="h2row"><div class="h2">Automation Scorecard</div><div class="sub">what Project YOU still makes you do by hand, this never resets</div></div>
+      <div class="as-head">
+        <div class="as-headtext">
+          <div class="as-title">What's still manual</div>
+          <div class="as-desc">Tap a button on any item and it becomes real work on Claude's List. Comment first if you want the reasoning before deciding.</div>
+        </div>
+        <div class="as-stats">
+          <div class="as-stat"><div class="as-n" id="asOpenN">–</div><div class="as-cap">Still manual</div></div>
+          <div class="as-stat"><div class="as-n as-good" id="asQueuedN">–</div><div class="as-cap">Queued</div></div>
+          <div class="as-stat"><div class="as-n as-gold" id="asQuickN">–</div><div class="as-cap">Quick wins</div></div>
+        </div>
+      </div>
+      <div id="asGroups"></div>
+      <div class="tinynote">Every automation gap found lives here permanently and gets added as it turns up, nothing here resets on Sunday.</div>
+    </div>
+
     <div class="foot" id="foot"></div>
   </div>
 </div>
@@ -268,6 +321,7 @@ const PINWHEEL="<svg width=\"14\" height=\"14\" style=\"vertical-align:-2px;marg
 </script>
 <script>
 /* The PY Week in Review v1.5, Project YOU. Sep 7, 2026.
+   v1.6: Automation Scorecard section added (permanent, never resets), reads/writes automation_gaps, Do this queues a real Claude's List item.
    v1.5: Hacks of the Week section added (Send to me, Summarize Audio, Better Share Sheet, Custom Auto-Replies, Wallpaper Switching), star to mark favorites, links out to setup instructions.
    v1.3: Heat cells (tint by minutes), rollover numbers on every square, pale-tinted habit names, link to the other layouts at the foot.
    v1.2: rotated, tinted Compass column and dark grey glyphs in the habit grid (his Jan 2025 sheet); stacks read from habit_stacks (Stack Builder), shown as vertical dominoes with day squares.
@@ -281,7 +335,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v1.5';
+const VERSION='v1.6';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -341,7 +395,7 @@ el('prevWeek').onclick=()=>{WEEK_END=addDays(WEEK_END,-7);load();};
 el('nextWeek').onclick=()=>{if(WEEK_END<defaultWeekEnd()){WEEK_END=addDays(WEEK_END,7);load();}};
 function msg(t,c){const m=el('msg');m.textContent=t;m.className=c||'';}
 function status(t,bad){el('statustext').textContent=t;el('statusdot').className='dot'+(bad?' bad':'');}
-function showApp(){el('login').classList.add('hidden');el('app').classList.remove('hidden');WEEK_END=defaultWeekEnd();el('builtOn').textContent=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})+' EST';load();}
+function showApp(){el('login').classList.add('hidden');el('app').classList.remove('hidden');WEEK_END=defaultWeekEnd();el('builtOn').textContent=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})+' EST';load();asLoad();}
 
 /* ---------- load ---------- */
 async function load(){
@@ -615,6 +669,105 @@ el('copyBtn').addEventListener('click',function(){const t=el('out');t.select();t
 let saveT=null;
 async function saveScores(){const pct=C.possible?Math.round(C.done/C.possible*100):null;const {s,n,total}=score();const row={week_start:D.ws,coverage:+C.coverage.toFixed(2),consistency:pct,retention:(total&&n>=total&&SCORE.max)?Math.round(s/SCORE.max*100):null,habits_done:C.done,habits_possible:C.possible,votes:C.voteN,work_hours:+hrs(C.workMin),habit_hours:+hrs(C.habitMin),py_hours:C.pyMin?+hrs(C.pyMin):null,build_sessions:C.sessN,right_order_days:C.rightDays,days_present:C.present.length,updated_at:new Date().toISOString()};const {error}=await sb.from('weekly_review').upsert(row,{onConflict:'week_start'});if(error){el('saveState').textContent='Could not save this week: '+error.message;}}
 function saveAnswers(){renderScore();renderOut();el('saveState').textContent='Saving...';clearTimeout(saveT);saveT=setTimeout(async()=>{const {s,n,total}=score();const {error}=await sb.from('weekly_review').upsert({week_start:D.ws,quiz:S.quiz,goals:{picked:S.goals,own:S.own},prior_goals_result:S.lastGoals,retention:(total&&n>=total&&SCORE.max)?Math.round(s/SCORE.max*100):null,updated_at:new Date().toISOString()},{onConflict:'week_start'});el('saveState').textContent=error?('Could not save: '+error.message):('Saved '+new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'})+' EST');},700);}
+
+
+
+/* ---------- Automation Scorecard, permanent, its own table ---------- */
+const AS_GROUPS=[
+  {id:'g1',name:'Photos, food and health',color:'#853547',tint:'#fdf1f3',ink:'#853547'},
+  {id:'g2',name:'Time you actually spend',color:'#6f5c17',tint:'#fdfbec',ink:'#6f5c17'},
+  {id:'g3',name:'Capture and calendar',color:'#2f567f',tint:'#f0f5fc',ink:'#2f567f'}
+];
+let AS_ROWS=[];
+let AS_SAVE_T={};
+
+async function asLoad(){
+  const {data,error}=await sb.from('automation_gaps').select('*').order('item');
+  if(error){console.error(error);return;}
+  AS_ROWS=data||[];
+  asRender();
+}
+
+function asEffortText(e){return e==='S'?'S · quick':e==='M'?'M · a build':'L · bigger lift';}
+
+function asStatusLabel(s){
+  if(s==='queued')return {c:'#1E8E5A',t:'QUEUED TO CLAUDE’S LIST'};
+  if(s==='more')return {c:'#3F6F8F',t:'WANTS MORE INFO'};
+  if(s==='killed')return {c:'#C0453B',t:'KILLED'};
+  return {c:'#8a7a3a',t:'AWAITING YOUR CALL'};
+}
+
+function asRender(){
+  if(!el('asGroups'))return;
+  const open=AS_ROWS.filter(r=>!r.status||r.status==='open').length;
+  const queued=AS_ROWS.filter(r=>r.status==='queued').length;
+  const quick=AS_ROWS.filter(r=>r.effort==='S').length;
+  el('asOpenN').textContent=open;
+  el('asQueuedN').textContent=queued;
+  el('asQuickN').textContent=quick;
+
+  el('asGroups').innerHTML=AS_GROUPS.map(g=>{
+    const items=AS_ROWS.filter(r=>r.group_id===g.id);
+    const cards=items.map(r=>{
+      const st=asStatusLabel(r.status);
+      const cls=(r.status&&r.status!=='open')?(' st-'+r.status):'';
+      return '<div class="as-item'+cls+'" style="background:'+g.tint+';color:'+g.ink+'">'
+        +'<div class="as-itop"><div class="as-ititle">'+esc(r.title)+'</div><span class="as-eff">'+esc(asEffortText(r.effort))+'</span></div>'
+        +'<div class="as-cost">'+esc(r.cost)+'</div>'
+        +'<div class="as-fix">→ '+esc(r.fix)+'</div>'
+        +'<div class="as-status" style="color:'+st.c+'">'+st.t+'</div>'
+        +'<input class="as-comment" data-item="'+r.item+'" placeholder="Add a comment..." value="'+esc(r.comment||'')+'">'
+        +'<div class="as-btns">'
+        +'<button class="as-btn more" data-item="'+r.item+'" data-act="more">Tell me more</button>'
+        +'<button class="as-btn do" data-item="'+r.item+'" data-act="do">Do this</button>'
+        +'<button class="as-btn kill" data-item="'+r.item+'" data-act="kill">Kill this</button>'
+        +'</div></div>';
+    }).join('');
+    return '<div class="as-group"><div class="as-grouphead"><div class="as-bar" style="background:'+g.color+'"></div><div class="as-gname">'+esc(g.name)+'</div><div class="as-gcount">'+items.length+' items</div></div><div class="as-grid">'+cards+'</div></div>';
+  }).join('');
+
+  document.querySelectorAll('.as-comment').forEach(inp=>{
+    inp.addEventListener('input',()=>{
+      const item=inp.dataset.item;
+      clearTimeout(AS_SAVE_T[item]);
+      AS_SAVE_T[item]=setTimeout(()=>asSaveComment(item,inp.value),700);
+    });
+  });
+  document.querySelectorAll('.as-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>asAct(btn.dataset.item,btn.dataset.act));
+  });
+}
+
+async function asSaveComment(item,val){
+  await sb.from('automation_gaps').update({comment:val}).eq('item',item);
+  const row=AS_ROWS.find(r=>r.item===item); if(row)row.comment=val;
+}
+
+async function asAct(item,act){
+  const row=AS_ROWS.find(r=>r.item===item);
+  if(!row)return;
+  if(act==='do'){
+    if(row.status==='queued')return;
+    const {data,error}=await sb.from('session_todos').insert({
+      txt:'Automate: '+row.title,
+      cat:'Operating System',
+      own:'Claude',
+      kind:'feature',
+      project:'Project YOU',
+      note:row.fix+(row.comment?(' Scott’s note: '+row.comment):'')
+    }).select('id').single();
+    const todo_id=(!error&&data)?data.id:null;
+    await sb.from('automation_gaps').update({status:'queued',todo_id}).eq('item',item);
+    row.status='queued'; row.todo_id=todo_id;
+  } else if(act==='more'){
+    await sb.from('automation_gaps').update({status:'more'}).eq('item',item);
+    row.status='more';
+  } else if(act==='kill'){
+    await sb.from('automation_gaps').update({status:'killed'}).eq('item',item);
+    row.status='killed';
+  }
+  asRender();
+}
 
 boot();
 
