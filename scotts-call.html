@@ -60,6 +60,8 @@
   .chats .min{font-size:11.5px;color:var(--muted);min-width:44px;text-align:right;font-variant-numeric:tabular-nums}
   .chats .st{font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;border-radius:999px;padding:1px 7px;min-width:64px;text-align:center}
   .chats .st.open{background:#fff4dd;color:var(--amber)} .chats .st.wrapped{background:#e6f5ec;color:var(--good)} .chats .st.abandoned{background:#f1f3f6;color:var(--dim)}
+  .chats .guess{font-size:10px;font-weight:700;color:var(--amber);border:1px dashed var(--amber);border-radius:999px;padding:0 6px;margin-left:6px;vertical-align:middle}
+  .chats li.guessed .topic{color:var(--muted)}
   .chats .empty{font-size:12px;color:var(--dim);padding:6px}
   .chats .how{font-size:11px;color:#8a929c;margin:6px 4px 0}
   .board{margin-top:14px}
@@ -213,7 +215,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v1.7</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Scott's Call <span class="ver">v1.8</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -237,7 +239,7 @@
   <div class="chats" id="chats">
     <div class="sech">💬 Today's chats <span class="cnt" id="chats-cnt">0</span><span class="tot" id="chats-tot"></span></div>
     <ul id="chats-rows"></ul>
-    <p class="how">Every chat you open registers itself here on Claude's first reply, refreshes at [ST] and closes at [RAP]. Minutes are measured from the activity in the chat, not the open window: a quiet gap of over 20 minutes ends a block. The day runs 2am to 2am.</p>
+    <p class="how">Every chat you open, in any project, registers itself here on Claude's first reply, refreshes at [ST] and closes at [RAP]. A dashed <i>guessed</i> tag means I added the row from a footprint; [ST] in that chat corrects it. Minutes are measured from the activity in the chat, not the open window: a quiet gap of over 20 minutes ends a block. The day runs 2am to 2am.</p>
   </div>
 
   <div class="board" id="board"></div>
@@ -283,7 +285,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.7 · Sep 7, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.8 · Sep 7, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -338,7 +340,7 @@ async function loadChats(){
   const tot=rows.reduce((a,r)=>a+(r.active_minutes||0),0);
   document.getElementById('chats-tot').innerHTML=rows.length?('<b>'+fmtMins(tot)+'</b> measured · '+rows.filter(r=>r.status==='open').length+' still open'):'';
   if(!rows.length){ul.innerHTML='<li class="empty">No chats registered yet today. The first chat you open writes itself here.</li>';return;}
-  ul.innerHTML=rows.map(r=>'<li><span class="t">'+fmtClock(r.started_at)+'</span><span class="topic">'+(PROJ_ICON[r.project]||'')+esc(r.topic)+(r.tracker_url?'<a href="'+esc(r.tracker_url)+'" target="_blank">tracker ›</a>':'')+(r.session_url?'<a href="'+esc(r.session_url)+'" target="_blank">open chat ›</a>':'')+'</span><span class="min" title="Measured active minutes">'+fmtMins(r.active_minutes)+'</span><span class="st '+esc(r.status)+'">'+esc(r.status)+'</span></li>').join('');
+  ul.innerHTML=rows.map(r=>'<li'+(r.guessed?' class="guessed"':'')+'><span class="t">'+(r.guessed?'~':'')+fmtClock(r.started_at)+'</span><span class="topic">'+(PROJ_ICON[r.project]||'')+esc(r.topic)+(r.guessed?'<span class="guess" title="Added by Claude from a footprint, not by the chat itself. Type [ST] in that chat to correct it.">guessed</span>':'')+(r.tracker_url?'<a href="'+esc(r.tracker_url)+'" target="_blank">tracker ›</a>':'')+(r.session_url?'<a href="'+esc(r.session_url)+'" target="_blank">open chat ›</a>':'')+'</span><span class="min" title="Measured active minutes">'+fmtMins(r.active_minutes)+'</span><span class="st '+esc(r.status)+'">'+esc(r.status)+'</span></li>').join('');
 }
 async function load(quiet){
   if(!quiet)setSave('loading…');
