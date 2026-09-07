@@ -64,15 +64,27 @@
   .sec h2{font-size:13px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--acc);margin:0}
   .sec .n{font-size:11px;color:var(--muted)}
   .note{font-size:12.5px;color:var(--muted);padding:0 16px 14px}
-  .hi{padding:0 16px;max-height:440px;overflow-y:auto}
-  .hirow{padding:10px 0;border-bottom:1px solid var(--line)}
-  .hirow:last-child{border-bottom:none}
-  .hitop{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
-  .hitxt{font-size:13.5px;line-height:1.42;color:var(--ink)}
-  .hival{font-weight:700;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .hicard{padding:0}
+  .hihead{padding:16px 16px 4px}
+  .hihead h2{font-size:22px;font-weight:800;color:var(--ink);margin:0 0 4px;letter-spacing:0;text-transform:none}
+  .hisub{font-size:13px;color:var(--muted)}
+  .histatus{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-top:2px solid var(--ink);margin-top:10px}
+  .hicount{font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:var(--bad)}
+  .hirevealbtn{font-size:12.5px;font-weight:600;color:var(--ink);background:none;border:1px solid var(--key);
+    border-radius:20px;padding:5px 14px;cursor:pointer}
+  .hirevealbtn:hover{border-color:var(--muted)}
+  .hilist{max-height:460px;overflow-y:auto}
+  .hirow{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:14px 16px;
+    border-bottom:1px solid var(--line);cursor:pointer;background:var(--sunk)}
+  .hirow.revealed{background:var(--badbg);border-top:2px solid var(--bad);border-bottom:2px solid var(--bad);margin-top:-2px}
+  .hitxt{font-size:13.5px;line-height:1.4;color:var(--ink)}
+  .hival{font-weight:800;font-size:19px;color:var(--bad);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .himask{width:56px;height:3px;background:var(--key);border-radius:2px;flex:0 0 auto}
   .hisrc{font-size:9.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-top:3px}
-  .himeta{font-size:11px;color:var(--muted);text-align:right;padding:10px 16px 14px;border-top:1px solid var(--line);margin-top:2px}
-  .himeta a{color:var(--muted)}
+  .hifoot{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;
+    font-size:11px;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
+  .hifoot .hihint{text-transform:none;font-style:italic}
+  .hifoot a{color:var(--muted)}
 
   .st{position:absolute;top:7px;left:7px;width:28px;height:28px;border-radius:50%;
       border:0;background:rgba(15,18,25,.55);color:#fff;cursor:pointer;display:grid;
@@ -316,7 +328,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v1.20</span></h1>
+      <h1>The Wall <span class="ver">v1.21</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="hint">Tap any picture to see it big, then swipe or use the arrow keys.</div>
     </div>
@@ -381,15 +393,24 @@
     <div class="note">Things you sent yourself to watch when you have the time. Say &ldquo;add this to my watchlist&rdquo; with a link in any chat and it turns up here the next time you load the page. The badge on the picture is how long it runs, so you can pick one that fits the gap you have. Tap Watched and it moves out of the way.</div>
   </div>
 
-  <div class="card" id="hicard" hidden>
-    <div class="sec"><h2>Harper&rsquo;s Index</h2><span class="n" id="hin"></span></div>
-    <div class="hi" id="hir"></div>
-    <div class="himeta" id="himeta"></div>
-    <div class="note">Every line of Harper&rsquo;s Index, one issue a week, on Wednesdays. Starts with the newest issue and steps one issue further back each week. Not about you, like the rest of the Wall. <a href="https://harpers.org/harpers-index/" target="_blank" rel="noopener noreferrer">Read it at harpers.org</a>.</div>
+  <div class="card hicard" id="hicard" hidden>
+    <div class="hihead">
+      <h2>Harper&rsquo;s Index</h2>
+      <div class="hisub">Read the finding, guess the figure, then tap to reveal it.</div>
+    </div>
+    <div class="histatus">
+      <span class="hicount" id="hicount"></span>
+      <button type="button" class="hirevealbtn" id="hirevealbtn">Reveal all</button>
+    </div>
+    <div class="hilist" id="hir"></div>
+    <div class="hifoot">
+      <span id="himeta"></span>
+      <span class="hihint">Tap any row · <a href="https://harpers.org/harpers-index/" target="_blank" rel="noopener noreferrer">harpers.org</a></span>
+    </div>
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.20</div>
+  <div class="stamp" id="stamp">v1.21</div>
 </div>
 
 <script>
@@ -977,10 +998,50 @@ document.addEventListener("click",function(e){
 
 var MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
 function esc2(s){ return esc(String(s==null?"":s)); }
-function hiRow(e){
-  return '<div class="hirow"><div class="hitop"><div class="hitxt">'+esc2(e.text)+
-    '</div><div class="hival">'+esc2(e.value)+'</div></div>'+
-    (e.source?'<div class="hisrc">'+esc2(e.source)+'</div>':'')+'</div>';
+var HI_ROWS=[], HI_WEEK=null, HI_REVEALED={};
+function hiKey(){ return "hiRevealed:"+(HI_WEEK||""); }
+function hiLoadRevealed(){
+  try{
+    var raw=localStorage.getItem(hiKey());
+    HI_REVEALED = raw ? JSON.parse(raw) : {};
+  }catch(e){ HI_REVEALED={}; }
+}
+function hiSaveRevealed(){
+  try{ localStorage.setItem(hiKey(), JSON.stringify(HI_REVEALED)); }catch(e){}
+}
+function hiCountText(){
+  var n=Object.keys(HI_REVEALED).length, total=HI_ROWS.length;
+  return n+" OF "+total+" REVEALED";
+}
+function hiPaintRow(i){
+  var row=document.querySelector('.hirow[data-i="'+i+'"]');
+  if(!row) return;
+  var e=HI_ROWS[i], revealed=!!HI_REVEALED[i];
+  row.classList.toggle("revealed", revealed);
+  row.querySelector(".hival,.himask").outerHTML = revealed
+    ? '<div class="hival">'+esc2(e.value)+'</div>'
+    : '<div class="himask" aria-hidden="true"></div>';
+}
+function hiReveal(i){
+  if(HI_REVEALED[i]) return;
+  HI_REVEALED[i]=true;
+  hiSaveRevealed();
+  hiPaintRow(i);
+  document.getElementById("hicount").textContent=hiCountText();
+}
+function hiRevealAll(){
+  HI_ROWS.forEach(function(e,i){ HI_REVEALED[i]=true; });
+  hiSaveRevealed();
+  HI_ROWS.forEach(function(e,i){ hiPaintRow(i); });
+  document.getElementById("hicount").textContent=hiCountText();
+}
+function hiRow(e,i){
+  var revealed=!!HI_REVEALED[i];
+  return '<div class="hirow'+(revealed?' revealed':'')+'" data-i="'+i+'">'+
+    '<div class="hitxt">'+esc2(e.text)+
+    (e.source?'<div class="hisrc">'+esc2(e.source)+'</div>':'')+'</div>'+
+    (revealed?'<div class="hival">'+esc2(e.value)+'</div>':'<div class="himask" aria-hidden="true"></div>')+
+    '</div>';
 }
 function loadHarpers(){
   var card=document.getElementById("hicard");
@@ -990,11 +1051,13 @@ function loadHarpers(){
     .then(function(rows){
       var row=rows && rows[0];
       if(!row){ card.hidden=true; return; }
-      var entries=row.entries||[];
-      document.getElementById("hin").textContent=entries.length+(entries.length===1?" line":" lines");
-      document.getElementById("hir").innerHTML=entries.map(hiRow).join("");
+      HI_ROWS=row.entries||[];
+      HI_WEEK=row.week_date;
+      hiLoadRevealed();
+      document.getElementById("hicount").textContent=hiCountText();
+      document.getElementById("hir").innerHTML=HI_ROWS.map(hiRow).join("");
       document.getElementById("himeta").textContent=
-        "Harper’s Index · "+MON[row.issue_month-1]+" "+row.issue_year;
+        MON[row.issue_month-1].toUpperCase()+" "+row.issue_year;
       card.hidden=false;
     })
     .catch(function(){ card.hidden=true; });
@@ -1014,7 +1077,7 @@ function boot(){
       days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+
       " pictures from "+nSrc+" sources";
     document.getElementById("stamp").textContent=
-      "v1.20, dealt "+DAY+", the order is shuffled fresh every day, and none of the pictures are about you";
+      "v1.21, dealt "+DAY+", the order is shuffled fresh every day, and none of the pictures are about you";
     if(DAY!==today()){
       document.getElementById("err").innerHTML=
         '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
@@ -1028,6 +1091,12 @@ function boot(){
     setTimeout(mountPhotogs,1200);
   });
 }
+document.addEventListener("click",function(e){
+  var row=e.target.closest ? e.target.closest(".hirow") : null;
+  if(row){ hiReveal(+row.getAttribute("data-i")); return; }
+  var btn=e.target.closest ? e.target.closest("#hirevealbtn") : null;
+  if(btn){ hiRevealAll(); }
+});
 boot();
 loadWatch();
 loadHarpers();
