@@ -266,6 +266,8 @@
   .mdrow.on .mdc{color:#4f7f52}
   .mdcl{display:block;width:100%;margin-top:6px;padding:9px;border:none;border-radius:10px;
       background:#1f2a44;color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+  .mdbagrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px}
+  .mdbagrid .mdk{padding:16px 6px;font-size:14.5px}
   .rico{width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:19px;line-height:1;
       filter:none;opacity:1;transition:filter .16s,opacity .16s;position:relative}
   .rmk.on .rico{filter:grayscale(1);opacity:.3}
@@ -420,7 +422,7 @@
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.18</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.19</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -750,7 +752,7 @@ async function toggle(m,el){
    habit tracker reads "3 cups" rather than just "done".
    ========================================================================== */
 var RAIL = (function(){
-  var R = {rows:{}, presets:{}, plist:[], pby:{}, slots:{}, more:false, moreFilter:null, moreQ:'',
+  var R = {rows:{}, presets:{}, plist:[], pby:{}, slots:{}, more:false, moreFilter:null, moreQ:'', bagPick:null,
            addOpen:false, addBusy:false, addName:'', addSlot:'', addPhoto:null, addLabel:null,
            addPhotoName:'', addLabelName:'', addSay:'', cups:[], glasses:0, mf:{}, flags:{}, ex:null, photo:false, meals:{}, soc:{}, plans:[], quiet:[], ready:false};
   var el = null;
@@ -910,7 +912,7 @@ var RAIL = (function(){
       sb.from('mf_sessions').select('app').eq('day',d),
       sb.from('day_flags').select('*').eq('day',d).maybeSingle(),
       sb.from('exercise_day').select('*').eq('day',d).maybeSingle(),
-      sb.from('meal_presets').select('id,key,name,emoji,slot,calories,protein_g,carbs_g,fat_g,fiber_g,sort,photo_path,label_path,pending').eq('active',true).order('sort',{ascending:true}),
+      sb.from('meal_presets').select('id,key,name,emoji,slot,calories,protein_g,carbs_g,fat_g,fiber_g,sort,photo_path,label_path,pending,servings_per_container').eq('active',true).order('sort',{ascending:true}),
       sb.from('meals').select('id,preset_id,eaten_at,source,slot').eq('day',d),
       sb.from('social_slots').select('*').eq('week_start',monday(d)),
       sb.from('social_plans').select('*').gte('day',monday(d)).lte('day',dadd(monday(d),13)),
@@ -1154,6 +1156,50 @@ var RAIL = (function(){
     if(typeof toast==='function') toast(p.name+(p.calories?' · '+p.calories+' cal':'')+' → food log ✓');
   }
 
+  /* A bag with more than one label serving gets its own small sheet, 1/4, 1/2,
+     3/4 or the whole bag, instead of the plain on/off toggle every other
+     regular uses. It always ADDS a fresh entry (never toggles one off), since
+     Scott can dip into the same bag more than once a day (Sep 7 2026). Each
+     tap logs a fraction of the WHOLE bag, not of whatever is left in it. */
+  var FRAC_LABEL={0.25:'1/4',0.5:'1/2',0.75:'3/4',1:'Whole'};
+  function bagHtml(){
+    var p=R.pby[R.bagPick]; if(!p) return '';
+    var cnt=(R.meals[p.id]||[]).length;
+    return '<div class="mdcd"><h4>'+esc((p.emoji?p.emoji+' ':'')+p.name)+'</h4>'+
+      '<p class="mdsub">How much did you have this time'+(cnt?(' &mdash; you\u2019ve already logged '+cnt+(cnt===1?' helping':' helpings')+' today'):'')+'?</p>'+
+      '<div class="mdbagrid">'+
+        '<button class="mdk" data-bagfrac="0.25">1/4 bag</button>'+
+        '<button class="mdk" data-bagfrac="0.5">1/2 bag</button>'+
+        '<button class="mdk" data-bagfrac="0.75">3/4 bag</button>'+
+        '<button class="mdk" data-bagfrac="1">Whole bag</button>'+
+      '</div>'+
+      '<button class="mdadd" data-mdback="1">Back to the list</button>'+
+      '<button class="mdcl" data-mdcl="1">Close</button></div>';
+  }
+  function bindBag(bk){
+    bk.querySelectorAll('[data-bagfrac]').forEach(function(b){
+      b.onclick=function(){ var pid=R.bagPick; logBagInsert(pid,parseFloat(b.dataset.bagfrac)); R.bagPick=null; moreDraw(); };
+    });
+    var bkb=bk.querySelector('[data-mdback]'); if(bkb) bkb.onclick=function(){R.bagPick=null; moreDraw();};
+    var c=bk.querySelector('[data-mdcl]'); if(c) c.onclick=moreClose;
+  }
+  async function logBagInsert(pid,fraction){
+    var p=R.pby[pid]; if(!p) return;
+    if(p.pending){ if(typeof toast==='function') toast('Still reading the label for '+p.name+' \u2014 the numbers land within a couple of hours'); return; }
+    var spc=(+p.servings_per_container)||1, scale=fraction*spc;
+    var round1=function(x){return Math.round(x*10)/10;};
+    var nm=(p.emoji?p.emoji+' ':'')+p.name+' ('+FRAC_LABEL[fraction]+' bag)';
+    var row={day:today(),name:nm,preset_id:pid,source:'counter',status:'done',confidence:'high',
+      calories:Math.round((p.calories||0)*scale), protein_g:Math.round((p.protein_g||0)*scale),
+      carbs_g:Math.round((p.carbs_g||0)*scale), fat_g:Math.round((p.fat_g||0)*scale),
+      fiber_g:round1((p.fiber_g||0)*scale), eaten_at:new Date().toISOString()};
+    var ins=await sb.from('meals').insert(row).select('id,preset_id,eaten_at,source');
+    if(ins.error){ if(typeof toast==='function') toast('Did not save: '+ins.error.message); return; }
+    (R.meals[pid]=R.meals[pid]||[]).push((ins.data&&ins.data[0])||{id:null,source:'counter',eaten_at:new Date().toISOString()});
+    draw(); moreDraw();
+    if(typeof toast==='function') toast(nm+(row.calories?' &middot; '+row.calories+' cal':'')+' \u2192 food log \u2713');
+  }
+
   /* The regulars sheet. The strip only has room for three; this is all of them,
      newest saved meal included, with no page change needed when one is added. */
   function esc(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -1207,22 +1253,26 @@ var RAIL = (function(){
     return moreScope().filter(function(p){return !q||String(p.name||'').toLowerCase().indexOf(q)>=0;});
   }
 
+  function isBag(p){ return p && (+p.servings_per_container)>1; }
   function rowsHtml(){
     var rows=moreList();
     if(!R.plist.length) return '<p class="mdsub">Nothing saved yet. Add one below, or tell Claude about a meal you eat often.</p>';
     if(!rows.length) return '<p class="mdsub">Nothing matches that.</p>';
     return rows.map(function(p){
-      var on=(R.meals[p.id]||[]).length>0;
-      var blocked=(!on)&&p.slot&&R.slots[p.slot];
-      /* Four states, and every one of them says what it is before he presses
-         anything: on, off, spoken for, or still being read. */
+      var cnt=(R.meals[p.id]||[]).length;
+      var on=cnt>0;
+      var bag=isBag(p);
+      var blocked=(!bag)&&(!on)&&p.slot&&R.slots[p.slot];
+      /* Bags get a fifth state: logged one or more times today, always still
+         tappable for another helping, never a one-way on/off like the rest. */
       var why = p.pending ? 'reading the label &middot; numbers land within a couple of hours'
+              : bag ? (cnt ? ('logged '+cnt+(cnt===1?' time':' times')+' today &middot; tap to log more') : 'tap to log how much you had')
               : on ? 'in today&rsquo;s log &middot; tap to take it off'
               : blocked ? ('you have already had a '+esc(p.slot)+' today')
               : 'tap to add it to today';
       var pic=presetPhoto(p);
-      return '<button class="mdrow'+(on?' on':'')+((blocked||p.pending)?' spoken':'')+'" data-pid="'+esc(p.id)+'">'+
-        '<span class="mdtk">'+(on?'&#10003;':'')+'</span>'+
+      return '<button class="mdrow'+((on&&!bag)?' on':'')+((blocked||p.pending)?' spoken':'')+'" data-pid="'+esc(p.id)+'">'+
+        '<span class="mdtk">'+(bag?(cnt||''):(on?'&#10003;':''))+'</span>'+
         (pic?'<img class="mdpic" src="'+esc(pic)+'" alt="">':'<span class="mde">'+esc(p.emoji||'🍽')+'</span>')+
         '<span class="mdn">'+esc(p.name)+'<span class="mdw">'+why+'</span></span>'+
         '<span class="mdc">'+(p.calories?p.calories+' cal':'')+
@@ -1243,7 +1293,13 @@ var RAIL = (function(){
     return h;
   }
   function bindRows(bk){
-    bk.querySelectorAll('[data-pid]').forEach(function(b){b.onclick=function(){logToggle(b.dataset.pid);};});
+    bk.querySelectorAll('[data-pid]').forEach(function(b){
+      b.onclick=function(){
+        var p=R.pby[b.dataset.pid];
+        if(isBag(p)){ R.bagPick=b.dataset.pid; moreDraw(); }
+        else logToggle(b.dataset.pid);
+      };
+    });
   }
   function bindList(bk){
     bindRows(bk);
@@ -1344,11 +1400,11 @@ var RAIL = (function(){
       document.body.appendChild(bk);
       document.addEventListener('keydown',moreKey);
     }
-    bk.innerHTML = R.addOpen ? addHtml() : listHtml();
-    if(R.addOpen) bindAdd(bk); else bindList(bk);
+    bk.innerHTML = R.addOpen ? addHtml() : (R.bagPick ? bagHtml() : listHtml());
+    if(R.addOpen) bindAdd(bk); else if(R.bagPick) bindBag(bk); else bindList(bk);
   }
   function moreKey(e){ if(e.key==='Escape') moreClose(); }
-  function moreClose(){ R.more=false; R.addOpen=false; R.moreFilter=null; R.moreQ=''; document.removeEventListener('keydown',moreKey); moreDraw(); }
+  function moreClose(){ R.more=false; R.addOpen=false; R.bagPick=null; R.moreFilter=null; R.moreQ=''; document.removeEventListener('keydown',moreKey); moreDraw(); }
   async function exTap(k){
     var d=today(), cur=R.ex||{day:d,dog:false,out_walk:false,back_walk:false,ruck:false,ideas:false};
     cur[k]=!cur[k]; R.ex=cur; draw();
