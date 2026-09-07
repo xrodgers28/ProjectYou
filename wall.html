@@ -85,6 +85,11 @@
     font-size:11px;letter-spacing:.4px;color:var(--muted);text-transform:uppercase}
   .hifoot .hihint{text-transform:none;font-style:italic}
   .hifoot a{color:var(--muted)}
+  .hirow{position:relative;padding-left:46px}
+  .hirow .st{top:50%;left:10px;transform:translateY(-50%);width:24px;height:24px}
+  .hirow .st svg{width:12px;height:12px}
+  .hirow.starred{background:var(--warnbg)}
+  .hirow.starred.revealed{background:var(--badbg)}
 
   .st{position:absolute;top:7px;left:7px;width:28px;height:28px;border-radius:50%;
       border:0;background:rgba(15,18,25,.55);color:#fff;cursor:pointer;display:grid;
@@ -328,7 +333,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v1.21</span></h1>
+      <h1>The Wall <span class="ver">v1.22</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="hint">Tap any picture to see it big, then swipe or use the arrow keys.</div>
     </div>
@@ -410,7 +415,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.21</div>
+  <div class="stamp" id="stamp">v1.22</div>
 </div>
 
 <script>
@@ -998,7 +1003,33 @@ document.addEventListener("click",function(e){
 
 var MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
 function esc2(s){ return esc(String(s==null?"":s)); }
-var HI_ROWS=[], HI_WEEK=null, HI_REVEALED={};
+var HI_ROWS=[], HI_WEEK=null, HI_REVEALED={}, HI_STARRED={};
+function hiStarred(i){ return !!HI_STARRED[i]; }
+function hiLoadStars(week){
+  return api("harpers_index_stars?select=idx&week_date=eq."+week)
+    .then(function(rows){
+      HI_STARRED={};
+      (rows||[]).forEach(function(r){ HI_STARRED[r.idx]=true; });
+    })
+    .catch(function(){ HI_STARRED={}; });
+}
+function hiToggleStar(i){
+  var e=HI_ROWS[i];
+  if(!e) return;
+  var want=!hiStarred(i);
+  HI_STARRED[i]=want;
+  hiPaintRow(i);
+  var p = want
+    ? api("harpers_index_stars",{method:"POST",
+        body:JSON.stringify({week_date:HI_WEEK,idx:i,text:e.text,value:e.value,source:e.source||null}),
+        prefer:"resolution=ignore-duplicates"})
+    : api("harpers_index_stars?week_date=eq."+HI_WEEK+"&idx=eq."+i,{method:"DELETE"});
+  p.catch(function(err){
+    HI_STARRED[i]=!want;
+    hiPaintRow(i);
+    document.getElementById("err").innerHTML='<div class="err">Could not save that star: '+esc(err.message)+'</div>';
+  });
+}
 function hiKey(){ return "hiRevealed:"+(HI_WEEK||""); }
 function hiLoadRevealed(){
   try{
@@ -1016,8 +1047,11 @@ function hiCountText(){
 function hiPaintRow(i){
   var row=document.querySelector('.hirow[data-i="'+i+'"]');
   if(!row) return;
-  var e=HI_ROWS[i], revealed=!!HI_REVEALED[i];
+  var e=HI_ROWS[i], revealed=!!HI_REVEALED[i], starred=hiStarred(i);
   row.classList.toggle("revealed", revealed);
+  row.classList.toggle("starred", starred);
+  var sb=row.querySelector(".st");
+  if(sb) sb.setAttribute("aria-pressed", starred?"true":"false");
   row.querySelector(".hival,.himask").outerHTML = revealed
     ? '<div class="hival">'+esc2(e.value)+'</div>'
     : '<div class="himask" aria-hidden="true"></div>';
@@ -1036,8 +1070,9 @@ function hiRevealAll(){
   document.getElementById("hicount").textContent=hiCountText();
 }
 function hiRow(e,i){
-  var revealed=!!HI_REVEALED[i];
-  return '<div class="hirow'+(revealed?' revealed':'')+'" data-i="'+i+'">'+
+  var revealed=!!HI_REVEALED[i], starred=hiStarred(i);
+  return '<div class="hirow'+(revealed?' revealed':'')+(starred?' starred':'')+'" data-i="'+i+'">'+
+    '<button class="st" type="button" data-i="'+i+'" aria-label="Star this fact" aria-pressed="'+(starred?"true":"false")+'">'+STAR+'</button>'+
     '<div class="hitxt">'+esc2(e.text)+
     (e.source?'<div class="hisrc">'+esc2(e.source)+'</div>':'')+'</div>'+
     (revealed?'<div class="hival">'+esc2(e.value)+'</div>':'<div class="himask" aria-hidden="true"></div>')+
@@ -1054,11 +1089,13 @@ function loadHarpers(){
       HI_ROWS=row.entries||[];
       HI_WEEK=row.week_date;
       hiLoadRevealed();
-      document.getElementById("hicount").textContent=hiCountText();
-      document.getElementById("hir").innerHTML=HI_ROWS.map(hiRow).join("");
-      document.getElementById("himeta").textContent=
-        MON[row.issue_month-1].toUpperCase()+" "+row.issue_year;
-      card.hidden=false;
+      return hiLoadStars(HI_WEEK).then(function(){
+        document.getElementById("hicount").textContent=hiCountText();
+        document.getElementById("hir").innerHTML=HI_ROWS.map(hiRow).join("");
+        document.getElementById("himeta").textContent=
+          MON[row.issue_month-1].toUpperCase()+" "+row.issue_year;
+        card.hidden=false;
+      });
     })
     .catch(function(){ card.hidden=true; });
 }
@@ -1077,7 +1114,7 @@ function boot(){
       days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+
       " pictures from "+nSrc+" sources";
     document.getElementById("stamp").textContent=
-      "v1.21, dealt "+DAY+", the order is shuffled fresh every day, and none of the pictures are about you";
+      "v1.22, dealt "+DAY+", the order is shuffled fresh every day, and none of the pictures are about you";
     if(DAY!==today()){
       document.getElementById("err").innerHTML=
         '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
@@ -1092,6 +1129,8 @@ function boot(){
   });
 }
 document.addEventListener("click",function(e){
+  var star=e.target.closest ? e.target.closest(".hirow .st") : null;
+  if(star){ e.preventDefault(); hiToggleStar(+star.getAttribute("data-i")); return; }
   var row=e.target.closest ? e.target.closest(".hirow") : null;
   if(row){ hiReveal(+row.getAttribute("data-i")); return; }
   var btn=e.target.closest ? e.target.closest("#hirevealbtn") : null;
