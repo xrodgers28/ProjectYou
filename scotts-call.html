@@ -194,6 +194,10 @@
   .receipt a{color:var(--accent);font-weight:700}
   .pen{font-size:10px;color:#c9cdd3;margin-left:4px;font-weight:400}
   /* v2.2: Recent Photos sheet for Add a photo */
+  /* v2.3: Add a to-do panel, same shell as the photo sheet */
+  .addbox{background:#fff;border-radius:14px;width:min(560px,96vw);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+  .addbox .body{padding:14px}
+  .addbox textarea{width:100%;font:inherit;font-size:14px;padding:10px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:100px}
   .photobox{background:#fff;border-radius:14px;width:min(820px,96vw);max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.35)}
   .photobox .peekhead .sub{color:#8a929c;font-weight:400;margin-left:2px}
   .photobox .peekhead .x{margin-left:auto}
@@ -231,7 +235,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Staging Area / Scott's Call <span class="ver">v2.2</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Staging Area / Scott's Call <span class="ver">v2.3</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -241,6 +245,7 @@
     <button class="chip" id="selbtn" onclick="toggleSelect()">☐ Select several</button>
     <button class="chip pull" id="pullnow" onclick="pullDrafts()">⟳ Pull from Drafts now</button>
     <button class="chip run" onclick="runNow()" title="Start the Now shelf of Claude's List: right away if a chat with Claude is open, otherwise at the top of the hour (10am to 6pm EST)">▶ Run now</button>
+    <button class="chip" title="Type a new to-do. One line becomes one waiting note; I read it at the next slot and suggest where it goes." onclick="openAddTodo()">📝 Add a to-do</button>
     <button class="chip" title="Add a photo as a note from your Recent Photos. Claude reads it at the next slot." onclick="openPhotos()">📷 Add a photo</button><input type="file" accept="image/*" id="photoin" style="display:none" onchange="addPhoto(this)">
     <button class="chip" onclick="load(true)">⟳</button>
     <span class="savestate" id="save">loading…</span>
@@ -282,6 +287,7 @@
       <dt>more ▾</dt><dd>▶ Do it now (approves it to Claude's List, Now, and asks the runner to start), 🌙 send it to tonight's Midnight Run, Park it, straight to Project You Ideas, Make it a rule, Dismiss.</dd>
       <dt>🍿 Popcorn · 💬 comment · est · act</dt><dd>Popcorn shows your dictation word for word, even when one dictation became several rows. Comment rides along with your tap and I remember it. Est is my guess at minutes, act is yours after.</dd>
       <dt>The green strip after a tap</dt><dd>Says what was filed and where, with Undo and a correction box. Ten seconds, then it folds into the Archive.</dd>
+      <dt>📝 Add a to-do</dt><dd>Type one straight in. One line per to-do; each lands here as a waiting note and I suggest where it goes, same as a Drafts note or a photo.</dd>
       <dt>📷 Add a photo</dt><dd>Opens your Recent Photos (your Photos library, read by your Mac about once an hour, Update now asks for a fresh read). Tap one and it lands here as a waiting note with the picture; I read it at the next slot and write the note under it. Choose a file instead is at the bottom of the sheet.</dd>
       <dt>▶ Run now</dt><dd>Starts the Now shelf of Claude's List. If a chat with me is open I begin within a minute; otherwise the runner takes it at the top of the hour, 10am to 6pm EST. Approved builds land back here under Delivered by Claude. The 4am Midnight Run takes the Tonight shelf on its own.</dd>
       <dt>⟳ Pull from Drafts now</dt><dd>Opens Drafts and runs your Sweep to ProjectYou action. Several tasks in one note get split into separate rows. Otherwise the sweep runs every two hours on its own.</dd>
@@ -301,11 +307,12 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Staging Area / Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v2.2 · Sep 7, 2026</span></footer>
+  <footer><span>Project You · Staging Area / Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v2.3 · Sep 7, 2026</span></footer>
 </div>
 </div>
 <div class="overlay" id="photos" onclick="if(event.target===this)closePhotos()"><div class="photobox"><div class="peekhead">📷 <b>Recent Photos</b><span class="sub" id="photos-sub"></span><button class="chip" onclick="refreshPhotos()" title="Re-read the list now and ask your Mac to read the Photos library again">⟳ Update now</button><button class="x" onclick="closePhotos()">Close</button></div><div class="pgrid" id="pgrid"></div><div class="pfoot"><span>From your Photos library, read by your Mac about once an hour. Tap a picture and it becomes a waiting note; I read it at the next slot.</span><a onclick="document.getElementById('photoin').click()">Choose a file instead</a></div></div></div>
 <div class="toast" id="toast"></div>
+<div class="overlay" id="addtodo" onclick="if(event.target===this)closeAddTodo()"><div class="addbox"><div class="peekhead">📝 <b>Add a to-do</b><button class="x" onclick="closeAddTodo()">Close</button></div><div class="body"><textarea id="addtodo-text" placeholder="Type a to-do. One per line to add more than one." onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey))submitAddTodo()"></textarea></div><div class="pfoot"><span>Each line lands here as a waiting note, same as everything else on this page: I read it at the next slot and suggest where it goes.</span><button class="chip on" style="margin-left:auto" onclick="submitAddTodo()">Add</button></div></div></div>
 <div class="overlay" id="peek" onclick="if(event.target===this)closePeek()"><div class="peekbox"><div class="peekhead">Where it goes: <b id="peektitle"></b><span id="peeksub" style="color:#8a929c"></span><button class="x" onclick="closePeek()">Close</button></div><iframe id="peekframe" title="Destination preview"></iframe></div></div>
 
 <script>
@@ -738,6 +745,26 @@ async function delST(r){if(await save(r.id,{deleted_at:new Date().toISOString()}
 
 /* ---------- drafts, mic, toast ---------- */
 function fmtWhen(s){return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',hour:'numeric',minute:'2-digit'}).format(new Date(s)).toLowerCase();}
+function openAddTodo(){document.getElementById('addtodo').classList.add('on');const t=document.getElementById('addtodo-text');t.value='';setTimeout(()=>t.focus(),50);}
+function closeAddTodo(){document.getElementById('addtodo').classList.remove('on');}
+async function submitAddTodo(){
+  const raw=document.getElementById('addtodo-text').value;
+  const lines=raw.split('\n').map(s=>s.trim()).filter(Boolean);
+  if(!lines.length){closeAddTodo();return;}
+  const btn=event&&event.target&&event.target.tagName==='BUTTON'?event.target:null;if(btn)btn.disabled=true;
+  toast(lines.length>1?('Adding '+lines.length+' to-dos…'):'Adding…');
+  let ok=0,fail=0;
+  for(const line of lines){
+    const {error}=await sb.from('todos').insert({staged:true,section:INBOX,task:line,staging_note:'Typed on Scott’s Call. I read it at the next slot and suggest where it goes.',stage_conf:'lo',stage_kind:'task',stage_project:'Personal',stage_guess:'Core To-Dos',stage_board:'todays',status:'todo',position:0});
+    if(error)fail++;else ok++;
+  }
+  if(btn)btn.disabled=false;
+  closeAddTodo();
+  if(fail&&ok)toast(ok+' added, '+fail+' failed.');
+  else if(fail)toast('Could not add. Try again.');
+  else toast(ok===1?'Added. Waiting for you above.':'Added '+ok+' to-dos. Waiting for you above.');
+  load(true);
+}
 async function openPhotos(){document.getElementById('photos').classList.add('on');await loadPhotos();}
 function closePhotos(){document.getElementById('photos').classList.remove('on');}
 async function loadPhotos(){
