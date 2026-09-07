@@ -62,6 +62,9 @@
   .chats .st.open{background:#fff4dd;color:var(--amber)} .chats .st.wrapped{background:#e6f5ec;color:var(--good)} .chats .st.abandoned{background:#f1f3f6;color:var(--dim)}
   .chats .guess{font-size:10px;font-weight:700;color:var(--amber);border:1px dashed var(--amber);border-radius:999px;padding:0 6px;margin-left:6px;vertical-align:middle}
   .chats li.guessed .topic{color:var(--muted)}
+  .chats .step{display:inline-flex;gap:4px;margin-left:8px}
+  .chats .step .chip{padding:1px 9px;font-size:13px;line-height:18px}
+  .chats .step .chip:disabled{opacity:.35;cursor:default}
   .chats .empty{font-size:12px;color:var(--dim);padding:6px}
   .chats .how{font-size:11px;color:#8a929c;margin:6px 4px 0}
   .board{margin-top:14px}
@@ -215,7 +218,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v1.8</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Scott's Call <span class="ver">v1.9</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -237,9 +240,9 @@
   </div>
 
   <div class="chats" id="chats">
-    <div class="sech">💬 Today's chats <span class="cnt" id="chats-cnt">0</span><span class="tot" id="chats-tot"></span></div>
+    <div class="sech">💬 <span id="chats-day">Today's chats</span> <span class="cnt" id="chats-cnt">0</span><span class="tot" id="chats-tot"></span><span class="step"><button class="chip" onclick="stepChats(1)" title="Earlier day">‹</button><button class="chip" id="chats-fwd" onclick="stepChats(-1)" title="Later day" disabled>›</button></span></div>
     <ul id="chats-rows"></ul>
-    <p class="how">Every chat you open, in any project, registers itself here on Claude's first reply, refreshes at [ST] and closes at [RAP]. A dashed <i>guessed</i> tag means I added the row from a footprint; [ST] in that chat corrects it. Minutes are measured from the activity in the chat, not the open window: a quiet gap of over 20 minutes ends a block. The day runs 2am to 2am.</p>
+    <p class="how">Every chat you open, in any project, registers itself here on Claude's first reply, refreshes at [ST] and closes at [RAP]. ‹ steps back a day. A dashed <i>guessed</i> tag means I added the row from a footprint; [ST] in that chat corrects it. Minutes are measured from the activity in the chat, not the open window: a quiet gap of over 20 minutes ends a block. The day runs 2am to 2am.</p>
   </div>
 
   <div class="board" id="board"></div>
@@ -285,7 +288,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.8 · Sep 7, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.9 · Sep 7, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -331,15 +334,21 @@ function isScott(r){return /^scott$/i.test(r.own||'');}
 function fmtClock(s){if(!s)return '';return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}).format(new Date(s)).toLowerCase().replace(' ','');}
 function fmtMins(m){m=Math.max(0,Math.round(m||0));return m>=60?Math.floor(m/60)+'h '+(m%60?m%60+'m':''):m+'m';}
 const PROJ_ICON={'Project YOU':'<svg class="pinw sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12 12 2a10 10 0 0 1 10 10z" fill="#3f6f8f"/><path d="M12 12 22 12a10 10 0 0 1-10 10z" fill="#8a5a9c"/><path d="M12 12 12 22A10 10 0 0 1 2 12z" fill="#1e8e5a"/><path d="M12 12 2 12A10 10 0 0 1 12 2z" fill="#b8801f"/></svg>','TreadWell':'🥾 ','Amazon':'💼 '};
+let CHATS_BACK=0;
+function stepChats(d){CHATS_BACK=Math.max(0,CHATS_BACK+d);loadChats();}
+function fmtDayLabel(iso){const d=new Date(iso+'T12:00:00Z');return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',weekday:'short',month:'short',day:'numeric'}).format(d);}
 async function loadChats(){
-  const {data,error}=await sb.from('v_chats_today').select('*');
+  const {data,error}=await sb.rpc('chats_for_day',{days_back:CHATS_BACK});
+  const fwd=document.getElementById('chats-fwd');if(fwd)fwd.disabled=(CHATS_BACK===0);
+  const lab=document.getElementById('chats-day');
+  if(lab){if(CHATS_BACK===0)lab.textContent="Today's chats";else if(CHATS_BACK===1)lab.textContent="Yesterday's chats";else{const r0=(data||[])[0];lab.textContent=(r0?fmtDayLabel(r0.day):CHATS_BACK+' days ago')+' chats';}}
   const ul=document.getElementById('chats-rows');if(!ul)return;
   if(error){ul.innerHTML='<li class="empty">Could not read today\'s chats: '+esc(error.message)+'</li>';return;}
   const rows=data||[];
   document.getElementById('chats-cnt').textContent=rows.length;
   const tot=rows.reduce((a,r)=>a+(r.active_minutes||0),0);
   document.getElementById('chats-tot').innerHTML=rows.length?('<b>'+fmtMins(tot)+'</b> measured · '+rows.filter(r=>r.status==='open').length+' still open'):'';
-  if(!rows.length){ul.innerHTML='<li class="empty">No chats registered yet today. The first chat you open writes itself here.</li>';return;}
+  if(!rows.length){ul.innerHTML='<li class="empty">'+(CHATS_BACK===0?'No chats registered yet today. The first chat you open writes itself here.':'No chats registered that day.')+'</li>';return;}
   ul.innerHTML=rows.map(r=>'<li'+(r.guessed?' class="guessed"':'')+'><span class="t">'+(r.guessed?'~':'')+fmtClock(r.started_at)+'</span><span class="topic">'+(PROJ_ICON[r.project]||'')+esc(r.topic)+(r.guessed?'<span class="guess" title="Added by Claude from a footprint, not by the chat itself. Type [ST] in that chat to correct it.">guessed</span>':'')+(r.tracker_url?'<a href="'+esc(r.tracker_url)+'" target="_blank">tracker ›</a>':'')+(r.session_url?'<a href="'+esc(r.session_url)+'" target="_blank">open chat ›</a>':'')+'</span><span class="min" title="Measured active minutes">'+fmtMins(r.active_minutes)+'</span><span class="st '+esc(r.status)+'">'+esc(r.status)+'</span></li>').join('');
 }
 async function load(quiet){
