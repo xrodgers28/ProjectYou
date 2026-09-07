@@ -346,12 +346,12 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v3.6</span>
+  <span class="pn-ver">v3.7</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.6</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.7</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Live events sit dimmed because they are tour dates you are tracking; star one to say you are going and it comes forward. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
 </div>
 
@@ -432,7 +432,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-/* ===== Project YOU · Calendar v3.6 =====
+/* ===== Project YOU · Calendar v3.7 =====
    Events live in public.calendar_events, layers in public.calendar_categories.
    New in v1.2: sign-in (the Google feed brings personal appointments onto this
    page, so it can no longer be open to anyone with the URL), plain-English add
@@ -467,7 +467,10 @@ function subLabel(cat,sub){return subMeta(cat,sub).label||sub;}
    washed everything out and made the layers hard to tell apart. Sep 1 2026. */
 const INK='#4d4d4d';
 function colorOf(e){return subMeta(e.cat,e.sub).color||catOf(e.cat).color;}
-function fillOf(e){return subMeta(e.cat,e.sub).fill||catOf(e.cat).fill;}
+/* Sep 7 2026, Scott: Sports Teams entries sit on plain white, no pale tint.
+   Everything else keeps its normal fill. The colored left rail and crest
+   still say which team it is. */
+function fillOf(e){ if(e.cat==='Sports Teams')return '#ffffff'; return subMeta(e.cat,e.sub).fill||catOf(e.cat).fill;}
 const MAXCHIPS=3;
 const MFULL=["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DOWN=["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
@@ -523,6 +526,11 @@ function catOf(c){return CATS[c]||{color:"#5F6B7A",fill:"#EAECEF"};}
    Sep 7 2026 exception, at Scott's request: the new Sports Teams layer shows
    its mini crest next to each game. Every other layer stays plain text. */
 function iconHTML(e){ if(e.cat==='Sports Teams'&&e.logo&&LOGOS[e.logo])return '<span class="ci">'+LOGOS[e.logo]+'</span>'; return ''; }
+/* Sep 7 2026, Scott: say home or away right on the popup for a Sports Teams
+   game. Every title I loaded reads "Team vs Opponent" for home and
+   "Team @ Opponent" for away, so that is read straight off the title rather
+   than a separate stored field. */
+function homeAwayOf(e){ if(e.cat!=='Sports Teams')return null; return /\s@\s/.test(e.title)?'Away':'Home'; }
 function labelOf(e){
   if(e.cat==='Live events'){ return e.loc ? initsOf(e.sub||e.title)+': '+e.loc.split(' — ')[0] : (e.sub||e.title); }
   return e.title;
@@ -945,7 +953,9 @@ function openEvent(id){
   let dr=isSpan(e)?fmtFull(e.date)+" to "+fmtFull(e.end):fmtFull(e.date);
   if(e.start_time)dr+=' · '+shortTime(e.start_time)+(e.end_time?' to '+shortTime(e.end_time):'')+' EST';
   const gs=e.gcal_status;
+  const ha=homeAwayOf(e);
   let h='<h3>'+iconHTML(e)+' '+esc(e.title)+'</h3><div class="meta">'+dr+'</div>'
+    +(ha?'<span class="tag" style="background:'+(ha==='Home'?'#2F8A5B':'#8a5a9c')+'">'+ha+' game</span>':'')
     +(e.loc?'<div class="meta">'+esc(e.loc)+'</div>':'')
     +(e.link?'<div class="meta"><a href="'+esc(e.link)+'" target="_blank" rel="noopener">Open the source</a></div>':'')
     +(e.notes?'<div class="meta">'+esc(e.notes)+'</div>':'')
