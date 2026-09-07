@@ -45,6 +45,7 @@
   .savestate{margin-left:auto;font-size:11.5px;color:#9aa6b4;min-width:60px;text-align:right}
   .savestate.saved{color:var(--good)} .savestate.err{color:var(--hot)}
   /* v1.6: Today's chats strip, one line per chat Scott opened today, read from v_chats_today */
+  /* v1.7: Delivered items get the same binoculars preview as For you/For Claude, when session_todos.page is set */
   .chats{margin-top:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 10px 6px}
   .chats .sech{justify-content:flex-start}
   .chats .tot{margin-left:auto;font-size:11px;color:var(--muted);font-weight:600;letter-spacing:0;text-transform:none}
@@ -212,7 +213,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <h1>Scott's Call <span class="ver">v1.6</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
+  <h1>Scott's Call <span class="ver">v1.7</span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table ›</a> <a href="claudes-list.html" style="font-size:12px;font-weight:700;color:#8a5a9c;margin-left:6px;text-decoration:none;border:1px solid #d9c9e4;border-radius:999px;padding:2px 10px;vertical-align:middle">Claude's List: what I owe you ›</a></h1>
   <p class="sub">Everything waiting on you, in one place, empty most days. New notes with my suggested home and a one-tap Approve; work I have finished, for your Got It; rules to say yes or no to. Approve is go.</p>
   <div class="toolbar">
     <span class="chip static" id="c-wait"><b>0</b> waiting</span>
@@ -257,7 +258,7 @@
       <dt>2 places</dt><dd>An amber pill next to the destination means one tap writes in two places: a film goes to Movies and the habit tracker, a person to Connections and the tracker, a habit to the worksheet and the tracker. Hover it to see both. Undo removes both.</dd>
       <dt>The pinwheel · 🥾 · 💼</dt><dd>Which project the note belongs to: Project YOU (the pinwheel spins on rollover; on a waiting note a tap sends it straight to Project You Ideas, as on the Staging Area), TreadWell, Amazon. No icon means personal.</dd>
       <dt>The headline</dt><dd>Tap the words to fix a garbled voice note. Under it, the note interpreted in one to four plain sentences. Popcorn keeps your exact words.</dd>
-            <dt>The binoculars</dt><dd>Look before you file: opens the destination page in a window on top.</dd>
+            <dt>The binoculars</dt><dd>Look before you file: opens the destination page in a window on top. On a Delivered item it opens the page I actually built, when there is one.</dd>
       <dt>Approve · Log it · Dismiss</dt><dd>The button changes with the home. Approve files a to-do or a build item. Log it records a thing that happened and never makes a to-do: a film goes to Movies and a 🎬 square on the tracker, a person to Connections and a Social Fitness square, a habit ticks the worksheet, a meal goes to the Meal log, an appointment to the Calendar and on to Google. Dismiss moves it to a recoverable bin.</dd>
       <dt>🌙 · ×</dt><dd>Top right of every row. The moon sends it straight to the Midnight Run (Claude's List, Tonight). The × kills it, with Undo.</dd>
       <dt>more ▾</dt><dd>▶ Do it now (approves it to Claude's List, Now, and asks the runner to start), 🌙 send it to tonight's Midnight Run, Park it, straight to Project You Ideas, Make it a rule, Dismiss.</dd>
@@ -282,7 +283,7 @@
     </dl>
   </div>
   <p class="prev">Previous versions, kept as a backup: <a href="staging-area.html">Staging Area</a> · <a href="all-todos.html">All ToDos</a> · <a href="midnight-run-v2.html">Midnight Run</a></p>
-  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.6 · Sep 6, 2026</span></footer>
+  <footer><span>Project You · Scott's Call · rows read live from your waiting notes, delivered work and rules</span><span>v1.7 · Sep 7, 2026</span></footer>
 </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -502,14 +503,16 @@ function delivRow(r){
   const top=el('div','toprow');top.appendChild(el('span','h',''));
   const t=el('div','txt');{const pn=projNode(r.project);if(pn)t.appendChild(pn);}t.appendChild(document.createTextNode(r.txt||''));top.appendChild(t);
   const rg=el('div','rightgrp');rg.style.gridTemplateColumns='auto';
-  const meta=el('span','tag st',brief?'a question':('built '+fmtDate(r.updated_at||r.created_at)));
+  const metarow=el('div','rr');
+  const meta=el('span','tag st',brief?'a question':('built '+fmtDate(r.updated_at||r.created_at)));metarow.appendChild(meta);
+  if(r.page){metarow.appendChild(peekIcon(()=>peekPage(r.page,r.txt||''),'Look at what got built'));}
   const btns=el('div');btns.style.cssText='display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end';
   if(brief){
     [['Do this','go',()=>five(r,'Do this')],['Tell me more','',()=>five(r,'Tell me more')],['I did it','',()=>five(r,'I did it')],['I read this','',()=>five(r,'I read this')],['Kill this task','',()=>five(r,'Kill this task')]].forEach(([l,c,f])=>{const b=el('button','btnp five '+c,l);b.onclick=f;btns.appendChild(b);});
   } else {
     const g=el('button','btnp log','Got It');g.onclick=()=>gotIt(r);const n=el('button','btnp ghost','Needs a fix');n.onclick=()=>needsFix(r);btns.append(g,n);
   }
-  rg.append(meta,btns);top.appendChild(rg);li.appendChild(top);
+  rg.append(metarow,btns);top.appendChild(rg);li.appendChild(top);
   {const kx=el('button','kill','×');kx.type='button';kx.title='Kill this';kx.onclick=e=>{e.stopPropagation();brief?five(r,'Kill this task'):delST(r);};li.appendChild(kx);}
   const s=(r.summary||r.note||'').replace(/^Was: [^\n]*\n*/,'').trim();if(s)li.appendChild(el('div','note sum',esc(s.length>300?s.slice(0,300)+'…':s)));
   li.appendChild(commentLine(r,'session'));
@@ -587,10 +590,13 @@ async function bulk(what){const ids=[...SEL];for(const id of ids){const r=CAP.fi
 async function approveAll(list){if(!list.length)return;for(const r of list){await act(r,DEST[r.id]||guessKey(r),true);}toast('Filed '+list.length+' as guessed');render();}
 
 /* ---------- 🔭 look before you file ---------- */
-function peek(k,r){
-  const page=destPage(k);document.getElementById('peektitle').textContent=destLabel(k);document.getElementById('peeksub').textContent=' · '+page;
+function openPeek(page,label){
+  document.getElementById('peektitle').textContent=label;document.getElementById('peeksub').textContent=' · '+page;
   document.getElementById('peekframe').src=page+'?peek=1&cb='+Date.now();document.getElementById('peek').classList.add('on');
 }
+function peek(k,r){openPeek(destPage(k),destLabel(k));}
+function peekPage(page,label){openPeek(page,label);}
+function peekIcon(onclick,title){const pk=el('button','peek');pk.innerHTML='<svg viewBox="0 0 48 48" width="17" height="17" fill="#3f6f8f"><rect x="14" y="8" width="7" height="9" rx="2"/><rect x="27" y="8" width="7" height="9" rx="2"/><path d="M12 15h8v12h8V15h8l7 13v6H5v-6z"/><circle cx="13" cy="35" r="9"/><circle cx="35" cy="35" r="9"/><circle cx="13" cy="35" r="4" fill="#fff" opacity=".85"/><circle cx="35" cy="35" r="4" fill="#fff" opacity=".85"/></svg>';pk.title=title||'Look at where it landed';pk.onclick=onclick;return pk;}
 function closePeek(){document.getElementById('peek').classList.remove('on');document.getElementById('peekframe').src='about:blank';}
 
 /* ---------- acting on a note ---------- */
