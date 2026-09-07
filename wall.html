@@ -376,12 +376,19 @@
   .stx-fact{font-size:12.5px;line-height:1.42}
   .stx-fact a{color:var(--ink);text-decoration:none;border-bottom:1px solid var(--key)}
   .stx-fact a:hover{color:var(--accent);border-bottom-color:var(--accent)}
-  .stx-standings{margin-top:10px;border-top:1px dashed var(--key);padding-top:7px}
-  .stx-row{display:flex;align-items:baseline;gap:8px;font-size:11.5px;padding:2.5px 0;color:var(--muted)}
-  .stx-row .pos{width:16px;flex:none;color:var(--faint)}
-  .stx-row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .stx-row .st{flex:none;font-variant-numeric:tabular-nums}
-  .stx-row.self{color:var(--onbg);font-weight:800}
+  /* Full standings table, one per team. Scott wants the real division/poll/
+     league table (like a screenshot he sent), not a short excerpt. Some of
+     these run wider than the 320px sidebar (6-8 columns), so the table
+     scrolls sideways INSIDE its own wrapper rather than pushing the page
+     wide again like the earlier bug. */
+  .stx-standings-wrap{margin-top:10px;border-top:1px dashed var(--key);padding-top:8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .stx-table{border-collapse:collapse;font-size:11px;white-space:nowrap}
+  .stx-table th{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);text-align:left;padding:2px 10px 4px 0;border-bottom:1px solid var(--key)}
+  .stx-table td{padding:3px 10px 3px 0;color:var(--muted);font-variant-numeric:tabular-nums}
+  .stx-table th:first-child,.stx-table td:first-child{padding-left:0}
+  .stx-table th:last-child,.stx-table td:last-child{padding-right:0}
+  .stx-table tr.self td{color:var(--onbg);font-weight:800}
+  .stx-asof{font-size:9.5px;color:var(--faint);margin-top:4px}
   .stx-empty{font-size:12.5px;color:var(--muted);padding:2px 0}
 </style>
 
@@ -390,7 +397,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v1.24</span></h1>
+      <h1>The Wall <span class="ver">v1.25</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="hint">Tap any picture to see it big, then swipe or use the arrow keys.</div>
     </div>
@@ -483,7 +490,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.24</div>
+  <div class="stamp" id="stamp">v1.25</div>
 </div>
 
 <aside class="stx-col">
@@ -984,15 +991,28 @@ function stxTeamClass(team){
   if(t.indexOf("arsenal")>-1) return "t-arsenal";
   return "";
 }
-function stxStandings(rows){
-  if(!rows || !rows.length) return "";
-  var out=rows.map(function(r){
-    return '<div class="stx-row'+(r.self?' self':'')+'">'+
-      '<span class="pos">'+stxEsc(r.pos)+'</span>'+
-      '<span class="nm">'+stxEsc(r.name)+'</span>'+
-      '<span class="st">'+stxEsc(r.stat)+'</span></div>';
-  }).join("");
-  return '<div class="stx-standings">'+out+'</div>';
+function stxDate(iso){
+  if(!iso) return "";
+  var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var p=String(iso).split("-"); if(p.length<3) return stxEsc(iso);
+  var y=p[0], m=parseInt(p[1],10)-1, d=parseInt(p[2],10);
+  if(!mo[m]) return stxEsc(iso);
+  return mo[m]+" "+d+", "+y;
+}
+/* standings is {columns:[...], rows:[{cells:[...], self:bool}]} — a real
+   division/poll/league table, not a short excerpt. Rendered as an actual
+   table so it lines up in columns; the wrapper (see CSS) scrolls sideways
+   on its own if a table is wider than the sidebar, instead of the whole
+   page stretching. */
+function stxStandings(standings,asof){
+  if(!standings || !standings.columns || !standings.rows || !standings.rows.length) return "";
+  var head='<tr>'+standings.columns.map(function(c){return '<th>'+stxEsc(c)+'</th>';}).join('')+'</tr>';
+  var body=standings.rows.map(function(r){
+    var cells=(r.cells||[]).map(function(c){return '<td>'+stxEsc(c)+'</td>';}).join('');
+    return '<tr'+(r.self?' class="self"':'')+'>'+cells+'</tr>';
+  }).join('');
+  var cap=asof ? '<div class="stx-asof">as of '+stxDate(asof)+'</div>' : '';
+  return '<div class="stx-standings-wrap"><table class="stx-table"><thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>'+cap;
 }
 function loadSportsTicker(){
   var el=document.getElementById("stxbody");
@@ -1007,7 +1027,7 @@ function loadSportsTicker(){
       var logo=t.logo_url ? '<img class="stx-logo" src="'+stxEsc(t.logo_url)+'" alt="" loading="lazy">' : "";
       var fact=t.fun_fact ? '<div class="stx-eyebrow">Fact of the week</div><div class="stx-fact">'+stxLink(t.fun_fact,t.fun_fact_url)+'</div>' : "";
       var brief=t.daily_headline ? '<div class="stx-eyebrow">Today&rsquo;s briefing</div><div class="stx-fact">'+stxLink(t.daily_headline,t.daily_headline_url)+'</div>' : "";
-      var standings=stxStandings(t.standings);
+      var standings=stxStandings(t.standings,t.standings_asof);
       return '<div class="stx-team '+stxTeamClass(t.team)+'">'+
         '<div class="stx-head">'+logo+
           '<div><div class="stx-name">'+stxEsc(t.team)+'</div><div class="stx-sport">'+stxEsc(t.sport)+'</div></div>'+
@@ -1258,7 +1278,7 @@ function boot(){
       days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+
       " pictures from "+nSrc+" sources";
     document.getElementById("stamp").textContent=
-      "v1.24, dealt "+DAY+", the order is shuffled fresh every day, and none of the pictures are about you";
+      "v1.25, dealt "+DAY+", the order is shuffled fresh every day, and none of the pictures are about you";
     if(DAY!==today()){
       document.getElementById("err").innerHTML=
         '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
