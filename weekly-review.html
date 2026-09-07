@@ -202,7 +202,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>The PY Week in Review</h1><span class="ver">v1.6</span><span class="date" id="builtOn"></span>
+  <div class="secbar"><h1>The PY Week in Review</h1><span class="ver">v1.7</span><span class="date" id="builtOn"></span>
     <span class="weeknav"><a class="btn" id="prevWeek">&#9664; Previous</a><span id="weekLabel" class="weeklabel"></span><a class="btn" id="nextWeek">Next &#9654;</a><a class="btn" id="signout">sign out</a></span>
   </div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading your week...</span></div>
@@ -322,6 +322,7 @@ const PINWHEEL="<svg width=\"14\" height=\"14\" style=\"vertical-align:-2px;marg
 <script>
 /* The PY Week in Review v1.5, Project YOU. Sep 7, 2026.
    v1.6: Automation Scorecard section added (permanent, never resets), reads/writes automation_gaps, Do this queues a real Claude's List item.
+   v1.7: Where the hours went re-ordered to Habit Bandit, ProjectYou, Work; ProjectYou hours now pull from chat_register (real logged minutes) instead of the empty time_log; ProjectYou lane colour matches Todays Tasks pink, Work is Amazon orange, pinwheel icon added next to ProjectYou.
    v1.5: Hacks of the Week section added (Send to me, Summarize Audio, Better Share Sheet, Custom Auto-Replies, Wallpaper Switching), star to mark favorites, links out to setup instructions.
    v1.3: Heat cells (tint by minutes), rollover numbers on every square, pale-tinted habit names, link to the other layouts at the foot.
    v1.2: rotated, tinted Compass column and dark grey glyphs in the habit grid (his Jan 2025 sheet); stacks read from habit_stacks (Stack Builder), shown as vertical dominoes with day squares.
@@ -335,7 +336,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v1.6';
+const VERSION='v1.7';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -406,7 +407,7 @@ async function load(){
   const from28=addDays(ws,-27), from14=addDays(we,-13);
   try{
     const q=(t,sel,f)=>{let r=sb.from(t).select(sel);if(f)r=f(r);return r;};
-    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,quotes,areas,prevrow,thisrow,fs,hstk]=await Promise.all([
+    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,quotes,areas,prevrow,thisrow,fs,hstk,chatreg]=await Promise.all([
       q('qs_log','date,"group",tracker,minutes,logged_at',r=>r.gte('date',from28).lte('date',we).limit(5000)),
       q('worksheet_rows','habit,area,icon,identity,qs_tracker,count_on,is_active,retired',r=>r.eq('is_active',true)),
       q('todos','for_date,actual_minutes,task',r=>r.eq('category','Strava').gte('for_date',ws).lte('for_date',we)),
@@ -422,12 +423,13 @@ async function load(){
       q('weekly_review','*',r=>r.eq('week_start',addDays(ws,-7)).maybeSingle()),
       q('weekly_review','*',r=>r.eq('week_start',ws).maybeSingle()),
       q('farnam_street','*',r=>r.gte('created_at',ws+'T00:00:00').limit(50)),
-      q('habit_stacks','*',r=>r.order('position'))
+      q('habit_stacks','*',r=>r.order('position')),
+      q('chat_register','project,started_at,active_minutes',r=>r.gte('started_at',ws+'T00:00:00').lt('started_at',addDays(we,1)+'T00:00:00'))
     ]);
     const bad=[qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,quotes,areas].filter(x=>x.error);
     if(bad.length){throw new Error(bad.map(x=>x.error.message).join('; '));}
     (areas.data||[]).forEach(a=>{if(a.color)AREACOL[a.label]=a.color;});
-    D={days,ws,we,from28,from14,qs:qs.data||[],wr:wr.data||[],strava:strava.data||[],sess:sess.data||[],cal:(cal.data||[]).filter(c=>!c.hidden&&!c.dismissed),tl:tl.data||[],deck:deck.data||[],sf:sf.data||[],ai:ai.data||[],fav:fav.data||[],quotes:quotes.data||[],prev:prevrow.data||null,row:thisrow.data||null,fs:(fs&&fs.data)||[],stacks:(hstk&&hstk.data)||[]};
+    D={days,ws,we,from28,from14,qs:qs.data||[],wr:wr.data||[],strava:strava.data||[],sess:sess.data||[],cal:(cal.data||[]).filter(c=>!c.hidden&&!c.dismissed),tl:tl.data||[],deck:deck.data||[],sf:sf.data||[],ai:ai.data||[],fav:fav.data||[],quotes:quotes.data||[],prev:prevrow.data||null,row:thisrow.data||null,fs:(fs&&fs.data)||[],stacks:(hstk&&hstk.data)||[],chatreg:(chatreg&&chatreg.data)||[]};
     S={quiz:{},goals:[],own:'',lastGoals:{}};
     if(D.row){S.quiz=D.row.quiz||{};const g=D.row.goals||{};S.goals=g.picked||[];S.own=g.own||'';S.lastGoals=D.row.prior_goals_result||{};}
     compute(); render(); saveScores();
@@ -481,7 +483,7 @@ function compute(){
   /* hours */
   const workMin=days.reduce((tot,d)=>{const iv=D.cal.filter(c=>c.date===d).map(c=>[tmin(c.start_time),tmin(c.end_time)]).filter(x=>x[0]!=null&&x[1]!=null&&x[1]>x[0]).sort((a,b)=>a[0]-b[0]);let sum=0,cs=null,ce=null;iv.forEach(([s,e])=>{if(cs==null){cs=s;ce=e;}else if(s<=ce){ce=Math.max(ce,e);}else{sum+=ce-cs;cs=s;ce=e;}});if(cs!=null)sum+=ce-cs;return tot+sum;},0);
   const habitMin=wk.reduce((a,r)=>a+(r.minutes||0),0)+D.strava.reduce((a,r)=>a+(r.actual_minutes||0),0);
-  const pyMin=D.tl.filter(r=>/^project/i.test(r.name||'')).reduce((a,r)=>a+(r.minutes||0),0);
+  const pyMin=D.chatreg.filter(r=>r.project==='Project YOU').reduce((a,r)=>a+(r.active_minutes||0),0);
   const sessWk=D.sess.filter(s=>s.day>=ws&&s.day<=we);
   /* order of the day */
   const order=days.map(d=>{const ev=D.cal.filter(c=>c.date===d);const ss=D.sess.filter(s=>s.day===d);const first=ev.length?Math.min(...ev.map(c=>tmin(c.start_time)).filter(x=>x!=null)):null;const last=ev.length?Math.max(...ev.map(c=>tmin(c.end_time)).filter(x=>x!=null)):null;const firstBuild=ss.length?Math.min(...ss.map(s=>etMinutes(s.created_at))):null;let ok=true;if(last!=null&&firstBuild!=null&&firstBuild<last)ok=false;const fh=ticksAt(d);return {d,first,last,firstBuild,n:ss.length,ok,firstHabit:fh};});
@@ -544,12 +546,12 @@ function render(){
   const workPct=Math.min(100,C.workMin/2400*100), habPct=Math.min(100,C.habitMin/2400*100);
   el('hoursSub').textContent='in the order they should go · right order '+C.rightDays+' of 7 days';
   el('lanes').innerHTML=
-    '<div class="num" style="color:#3f6f8f">1</div><div><div class="lanename">Work <span>cap 40 h</span></div><div class="bar"><i style="width:'+workPct+'%;background:#3f6f8f"></i><span class="cap40"></span></div></div><div class="val">'+workH+'<small> h meetings</small></div>'+
-    '<div class="num" style="color:#1e8e5a">2</div><div><div class="lanename">Habits and habit building</div><div class="bar"><i style="width:'+habPct+'%;background:#1e8e5a"></i></div></div><div class="val">'+habH+'<small> h, '+C.present.length+' days</small></div>'+
-    '<div class="num" style="color:#c0453b">3</div><div><div class="lanename">Building Project YOU</div><div class="bar'+(pyH?'':' hatch')+'">'+(pyH?'<i style="width:'+Math.min(100,C.pyMin/2400*100)+'%;background:#c0453b"></i>':'')+'</div></div><div class="val" style="color:#c0453b">'+(pyH||'?')+'<small> '+C.sessN+' sessions'+(pyH?'':', no clock')+'</small></div>';
-  const tot=C.workMin+C.habitMin+C.pyMin;const a1=tot?360*C.workMin/tot:0,a2=tot?360*(C.workMin+C.habitMin)/tot:0;
-  el('donut').innerHTML='<svg width="150" height="150" viewBox="0 0 170 170">'+(tot?arc(85,85,62,0,Math.max(0,a1-1),'#3f6f8f')+arc(85,85,62,a1+1,Math.max(a1+1,a2-1),'#1e8e5a')+(C.pyMin?arc(85,85,62,a2+1,359,'#9aa6b4'):''):'<circle cx="85" cy="85" r="62" fill="none" stroke="#e3e7ee" stroke-width="24"/>')+'<text x="85" y="82" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#1f2a44">'+hrs(tot)+'</text><text x="85" y="98" text-anchor="middle" font-family="Arial" font-size="8" letter-spacing="1.5" fill="#5b6472">HOURS TRACKED</text></svg>';
-  el('donutLegend').innerHTML='<div><b style="color:#3f6f8f">'+workH+'</b><span class="tiny">Work, meetings</span></div><div><b style="color:#1e8e5a">'+habH+'</b><span class="tiny">Habits</span></div><div><b style="color:#9aa6b4">'+(pyH||'?')+'</b><span class="tiny">Project YOU</span></div>';
+    '<div class="num" style="color:#1e8e5a">1</div><div><div class="lanename">Habit Bandit</div><div class="bar"><i style="width:'+habPct+'%;background:#1e8e5a"></i></div></div><div class="val">'+habH+'<small> h, '+C.present.length+' days</small></div>'+
+    '<div class="num" style="color:#7a3a52">2</div><div><div class="lanename">'+PINWHEEL+'ProjectYou</div><div class="bar'+(pyH?'':' hatch')+'">'+(pyH?'<i style="width:'+Math.min(100,C.pyMin/2400*100)+'%;background:#e8a0b8"></i>':'')+'</div></div><div class="val" style="color:#7a3a52">'+(pyH||'?')+'<small> '+C.sessN+' sessions'+(pyH?'':', no clock')+'</small></div>'+
+    '<div class="num" style="color:#FF9900">3</div><div><div class="lanename">Work <span>cap 40 h</span></div><div class="bar"><i style="width:'+workPct+'%;background:#FF9900"></i><span class="cap40"></span></div></div><div class="val">'+workH+'<small> h meetings</small></div>';
+  const tot=C.workMin+C.habitMin+C.pyMin;const a1=tot?360*C.habitMin/tot:0,a2=tot?360*(C.habitMin+C.pyMin)/tot:0;
+  el('donut').innerHTML='<svg width="150" height="150" viewBox="0 0 170 170">'+(tot?arc(85,85,62,0,Math.max(0,a1-1),'#1e8e5a')+(C.pyMin?arc(85,85,62,a1+1,Math.max(a1+1,a2-1),'#e8a0b8'):'')+arc(85,85,62,a2+1,359,'#FF9900'):'<circle cx="85" cy="85" r="62" fill="none" stroke="#e3e7ee" stroke-width="24"/>')+'<text x="85" y="82" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#1f2a44">'+hrs(tot)+'</text><text x="85" y="98" text-anchor="middle" font-family="Arial" font-size="8" letter-spacing="1.5" fill="#5b6472">HOURS TRACKED</text></svg>';
+  el('donutLegend').innerHTML='<div><b style="color:#1e8e5a">'+habH+'</b><span class="tiny">Habit Bandit</span></div><div><b style="color:#7a3a52">'+(pyH||'?')+'</b><span class="tiny">ProjectYou</span></div><div><b style="color:#FF9900">'+workH+'</b><span class="tiny">Work, meetings</span></div>';
   el('orderStrip').innerHTML=C.order.map(o=>'<div><i style="background:'+(o.ok?'#1e8e5a':'#c0453b')+'"></i><span>'+dname(o.d)+'</span></div>').join('');
   el('dayNotes').innerHTML=C.order.map(o=>{let t='';if(o.first!=null)t+='Work '+mm(o.first)+' to '+mm(o.last)+'. ';if(o.n)t+=(o.ok?'Build at ':'Build at ')+mm(o.firstBuild)+(o.ok?'':', before work ended');else t+='No build.';if(o.first==null&&o.firstHabit!=null)t='Habits from '+mm(o.firstHabit)+'. '+t;return '<div class="'+(o.ok?'':'x')+'"><b>'+dname(o.d)+' '+fmt(o.d).split(' ')[1]+'</b><span>'+esc(t)+'</span></div>';}).join('');
   /* grid */
