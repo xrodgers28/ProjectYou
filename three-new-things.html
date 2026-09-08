@@ -450,6 +450,25 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 .ownq::placeholder{color:#6b5f56}
 .ownq:focus-visible{outline:2px solid var(--ember);outline-offset:1px;border-color:var(--ember)}
 
+/* ---------- tired level, its own card, a description under every option ---------- */
+.tiredlist{display:grid;gap:8px;margin-top:2px}
+.tiredopt{
+  display:flex;align-items:flex-start;gap:11px;width:100%;text-align:left;
+  background:var(--bg-3);border:1px solid var(--line);border-radius:10px;
+  padding:10px 12px;cursor:pointer;font-family:inherit;color:var(--ink);
+}
+.tiredopt:hover{border-color:var(--ember)}
+.tiredopt.on{border-color:var(--ember);background:rgba(224,123,65,.12)}
+.tiredopt:focus-visible{outline:2px solid var(--peri);outline-offset:2px}
+.tiredopt .tn{
+  flex:none;font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--ink-2);
+  width:14px;padding-top:2px;
+}
+.tiredopt.on .tn{color:var(--ember)}
+.tiredopt .tbody{display:flex;flex-direction:column;gap:2px}
+.tiredopt .tw{font-weight:600;font-size:15px}
+.tiredopt .td{font-size:13px;color:var(--ink-2);line-height:1.4}
+
 /* ---------- minutes ---------- */
 .minrow{display:flex;align-items:center;gap:9px;font-size:15px;color:var(--ink-2);margin-bottom:2px}
 .minrow span{white-space:nowrap}
@@ -509,7 +528,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.3</span>
+    <span id="ver" class="ver">v2.4</span>
   </div>
 </div>
 
@@ -675,6 +694,17 @@ var WITH=['Åsa','Carson','Max','Zingo','On my own','Family','Friends','Colleagu
 var ENERGY=['A person','Being outside','Making something','Moving','Finishing something','Quiet','Music','A good meal','A win at work','Solving something','Nothing much did'];
 var WHERE=['Home','Out','Work','Travelling','Outside'];
 var CRE_WORD=['Flat','Ticking over','Some sparks','Really flowing','On fire'];
+/* Tired level, added Sep 8 2026. Its own card on the last screen, not part of
+   WRAPCATS/wc8, because it is the one metric that needs a description under
+   every option instead of a plain dot. Saved into the same answers jsonb as
+   everything else in WRAPCATS, key 'tired', no new column. */
+var TIRED=[
+ {n:1,w:'Fresh',d:'Rested, no drag anywhere today.'},
+ {n:2,w:'A little tired',d:'An occasional low moment, never really slowed you down.'},
+ {n:3,w:'Tired',d:'Noticeably tired for real stretches of the day.'},
+ {n:4,w:'Very tired',d:'Dragging most of the day, sometimes from before it even started.'},
+ {n:5,w:'Exhausted',d:'Running on empty, hard to push through anything.'}
+];
 /* The fixed nightly check-in, Sep 7 2026. Replaces the old rotating 52-question
    bank (tnt_questions / QFALL / dealQuestions / saveQuestions, left below unused
    rather than ripped out) with the SAME eight things every night, so they trend.
@@ -773,6 +803,7 @@ async function saveThing(item,slot){
 function answerPayload(){
   var out={};
   WRAPCATS.forEach(function(c){ if(N.a8[c.k]!==undefined) out[c.k]=N.a8[c.k]; });
+  if(N.tired!==undefined) out.tired=N.tired;
   if(N.a.__told) out.__told=1;
   return out;
 }
@@ -1147,7 +1178,7 @@ function newNight(){
     withw:[], wherew:null, energy:[], energyNote:'', mins:'',
     items:[], cat:null, text:'', extra:null, etext:'', skipped:[],
     three:['','',''], nudge:[], dupes:[],
-    cre:3, crePlaced:false, stars:[], creNote:''
+    cre:3, crePlaced:false, stars:[], creNote:'', tired:undefined
   };
 }
 /* Tonight's pair. Rebuilt once a day. The deck holds each card once,
@@ -1478,6 +1509,14 @@ function render(){
       h+='</div></div>';
     });
     h+='</div>';
+    h+='<div class="wc8card tiredcard" style="margin-top:10px"><p class="wc8lab">Tired level</p><div class="tiredlist">';
+    TIRED.forEach(function(t){
+      var sel=(N.tired===t.n);
+      h+='<button class="tiredopt'+(sel?' on':'')+'" data-tired="'+t.n+'" aria-label="'+t.n+' of 5, '+esc(t.w)+'">';
+      h+='<span class="tn">'+t.n+'</span><span class="tbody"><span class="tw">'+esc(t.w)+'</span><span class="td">'+esc(t.d)+'</span></span>';
+      h+='</button>';
+    });
+    h+='</div></div>';
     if(PROJ.length){
       h+='<p class="sub" style="margin-top:14px">Which project felt most creative today? Star up to two.</p>';
       h+='<div class="chiprow">';
@@ -1515,6 +1554,7 @@ function render(){
     if(N.words.length) h+='<div class="item"><span class="c">Tonight you were</span><span class="t">'+N.words.join(' &middot; ')+'</span></div>';
     if(energyText()) h+='<div class="item"><span class="c">What put something back</span><span class="t">'+esc(energyText())+'</span></div>';
     if(eightDone()) h+='<div class="item"><span class="c">How today measured</span><span class="t">'+WRAPCATS.filter(function(c){return N.a8[c.k]!==undefined;}).map(function(c){return c.n+' '+N.a8[c.k];}).join(' &middot; ')+'</span></div>';
+    if(N.tired!==undefined) h+='<div class="item"><span class="c">Tired level</span><span class="t">'+esc(N.tired+' '+TIRED[N.tired-1].w)+'</span></div>';
     if(N.a8.creativity!==undefined && N.stars.length) h+='<div class="item"><span class="c">Most creative today</span><span class="t">'+esc(N.stars.join(' &amp; '))+'</span></div>';
     h+='<div class="tally">';
     h+='<div><b>'+S.hist.length+'</b><span>things noticed</span></div>';
@@ -1779,6 +1819,13 @@ function wireEight(){
       var c=WRAPCATS[+b.getAttribute('data-c')], v=+b.getAttribute('data-v');
       if(N.a8[c.k]===v){ delete N.a8[c.k]; delete N.a8fx[c.k]; }
       else { N.a8[c.k]=v; N.a8fx[c.k]=scratchFX(); }
+      render();
+    });
+  });
+  stage.querySelectorAll('[data-tired]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var v=+b.getAttribute('data-tired');
+      N.tired=(N.tired===v)?undefined:v;
       render();
     });
   });
