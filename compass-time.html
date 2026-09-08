@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Compass Time · Project YOU</title>
+<style>
+:root{
+  --page:#f2f3f4; --sheet:#ffffff; --ink:#2f3337; --ink-2:#555b61;
+  --muted:#8a9097; --line:#d6dade; --line-2:#c2c8ce; --grid:#dfe3e6;
+  --accent:#2f5a74; --soft:#eef2f5;
+  --ok:#3f7a53; --okTint:#e2f0e6;
+  --amber:#a1791f; --amberTint:#f7f0da;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page:#0f1214; --sheet:#171b1e; --ink:#d6dce4; --ink-2:#aab2ba; --muted:#828b93;
+    --line:#2a3136; --line-2:#39424a; --grid:#2a3136; --accent:#7fb6d4; --soft:#1b2226;
+    --ok:#7fc496; --okTint:#173322; --amber:#e0b95c; --amberTint:#332a12;
+  }
+}
+:root[data-theme="dark"]{
+  --page:#0f1214; --sheet:#171b1e; --ink:#d6dce4; --ink-2:#aab2ba; --muted:#828b93;
+  --line:#2a3136; --line-2:#39424a; --grid:#2a3136; --accent:#7fb6d4; --soft:#1b2226;
+  --ok:#7fc496; --okTint:#173322; --amber:#e0b95c; --amberTint:#332a12;
+}
+*{box-sizing:border-box}
+body{margin:0; background:var(--page); color:var(--ink);
+  font-family:Arial,Helvetica,"Helvetica Neue",sans-serif; font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased}
+.shell{max-width:1020px; margin:0 auto; padding:22px 16px 90px}
+.pillrow{display:flex; flex-wrap:wrap; gap:7px; margin-bottom:14px}
+.pill{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.62rem; font-weight:600; letter-spacing:.09em;
+  text-transform:uppercase; border:1px solid var(--line-2); color:var(--muted); padding:4px 8px; border-radius:3px}
+h1{font-size:1.7rem; font-weight:700; letter-spacing:-.02em; margin:0 0 8px}
+.sub{color:var(--ink-2); font-size:.95rem; margin:0 0 20px; max-width:78ch}
+.sub b{color:var(--ink)}
+h2{font-size:1.05rem; font-weight:700; margin:0 0 2px}
+.eyebrow{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.62rem; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); margin:0 0 4px; font-weight:600}
+section{margin-bottom:26px}
+
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-bottom:8px}
+.stat{background:var(--sheet); border:1px solid var(--line); border-left:4px solid var(--sw); border-radius:6px; padding:10px 12px}
+.stat .k{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.stat .v{font-size:1.25rem; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.02em; margin-top:2px}
+.stat .v2{font-size:.75rem; color:var(--ink-2); margin-top:1px}
+
+.groupcard{background:var(--sheet); border:1px solid var(--line); border-left:4px solid var(--sw); border-radius:8px; margin-bottom:12px; overflow:hidden}
+.grouphead{display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid var(--line)}
+.dot{width:11px; height:11px; border-radius:50%; background:var(--sw); flex:none}
+.grouphead b{font-size:.95rem}
+.grouphead .cnt{margin-left:auto; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.68rem; color:var(--muted)}
+
+.tablewrap{overflow-x:auto}
+table{width:100%; border-collapse:collapse; min-width:640px}
+th{text-align:left; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.62rem; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); font-weight:600; padding:8px 14px; border-bottom:1px solid var(--line)}
+td{padding:9px 14px; border-bottom:1px solid var(--line); vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.habitname{font-weight:600}
+.habitmeta{font-size:.76rem; color:var(--ink-2); margin-top:1px}
+select, .mins{font-family:Arial,Helvetica,sans-serif; font-size:.85rem; color:var(--ink); background:var(--soft);
+  border:1px solid var(--line-2); border-radius:5px; padding:6px 8px}
+select{min-width:170px}
+.mins{color:var(--ink-2); font-variant-numeric:tabular-nums}
+.toggle{display:inline-flex; border:1px solid var(--line-2); border-radius:99px; overflow:hidden}
+.toggle button{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.66rem; font-weight:700;
+  letter-spacing:.05em; text-transform:uppercase; border:none; background:var(--soft); color:var(--muted);
+  padding:6px 12px; cursor:pointer}
+.toggle button.on.yes{background:var(--okTint); color:var(--ok)}
+.toggle button.on.no{background:var(--amberTint); color:var(--amber)}
+.rowsave{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.6rem; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted); opacity:0; transition:opacity .25s; white-space:nowrap}
+.rowsave.show{opacity:1}
+.rowsave.ok{color:var(--ok)}
+.rowsave.err{color:#b3532f}
+
+.note{border-left:3px solid var(--accent); background:var(--soft); border-radius:0 6px 6px 0; padding:10px 14px; font-size:.86rem; color:var(--ink-2); margin-bottom:18px}
+.note b{color:var(--ink)}
+
+footer{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.68rem; color:var(--muted);
+  border-top:1px solid var(--line); padding-top:12px; margin-top:30px}
+.loading{color:var(--muted); font-size:.9rem; padding:20px 0}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="pillrow">
+    <span class="pill">PROJECT YOU</span>
+    <span class="pill">COMPASS TIME v1.0</span>
+    <span class="pill" id="datePill">Sep 8, 2026</span>
+    <span class="pill">LIVE</span>
+  </div>
+
+  <h1>Compass Time</h1>
+  <p class="sub">This decides two things for every habit: which <b>Clarity Compass</b> point it belongs to, and whether its
+    minutes should count toward your daily and weekly habit-time totals. It does not change your habits, your day, or
+    your schedule, only how those totals get built. Every habit already carries a Compass point from the Habit
+    Worksheets; this page is where you confirm each one or correct it, and decide what counts.</p>
+
+  <div class="note">
+    <b>What this feeds.</b> Once you've been through this list, I'll wire the Time Bandit Wheel, the Clarity Compass
+    wheel, the Week in Review and the Habits Tracker totals to read from these same choices, so all four agree with
+    each other and with this page. Nothing downstream has been wired yet, this is step one.
+  </div>
+
+  <section>
+    <div class="eyebrow">Right now, if every counted habit landed today</div>
+    <h2>By Compass point</h2>
+    <div class="stats" id="statsRow"><div class="loading">Loading&hellip;</div></div>
+  </section>
+
+  <section>
+    <div class="eyebrow">One row per habit, grouped by Compass point</div>
+    <h2>Review and adjust</h2>
+    <div id="groups"><div class="loading">Loading your habits from the worksheet&hellip;</div></div>
+  </section>
+
+  <footer id="foot">Project YOU · Compass Time v1.0 · Sep 8, 2026 · reads and writes worksheet_rows, syncs into daily_template (Supabase)</footer>
+</div>
+
+<script>
+var SB  = 'https://arnjntspmrhigodlssbn.supabase.co/rest/v1/';
+var SBK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+
+var AREAS = [
+  {name:'Physical Health',      c:'#c05f7a'},
+  {name:'Environmental Health', c:'#4fa08a'},
+  {name:'Social Well-Being',    c:'#5b8fce'},
+  {name:'Recreational Health',  c:'#e0975a'},
+  {name:'Sense of Purpose',     c:'#cf9088'},
+  {name:'Mental Fitness',       c:'#c6a63f'},
+  {name:'Emotional Health',     c:'#7d81c2'},
+  {name:'Project YOU',          c:'#3f6f8f'}
+];
+var AREA_COLOR = {}; AREAS.forEach(function(a){ AREA_COLOR[a.name] = a.c; });
+
+function sbFetch(path, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({'apikey':SBK, 'Authorization':'Bearer '+SBK, 'Content-Type':'application/json'}, opts.headers||{});
+  return fetch(SB+path, opts).then(function(r){
+    if(!r.ok) return r.text().then(function(x){ throw new Error(r.status+' '+path+' '+x.slice(0,180)); });
+    if(r.status===204 || (opts.headers.Prefer||'').indexOf('return=minimal')>-1) return null;
+    return r.text().then(function(x){ return x ? JSON.parse(x) : null; });
+  });
+}
+
+var ROWS = []; // unified: {kind:'ws'|'dt', id, area, section, habit, minutes, count_time}
+
+function load(){
+  sbFetch('worksheet_rows?is_active=eq.true&retired=eq.false&parked=eq.false&select=id,area,section,habit,minutes,count_time&order=area,section')
+  .then(function(ws){
+    ROWS = (ws||[]).map(function(w){
+      return {kind:'ws', id:w.id, area:w.area, section:w.section, habit:w.habit, minutes:w.minutes, count_time: w.count_time !== false};
+    });
+    render();
+  }).catch(function(e){
+    document.getElementById('groups').innerHTML = '<div class="loading">Could not load: '+String(e.message||e)+'</div>';
+    console.error(e);
+  });
+}
+
+function render(){
+  renderStats();
+  renderGroups();
+}
+
+function renderStats(){
+  var byArea = {};
+  AREAS.forEach(function(a){ byArea[a.name] = {n:0, min:0}; });
+  ROWS.forEach(function(r){
+    if(!byArea[r.area]) byArea[r.area] = {n:0, min:0};
+    byArea[r.area].n++;
+    if(r.count_time) byArea[r.area].min += (r.minutes||0);
+  });
+  var html = AREAS.map(function(a){
+    var s = byArea[a.name] || {n:0,min:0};
+    return '<div class="stat" style="--sw:'+a.c+'"><div class="k">'+a.name+'</div>'+
+      '<div class="v">'+s.min+' min</div><div class="v2">'+s.n+' habit'+(s.n===1?'':'s')+'</div></div>';
+  }).join('');
+  document.getElementById('statsRow').innerHTML = html;
+}
+
+function renderGroups(){
+  var host = document.getElementById('groups');
+  host.innerHTML = '';
+  AREAS.forEach(function(a){
+    var rows = ROWS.filter(function(r){ return r.area === a.name; });
+    if(!rows.length) return;
+    var card = document.createElement('div');
+    card.className = 'groupcard';
+    card.style.setProperty('--sw', a.c);
+    card.innerHTML = '<div class="grouphead"><span class="dot"></span><b>'+a.name+'</b>'+
+      '<span class="cnt">'+rows.length+' habit'+(rows.length===1?'':'s')+'</span></div>'+
+      '<div class="tablewrap"><table><thead><tr>'+
+      '<th>Habit</th><th>Compass point</th><th>Minutes</th><th>Counts toward total</th><th></th>'+
+      '</tr></thead><tbody></tbody></table></div>';
+    var tbody = card.querySelector('tbody');
+    rows.forEach(function(r){ tbody.appendChild(buildRow(r)); });
+    host.appendChild(card);
+  });
+}
+
+function buildRow(r){
+  var tr = document.createElement('tr');
+  tr.dataset.kind = r.kind; tr.dataset.id = r.id;
+
+  var tdName = document.createElement('td');
+  tdName.innerHTML = '<div class="habitname">'+escapeHtml(r.habit)+'</div>'+
+    '<div class="habitmeta">'+escapeHtml(r.section||'')+'</div>';
+  tr.appendChild(tdName);
+
+  var tdArea = document.createElement('td');
+  var sel = document.createElement('select');
+  AREAS.forEach(function(a){
+    var opt = document.createElement('option');
+    opt.value = a.name; opt.textContent = a.name;
+    if(a.name === r.area) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', function(){ save(r, tr, {area: sel.value}); });
+  tdArea.appendChild(sel);
+  tr.appendChild(tdArea);
+
+  var tdMin = document.createElement('td');
+  tdMin.innerHTML = '<span class="mins">'+(r.minutes==null ? '&mdash;' : r.minutes+' min')+'</span>';
+  tr.appendChild(tdMin);
+
+  var tdToggle = document.createElement('td');
+  var wrap = document.createElement('div'); wrap.className = 'toggle';
+  var yes = document.createElement('button'); yes.textContent = 'Yes';
+  var no = document.createElement('button'); no.textContent = 'No';
+  function paint(){
+    yes.className = r.count_time ? 'on yes' : '';
+    no.className = !r.count_time ? 'on no' : '';
+  }
+  paint();
+  yes.addEventListener('click', function(){ if(r.count_time) return; r.count_time = true; paint(); save(r, tr, {count_time:true}); });
+  no.addEventListener('click', function(){ if(!r.count_time) return; r.count_time = false; paint(); save(r, tr, {count_time:false}); });
+  wrap.appendChild(yes); wrap.appendChild(no);
+  tdToggle.appendChild(wrap);
+  tr.appendChild(tdToggle);
+
+  var tdSave = document.createElement('td');
+  var savePill = document.createElement('span'); savePill.className = 'rowsave'; savePill.textContent = 'saved';
+  tdSave.appendChild(savePill);
+  tr.appendChild(tdSave);
+  tr._savePill = savePill;
+
+  return tr;
+}
+
+function flashSave(tr, ok){
+  var el = tr._savePill;
+  if(!el) return;
+  el.className = 'rowsave show ' + (ok ? 'ok' : 'err');
+  el.textContent = ok ? 'saved' : 'not saved';
+  setTimeout(function(){ el.className = 'rowsave'; }, 1800);
+}
+
+function save(r, tr, patch){
+  Object.assign(r, patch);
+  sbFetch('worksheet_rows?id=eq.'+r.id, {method:'PATCH', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(patch)})
+    .then(function(){
+      // The worksheet decides Compass point and whether a habit counts toward the totals.
+      // This pushes that classification down to today's list so nothing disagrees with it.
+      return sbFetch('rpc/sync_worksheet_classification', {method:'POST', body:JSON.stringify({p_ws_id: r.id})});
+    })
+    .then(function(){
+      flashSave(tr, true);
+      renderStats();
+      // delay the regroup so the "saved" confirmation is visible before a row
+      // that changed Compass point jumps to its new group card
+      setTimeout(renderGroups, 1300);
+    })
+    .catch(function(e){ flashSave(tr, false); console.error(e); });
+}
+
+function escapeHtml(s){
+  return String(s==null?'':s).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+document.getElementById('datePill').textContent = new Date().toLocaleDateString('en-US', {month:'short', day:'numeric', year:'numeric', timeZone:'America/New_York'});
+load();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
