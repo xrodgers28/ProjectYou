@@ -6,7 +6,7 @@
 <title>Food Log &middot; Project YOU</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  /* ===== Project YOU * Food Log v1.6 ===== */
+  /* ===== Project YOU * Food Log v1.7 ===== */
   :root{
     --ink:#1f2a44;--muted:#4b5563;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;
     --inset:#f5f7fb;--accent:#1e8e5a;--accent2:#166f46;--chip:#eef2f8;
@@ -180,6 +180,35 @@
   .mdmeta i{font-style:normal;color:var(--ink)}
   .row{cursor:pointer}
   .row:hover{border-color:var(--line-2,#cfd6de)}
+
+  /* ---- A whole day, opened up. Scott, Sep 8 2026: tap a day (the bar or the
+     row) and see everything eaten that day, with arrows to step to the
+     previous or next day. Sits UNDER the single-meal popup (z-index 190
+     against its 200) so tapping a meal inside this list can open the meal's
+     own detail stacked on top, the same tap-a-meal behaviour as everywhere
+     else on the page. Browsing runs across his whole history, not just the
+     14 days in the chart; an empty day still opens and says so rather than
+     silently jumping to the next one that has something in it; the arrows
+     stop at today (nothing in the future) and at the day of his first-ever
+     logged meal (nothing before he started). */
+  .ddet{position:fixed;inset:0;background:rgba(18,24,36,.66);z-index:190;
+        display:flex;align-items:center;justify-content:center;padding:18px;
+        opacity:0;transition:opacity .18s}
+  .ddet.on{opacity:1}
+  .ddbox{background:#fff;border-radius:16px;width:100%;max-width:640px;max-height:88vh;
+         display:flex;flex-direction:column;overflow:hidden;position:relative;
+         box-shadow:0 24px 60px rgba(15,20,32,.35)}
+  .ddnav{display:flex;align-items:center;gap:10px;padding:18px 52px 14px 18px;border-bottom:1px solid var(--line);flex:none}
+  .ddarrow{background:var(--inset);border:1px solid var(--line);color:var(--ink);
+           width:38px;height:38px;border-radius:50%;font-size:18px;line-height:1;cursor:pointer;flex:none}
+  .ddarrow:hover{border-color:var(--accent)}
+  .ddarrow:disabled{opacity:.35;cursor:default;border-color:var(--line)}
+  .ddhead{flex:1;text-align:center;min-width:0}
+  .ddhead h3{font-size:19px}
+  .ddsub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:3px}
+  .ddlist{padding:14px 18px 20px;overflow-y:auto}
+  .daybar{cursor:pointer}
+  #tdays tbody tr{cursor:pointer}
 </style>
 </head>
 <body>
@@ -194,7 +223,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.6</span><span class="date" id="dstamp"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Food Log</h1><span class="ver pn-ver">v1.7</span><span class="date" id="dstamp"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Where today stands against your goals, then every meal you have logged. You log a meal by taking a picture on <a href="log-meal.html">Log a Meal</a>. Numbers that came off a packet are exact; numbers read off a photo are close rather than correct.</p>
@@ -267,7 +296,7 @@
     </div>
   </div>
 
-  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.6</p>
+  <p class="foot" id="foot">Project YOU OS  -  Food Log v1.7</p>
 </div>
 </div>
 
@@ -277,6 +306,18 @@
     <button class="mdx" type="button" onclick="closeDetail()" aria-label="Close">&times;</button>
     <div class="mdimg"></div>
     <div class="mdinfo"></div>
+  </div>
+</div>
+
+<div id="ddet" class="ddet hidden" onclick="closeDayDetail(event)">
+  <div class="ddbox">
+    <button class="mdx" type="button" onclick="closeDayDetail()" aria-label="Close">&times;</button>
+    <div class="ddnav">
+      <button class="ddarrow" id="ddprev" type="button" onclick="navDay(-1)" aria-label="Previous day">&#8592;</button>
+      <div class="ddhead"><h3 id="ddtitle"></h3><div class="ddsub" id="ddsub"></div></div>
+      <button class="ddarrow" id="ddnext" type="button" onclick="navDay(1)" aria-label="Next day">&#8594;</button>
+    </div>
+    <div class="ddlist" id="ddlist"></div>
   </div>
 </div>
 
@@ -355,7 +396,7 @@ async function load(){
   GOALS=(g && !g.error && g.data && g.data[0]) ? g.data[0] : GOALS;
   FIBREF=(f && !f.error && f.data) ? f.data : [];
   safe(drawGoals); safe(drawCards); safe(drawToday); safe(drawDays); safe(drawAsks); safe(drawAll); safe(drawUsuals); safe(drawFibre);
-  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.6  -  '+MEALS.length+' meals on record  -  read from your own database.';
+  document.getElementById('foot').textContent='Project YOU OS  -  Food Log v1.7  -  '+MEALS.length+' meals on record  -  read from your own database.';
 }
 
 /* Today against the two numbers he set himself, plus the four glasses of water.
@@ -542,16 +583,21 @@ function drawDays(){
     const h=Math.max(2, ih*(d.cal/top));
     const x=L+step*i+(step-bw)/2, y=T+ih-h;
     const fill=(d.day===today)?'var(--barnow)':'var(--bar)';
+    /* Whole day, one tap: the bar, its number and its date label are one
+       clickable group, same day popup as the table row below. */
+    s+='<g class="daybar" onclick="openDayDetail(\''+d.day+'\')">';
+    s+='<rect x="'+(x-3).toFixed(1)+'" y="'+T+'" width="'+(bw+6).toFixed(1)+'" height="'+ih+'" fill="transparent"></rect>';
     s+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+h.toFixed(1)+'" rx="3" fill="'+fill+'"></rect>';
     s+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(y-5).toFixed(1)+'" text-anchor="middle" class="cvalue">'+d.cal.toLocaleString('en-US')+'</text>';
     const p=d.day.split('-');
     s+='<text x="'+(x+bw/2).toFixed(1)+'" y="'+(T+ih+16)+'" text-anchor="middle" class="clabel">'+MON[+p[1]-1]+' '+(+p[2])+'</text>';
+    s+='</g>';
   });
   s+='<line x1="'+L+'" y1="'+(T+ih)+'" x2="'+(W-R)+'" y2="'+(T+ih)+'" stroke="var(--line)" stroke-width="1" fill="none"></line>';
   s+='<text x="'+L+'" y="'+(H-8)+'" class="clabel">Calories a day. The darkest bar is today.</text>';
   svg.innerHTML=s;
 
-  tb.innerHTML=shown.map(d=>'<tr><td>'+esc(dayLabel(d.day))+'</td><td class="num">'+d.cal.toLocaleString('en-US')+'</td><td class="num">'+fg(d.fib)+' g</td><td class="num">'+d.p+' g</td><td class="num">'+d.c+' g</td><td class="num">'+d.f+' g</td><td class="num">'+d.meals+'</td></tr>').join('');
+  tb.innerHTML=shown.map(d=>'<tr onclick="openDayDetail(\''+d.day+'\')"><td>'+esc(dayLabel(d.day))+'</td><td class="num">'+d.cal.toLocaleString('en-US')+'</td><td class="num">'+fg(d.fib)+' g</td><td class="num">'+d.p+' g</td><td class="num">'+d.c+' g</td><td class="num">'+d.f+' g</td><td class="num">'+d.meals+'</td></tr>').join('');
   const tp=Math.round(days.reduce((a,d)=>a+d.p,0)/days.length), tc=Math.round(days.reduce((a,d)=>a+d.c,0)/days.length), tfat=Math.round(days.reduce((a,d)=>a+d.f,0)/days.length);
   const tfib=Math.round(days.reduce((a,d)=>a+d.fib,0)/days.length*10)/10;
   /* His goals, right under the average so the two sit next to each other.
@@ -769,6 +815,77 @@ function closeDetail(ev){
   box.classList.remove('on');
   document.removeEventListener('keydown', escClose);
   setTimeout(function(){ box.classList.add('hidden'); }, 180);
+}
+
+/* ---- A whole day, opened up -----------------------------------------------
+   Tap a day, on the chart or in the table under it, and see every meal that
+   landed on it, with arrows to step to the previous or next day. Browsing is
+   not boxed in to the 14 days the chart draws: it walks his whole history,
+   stopping only at today (nothing in the future, per his "only track what
+   already happened" rule) and at the day of his first-ever logged meal
+   (nothing before there was anything to log). A day with nothing on it still
+   opens and says "Nothing logged" rather than the tap silently jumping
+   somewhere else. Tapping a meal in the list opens that meal's own detail on
+   top, via the same openDetail() every other meal row on this page already
+   uses - mealRow() is reused as-is for the list. */
+let DDDAY = null;
+function addDays(day, delta){
+  const p = day.split('-');
+  const dt = new Date(Date.UTC(+p[0], +p[1]-1, +p[2]));
+  dt.setUTCDate(dt.getUTCDate() + delta);
+  return dt.toISOString().slice(0,10);
+}
+function earliestLoggedDay(){
+  const days = byDay();
+  if (!days.length) return null;
+  return days.reduce((a,d)=> d.day < a ? d.day : a, days[0].day);
+}
+function openDayDetail(day, ev){
+  if (ev && ev.target && ev.target.closest && ev.target.closest('button')) return;
+  DDDAY = day;
+  renderDayDetail();
+  const box = document.getElementById('ddet');
+  box.classList.remove('hidden');
+  requestAnimationFrame(function(){ box.classList.add('on'); });
+  document.addEventListener('keydown', ddKeyHandler);
+}
+function ddKeyHandler(e){
+  if (e.key === 'Escape') { closeDayDetail(); }
+  else if (e.key === 'ArrowLeft') { navDay(-1); }
+  else if (e.key === 'ArrowRight') { navDay(1); }
+}
+function navDay(delta){
+  if (!DDDAY) return;
+  const next = addDays(DDDAY, delta);
+  const today = nyDay();
+  const earliest = earliestLoggedDay();
+  if (next > today) return;
+  if (earliest && next < earliest) return;
+  DDDAY = next;
+  renderDayDetail();
+}
+function renderDayDetail(){
+  const day = DDDAY, today = nyDay();
+  const list = MEALS.filter(function(m){ return m.day === day; }).slice().sort(function(a,b){ return a.eaten_at < b.eaten_at ? -1 : 1; });
+  const cal = list.filter(counted).reduce(function(a,m){ return a + n(m.calories); }, 0);
+  document.getElementById('ddtitle').textContent = dayLabel(day) + (day === today ? ' · Today' : '');
+  document.getElementById('ddsub').textContent = list.length
+    ? cal.toLocaleString('en-US') + ' calories across ' + list.length + (list.length === 1 ? ' meal' : ' meals')
+    : 'Nothing logged';
+  document.getElementById('ddlist').innerHTML = list.length
+    ? list.map(function(m){ return mealRow(m,false); }).join('')
+    : '<div class="empty">Nothing logged this day.</div>';
+  const earliest = earliestLoggedDay();
+  document.getElementById('ddprev').disabled = !!(earliest && day <= earliest);
+  document.getElementById('ddnext').disabled = (day >= today);
+}
+function closeDayDetail(ev){
+  if (ev && ev.target && ev.target.id !== 'ddet' && !ev.target.classList.contains('mdx')) return;
+  const box = document.getElementById('ddet');
+  if (!box) return;
+  box.classList.remove('on');
+  document.removeEventListener('keydown', ddKeyHandler);
+  setTimeout(function(){ box.classList.add('hidden'); DDDAY = null; }, 180);
 }
 
 boot();
