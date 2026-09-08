@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#FCFCFB; --panel:#ffffff; --ink:#2E2C27; --soft:#6B6A63; --grey:#B4B3A8;
+  --hair:#E4E3DC; --wash:#F5F5F2;
+  --green:#2f8f5b; --amber:#c07f10; --red:#c0503a;
+  --b-do:#3f6f8f; --b-tell:#c07f10; --b-did:#2f8f5b; --b-read:#6f7b8a; --b-kill:#a8724a;
+  --shadow:0 1px 2px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1a1917; --panel:#232220; --ink:#ecebe6; --soft:#a9a89f; --grey:#75736b;
+    --hair:#35332e; --wash:#201f1c; --shadow:0 1px 2px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1a1917; --panel:#232220; --ink:#ecebe6; --soft:#a9a89f; --grey:#75736b;
+  --hair:#35332e; --wash:#201f1c; --shadow:0 1px 2px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif;line-height:1.5;
+  -webkit-font-smoothing:antialiased;}
+.wrap{max-width:820px;margin:0 auto;padding:22px 18px 60px;}
+.titlebar{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:2px;}
+.titlebar h1{font-size:26px;margin:0;letter-spacing:.2px;}
+.chip{font-size:12px;font-weight:700;color:var(--soft);border:1px solid var(--hair);
+  border-radius:6px;padding:2px 7px;background:var(--wash);}
+.date{color:var(--soft);font-size:14px;margin:2px 0 18px;}
+
+.day{background:var(--panel);border:1px solid var(--hair);border-radius:10px;
+  padding:14px 16px;margin-bottom:16px;box-shadow:var(--shadow);}
+.day h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--soft);margin:0 0 8px;}
+.day p{margin:0 0 8px;font-size:15px;}
+.day p:last-child{margin-bottom:0;}
+.tag{font-weight:700;}
+
+.key{background:var(--wash);border:1px solid var(--hair);border-radius:10px;
+  padding:12px 16px;margin-bottom:16px;font-size:13.5px;}
+.key h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--soft);margin:0 0 8px;}
+.key ul{margin:0;padding-left:0;list-style:none;}
+.key li{margin:5px 0;}
+.key b{display:inline-block;min-width:118px;}
+.kd{color:var(--b-do);} .kt{color:var(--b-tell);} .ki{color:var(--b-did);}
+.kr{color:var(--b-read);} .kk{color:var(--b-kill);}
+
+.compiler{position:sticky;top:0;z-index:20;background:var(--bg);
+  padding:10px 0 12px;margin-bottom:8px;border-bottom:1px solid var(--hair);}
+.compiler h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--soft);margin:0 0 6px;}
+.compiler .hint{font-size:12.5px;color:var(--soft);margin:0 0 6px;}
+#answers{width:100%;min-height:82px;resize:vertical;font-family:Arial,Helvetica,sans-serif;
+  font-size:13px;line-height:1.45;color:var(--ink);background:var(--panel);
+  border:1px solid var(--hair);border-radius:8px;padding:9px 11px;}
+.cprow{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;}
+.copybtn{font-size:12.5px;font-weight:600;color:var(--soft);background:var(--wash);
+  border:1px solid var(--hair);border-radius:7px;padding:6px 11px;cursor:pointer;}
+.count{font-size:12.5px;color:var(--soft);}
+
+.rows{margin-top:6px;}
+.row{background:var(--panel);border:1px solid var(--hair);border-left:5px solid var(--hair);
+  border-radius:10px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow);transition:border-color .15s;}
+.rowhead{display:flex;align-items:flex-start;gap:10px;}
+.light{flex:none;width:13px;height:13px;border-radius:50%;margin-top:5px;}
+.g{background:var(--green);} .a{background:var(--amber);} .r{background:var(--red);}
+.rowhead h3{font-size:16.5px;margin:0;font-weight:700;}
+.state{font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;
+  color:var(--grey);margin-top:6px;}
+.body{margin:8px 0 4px;font-size:14.5px;color:var(--soft);}
+.next{margin:8px 0 2px;font-size:14px;}
+.next b{color:var(--ink);}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;}
+.btn{font-size:13px;font-weight:600;color:#FCFCFB;border:none;border-radius:8px;
+  padding:9px 14px;cursor:pointer;opacity:.92;transition:opacity .12s, transform .05s;}
+.btn:hover{opacity:1;} .btn:active{transform:translateY(1px);}
+.btn[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:1px;opacity:1;}
+.do{background:var(--b-do);} .tell{background:var(--b-tell);} .did{background:var(--b-did);}
+.read{background:var(--b-read);} .kill{background:var(--b-kill);}
+.cbox{margin-top:10px;}
+.cbox textarea{width:100%;min-height:38px;resize:vertical;font-family:Arial,Helvetica,sans-serif;
+  font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--hair);
+  border-radius:7px;padding:7px 9px;}
+.cbox label{display:block;font-size:12px;color:var(--grey);margin-bottom:4px;}
+
+.tip{background:var(--wash);border:1px solid var(--hair);border-radius:10px;
+  padding:13px 16px;margin:18px 0 10px;font-size:14px;}
+.tip b{color:var(--ink);}
+.proof{font-size:11.5px;color:var(--grey);border-top:1px solid var(--hair);
+  padding-top:10px;margin-top:18px;line-height:1.5;}
+.foot{font-size:12px;color:var(--grey);margin-top:10px;}
+@media (max-width:640px){
+  .titlebar h1{font-size:22px;}
+  .key b{min-width:0;display:block;margin-bottom:1px;}
+  .btn{flex:1 1 auto;text-align:center;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="titlebar">
+    <h1>Morning Report</h1>
+    <span class="chip">v1.0</span>
+  </div>
+  <div class="date">Monday, September 8, 2026</div>
+
+  <div class="day">
+    <h2>Your day</h2>
+    <p><span class="tag">Shape:</span> a full one. Your calendar stacks work calls from mid-morning on, so treat the early hours before 10 as the quiet you get today.</p>
+    <p><span class="tag">The spine of it:</span> back-to-back through the middle of the day, with the P&amp;G Entertainment Summit workshop late morning, then Braun and the Amazon partner meetings across the afternoon into the early evening.</p>
+    <p><span class="tag">Tomorrow, so you can lean into it:</span> you are in New York for the Braun Haus fashion-week activation, and the Braun Haus stay runs into the weekend. Anything you want in hand for that is worth a look tonight, not in the morning.</p>
+    <p><span class="tag">Inbox:</span> quiet. Nothing is waiting on a reply from you. The Greenwich squash schedule sorted itself out on its own, the boys move to the Wednesday and Sunday group, no action needed.</p>
+  </div>
+
+  <div class="key">
+    <h2>How to answer</h2>
+    <p class="hint">Tap one button on each item. Your taps gather in the box below the key. When you are done, select that text and paste it back to me in the chat. That is how your answers travel.</p>
+    <ul>
+      <li><b class="kd">Do this</b> go build it, run it, ship it. An instruction, not an answer. The item stays open until the work is finished.</li>
+      <li><b class="kt">Tell me more</b> you lean yes, but want the cost or the reasoning first. Your question goes in the box. Stays open, my move next.</li>
+      <li><b class="ki">I did it</b> you handled it yourself. Item settles.</li>
+      <li><b class="kr">I read this</b> just noting you saw it. Nothing owed. Item settles.</li>
+      <li><b class="kk">Kill this task</b> drop it, and it does not come back. Item settles.</li>
+    </ul>
+  </div>
+
+  <div class="compiler">
+    <h2>Your answers so far</h2>
+    <textarea id="answers" readonly placeholder="Your taps will appear here as plain text to copy back into the chat."></textarea>
+    <div class="cprow">
+      <button class="copybtn" id="copy">Copy the text</button>
+      <span class="count" id="count">0 of 8 answered</span>
+    </div>
+  </div>
+
+  <div class="rows" id="rows">
+
+    <div class="row" data-id="1" data-head="Your site could not update itself yesterday">
+      <div class="rowhead">
+        <span class="light r"></span>
+        <div>
+          <h3>Your website could not update itself yesterday afternoon</h3>
+          <div class="state" data-state>Open, needs a decision</div>
+        </div>
+      </div>
+      <p class="body">Yesterday afternoon, over about an hour and a half, the step that copies your Project YOU pages onto the live web failed again and again, eight times in a row. Every publish request was accepted, but the final hand-off to the web never landed. This is the reason the five pages built for you overnight are still not live. Nothing was lost. The built work is safe and waiting, but until this is fixed, nothing new reaches the site, including this report.</p>
+      <p class="next"><b>Next:</b> Let me dig into why the hand-off keeps failing and get it working again.</p>
+      <div class="btns"></div>
+      <div class="cbox"><label>Add a note (optional)</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="row" data-id="2" data-head="Five pages built, waiting on your OK to publish">
+      <div class="rowhead">
+        <span class="light a"></span>
+        <div>
+          <h3>Five pages are built and ready, waiting only for your go-ahead</h3>
+          <div class="state" data-state>Open, needs a decision</div>
+        </div>
+      </div>
+      <p class="body">Overnight I finished five pieces of work and left them ready rather than pushing them live, the way you asked. The biggest is a new card on your Week in Review that shows where your chat time actually went, split by project and by topic. The rest are small tidy-ups: your day now ends at 2am the same way everywhere, an out-of-date note was corrected, and a few page labels were brought back into agreement. They go live the moment you say so, once the publish step above is healthy.</p>
+      <p class="next"><b>Next:</b> Tell me to publish and I ship all five.</p>
+      <div class="btns"></div>
+      <div class="cbox"><label>Add a note (optional)</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="row" data-id="3" data-head="A cleanup I couldn't finish without your yes">
+      <div class="rowhead">
+        <span class="light a"></span>
+        <div>
+          <h3>A small cleanup I could not finish on my own</h3>
+          <div class="state" data-state>Open, needs a decision</div>
+        </div>
+      </div>
+      <p class="body">On Saturday you told me to kill the red-and-green day-order squares everywhere on the site. I removed the feature itself, but three quiet background helpers still lean on the leftover data behind it, so deleting it outright would have risked breaking them. I have written out the safe, step-by-step way to clear it cleanly. It just needs your yes before I run it.</p>
+      <p class="next"><b>Next:</b> Approve the cleanup and I run it on the next quiet pass.</p>
+      <div class="btns"></div>
+      <div class="cbox"><label>Add a note (optional)</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="row" data-id="4" data-head="Four automation ideas, each needs one small answer">
+      <div class="rowhead">
+        <span class="light a"></span>
+        <div>
+          <h3>Four time-savers are ready to build, each waiting on one small choice</h3>
+          <div class="state" data-state>Open, needs a decision</div>
+        </div>
+      </div>
+      <p class="body">I drafted four automations overnight but held off building them, because each one needs either your phone or a single choice from you first. They are: a nudge when one of your body-stat feeds goes quiet, a daily automatic import of your travel history, a one-tap way to log a person right after you see them, and a way to tell "nothing to capture" apart from "could not reach your phone." None is urgent. Each one hinges on a single answer, like how often it should run or where the alert should show up.</p>
+      <p class="next"><b>Next:</b> Pick the ones you want and answer the one question each, or tell me to skip them.</p>
+      <div class="btns"></div>
+      <div class="cbox"><label>Add a note: which ones, and your answer for each (optional)</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="row" data-id="5" data-head="Your overnight helper has two bedtimes written down">
+      <div class="rowhead">
+        <span class="light a"></span>
+        <div>
+          <h3>Two different times are written down for your overnight helper</h3>
+          <div class="state" data-state>Open, needs a decision</div>
+        </div>
+      </div>
+      <p class="body">Your overnight helper actually runs at 4am, and it ran cleanly last night. But an old setting still says 2am, so your written notes and the real schedule disagree with each other. It is harmless right now, the run works fine, but the mismatch will confuse the next reader or the next run. Pick the time you actually want and I will make everything agree.</p>
+      <p class="next"><b>Next:</b> Tell me 4am, or an earlier time if you would rather, and I line them up.</p>
+      <div class="btns"></div>
+      <div class="cbox"><label>Add a note (optional)</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="row" data-id="6" data-head="Last night's overnight run went well">
+      <div class="rowhead">
+        <span class="light g"></span>
+        <div>
+          <h3>Your overnight helper ran cleanly and left you a full day's work</h3>
+          <div class="state" data-state>For your information</div>
+        </div>
+      </div>
+      <p class="body">It clocked in at 4:05am and finished around 4:16am with no errors. It built the five pages above, filled in two chat entries from the day before that had not logged themselves, and confirmed your photo and Strava feeds are healthy. It published nothing on purpose, leaving every choice to you. I opened one of its finished pieces to check it was real, not just claimed, and the Week in Review chat card is genuinely built and sitting ready.</p>
+      <p class="next"><b>Next:</b> Nothing. This is just so you know the night went well.</p>
+      <div class="btns"></div>
+      <div class="cbox"><label>Add a note (optional)</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="row" data-id="7" data-head="Two AI cards still waiting for keep or discard">
+      <div class="rowhead">
+        <span class="light a"></span>
+        <div>
+          <h3>Two old AI tool cards have been sitting in limbo since August</h3>
+          <div class="state" data-state>Open, needs a decision</div>
+        </div>
+      </div>
+      <p class="body">Your AI Intelligence deck has two tool cards that were flagged for you to check about a month ago and never got a yes or a no. They are switched off right now, so they are not showing up in your daily deck, but they are cluttering the holding area. Your latest community and AI scan turned up nothing new that needs your judgment, so these two are the only thing waiting. A quick keep or discard clears them out.</p>
+      <p class="next"><b>Next:</b> Tell me keep or discard, and I sort both.</p>
+      <div class="btns"></div>
+      <div class="cbox"><label>Add a note (optional)</label><textarea data-note></textarea></div>
+    </div>
+
+    <div class="row" data-id="8" data-head="Your Claude weekly usage, I can't see it from here">
+      <div class="rowhead">
+        <span class="light a"></span>
+        <div>
+          <h3>I cannot read your Claude usage from where I run</h3>
+          <div class="state" data-state>Open, needs a decision</div>
+        </div>
+      </div>
+      <p class="body">You asked where you stand on your weekly Claude limit. I have no way to see your account's usage from inside this run, so I will not guess at a number and risk giving you a wrong one. The place that shows it is your Claude app, under Settings and then Usage, which gives the live figure and the day it resets. If you want, I can look into whether there is a way to surface it in future briefs.</p>
+      <p class="next"><b>Next:</b> Check Settings, then Usage, in your Claude app for the live number.</p>
+      <div class="btns"></div>
+      <div class="cbox"><label>Add a note (optional)</label><textarea data-note></textarea></div>
+    </div>
+
+  </div>
+
+  <div class="tip">
+    <b>One from Atomic Habits.</b> James Clear's two-minute rule says to shrink the doorway to a habit until starting is almost effortless. Your five built pages are exactly that kind of doorway: one word from you and they are done. Clearing what is already finished is the cheapest win on this whole page.
+  </div>
+
+  <div class="proof">
+    <b>Technical proof (for the record):</b> run_log holds no row for the overnight run because that job writes to board_meta, not run_log; heartbeat started 2026-09-08 08:05:03 UTC, wrap 08:35:27, last_result 08:36:04, status complete. Verified claim: overnight_build holds draft:296-weekly-review-chats-card (4605 bytes, v1.9, not published) while pages.updated_at for weekly-review.html is 2026-09-06 05:07 UTC, unchanged during the run window, so "built but not published" checks out. Publish failures: 8 GitHub Actions "Publish pages from Supabase" run-failed emails Sep 7 16:26 to 18:03 UTC; publish_hook_log rows read ok=true (dispatch queued), so the break is on the Actions side, not the dispatch. Queue: 1 needs_input, 39 parked, 31 unqueued in queue_run. Schedule drift: trigger cron 0 8 UTC (4am ET) vs board_meta midnight_run_cron 0 6.
+  </div>
+  <div class="foot">This page keeps nothing. Your taps live only in this browser tab and are gone when you close it, so copy them out before you leave.</div>
+
+</div>
+
+<script>
+(function(){
+  var LABELS=[["do","Do this"],["tell","Tell me more"],["did","I did it"],["read","I read this"],["kill","Kill this task"]];
+  var OPEN={do:1,tell:1};
+  var rows=[].slice.call(document.querySelectorAll(".row"));
+  var answers=document.getElementById("answers");
+  var count=document.getElementById("count");
+  var state={};
+
+  function colorVar(k){return getComputedStyle(document.documentElement).getPropertyValue("--b-"+k);}
+
+  rows.forEach(function(row){
+    var id=row.getAttribute("data-id");
+    var btns=row.querySelector(".btns");
+    LABELS.forEach(function(pair){
+      var k=pair[0], text=pair[1];
+      var b=document.createElement("button");
+      b.className="btn "+k; b.type="button"; b.textContent=text;
+      b.setAttribute("aria-pressed","false");
+      b.addEventListener("click",function(){ choose(row,id,k,text,b); });
+      btns.appendChild(b);
+    });
+    var note=row.querySelector("[data-note]");
+    note.addEventListener("input",function(){ if(state[id]) state[id].note=note.value.trim(); compile(); });
+  });
+
+  function choose(row,id,k,text,btn){
+    row.querySelectorAll(".btn").forEach(function(x){x.setAttribute("aria-pressed","false");});
+    btn.setAttribute("aria-pressed","true");
+    row.style.borderLeftColor=colorVar(k).trim();
+    var note=row.querySelector("[data-note]");
+    state[id]={label:text,key:k,head:row.getAttribute("data-head"),note:note.value.trim()};
+    var st=row.querySelector("[data-state]");
+    st.textContent=OPEN[k]?"Open, work owed":"Settled";
+    compile();
+  }
+
+  function compile(){
+    var lines=["MORNING REPORT — Sep 8, 2026 — my answers",""];
+    var n=0;
+    rows.forEach(function(row){
+      var id=row.getAttribute("data-id");
+      var s=state[id];
+      if(!s) return;
+      n++;
+      var line=id+". "+s.head+" -> "+s.label.toUpperCase();
+      if(s.note) line+="  [note: "+s.note+"]";
+      lines.push(line);
+    });
+    if(n===0){ answers.value=""; }
+    else{ answers.value=lines.join("\n"); }
+    count.textContent=n+" of "+rows.length+" answered";
+  }
+
+  document.getElementById("copy").addEventListener("click",function(){
+    answers.removeAttribute("readonly");
+    answers.select(); answers.setSelectionRange(0,answers.value.length);
+    var ok=false;
+    try{ ok=document.execCommand("copy"); }catch(e){}
+    if(navigator.clipboard){ try{ navigator.clipboard.writeText(answers.value); ok=true; }catch(e){} }
+    answers.setAttribute("readonly","");
+    this.textContent=ok?"Copied":"Select the text above and copy it";
+    var self=this;
+    setTimeout(function(){ self.textContent="Copy the text"; },2200);
+  });
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
