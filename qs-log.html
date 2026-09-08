@@ -17,18 +17,9 @@
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#37a169;margin-right:5px;vertical-align:middle}
   .dot.off{background:#c0392b}
   .gridwrap{overflow-x:auto;border:1px solid #e3e7ee;border-radius:8px;background:#fff;display:inline-block;max-width:100%}
-  .stripsec{margin:0 0 16px}
-  .striphead{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:0 0 6px}
-  .stripwrap{overflow-x:auto;border:1px solid #e3e7ee;border-radius:8px;background:#fff;display:inline-block;max-width:100%}
-  table.stripgrid{border-collapse:collapse}
-  table.stripgrid td, table.stripgrid th{border:1px solid #eceef2;text-align:center;font-size:10.5px;height:28px;min-width:30px;padding:0}
-  table.stripgrid th.day{background:#fff;font-weight:700;color:var(--ink);min-width:30px}
-  table.stripgrid th.wd{background:#fff;font-weight:400;color:#9aa0aa;font-size:8.5px;height:15px}
-  table.stripgrid th.day.today, table.stripgrid td.today{background:#fff7e0}
-  td.rowlab{text-align:left;padding:0 8px;min-width:150px;width:150px;font-size:11px;font-weight:600;color:#333;position:sticky;left:0;z-index:2;background:#fff}
-  tr.seas td.rowlab, tr.seas td.box{background:#e4f2e5}
-  tr.wiwut td.rowlab, tr.wiwut td.box{background:#dfeaf6}
-  tr.conn td.rowlab, tr.conn td.box{background:#eceef2}
+  tr.seas td.box{background:#e4f2e5}
+  tr.wiwut td.box{background:#dfeaf6}
+  tr.conn td.box{background:#eceef2}
   td.box{cursor:pointer;font-weight:400;color:var(--ink);font-size:10.5px;padding:0 3px;line-height:1.2}
   td.box.inert{cursor:default;color:#c7cdd6}
   td.box .plus{color:#b7bec9;font-size:12px;font-weight:400}
@@ -58,7 +49,7 @@
   td.cell img.ic{width:15px;height:15px;object-fit:contain;vertical-align:middle}
   td.cell .mk{display:inline-block;width:9px;height:9px;border-radius:50%;background:#7d8794;vertical-align:middle}
   tr.grp td{background:#f4f6f9;text-align:left;padding:3px 8px;font-size:10.5px;font-weight:800;letter-spacing:.03em;color:#41506a;text-transform:uppercase}
-  .lab.pink{background:var(--pink)} .lab.yellow{background:var(--yellow)} .lab.green{background:var(--green)} .lab.blue{background:var(--blue)} .lab.grey{background:var(--grey)}
+  .lab.pink{background:var(--pink)} .lab.yellow{background:var(--yellow)} .lab.green{background:var(--green)} .lab.blue{background:var(--blue)} .lab.grey{background:var(--grey)} .lab.seas{background:#e4f2e5} .lab.wiwut{background:#dfeaf6} .lab.conn{background:#eceef2}
   .legend{font-size:12px;color:var(--muted);margin:12px 0 0;max-width:900px;line-height:1.6}
   .key{display:inline-flex;align-items:center;gap:5px;margin-right:12px}
   .key img{width:15px;height:15px;object-fit:contain}
@@ -115,12 +106,8 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>Habits Tracker</h1><span class="ver">v1.4</span><span class="date"></span></div>
+  <div class="secbar"><h1>Habits Tracker</h1><span class="ver">v1.5</span><span class="date"></span></div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Connecting...</span> &nbsp;·&nbsp; <span id="monthlabel"></span> &nbsp;·&nbsp; <a class="btn" id="reload">refresh</a> &nbsp; <a class="btn" id="signout">sign out</a></div>
-  <div class="stripsec">
-    <div class="striphead">Daily Notes</div>
-    <div class="stripwrap"><table class="stripgrid" id="stripgrid"></table></div>
-  </div>
   <div class="gridwrap"><table id="grid"></table></div>
   <p class="legend" id="legend"></p>
 </div>
@@ -254,9 +241,17 @@ async function loadMonth(){
   document.getElementById('monthlabel').textContent = MONTHS[month]+' '+year;
 
   document.getElementById('statustext').textContent = 'Loading '+MONTHS[month]+'...';
-  const { data, error } = await sb.from('qs_log')
-    .select('date,tracker,value,unit,status,note,grp:group')
-    .gte('date', first).lte('date', last);
+  const [qsRes, psRes, cxRes, snRes] = await Promise.all([
+    sb.from('qs_log').select('date,tracker,value,unit,status,note,grp:group').gte('date', first).lte('date', last),
+    sb.from('photo_shots').select('id,day,caption').eq('series','wiwut').gte('day', first).lte('day', last),
+    sb.from('connections').select('id,person,happened_on').gte('happened_on', first).lte('happened_on', last),
+    sb.from('qs_strip_notes').select('id,day,label,icon_url').gte('day', first).lte('day', last)
+  ]);
+  const { data, error } = qsRes;
+  const psMap = {}, cxMap = {}, snMap = {};
+  (psRes.data||[]).forEach(r=>{ const d=parseInt(r.day.slice(8,10),10); psMap[d]=r; });
+  (cxRes.data||[]).forEach(r=>{ const d=parseInt(r.happened_on.slice(8,10),10); (cxMap[d]=cxMap[d]||[]).push(r); });
+  (snRes.data||[]).forEach(r=>{ const d=parseInt(r.day.slice(8,10),10); snMap[d]=r; });
 
   const dot = document.getElementById('statusdot');
   if (error){
@@ -301,13 +296,14 @@ async function loadMonth(){
   // build grid
   const days = [];
   for(let d=1; d<=dim; d++){ days.push({d, wd: WD[new Date(year,month,d).getDay()], today: d===todayD}); }
-  buildStrip(year, month, dim, days, first, last);
 
   let h = '<tr><th class="lab"></th>';
   days.forEach(x=> h += '<th class="day'+(x.today?' today':'')+'">'+x.d+'</th>');
   h += '</tr><tr><th class="lab"></th>';
   days.forEach(x=> h += '<th class="wd'+(x.today?' today':'')+'">'+x.wd+'</th>');
   h += '</tr>';
+
+  h += stripRowsHtml(days, psMap, cxMap, snMap);
 
   groups.forEach(g=>{
     h += '<tr class="grp"><td colspan="'+(days.length+1)+'">'+g.name+'</td></tr>';
@@ -331,6 +327,7 @@ async function loadMonth(){
     });
   });
   document.getElementById('grid').innerHTML = h;
+  document.getElementById('grid').__ctx = {year, month};
 
   document.getElementById('legend').innerHTML =
     'Live read from <b>qs_log</b> (your master log), filtered to '+MONTHS[month]+' '+year+'. Today ('+todayD+') is highlighted. '+
@@ -339,39 +336,25 @@ async function loadMonth(){
 }
 
 
-// ---- Daily Notes strip: Seasonal/Accomplishments (freeform), WIWUT (caption
-// on an existing Photo Booth photo), Connections (reads the real connections
-// log). None of this invents a second place to store data Photo Booth or the
-// Connections log already own; see project memory qs-log-strip.
+// ---- Daily Notes strip rows: Seasonal/Accomplishments (freeform), WIWUT
+// (caption on an existing Photo Booth photo), Connections (reads the real
+// connections log). Rendered as three ordinary rows of the SAME grid table,
+// under the one shared day/weekday header, never a second table. None of
+// this invents a second place to store data Photo Booth or the Connections
+// log already own; see project memory qs-log-strip.
 const STRIP_BUCKET = 'captures';
 
 function stripDayISO(year, month, d){ return year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
 
-async function buildStrip(year, month, dim, days, first, last){
-  const [psRes, cxRes, snRes] = await Promise.all([
-    sb.from('photo_shots').select('id,day,caption').eq('series','wiwut').gte('day', first).lte('day', last),
-    sb.from('connections').select('id,person,happened_on').gte('happened_on', first).lte('happened_on', last),
-    sb.from('qs_strip_notes').select('id,day,label,icon_url').gte('day', first).lte('day', last)
-  ]);
-  const psMap = {}, cxMap = {}, snMap = {};
-  (psRes.data||[]).forEach(r=>{ const d=parseInt(r.day.slice(8,10),10); psMap[d]=r; });
-  (cxRes.data||[]).forEach(r=>{ const d=parseInt(r.happened_on.slice(8,10),10); (cxMap[d]=cxMap[d]||[]).push(r); });
-  (snRes.data||[]).forEach(r=>{ const d=parseInt(r.day.slice(8,10),10); snMap[d]=r; });
-
+function stripRowsHtml(days, psMap, cxMap, snMap){
   const ROWS = [
     {key:'seas', label:'Seasonal / Accomplishments', cls:'seas'},
     {key:'wiwut', label:'WIWUT', cls:'wiwut'},
     {key:'conn', label:'Connections', cls:'conn'}
   ];
-
-  let h = '<tr><th class="rowlab"></th>';
-  days.forEach(x=> h += '<th class="day'+(x.today?' today':'')+'">'+x.d+'</th>');
-  h += '</tr><tr><th class="rowlab"></th>';
-  days.forEach(x=> h += '<th class="wd'+(x.today?' today':'')+'">'+x.wd+'</th>');
-  h += '</tr>';
-
+  let h = '';
   ROWS.forEach(r=>{
-    h += '<tr class="'+r.cls+'"><td class="rowlab">'+esc(r.label)+'</td>';
+    h += '<tr class="'+r.cls+'"><td class="lab '+r.cls+'">'+esc(r.label)+'</td>';
     days.forEach(x=>{
       const todayCls = x.today ? ' today' : '';
       let inner = '', clickable = true, extraData = '';
@@ -389,14 +372,12 @@ async function buildStrip(year, month, dim, days, first, last){
         const list = cxMap[x.d]||[];
         inner = list.length ? list.map(c=>esc(c.person||'')).join(', ') : '<span class="plus">+</span>';
       }
-      const cls = 'box'+todayCls+(clickable?'':' inert');
+      const cls = 'cell box'+todayCls+(clickable?'':' inert');
       h += '<td class="'+cls+'" data-row="'+r.key+'" data-day="'+x.d+'"'+extraData+'>'+inner+'</td>';
     });
     h += '</tr>';
   });
-  document.getElementById('stripgrid').innerHTML = h;
-
-  document.getElementById('stripgrid').__ctx = {year, month};
+  return h;
 }
 
 const seEditor = document.getElementById('stripEditor');
@@ -409,12 +390,12 @@ let sePastedUrl = null;
 
 function seClose(){ seEditor.classList.remove('show'); seActive = null; }
 
-document.getElementById('stripgrid').addEventListener('click', function(ev){
+document.getElementById('grid').addEventListener('click', function(ev){
   const td = ev.target.closest('td.box');
   if(!td || td.classList.contains('inert')) return;
   const row = td.getAttribute('data-row');
   const day = parseInt(td.getAttribute('data-day'),10);
-  const ctx = document.getElementById('stripgrid').__ctx || {};
+  const ctx = document.getElementById('grid').__ctx || {};
   seActive = {row, day, id: td.getAttribute('data-id')||null, year: ctx.year, month: ctx.month, td};
   sePastedUrl = td.getAttribute('data-icon') || null;
 
