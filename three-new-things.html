@@ -509,7 +509,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.2</span>
+    <span id="ver" class="ver">v2.3</span>
   </div>
 </div>
 
@@ -933,16 +933,20 @@ function tomorrowKey(){
   var d=new Date(+p[0], +p[1]-1, +p[2]); d.setDate(d.getDate()+1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+function bdayName(t){
+  return String(t||'').replace(/[’']s\s+/i,' ').replace(/\b(birthday|bday)s?\b/gi,'').replace(/!+/g,'').trim().replace(/\s+/g,' ');
+}
 async function loadTomorrow(){
   if(!cloud) return null;
-  var k=tomorrowKey(), out={key:k, first:null, n:0, missed:[]};
+  var k=tomorrowKey(), out={key:k, first:null, n:0, missed:[], birthdays:[]};
   try{
-    var ev=await sb.from('calendar_events').select('title,start_time,hidden,dismissed,skipped').eq('date',k);
+    var ev=await sb.from('calendar_events').select('title,start_time,hidden,dismissed,skipped,cat').eq('date',k);
     if(ev.data){
       var live=ev.data.filter(function(e){ return !e.hidden && !e.dismissed && !e.skipped; })
                       .sort(function(a,b){ return String(a.start_time||'').localeCompare(String(b.start_time||'')); });
       out.n=live.length;
       for(var i=0;i<live.length;i++){ if(live[i].start_time){ out.first=live[i]; break; } }
+      out.birthdays=live.filter(function(e){ return e.cat==='Birthdays'; }).map(function(e){ return bdayName(e.title); }).filter(Boolean);
     }
   }catch(e){}
   try{
@@ -957,6 +961,10 @@ async function loadTomorrow(){
 function drawTomorrow(){
   var box=document.getElementById('tombox'); if(!box) return;
   var h='';
+  if(TOM&&TOM.birthdays&&TOM.birthdays.length){
+    h+='<div class="item"><span class="c">🎂 Birthday tomorrow</span><span class="t">'+
+       TOM.birthdays.map(esc).join(' · ')+'</span></div>';
+  }
   if(TOM&&TOM.n){
     if(TOM.first){
       var t=String(TOM.first.start_time||'').slice(0,5).split(':');
