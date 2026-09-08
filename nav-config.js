@@ -26,7 +26,8 @@ window.NAV_CONFIG = {
   "Calendar": [],
   "Habit Modules": [
     { "label": "Cue Cards", "href": "habit-modules.html" },
-    { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" }
+    { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
+    { "label": "Compass<br>Time", "href": "compass-time.html" }
   ],
   /* Sep 3 2026, Scott. Two items left this group. Food Log moved to LISTS, where
      it is now the fifth tab. Intrinsic Capacity came off the bar entirely and is
