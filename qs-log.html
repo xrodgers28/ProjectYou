@@ -40,6 +40,7 @@
   td,th{border:1px solid #eceef2;text-align:center;font-size:10.5px;height:28px;min-width:30px;padding:0}
   th.day{background:#fff;font-weight:700;color:var(--ink);min-width:30px}
   th.wd{background:#fff;font-weight:400;color:#9aa0aa;font-size:8.5px;height:15px}
+  th.monthhdr{background:#fff;font-weight:700;color:var(--muted);font-size:9px;letter-spacing:.04em;text-transform:uppercase;height:16px;border-bottom:1px solid #dde1e8}
   th.today, td.today{background:#fff7e0}
   th.day.today{color:#b9820a}
   td.lab, th.lab{ text-align:left;padding:0 8px;min-width:132px;width:132px;font-size:11px;font-weight:600;color:#333;position:sticky;left:0;z-index:2;background:#fff }
@@ -106,7 +107,7 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>Habits Tracker</h1><span class="ver">v1.5</span><span class="date"></span></div>
+  <div class="secbar"><h1>Habits Tracker</h1><span class="ver">v1.6</span><span class="date"></span></div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Connecting...</span> &nbsp;·&nbsp; <span id="monthlabel"></span> &nbsp;·&nbsp; <a class="btn" id="reload">refresh</a> &nbsp; <a class="btn" id="signout">sign out</a></div>
   <div class="gridwrap"><table id="grid"></table></div>
   <p class="legend" id="legend"></p>
@@ -229,29 +230,39 @@ function fmtVal(v, unit){
   return (r % 1 === 0 ? r.toFixed(0) : r.toString());
 }
 
+// The tracker's fixed start date. Scott asked for it to go back to the
+// beginning of August and just keep growing day by day, scrolling sideways
+// as it does, rather than showing one month at a time. Change this one
+// constant to move the start; the end is always today, on purpose, so the
+// grid never shows a blank future day.
+const STRIP_RANGE_START = '2026-08-01';
+
 async function loadMonth(){
   // Eastern always, never the viewer's clock: the habit trigger files every
   // tick against the America/New_York date, so the grid must agree or a tick
   // made abroad lands in the wrong column.
   const et = etParts();
-  const year = et.y, month = et.m, todayD = et.d;
-  const first = year+'-'+String(month+1).padStart(2,'0')+'-01';
-  const dim = new Date(year, month+1, 0).getDate();
-  const last = year+'-'+String(month+1).padStart(2,'0')+'-'+String(dim).padStart(2,'0');
-  document.getElementById('monthlabel').textContent = MONTHS[month]+' '+year;
+  const todayISO = et.y+'-'+String(et.m+1).padStart(2,'0')+'-'+String(et.d).padStart(2,'0');
+  const first = STRIP_RANGE_START;
+  const last = todayISO;
+  const rangeLabel = function(iso){
+    const p = iso.split('-').map(Number);
+    return MONTHS[p[1]-1].slice(0,3)+' '+p[2]+', '+p[0];
+  };
+  document.getElementById('monthlabel').textContent = rangeLabel(first)+' to '+rangeLabel(last);
 
-  document.getElementById('statustext').textContent = 'Loading '+MONTHS[month]+'...';
+  document.getElementById('statustext').textContent = 'Loading...';
   const [qsRes, psRes, cxRes, snRes] = await Promise.all([
     sb.from('qs_log').select('date,tracker,value,unit,status,note,grp:group').gte('date', first).lte('date', last),
     sb.from('photo_shots').select('id,day,caption').eq('series','wiwut').gte('day', first).lte('day', last),
-    sb.from('connections').select('id,person,happened_on').gte('happened_on', first).lte('happened_on', last),
+    sb.from('connections').select('id,person,happened_on').eq('superseded', false).eq('planned', false).gte('happened_on', first).lte('happened_on', last),
     sb.from('qs_strip_notes').select('id,day,label,icon_url').gte('day', first).lte('day', last)
   ]);
   const { data, error } = qsRes;
   const psMap = {}, cxMap = {}, snMap = {};
-  (psRes.data||[]).forEach(r=>{ const d=parseInt(r.day.slice(8,10),10); psMap[d]=r; });
-  (cxRes.data||[]).forEach(r=>{ const d=parseInt(r.happened_on.slice(8,10),10); (cxMap[d]=cxMap[d]||[]).push(r); });
-  (snRes.data||[]).forEach(r=>{ const d=parseInt(r.day.slice(8,10),10); snMap[d]=r; });
+  (psRes.data||[]).forEach(r=>{ psMap[r.day]=r; });
+  (cxRes.data||[]).forEach(r=>{ (cxMap[r.happened_on]=cxMap[r.happened_on]||[]).push(r); });
+  (snRes.data||[]).forEach(r=>{ snMap[r.day]=r; });
 
   const dot = document.getElementById('statusdot');
   if (error){
@@ -263,14 +274,13 @@ async function loadMonth(){
   dot.classList.remove('off');
   const trackersSeen = new Set(rows.map(r=>r.tracker));
   document.getElementById('statustext').textContent =
-    'Connected to qs_log · '+rows.length+' entries this month across '+trackersSeen.size+' trackers';
+    'Connected to qs_log · '+rows.length+' entries since Aug 1 across '+trackersSeen.size+' trackers';
 
-  // map: tracker|day -> {value,unit,status}
+  // map: tracker|date -> {value,unit,status}
   const map = {};
   const noteMap = {};
   rows.forEach(r=>{
-    const d = parseInt(r.date.slice(8,10),10);
-    const k = r.tracker+'|'+d;
+    const k = r.tracker+'|'+r.date;
     map[k] = r;
     const n = (r.note||'').trim();
     if(n){ if(!noteMap[k]) noteMap[k] = []; if(noteMap[k].indexOf(n)<0) noteMap[k].push(n); }
@@ -293,11 +303,38 @@ async function loadMonth(){
   });
   if(orphans.length) groups.push({name:'Other (from log)', color:'blue', rows:orphans.map(t=>({t, icon:null}))});
 
-  // build grid
+  // build grid: one column per real calendar day from STRIP_RANGE_START to today
   const days = [];
-  for(let d=1; d<=dim; d++){ days.push({d, wd: WD[new Date(year,month,d).getDay()], today: d===todayD}); }
+  {
+    let cur = new Date(first+'T12:00:00Z');
+    const end = new Date(last+'T12:00:00Z');
+    while(cur <= end){
+      const iso = cur.toISOString().slice(0,10);
+      days.push({
+        iso,
+        d: cur.getUTCDate(),
+        wd: WD[cur.getUTCDay()],
+        month: cur.getUTCMonth(),
+        year: cur.getUTCFullYear(),
+        today: iso === todayISO
+      });
+      cur.setUTCDate(cur.getUTCDate()+1);
+    }
+  }
 
+  // a slim month label row, spanning the days that belong to each month, so
+  // Aug rolling into Sep (and beyond) is still legible with one shared header
   let h = '<tr><th class="lab"></th>';
+  {
+    let i = 0;
+    while(i < days.length){
+      let j = i;
+      while(j < days.length && days[j].month===days[i].month && days[j].year===days[i].year) j++;
+      h += '<th class="monthhdr" colspan="'+(j-i)+'">'+MONTHS[days[i].month].slice(0,3)+' '+days[i].year+'</th>';
+      i = j;
+    }
+  }
+  h += '</tr><tr><th class="lab"></th>';
   days.forEach(x=> h += '<th class="day'+(x.today?' today':'')+'">'+x.d+'</th>');
   h += '</tr><tr><th class="lab"></th>';
   days.forEach(x=> h += '<th class="wd'+(x.today?' today':'')+'">'+x.wd+'</th>');
@@ -310,7 +347,7 @@ async function loadMonth(){
     g.rows.forEach(row=>{
       h += '<tr><td class="lab '+g.color+'">'+row.t+'</td>';
       days.forEach(x=>{
-        const e = map[row.t+'|'+x.d];
+        const e = map[row.t+'|'+x.iso];
         const tcls = x.today ? ' today' : '';
         if(!e){ h += '<td class="cell'+tcls+'"></td>'; return; }
         let inner;
@@ -319,7 +356,7 @@ async function loadMonth(){
         if(val==='CHK'){ inner = iconImg; }
         else if(val===''){ inner = iconImg; }
         else { inner = '<span class="num">'+val+'</span>'+iconImg; }
-        const noteTxt = (noteMap[row.t+'|'+x.d]||[]).join(' \u00b7 ');
+        const noteTxt = (noteMap[row.t+'|'+x.iso]||[]).join(' \u00b7 ');
         const noteAttr = noteTxt ? ' title="'+esc(noteTxt)+'" data-note="'+esc(noteTxt)+'"' : '';
         h += '<td class="cell'+tcls+(noteTxt?' hasnote':'')+'"'+noteAttr+'>'+inner+'</td>';
       });
@@ -327,10 +364,9 @@ async function loadMonth(){
     });
   });
   document.getElementById('grid').innerHTML = h;
-  document.getElementById('grid').__ctx = {year, month};
 
   document.getElementById('legend').innerHTML =
-    'Live read from <b>qs_log</b> (your master log), filtered to '+MONTHS[month]+' '+year+'. Today ('+todayD+') is highlighted. '+
+    'Live read from <b>qs_log</b> (your master log), from Aug 1, 2026 through today. Today is highlighted, scroll sideways for earlier days. '+
     'Empty cells just mean nothing logged that day yet. A grey dot marks a logged day for trackers that do not have an icon yet. '+
     'Sources feeding the log right now: Strava (Cardio) and Habit Bandit (habits).';
 }
@@ -343,8 +379,6 @@ async function loadMonth(){
 // this invents a second place to store data Photo Booth or the Connections
 // log already own; see project memory qs-log-strip.
 const STRIP_BUCKET = 'captures';
-
-function stripDayISO(year, month, d){ return year+'-'+String(month+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'); }
 
 function stripRowsHtml(days, psMap, cxMap, snMap){
   const ROWS = [
@@ -359,21 +393,21 @@ function stripRowsHtml(days, psMap, cxMap, snMap){
       const todayCls = x.today ? ' today' : '';
       let inner = '', clickable = true, extraData = '';
       if(r.key==='seas'){
-        const n = snMap[x.d];
+        const n = snMap[x.iso];
         const lbl = n && n.label ? esc(n.label) : '';
         const icon = n && n.icon_url ? '<img class="cellicon" src="'+esc(n.icon_url)+'">' : '';
         inner = (icon || lbl) ? (icon + (lbl?('<span>'+lbl+'</span>'):'')) : '<span class="plus">+</span>';
         extraData = ' data-id="'+(n?n.id:'')+'"'+(n&&n.icon_url?' data-icon="'+esc(n.icon_url)+'"':'');
       } else if(r.key==='wiwut'){
-        const p = psMap[x.d];
+        const p = psMap[x.iso];
         if(p){ inner = p.caption ? esc(p.caption) : '<span class="plus">+</span>'; extraData=' data-id="'+p.id+'"'; }
         else { inner=''; clickable=false; }
       } else if(r.key==='conn'){
-        const list = cxMap[x.d]||[];
+        const list = cxMap[x.iso]||[];
         inner = list.length ? list.map(c=>esc(c.person||'')).join(', ') : '<span class="plus">+</span>';
       }
       const cls = 'cell box'+todayCls+(clickable?'':' inert');
-      h += '<td class="'+cls+'" data-row="'+r.key+'" data-day="'+x.d+'"'+extraData+'>'+inner+'</td>';
+      h += '<td class="'+cls+'" data-row="'+r.key+'" data-day="'+x.iso+'"'+extraData+'>'+inner+'</td>';
     });
     h += '</tr>';
   });
@@ -394,12 +428,12 @@ document.getElementById('grid').addEventListener('click', function(ev){
   const td = ev.target.closest('td.box');
   if(!td || td.classList.contains('inert')) return;
   const row = td.getAttribute('data-row');
-  const day = parseInt(td.getAttribute('data-day'),10);
-  const ctx = document.getElementById('grid').__ctx || {};
-  seActive = {row, day, id: td.getAttribute('data-id')||null, year: ctx.year, month: ctx.month, td};
+  const dateISO = td.getAttribute('data-day');
+  seActive = {row, day: dateISO, id: td.getAttribute('data-id')||null, td};
   sePastedUrl = td.getAttribute('data-icon') || null;
 
-  seLbl.textContent = MONTHS[ctx.month]+' '+day+', '+ctx.year+' · '+
+  const dp = dateISO.split('-').map(Number);
+  seLbl.textContent = MONTHS[dp[1]-1]+' '+dp[2]+', '+dp[0]+' · '+
     (row==='seas'?'Seasonal / Accomplishments':row==='wiwut'?'WIWUT':'Connections');
 
   seExisting.style.display = 'none';
@@ -439,8 +473,7 @@ sePaste.addEventListener('paste', function(ev){
     if(items[i].type.indexOf('image')===0){
       ev.preventDefault();
       const blob = items[i].getAsFile();
-      const day = seActive.day, ctx = seActive;
-      const path = 'strip/'+ctx.year+'-'+String(ctx.month+1).padStart(2,'0')+'-'+String(day).padStart(2,'0')+'-'+Date.now()+'.png';
+      const path = 'strip/'+seActive.day+'-'+Date.now()+'.png';
       sePaste.innerHTML = 'Uploading...';
       sb.storage.from(STRIP_BUCKET).upload(path, blob, {upsert:true, contentType: blob.type||'image/png'}).then(({error})=>{
         if(error){ sePaste.innerHTML = 'Upload failed: '+error.message; return; }
@@ -456,7 +489,7 @@ sePaste.addEventListener('paste', function(ev){
 document.getElementById('seSave').onclick = async function(){
   if(!seActive) return;
   const txt = seText.value.trim();
-  const dISO = stripDayISO(seActive.year, seActive.month, seActive.day);
+  const dISO = seActive.day;
   if(seActive.row==='seas'){
     if(seActive.id){
       await sb.from('qs_strip_notes').update({label: txt||null, icon_url: sePastedUrl, updated_at: new Date().toISOString()}).eq('id', seActive.id);
