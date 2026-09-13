@@ -67,6 +67,14 @@
   #notetip.show{display:block}
   .hidden{display:none}
   .btn{border:1px solid #cfd3d9;background:#fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#333}
+
+  .moodcard{margin-top:18px;padding:14px 16px;border:1px solid #e3e7ee;border-radius:8px;background:#fff;max-width:560px}
+  .mcTitle{font-size:13px;font-weight:600;margin:0 0 8px;color:var(--ink)}
+  .mcBody{font-size:12.5px;color:var(--muted);line-height:1.6}
+  .mcBody p{margin:0 0 6px}
+  .mcBody b{color:var(--ink)}
+  .mcprog{height:5px;background:#eceef2;border-radius:99px;overflow:hidden;margin:8px 0 8px}
+  .mcprog i{display:block;height:100%;background:#8aa8c9}
 </style>
 <style id="pynav-css">
 .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
@@ -107,10 +115,15 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>Habits Tracker</h1><span class="ver">v1.6</span><span class="date"></span></div>
+  <div class="secbar"><h1>Habits Tracker</h1><span class="ver">v1.7</span><span class="date"></span></div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Connecting...</span> &nbsp;·&nbsp; <span id="monthlabel"></span> &nbsp;·&nbsp; <a class="btn" id="reload">refresh</a> &nbsp; <a class="btn" id="signout">sign out</a></div>
   <div class="gridwrap"><table id="grid"></table></div>
   <p class="legend" id="legend"></p>
+
+  <div class="moodcard" id="moodCard">
+    <p class="mcTitle">Mood, and what moves it</p>
+    <div id="moodBody" class="mcBody">Checking...</div>
+  </div>
 </div>
 
 <div id="stripEditor">
@@ -195,6 +208,43 @@ function showApp(){
   document.getElementById('login').classList.add('hidden');
   document.getElementById('app').classList.remove('hidden');
   loadMonth();
+  loadMoodCorrelations();
+}
+
+/* Mood, and what moves it. Sep 13 2026. Reads the mood answer already
+   collected by the nightly wrap's shared 1-to-5 dial (tnt_checkin.answers.mood)
+   next to sleep, steps and how many habits got ticked that day, off the
+   v_mood_correlations view. Stays quiet with a progress line until there are
+   60 nights of mood behind it, so an early coincidence never gets read as a
+   pattern. No new question is added anywhere on the site for this. */
+async function loadMoodCorrelations(){
+  var el = document.getElementById('moodBody');
+  if(!el) return;
+  try{
+    var r = await sb.from('v_mood_correlations').select('*').single();
+    if(r.error || !r.data){ el.textContent = "Can't check this yet."; return; }
+    var d = r.data;
+    var days = Number(d.days_tracked)||0;
+    if(!d.ready){
+      var pct = Math.min(100, Math.round((days/60)*100));
+      el.innerHTML = '<div class="mcprog"><i style="width:'+pct+'%"></i></div>' +
+        '<p>'+days+' of 60 nights logged so far. Once General Mood has two months behind it, this will start showing what tends to move it.</p>';
+      return;
+    }
+    function line(label, corrRaw, nRaw){
+      var corr = corrRaw===null ? null : Number(corrRaw);
+      var n = Number(nRaw)||0;
+      if(corr===null || isNaN(corr) || n<10) return '<p><b>'+label+'</b>: not enough overlapping nights yet to say much.</p>';
+      var mag = Math.abs(corr);
+      var strength = mag>=0.5 ? 'a real lean' : mag>=0.3 ? 'a mild lean' : 'barely a lean';
+      var dir = corr>0 ? 'higher' : 'lower';
+      return '<p><b>'+label+'</b>: '+strength+' toward mood being '+dir+' when it is higher, over '+n+' nights. <span style="opacity:.6">(r = '+corr.toFixed(2)+')</span></p>';
+    }
+    el.innerHTML =
+      line('Sleep', d.sleep_corr, d.sleep_n) +
+      line('Steps', d.steps_corr, d.steps_n) +
+      line('Habits ticked that day', d.ticks_corr, d.ticks_n);
+  }catch(e){ el.textContent = "Can't check this yet."; }
 }
 
 function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
