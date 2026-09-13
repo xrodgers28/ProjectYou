@@ -436,13 +436,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.23</span>
+    <span class="pn-ver">v6.24</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.23</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.24</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -665,15 +665,16 @@ function renderDayNav(){
   if(VIEWDATE===t){ pb.classList.add("hidden"); pb.innerHTML=""; }
   else {
     pb.classList.remove("hidden");
-    pb.innerHTML='<div class="pb-inner">Filling in '+fmtLong(VIEWDATE)+'. Tap a card\'s check to log it for that day — today\'s board is untouched. (Takeaways, Open Mode, Environmental Health, Recreational Health, Social Fitness and Bucket List can be checked off too, just without a specific tile yet — that\'s next.)</div>';
+    pb.innerHTML='<div class="pb-inner">Filling in '+fmtLong(VIEWDATE)+'. Tap a card\'s check, or any counter on the left, to log it for that day. Today\'s board stays untouched. (Takeaways, Open Mode, Environmental Health, Recreational Health, Social Fitness and Bucket List can be checked off too, just without a specific tile yet, that\'s next. The Social counter still always shows this week.)</div>';
   }
 }
 async function setViewDate(d){
   VIEWDATE=d;
   renderDayNav();
-  if(VIEWDATE===todayKey()||!sb||!signedIn){ PASTLOG={}; render(); return; }
+  if(VIEWDATE===todayKey()||!sb||!signedIn){ PASTLOG={}; render(); if(sb&&signedIn) RAIL.load(); return; }
   PASTLOG = await PYBackfill.loggedSet(sb, qsNames(), VIEWDATE);
   render();
+  RAIL.load();
 }
 
 /* the day always means the Eastern day, never the browser's clock, so a tick
@@ -1005,13 +1006,25 @@ var RAIL = (function(){
   /* the day is 2am-2am Eastern (py-day.js / public.py_day). Never reimplement it —
      but never let a missing loader take the whole rail down either. */
   function today(){try{return todayKey();}catch(e){return new Date().toISOString().slice(0,10);}}
+  /* the day this rail is scoped to: VIEWDATE once the board has stepped back,
+     otherwise real today. Sep 13 2026, so the counters learn the same date nav
+     the cue cards already have. Social's own week grid is left out on purpose,
+     it plans forward by the week rather than back by the day. */
+  function viewDay(){try{return (typeof VIEWDATE!=='undefined'&&VIEWDATE)?VIEWDATE:todayKey();}catch(e){return today();}}
   function row(tr){return R.rows[tr]||null;}
+  /* Photo Booth, Medicine, and the three Physical Fitness taps keep no table of
+     their own, so today's state comes from their todos row, which the 4am job
+     wipes clean every night. A past day's state for those five comes from
+     qs_log instead, loaded into R.pastDone. Every other counter already saves
+     one real row per day and needs no extra lookup. */
 
   /* ---------- load ---------- */
   async function load(){
     if(!sb) return;
-    var d=today();
+    var d=viewDay(), wd=today();
     var trackers=['Coffee','Water','Photo Booth',"Today's Plan",'Exercise','Medicine','Elevate','Imprint','Impulse','Social','Meditation','Stretching','Balance'];
+    var pastTrackers=['Photo Booth','Medicine','Meditation','Stretching','Balance'];
+    var pastReq = (d!==wd) ? PYBackfill.loggedSet(sb,pastTrackers,d) : Promise.resolve({});
     var res=await Promise.all([
       sb.from('todos').select('*').in('tracker',trackers).eq('is_habit',true),
       sb.from('coffee_cups').select('strength').eq('day',d),
@@ -1021,17 +1034,19 @@ var RAIL = (function(){
       sb.from('exercise_day').select('*').eq('day',d).maybeSingle(),
       sb.from('meal_presets').select('id,key,name,emoji,slot,calories,protein_g,carbs_g,fat_g,fiber_g,sort,photo_path,label_path,pending,servings_per_container,pieces_per_serving,count_unit,course,also_lunch').eq('active',true).order('sort',{ascending:true}),
       sb.from('meals').select('id,preset_id,eaten_at,source,slot').eq('day',d),
-      sb.from('social_slots').select('*').eq('week_start',monday(d)),
-      sb.from('social_plans').select('*').gte('day',monday(d)).lte('day',dadd(monday(d),13)),
+      sb.from('social_slots').select('*').eq('week_start',monday(wd)),
+      sb.from('social_plans').select('*').gte('day',monday(wd)).lte('day',dadd(monday(wd),13)),
       sb.from('v_social_quiet').select('person,circle,days_since').limit(24),
       sb.from('connections').select('id,person,kind,happened_on,superseded')
-        .gte('happened_on',monday(d)).lte('happened_on',dadd(monday(d),13))
+        .gte('happened_on',monday(wd)).lte('happened_on',dadd(monday(wd),13)),
+      pastReq
     ]);
+    R.pastDone = res[12] || {};
     (res[0].data||[]).forEach(function(r){ if(r.tracker) R.rows[r.tracker]=r; });
     R.cups=(res[1].data||[]).map(function(r){return r.strength;});
     R.glasses=(res[2].data||[]).length;
     R.mf={}; (res[3].data||[]).forEach(function(r){R.mf[r.app]=1;});
-    R.physOn={}; PHYS.forEach(function(a){var pr=row(a.n); R.physOn[a.k]=!!(pr&&pr.done);});
+    R.physOn={}; PHYS.forEach(function(a){var pr=row(a.n); R.physOn[a.k]=isPast()?!!R.pastDone[a.n]:!!(pr&&pr.done);});
     R.flags=res[4].data||{};
     R.ex=res[5].data||null;
     R.plist=(res[6].data||[]).slice();
@@ -1070,7 +1085,7 @@ var RAIL = (function(){
         kind:(c.kind==='call'?'call':(c.kind||'other')), note:null,
         source:'connections', done:true, logged:true});
     });
-    var pb=row('Photo Booth'); R.photo=!!(pb&&pb.done&&pb.for_date===d);
+    var pb=row('Photo Booth'); R.photo = (d!==wd) ? !!R.pastDone['Photo Booth'] : !!(pb&&pb.done&&pb.for_date===d);
     R.ready=true;
     draw();
     socLoadSync();
@@ -1090,8 +1105,28 @@ var RAIL = (function(){
 
   /* ---------- the one place a tick reaches the rest of the system ---------- */
   async function tick(tracker,on,opts){
-    var r=row(tracker); if(!r||!sb) return;
+    if(!sb) return;
     opts=opts||{};
+    if(isPast()){
+      var pd=viewDay();
+      if(!signedIn){ if(typeof toast==='function') toast('Sign in first so the tick reaches history.'); return; }
+      if(on){
+        var grp=(typeof AREA!=='undefined'&&AREA[tracker]&&AREA[tracker].area)||'Not sure yet';
+        var rp=await PYBackfill.log(sb,{tracker:tracker,date:pd,group:grp,
+          minutes:(opts.mins!=null?opts.mins:1),
+          value:(opts.count!=null?opts.count:1),
+          unit:(opts.label||'done'),
+          estimated:true});
+        if(rp.error){ if(typeof toast==='function') toast('Did not save: '+rp.error.message); return; }
+        R.pastDone[tracker]=true;
+      } else {
+        var rp2=await PYBackfill.unlog(sb,tracker,pd);
+        if(rp2.error){ if(typeof toast==='function') toast('Did not remove: '+rp2.error.message); return; }
+        delete R.pastDone[tracker];
+      }
+      return;
+    }
+    var r=row(tracker); if(!r) return;
     var now=new Date().toISOString(), d=today(), upd;
     if(on){
       upd={done:true,status:'done',done_at:now,for_date:d,updated_at:now,
@@ -1111,13 +1146,13 @@ var RAIL = (function(){
   /* ---------- taps ---------- */
   async function addCup(str){
     R.cups.push(str); draw();
-    await sb.from('coffee_cups').insert({day:today(),strength:str});
+    await sb.from('coffee_cups').insert({day:viewDay(),strength:str});
     await tick('Coffee',true,{mins:1,count:R.cups.length,label:'cups'});
   }
   async function undoCup(){
     if(!R.cups.length) return;
     R.cups.pop(); draw();
-    var d=today();
+    var d=viewDay();
     var last=await sb.from('coffee_cups').select('id').eq('day',d).order('at',{ascending:false}).limit(1);
     if(last.data&&last.data[0]) await sb.from('coffee_cups').delete().eq('id',last.data[0].id);
     if(R.cups.length) await tick('Coffee',true,{mins:1,count:R.cups.length,label:'cups'});
@@ -1143,7 +1178,7 @@ var RAIL = (function(){
     if(pl){ pl.textContent='+'+Math.max(0,R.glasses-4); pl.hidden = !(R.glasses>4); }
   }
   async function setWater(n){
-    var d=today(), was=R.glasses; R.glasses=n; paintWater(was);
+    var d=viewDay(), was=R.glasses; R.glasses=n; paintWater(was);
     if(n>was){ var rows=[]; for(var i=was;i<n;i++) rows.push({day:d}); await sb.from('water_glasses').insert(rows); }
     else { var ex2=await sb.from('water_glasses').select('id').eq('day',d).order('at',{ascending:false}).limit(was-n);
            if(ex2.data&&ex2.data.length) await sb.from('water_glasses').delete().in('id',ex2.data.map(function(r){return r.id;})); }
@@ -1152,7 +1187,7 @@ var RAIL = (function(){
     else await tick('Water',false);
   }
   async function toggleApp(k){
-    var d=today(), on=!R.mf[k];
+    var d=viewDay(), on=!R.mf[k];
     if(on) R.mf[k]=1; else delete R.mf[k];
     draw();
     if(on) await sb.from('mf_sessions').upsert({day:d,app:k});
@@ -1173,7 +1208,7 @@ var RAIL = (function(){
   }
   async function togglePlan(){
     var on=!R.flags.planned_day; R.flags.planned_day=on; draw();
-    await sb.from('day_flags').upsert({day:today(),planned_day:on,updated_at:new Date().toISOString()});
+    await sb.from('day_flags').upsert({day:viewDay(),planned_day:on,updated_at:new Date().toISOString()});
     await tick("Today's Plan",on,{mins:5});
   }
   function mealsOf(k){ var pid=R.presets[PRESETKEY[k]]; return (pid&&R.meals[pid])||[]; }
@@ -1190,13 +1225,13 @@ var RAIL = (function(){
     return n;
   }
   async function dietTap(k){
-    var d=today();
+    var d=viewDay();
     if(k==='sweet'){
       var nx=R.flags.sweet==='yes'?'no':'yes'; R.flags.sweet=nx; draw();
       await sb.from('day_flags').upsert({day:d,sweet:nx,updated_at:new Date().toISOString()});
       return;
     }
-    if(k==='med'){ var on=!(row('Medicine')||{}).done; draw(); await tick('Medicine',on,{mins:1}); await load(); return; }
+    if(k==='med'){ var wasOn=isPast()?!!R.pastDone['Medicine']:(row('Medicine')||{}).done; var on=!wasOn; draw(); await tick('Medicine',on,{mins:1}); await load(); return; }
     var slot=DIETSLOT[k];
     if(slot){
       /* Already had one of this kind today, so the only thing a tap can mean is
@@ -1257,13 +1292,14 @@ var RAIL = (function(){
       if(typeof toast==='function') toast('You have already had a '+p.slot+' today');
       return;
     }
-    var ins=await sb.from('meals').insert({day:today(),name:nm,preset_id:pid,source:'counter',
+    var dLog=viewDay(), isTodayLog=(dLog===today());
+    var ins=await sb.from('meals').insert({day:dLog,name:nm,preset_id:pid,source:'counter',
       status:'done',confidence:'high',calories:p.calories,protein_g:p.protein_g,
       carbs_g:p.carbs_g,fat_g:p.fat_g,
       /* Fibre is one of his two daily goals (38g), so a meal logged without it
          is a hole in the day he can see. It comes off the regular like the rest. */
       fiber_g:p.fiber_g,
-      eaten_at:new Date().toISOString()})
+      eaten_at:(isTodayLog?new Date().toISOString():(dLog+'T12:00:00.000Z'))})
       .select('id,preset_id,eaten_at,source');
     if(ins.error){
       /* The one-a-day rule lives in the database (meals_one_per_day_per_meal),
@@ -1594,7 +1630,7 @@ var RAIL = (function(){
   function moreKey(e){ if(e.key==='Escape') moreClose(); }
   function moreClose(){ R.more=false; R.addOpen=false; R.bagPick=null; R.countPick=null; R.countN=1; R.moreFilter=null; R.moreQ=''; document.removeEventListener('keydown',moreKey); moreDraw(); }
   async function exTap(k){
-    var d=today(), cur=R.ex||{day:d,dog:false,out_walk:false,back_walk:false,ruck:false,ideas:false};
+    var d=viewDay(), cur=R.ex||{day:d,dog:false,out_walk:false,back_walk:false,ruck:false,ideas:false};
     cur[k]=!cur[k]; R.ex=cur; draw();
     var save={day:d,dog:cur.dog,out_walk:cur.out_walk,back_walk:cur.back_walk,ruck:cur.ruck,
               ideas:cur.ideas,updated_at:new Date().toISOString()};
@@ -1892,7 +1928,7 @@ var RAIL = (function(){
   function draw(){
     if(!el) el=document.getElementById('rail');
     if(!el) return;
-    var med=(row('Medicine')||{}).done;
+    var med = isPast() ? !!R.pastDone['Medicine'] : (row('Medicine')||{}).done;
     var mfDone=APPS.filter(function(a){return R.mf[a.k];}).length;
     var cal=0, meals=0;
     var exd=R.ex||{}, legs=['dog','out_walk','back_walk','ruck'].filter(function(k){return exd[k];}).length;
