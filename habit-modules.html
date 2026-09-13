@@ -101,7 +101,17 @@
      because he had three glasses of water instead of four. ===== */
   .boardwrap{display:flex;gap:16px;align-items:flex-start;margin:26px 0 0}
   .boardwrap .board{flex:1;margin:0;min-width:0}
-  .rail{width:134px;flex:none;display:flex;flex-direction:column;gap:10px}
+  .rail-col{width:134px;flex:none;display:flex;flex-direction:column;gap:8px}
+.rail{width:auto;flex:none;display:flex;flex-direction:column;gap:10px}
+.daynav{display:flex;align-items:center;justify-content:space-between;gap:4px;background:#fff;border:1px solid var(--key);border-radius:999px;padding:5px 4px;box-shadow:0 4px 12px rgba(31,42,68,.06)}
+.daynav.past{outline:2px solid #b8962f;outline-offset:2px}
+.dn-arrow{appearance:none;border:none;background:var(--chip,#eef2f8);color:var(--accent);width:22px;height:22px;border-radius:50%;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;line-height:1;flex:none}
+.dn-arrow:disabled{opacity:.35;cursor:default}
+.dn-lbl{font-size:10px;font-weight:800;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;text-align:center}
+.dn-today{display:block;text-align:center;font-size:9.5px;font-weight:800;color:var(--accent);text-decoration:underline;padding:2px 0}
+.pastbanner{max-width:1160px;margin:14px auto 0;padding:0 72px}
+.pastbanner.hidden{display:none}
+.pastbanner .pb-inner{background:#fbf3e2;border:1px solid #f0dfb2;border-left:4px solid #b8962f;border-radius:10px;padding:10px 14px;font-size:13px;color:#5c4b1e;font-weight:700;line-height:1.4}
   .rt{width:134px;height:42px;background:#fff;border:1px solid #e1e6ee;border-left:2px solid var(--ra);
       border-radius:9px;box-shadow:0 3px 9px rgba(31,42,68,.05);display:flex;align-items:center;gap:5px;
       padding:0 5px 0 6px;position:relative;user-select:none;overflow:hidden;transition:box-shadow .16s}
@@ -301,7 +311,7 @@
   .rex .s{fill:#e07b39}
   .rmk.on .rex .f{stroke:#d3dae3}
   .rmk.on .rex .s{fill:#d3dae3}
-  @media(max-width:640px){.boardwrap{flex-direction:column}.rail{flex-direction:row;width:auto;flex-wrap:wrap}}
+  @media(max-width:640px){.boardwrap{flex-direction:column}.rail-col{width:auto}.rail{flex-direction:row;width:auto;flex-wrap:wrap}.pastbanner{padding:0 22px}}
   @media(max-width:640px){.board{grid-template-columns:1fr}.pagehead h1{font-size:26px}}
 
   /* v3.1 — wheel wiring */
@@ -413,6 +423,7 @@
   @media(max-width:640px){.pjgrid{grid-template-columns:1fr}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="backfill.js"></script>
 </head>
 <body>
   <div class="pynav">
@@ -421,13 +432,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.21</span>
+    <span class="pn-ver">v6.22</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.21</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.22</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -438,8 +449,17 @@
     </div>
     <div id="photobooth"></div>
     <div class="pjwrap pj-off" id="projects"></div>
+    <div class="pastbanner hidden" id="pastbanner"></div>
     <div class="boardwrap">
-      <div class="rail" id="rail"></div>
+      <div class="rail-col">
+        <div class="daynav" id="daynav">
+          <button type="button" class="dn-arrow" id="dnPrev" aria-label="Previous day">&#8249;</button>
+          <span class="dn-lbl" id="dnLbl">Today</span>
+          <button type="button" class="dn-arrow" id="dnNext" aria-label="Next day">&#8250;</button>
+        </div>
+        <a href="#" class="dn-today" id="dnToday" hidden>Back to today</a>
+        <div class="rail" id="rail"></div>
+      </div>
       <div class="board" id="board"></div>
     </div>
     <div id="sections"></div>
@@ -611,6 +631,44 @@ async function rotateBack(m){
 let ROWS={};            /* habit name -> todos row */
 let signedIn=false;
 
+/* ===== date nav / backfill (Sep 13 2026) =====
+   VIEWDATE is the day the board is scoped to. Today by default. The
+   header meter and streak ALWAYS describe real today (see isDoneToday) —
+   only the card grid and rail below the pinned date-nav scope to VIEWDATE. */
+var VIEWDATE = null; /* set in boot(), after PY.today() is available */
+var PASTLOG = {};    /* tracker -> true, for the day VIEWDATE names, when it is not today */
+function isPast(){return VIEWDATE!==todayKey();}
+function fmtShort(d){var dt=new Date(d+"T12:00:00");return dt.toLocaleDateString("en-US",{month:"short",day:"numeric"});}
+function fmtLong(d){var dt=new Date(d+"T12:00:00");return dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});}
+function hrefFor(m){
+  if(isPast()&&m.deck) return m.href+(m.href.indexOf("?")>-1?"&":"?")+"backfill="+VIEWDATE;
+  return m.href;
+}
+function renderDayNav(){
+  if(!VIEWDATE) return;
+  var min=PYBackfill.minDate(), t=todayKey();
+  var prev=document.getElementById("dnPrev"), next=document.getElementById("dnNext");
+  if(!prev) return;
+  prev.disabled = VIEWDATE<=min;
+  next.disabled = VIEWDATE>=t;
+  document.getElementById("dnLbl").textContent = (VIEWDATE===t)?"Today":fmtLong(VIEWDATE);
+  document.getElementById("daynav").classList.toggle("past", VIEWDATE!==t);
+  document.getElementById("dnToday").hidden = (VIEWDATE===t);
+  var pb=document.getElementById("pastbanner");
+  if(VIEWDATE===t){ pb.classList.add("hidden"); pb.innerHTML=""; }
+  else {
+    pb.classList.remove("hidden");
+    pb.innerHTML='<div class="pb-inner">Filling in '+fmtLong(VIEWDATE)+'. Tap a card\'s check to log it for that day — today\'s board is untouched. Opening Takeaways, Open Mode, Environmental Health, Recreational Health, Social Fitness or Bucket List deals it a fresh tile filed under that day.</div>';
+  }
+}
+async function setViewDate(d){
+  VIEWDATE=d;
+  renderDayNav();
+  if(VIEWDATE===todayKey()||!sb||!signedIn){ PASTLOG={}; render(); return; }
+  PASTLOG = await PYBackfill.loggedSet(sb, qsNames(), VIEWDATE);
+  render();
+}
+
 /* the day always means the Eastern day, never the browser's clock, so a tick
    made while travelling still lands on the right date and lines up with the
    4am habit reset running in the database */
@@ -669,11 +727,20 @@ async function loadStreak(){
   STREAK=n;
 }
 
-/* a card counts as done when today's habit row says so */
-function isDone(m){
+/* a card counts as done when today's habit row says so — or, when the board
+   is scoped to a past day, when that day already has a backfilled qs_log row.
+   isDoneToday() is the one the header meter and streak use, so viewing a past
+   day never makes today's own progress look wrong. */
+function isDoneToday(m){
   if(!sb){var h=getHist();return (h[todayKey()]||[]).indexOf(m.id)>-1;}
   var r=ROWS[m.habit];return !!(r&&r.done&&r.for_date===todayKey());}
-function minsOf(m){var r=ROWS[m.habit];return (r&&r.for_date===todayKey()&&r.actual_minutes)?r.actual_minutes:null;}
+function isDone(m){
+  if(isPast()) return !!PASTLOG[m.qs];
+  return isDoneToday(m);
+}
+function minsOf(m){
+  if(isPast()) return null;
+  var r=ROWS[m.habit];return (r&&r.for_date===todayKey()&&r.actual_minutes)?r.actual_minutes:null;}
 
 async function loadRows(){
   var names=MODS.map(function(m){return m.habit;});
@@ -707,6 +774,27 @@ async function ensureRow(m){
 }
 
 async function toggle(m,el){
+  if(isPast()){
+    if(!sb){toast('Offline — can\'t log a past day right now.');return;}
+    if(!signedIn){toast('Sign in first so the tick reaches history.');return;}
+    if(el)el.classList.add('busy');
+    var wantP=!isDone(m), dstamp=VIEWDATE;
+    if(wantP){
+      var grp=(AREA[m.habit]&&AREA[m.habit].area)||'Not sure yet';
+      var rp=await PYBackfill.log(sb,{tracker:m.qs,date:dstamp,group:grp,minutes:(m.est||DEFAULT_MIN),estimated:true});
+      if(rp.error){if(el)el.classList.remove('busy');toast('Did not save: '+rp.error.message);return;}
+      PASTLOG[m.qs]=true;
+      toast(m.name+' logged for '+fmtShort(dstamp));
+    } else {
+      var rp2=await PYBackfill.unlog(sb,m.qs,dstamp);
+      if(rp2.error){if(el)el.classList.remove('busy');toast('Did not remove: '+rp2.error.message);return;}
+      delete PASTLOG[m.qs];
+      toast(m.name+' removed from '+fmtShort(dstamp));
+    }
+    if(el)el.classList.remove('busy');
+    render();
+    return;
+  }
   if(!sb){setHist(m.id,!isDone(m));render();toast('Offline \u2014 recorded here, but it did not reach the wheel.');return;}
   if(!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
   if(el)el.classList.add('busy');
@@ -1877,7 +1965,7 @@ function render(){
     /* a scene card (m.scene) is a full-bleed picture that still opens its
        module page, so it keeps its href and its tick. */
     if(m.scene&&!shelf){
-      return '<a class="card night'+(done?' done':'')+'" style="--acc:'+m.acc+'" href="'+m.href+'">'+
+      return '<a class="card night'+(done?' done':'')+'" style="--acc:'+m.acc+'" href="'+hrefFor(m)+'">'+
         '<span class="nightbg">'+ART[m.scene]+'</span>'+
         '<span class="chk'+(done?' done':'')+'" data-id="'+m.id+'" role="button" tabindex="0" title="'+(done?'Untick \u2014 removes it from the wheel':'Tick \u2014 sends it to the wheel')+'"></span>'+
         (done&&mins?'<span class="mins">'+mins+' min</span>':'')+
@@ -1908,7 +1996,7 @@ function render(){
         ((m.deck&&!m.sleep)?'<button class="rback" data-back="'+m.id+'">Put back</button>':'')+
       '</a>';
     }
-    return '<a class="card'+(done?' done':'')+'" style="--acc:'+m.acc+'" href="'+m.href+'">'+
+    return '<a class="card'+(done?' done':'')+'" style="--acc:'+m.acc+'" href="'+hrefFor(m)+'">'+
       '<span class="chk'+(done?' done':'')+'" data-id="'+m.id+'" role="button" tabindex="0" title="'+(done?'Untick — removes it from the wheel':'Tick — sends it to the wheel')+'"></span>'+
       (done&&mins?'<span class="mins">'+mins+' min</span>':'')+
       '<span class="badge">'+IC[m.icon]+'</span>'+
@@ -1957,7 +2045,7 @@ function render(){
     el.onkeydown=function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();e.stopPropagation();toggle(m,el);}};
   });
 
-  var n=LIVE.filter(isDone).length;
+  var n=LIVE.filter(isDoneToday).length;
   document.getElementById('progbar').style.width=(LIVE.length?(n/LIVE.length*100):0)+'%';
   document.getElementById('progtxt').textContent=n+'/'+LIVE.length+' today';
   document.getElementById('streakn').textContent=streakDays()+' day streak';
@@ -1984,6 +2072,12 @@ async function signIn(){
 }
 
 async function boot(){
+  VIEWDATE=todayKey();
+  var dnPrev=document.getElementById('dnPrev'), dnNext=document.getElementById('dnNext'), dnToday=document.getElementById('dnToday');
+  if(dnPrev) dnPrev.onclick=function(){setViewDate(PYBackfill.shiftDate(VIEWDATE,-1));};
+  if(dnNext) dnNext.onclick=function(){setViewDate(PYBackfill.shiftDate(VIEWDATE,1));};
+  if(dnToday) dnToday.onclick=function(e){e.preventDefault();setViewDate(todayKey());};
+  renderDayNav();
   render();  /* paint immediately, then reconcile with the database */
   if(!sb){document.querySelector('.wheelnote').innerHTML='Could not reach the database \u2014 ticks are being kept locally only. Reload to try again.';return;}
   var s=await sb.auth.getSession();
@@ -1992,7 +2086,7 @@ async function boot(){
 }
 boot();
 /* re-sync when you come back from a module page */
-document.addEventListener('visibilitychange',function(){if(!document.hidden&&signedIn){loadRows();RAIL.load();}});
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&signedIn){loadRows();RAIL.load(); if(isPast())setViewDate(VIEWDATE);}});
 </script>
 <script>
 /* ===== THE PROJECTS BOARD =====
