@@ -133,6 +133,8 @@
   .rtype{font-size:9px;font-weight:800;color:#5c4b1e;background:#fbf3e2;border:1px solid #f0dfb2;border-radius:999px;padding:4px 8px;cursor:pointer;font-family:inherit;white-space:nowrap}
   .rtype:hover{background:#f5e6c4}
   .rtype.rtypex{background:#fff;color:#9aa6b4;border-color:#e1e6ee;padding:4px 8px;font-weight:800}
+  .rtype.on{background:#7a5136;color:#fff;border-color:#7a5136}
+  .rcofdiv{width:1px;align-self:stretch;background:#e6ddc9;margin:0 1px}
   .rplan{display:block;width:27px;height:27px}
   .rgl{display:block;width:18px;height:30px}
   /* the pour: slower now, .95s, with a small settle at the end */
@@ -445,13 +447,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.29</span>
+    <span class="pn-ver">v6.30</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.29</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.30</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -899,6 +901,8 @@ var RAIL = (function(){
   var PORDER=['rosetta','heart','tulip','swirl','flower','waves','clover'];
   var PTODAY=Math.floor(Date.now()/864e5)%PORDER.length;
   var COF={full:'#35200f',half:'#5f3c22',decaf:'#8f6a45'};
+  var MILK={oat:{cal:20,protein:0.375,carbs:1.875,fat:1.125,fiber:0.25},pistachio:{cal:10,protein:0.25,carbs:1.125,fat:0.4375,fiber:0.125}};
+  function milkOz(type){ return type==='cortado'?2:4; }
   var uid=0;
   /* Coffee does NOT invert. Everything else in the rail has a done state and fades
      when it is met; a cup is a tally with no target, so its three cups stay painted
@@ -1049,7 +1053,7 @@ var RAIL = (function(){
     R.pastDone = res[12] || {};
     (res[0].data||[]).forEach(function(r){ if(r.tracker) R.rows[r.tracker]=r; });
     R.cups=(res[1].data||[]).map(function(r){return r.strength;});
-    R.cofOpen=false; R.cofJustOpened=false; R.cofLastId=null;
+    R.cofOpen=false; R.cofJustOpened=false; R.cofLastId=null; R.cofType=null; R.cofMilk=null;
     R.glasses=(res[2].data||[]).length;
     R.mf={}; (res[3].data||[]).forEach(function(r){R.mf[r.app]=1;});
     R.physOn={}; PHYS.forEach(function(a){var pr=row(a.n); R.physOn[a.k]=isPast()?!!R.pastDone[a.n]:!!(pr&&pr.done);});
@@ -1153,6 +1157,7 @@ var RAIL = (function(){
   async function addCup(str){
     R.cups.push(str);
     if(!R.cofOpen){ R.cofOpen=true; R.cofJustOpened=true; }
+    R.cofType=null; R.cofMilk=null;
     draw();
     var ins=await sb.from('coffee_cups').insert({day:viewDay(),strength:str}).select('id').single();
     if(ins.data) R.cofLastId=ins.data.id;
@@ -1161,7 +1166,7 @@ var RAIL = (function(){
   async function undoCup(){
     if(!R.cups.length) return;
     R.cups.pop();
-    if(!R.cups.length){ R.cofOpen=false; R.cofLastId=null; }
+    if(!R.cups.length){ R.cofOpen=false; R.cofLastId=null; R.cofType=null; R.cofMilk=null; }
     draw();
     var d=viewDay();
     var last=await sb.from('coffee_cups').select('id').eq('day',d).order('at',{ascending:false}).limit(1);
@@ -1169,28 +1174,49 @@ var RAIL = (function(){
     if(R.cups.length) await tick('Coffee',true,{mins:1,count:R.cups.length,label:'cups'});
     else await tick('Coffee',false);
   }
-  /* the type drawer windowshades down under the tile, only when you tap a
-     cup. Picking a kind (or the little x) windowshades it back up. It never
-     stays open across a reload, so it never gets in the way of the next tap. */
-  function closeCofDrawer(afterClose){
+  /* the type+milk drawer windowshades down under the tile, only when you tap a
+     cup. Tapping a type or a milk just marks it and leaves the drawer open so
+     you can pick both; only the little x closes it. It never stays open
+     across a reload, so it never gets in the way of the next tap. */
+  function closeCofDrawer(){
     var cd=document.querySelector('.rcofdrawer');
     if(cd){
       var h0=cd.scrollHeight;
       cd.style.maxHeight=h0+'px';
       cd.offsetHeight;
       requestAnimationFrame(function(){ cd.style.maxHeight='0px'; });
-      setTimeout(function(){ R.cofOpen=false; if(afterClose) afterClose(); else draw(); },230);
+      setTimeout(function(){ R.cofOpen=false; R.cofType=null; R.cofMilk=null; draw(); },230);
     } else {
-      R.cofOpen=false;
-      if(afterClose) afterClose(); else draw();
+      R.cofOpen=false; R.cofType=null; R.cofMilk=null;
+      draw();
     }
   }
-  async function setCupKind(kind){
+  function writeMilkNutrition(){
     var id=R.cofLastId;
-    closeCofDrawer(function(){
-      draw();
-      if(id) sb.from('coffee_cups').update({kind:kind}).eq('id',id);
-    });
+    if(!id||!R.cofMilk) return;
+    var oz=milkOz(R.cofType);
+    var m=MILK[R.cofMilk];
+    var upd={
+      milk_kind:R.cofMilk, milk_oz:oz,
+      calories:Math.round(m.cal*oz*10)/10,
+      protein_g:Math.round(m.protein*oz*10)/10,
+      carbs_g:Math.round(m.carbs*oz*10)/10,
+      fat_g:Math.round(m.fat*oz*10)/10,
+      fiber_g:Math.round(m.fiber*oz*10)/10
+    };
+    sb.from('coffee_cups').update(upd).eq('id',id);
+  }
+  function setCofType(kind){
+    var id=R.cofLastId;
+    R.cofType=kind;
+    draw();
+    if(id) sb.from('coffee_cups').update({kind:kind}).eq('id',id);
+    if(R.cofMilk) writeMilkNutrition();
+  }
+  function setCofMilk(milk){
+    R.cofMilk=milk;
+    draw();
+    writeMilkNutrition();
   }
   function paintWater(was){
     if(!el) return;
@@ -1994,9 +2020,12 @@ var RAIL = (function(){
          return '<span class="rmw"><button class="rmk" data-cof="'+s+'" title="'+s+'">'+(n?cup(s):cupEmpty())+'</button>'+
            (n>1?'<span class="rbadge c">'+n+'</span>':'')+'</span>';}).join('')+'</div></div>'+
        '<div class="rcofdrawer'+(R.cofOpen?' open':'')+'" style="max-height:'+(R.cofOpen?(R.cofJustOpened?'0px':'none'):'0px')+'"><div class="rcoftyperow">'+
-       '<button class="rtype" data-coftype="latte">Latte</button>'+
-       '<button class="rtype" data-coftype="cortado">Cortado</button>'+
-       '<button class="rtype rtypex" data-coftype="" title="Skip, no label">&times;</button>'+
+       '<button class="rtype'+(R.cofType==='latte'?' on':'')+'" data-coftype="latte">Latte</button>'+
+       '<button class="rtype'+(R.cofType==='cortado'?' on':'')+'" data-coftype="cortado">Cortado</button>'+
+       '<span class="rcofdiv"></span>'+
+       '<button class="rtype'+(R.cofMilk==='oat'?' on':'')+'" data-cofmilk="oat">Oat</button>'+
+       '<button class="rtype'+(R.cofMilk==='pistachio'?' on':'')+'" data-cofmilk="pistachio">Pistachio</button>'+
+       '<button class="rtype rtypex" data-cofclose="1" title="Done">&times;</button>'+
        '</div></div></div>';
     /* Photo Booth */
     h+='<div class="rt rpb'+(R.photo?' on':'')+'" style="--ra:#c98a2e" data-photo="1">'+
@@ -2034,10 +2063,9 @@ var RAIL = (function(){
     el.querySelectorAll('[data-app]').forEach(function(b){b.onclick=function(){toggleApp(b.dataset.app);};});
     el.querySelectorAll('[data-phys]').forEach(function(b){b.onclick=function(){togglePhys(b.dataset.phys);};});
     el.querySelectorAll('[data-cof]').forEach(function(b){b.onclick=function(){addCup(b.dataset.cof);};});
-    el.querySelectorAll('[data-coftype]').forEach(function(b){b.onclick=function(){
-      var k=b.dataset.coftype;
-      if(k) setCupKind(k); else closeCofDrawer();
-    };});
+    el.querySelectorAll('[data-coftype]').forEach(function(b){b.onclick=function(){ setCofType(b.dataset.coftype); };});
+    el.querySelectorAll('[data-cofmilk]').forEach(function(b){b.onclick=function(){ setCofMilk(b.dataset.cofmilk); };});
+    el.querySelectorAll('[data-cofclose]').forEach(function(b){b.onclick=function(){ closeCofDrawer(); };});
     if(R.cofJustOpened){
       var cd0=el.querySelector('.rcofdrawer');
       if(cd0){ requestAnimationFrame(function(){ cd0.style.maxHeight=cd0.scrollHeight+'px'; }); }
