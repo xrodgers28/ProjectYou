@@ -71,6 +71,11 @@
          box-shadow:var(--shadow);padding:18px 20px;margin-top:16px;font-size:14px;color:var(--muted)}
   .empty b{color:var(--ink)}
 
+  .fbtns{display:flex;gap:8px;align-self:center;flex-wrap:wrap}
+  .pick.no[aria-pressed="true"]{background:var(--acc);border-color:var(--acc);color:#fff}
+  .fcard a{color:var(--accent)}
+  .copybox{margin-top:10px;width:100%}
+  .copybox textarea{width:100%;min-height:60px;font:inherit;font-size:13px;color:var(--ink);background:var(--sunk);border:1px solid var(--key);border-radius:8px;padding:8px}
   .foot{margin-top:26px;font-size:13px;color:var(--muted)}
   .foot b{color:var(--ink)}
   .foot ul{margin:7px 0 0;padding-left:20px}
@@ -79,56 +84,83 @@
 
 <div class="wrap">
   <div class="kick">The Wall</div>
-  <h1>Six more we could hang up <span class="ver" style="font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;margin-left:8px;vertical-align:middle">v1.1</span></h1>
-  <div class="sub">The six that used to be here (War and Peas, Perry Bible Fellowship, xkcd, r/CrappyDesign,
-  False Knees, Saturday Morning Breakfast Cereal) are out: Scott doesn't want to pull from those sites.
-  Nothing has replaced them yet.</div>
+  <h1>Fresh picks for the wall <span class="ver" style="font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;margin-left:8px;vertical-align:middle">v1.2</span></h1>
+  <div class="sub">New sources, found and tested every morning: each card below has a working picture and a recent post.
+  Tap <b>Add it</b> and it joins the wall the next morning. Tap <b>Not for me</b> and it never comes back.</div>
+  <div class="sub" id="asof" style="margin-top:4px"></div>
 
-  <div class="empty">
-    <b>No candidates right now.</b> When there's a new, tested source worth adding to the wall, a real card
-    for it will show up here the same way these six used to: pulled live, with a working picture, nothing
-    invented. Until then this page is quiet on purpose rather than showing something untested.
+  <div id="cards"><div class="empty">Loading today's picks&hellip;</div></div>
+
+  <div class="tally">
+    <b>You picked:</b>
+    <div class="t copybox"><textarea id="tally" readonly>nothing yet</textarea></div>
   </div>
 
   <div class="foot">
-    <p><b>Already on, no need to pick these.</b> The New Yorker cartoon of the day, and a live
-    @wrold_scope card. Awwwards is off and its tiles are gone.</p>
-    <p><b>Ruled out for good, don't re-suggest:</b> War and Peas, Perry Bible Fellowship, xkcd, r/CrappyDesign,
-    False Knees, and Saturday Morning Breakfast Cereal, plus the ones that never worked in the first place,
-    Marketoonist and the New Yorker caption contest (both block us), and Cyanide and Happiness, The Oatmeal,
-    The Onion and The Awkward Yeti (all send words without a picture, no use on a wall).</p>
+    <p><b>How this works.</b> Every morning a background job looks for new comic and visual sources, checks each one
+    actually sends a picture and has posted recently, and puts up to six here. Your taps save straight away.</p>
+    <p><b>Ruled out for good:</b> <span id="ruled">loading&hellip;</span></p>
   </div>
 
-  <div class="stamp">v1.1</div>
+  <div class="stamp">v1.2</div>
 </div>
 
 <script>
-var PICKED={};
-var NAMES={};
-function tally(){
-  var ns=Object.keys(PICKED).filter(function(k){return PICKED[k];}).sort();
-  var el=document.getElementById("tally");
-  if(!el) return;
-  el.textContent = ns.length ? ns.map(function(n){return n+". "+NAMES[n];}).join("   ") : "nothing yet";
+var SB="https://arnjntspmrhigodlssbn.supabase.co";
+var KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+var ROWS=[];
+function api(path,opts){
+  opts=opts||{};
+  var h={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
+  if(opts.prefer) h.Prefer=opts.prefer;
+  return fetch(SB+"/rest/v1/"+path,{method:opts.method||"GET",headers:h,body:opts.body}).then(function(r){
+    if(!r.ok) return r.text().then(function(t){ throw new Error(r.status+" "+t.slice(0,140)); });
+    return r.text().then(function(t){ return t?JSON.parse(t):null; });
+  });
 }
-document.querySelectorAll(".pick[data-n]").forEach(function(b){
-  b.onclick=function(){
-    var n=b.getAttribute("data-n");
-    PICKED[n]=!PICKED[n];
-    b.setAttribute("aria-pressed", PICKED[n]?"true":"false");
-    b.textContent = PICKED[n] ? "Added" : "Add it";
-    tally();
-  };
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function niceDate(d){ if(!d) return ""; var p=d.split("-"); return new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric",timeZone:"America/New_York"}); }
+function tally(){
+  var picked=ROWS.filter(function(r){return r.status==="picked";}).map(function(r){return r.name;});
+  var no=ROWS.filter(function(r){return r.status==="ruled_out";}).map(function(r){return r.name;});
+  var lines=[]; if(picked.length) lines.push("Add to the wall: "+picked.join(", "));
+  if(no.length) lines.push("Not for me: "+no.join(", "));
+  document.getElementById("tally").value = lines.length?lines.join("\n"):"nothing yet";
+}
+function render(){
+  var el=document.getElementById("cards");
+  if(!ROWS.length){ el.innerHTML='<div class="empty"><b>No new picks today.</b> Nothing new passed the tests this morning. Tomorrow&rsquo;s search runs automatically.</div>'; tally(); return; }
+  el.innerHTML=ROWS.map(function(r,i){
+    var img=r.sample_img?'<img src="'+esc(r.sample_img)+'" alt="'+esc(r.name+", "+(r.sample_title||""))+'" loading="lazy">':"";
+    var title=r.sample_link?'<a href="'+esc(r.sample_link)+'" target="_blank" rel="noopener">'+esc(r.sample_title||r.name)+'</a>':esc(r.sample_title||r.name);
+    return '<div class="fcard"><div class="fn">'+esc(r.name)+'</div><div class="num">'+(i+1)+'</div>'+img+
+      '<div class="fb"><div class="fbx"><div class="ft">'+title+'</div>'+
+      '<div class="fw">'+esc(r.blurb||"")+'</div>'+
+      '<div class="fs">'+esc(r.name)+(r.cadence?' &middot; '+esc(r.cadence):'')+'</div></div>'+
+      '<div class="fbtns"><button class="pick" type="button" id="add-'+esc(r.key)+'" data-k="'+esc(r.key)+'" data-s="picked" aria-pressed="'+(r.status==="picked")+'">'+(r.status==="picked"?"Added":"Add it")+'</button>'+
+      '<button class="pick no" type="button" id="no-'+esc(r.key)+'" data-k="'+esc(r.key)+'" data-s="ruled_out" aria-pressed="'+(r.status==="ruled_out")+'">'+(r.status==="ruled_out"?"Ruled out":"Not for me")+'</button></div></div></div>';
+  }).join("");
+  el.querySelectorAll("button[data-k]").forEach(function(b){ b.onclick=function(){ decide(b.getAttribute("data-k"),b.getAttribute("data-s")); }; });
+  tally();
+}
+function decide(k,s){
+  var r=ROWS.filter(function(x){return x.key===k;})[0]; if(!r) return;
+  var next = r.status===s ? "offered" : s;
+  var prev=r.status; r.status=next; render();
+  api("wall_candidates?key=eq."+encodeURIComponent(k),{method:"PATCH",body:JSON.stringify({status:next,decided_at:new Date().toISOString()})})
+    .catch(function(e){ r.status=prev; render(); alert("Could not save that tap: "+e.message); });
+}
+api("wall_candidates?select=*&status=in.(offered,picked,ruled_out)&order=offered_on.desc,name.asc").then(function(all){
+  var latest=null;
+  (all||[]).forEach(function(r){ if(r.feed_url!=="-" && (!latest || r.offered_on>latest)) latest=r.offered_on; });
+  ROWS=(all||[]).filter(function(r){ return r.feed_url!=="-" && r.offered_on===latest && (r.status!=="ruled_out" || r.decided_at); }).slice(0,6);
+  document.getElementById("asof").textContent = latest ? "Picks found " + niceDate(latest) : "";
+  var ruled=(all||[]).filter(function(r){return r.status==="ruled_out";}).map(function(r){return r.name;});
+  document.getElementById("ruled").textContent = ruled.join(", ") || "none yet";
+  render();
+}).catch(function(e){
+  document.getElementById("cards").innerHTML='<div class="empty"><b>Could not load picks.</b> '+esc(e.message)+'</div>';
 });
-var copyBtn=document.getElementById("copy");
-if(copyBtn) copyBtn.onclick=function(){
-  var ns=Object.keys(PICKED).filter(function(k){return PICKED[k];}).sort();
-  var t = ns.length ? ("Put these on the wall: "+ns.map(function(n){return NAMES[n];}).join(", ")) : "";
-  if(!t) return;
-  var b=document.getElementById("copy");
-  if(navigator.clipboard) navigator.clipboard.writeText(t);
-  b.textContent="Copied"; setTimeout(function(){ b.textContent="Copy"; },1600);
-};
 </script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
