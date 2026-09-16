@@ -196,6 +196,23 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
   padding:5px 11px;background:var(--surface);color:var(--ink-2)}
 .log .row .yes:hover{border-color:var(--good);color:var(--good)}
 .log .row .no:hover{border-color:var(--warm);color:var(--warm)}
+/* v2.7: where, note, lasting person note, recently logged */
+.log .recent-place .p{border-style:dashed;color:var(--blue)}
+.log textarea{width:100%;min-height:70px;padding:11px 13px;border:1px solid var(--line);border-radius:10px;
+  font-size:16px;font-family:inherit;background:var(--surface-2);color:var(--ink);resize:vertical}
+.log textarea:focus-visible{outline:2px solid var(--blue);outline-offset:1px;border-color:var(--blue)}
+.log .keep{display:flex;gap:8px;align-items:flex-start;font-size:14px;color:var(--ink-2);margin:8px 0 0;cursor:pointer}
+.log .keep input{margin-top:3px}
+.log .pnote{margin:8px 0 0;padding:9px 12px;border-left:3px solid var(--blue);background:var(--surface-2);
+  border-radius:0 9px 9px 0;font-size:14px;color:var(--ink-2)}
+.log .pnote b{color:var(--ink)}
+.log .past .row{align-items:flex-start}
+.log .past .what{flex:1;min-width:0}
+.log .past .meta{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.log .past .nt{display:block;font-size:13.5px;color:var(--ink-2);margin-top:3px;white-space:pre-wrap}
+.log .past .addn{width:100%;display:none;margin-top:6px}
+.log .past .addn.open{display:block}
+.log .past .addn .sp{margin:6px 0 0;display:flex;gap:6px}
 </style>
 </head>
 <body>
@@ -228,7 +245,7 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.6</span>
+    <span id="ver" class="ver">v2.7</span>
   </div>
 </div>
 
@@ -583,6 +600,22 @@ var pickKind='', pickWhen=DAY, known=[], knownLoaded=false;
 /* Who they are. Five of the nine things connections stores describe the PERSON,
    not the get-together, so they carry forward. These are the ones the form asks
    for, because a brand-new person has nothing to carry and used to save blank. */
+/* v2.7 (Sep 16 2026): where it happened. Pills first, then a free box. Places
+   typed before come back as dashed pills. Stored in connections.place as
+   "Pill · typed place", or just one of them. */
+var PLACES=['Home','Coffee shop','Restaurant','Office','Outdoors','Event','Phone / video'];
+var pickPlace='';
+function placeParts(p){ var s=String(p||''), i=s.indexOf(' \u00b7 ');
+  if(i>-1) return {pill:s.slice(0,i), typed:s.slice(i+3)};
+  return PLACES.indexOf(s)>-1?{pill:s,typed:''}:{pill:'',typed:s}; }
+function recentPlaces(){
+  var seen={}, out=[];
+  for(var i=0;i<known.length&&out.length<5;i++){
+    var t=placeParts(known[i].place).typed.trim();
+    if(!t||seen[t.toLowerCase()]) continue; seen[t.toLowerCase()]=1; out.push(t);
+  }
+  return out;
+}
 var PLABELS=[['family','Family'],['colleague','Colleague'],['ex-colleague','Ex-Colleague'],['industry','Industry'],['group','Group']];
 var pickLabels=[], labelsTouched=false;
 function labelWord(v){ for(var i=0;i<PLABELS.length;i++){ if(PLABELS[i][0]===v) return PLABELS[i][1]; } return v; }
@@ -615,7 +648,7 @@ function whenWords(d){
 async function loadKnown(){
   try{
     var r=await sb.from('connections')
-      .select('person,person_key,circle,social_group,labels,age_band,entity_type,happened_on')
+      .select('id,person,person_key,circle,social_group,labels,age_band,entity_type,happened_on,kind,place,notes,planned')
       .eq('superseded',false).order('happened_on',{ascending:false}).limit(400);
     known=(r.data)||[]; knownLoaded=true;
   }catch(e){ known=[]; }
@@ -689,6 +722,28 @@ function showCarry(){
     line+='New here. Say who '+(tn.name||'they')+' is once and it fills itself in every time after.';
   }
   note.textContent=line;
+  showPersonNote(tn.name);
+}
+/* the latest lasting note on this person, shown under Who */
+var pnTimer=null;
+function shortD(d){ var p=String(d||'').split('-'); if(p.length<3) return d||'';
+  return ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][+p[1]-1]+' '+(+p[2])+', '+p[0]; }
+function showPersonNote(name){
+  var box=el('lgPNote'); if(!box) return;
+  clearTimeout(pnTimer);
+  var c=carryFor(name), key=String((c&&c.person_key)||name||'').trim();
+  if(!key){ box.innerHTML=''; box.hidden=true; return; }
+  pnTimer=setTimeout(async function(){
+    try{
+      var r=await sb.from('person_notes').select('note,noted_on').ilike('person_key',key)
+        .order('created_at',{ascending:false}).limit(2);
+      var rows=(r.data)||[];
+      if(el('lgPNote')!==box) return;
+      if(!rows.length){ box.innerHTML=''; box.hidden=true; return; }
+      box.innerHTML=rows.map(function(n){ return '<div><b>'+esc(shortD(n.noted_on))+':</b> '+esc(n.note)+'</div>'; }).join('');
+      box.hidden=false;
+    }catch(e){ box.hidden=true; }
+  },250);
 }
 async function drawLog(){
   var box=el('log'); if(!box) return;
@@ -719,7 +774,7 @@ async function drawLog(){
     '</div>'+
     '<div class="fld"><label>Who they are</label><div class="picks tags" id="lgTags">'+
       PLABELS.map(function(x){return '<button type="button" class="p tag" data-l="'+att(x[0])+'">'+esc(x[1])+'</button>';}).join('')+
-    '</div><p class="why" id="lgWhoNote"></p></div>'+
+    '</div><p class="why" id="lgWhoNote"></p><div class="pnote" id="lgPNote" hidden></div></div>'+
     '<div class="fld"><label>What was it</label><div class="picks" id="lgKinds">'+
       KINDS.map(function(k){return '<button type="button" class="p k'+(pickKind===k?' on':'')+'" data-k="'+att(k)+'">'+esc(k)+'</button>';}).join('')+
     '</div></div>'+
@@ -729,8 +784,17 @@ async function drawLog(){
       '<button type="button" class="p w'+(pickWhen===shiftDay(1)?' on':'')+'" data-w="tom">Tomorrow</button>'+
       '<button type="button" class="p w" data-w="pick">Another day</button>'+
       '</div><input type="date" id="lgDate" value="'+pickWhen+'" style="margin-top:8px"></div>'+
+    '<div class="fld"><label>Where</label><div class="picks" id="lgWhere">'+
+      PLACES.map(function(x){return '<button type="button" class="p pl'+(pickPlace===x?' on':'')+'" data-pl="'+att(x)+'">'+esc(x)+'</button>';}).join('')+
+      '</div>'+
+      (recentPlaces().length?'<div class="picks recent-place" id="lgPlacesUsed" style="margin-top:7px">'+
+        recentPlaces().map(function(x){return '<button type="button" class="p used" data-used="'+att(x)+'">'+esc(x)+'</button>';}).join('')+'</div>':'')+
+      '<input type="text" id="lgPlace" placeholder="Where exactly? e.g. Arcadia, Greenwich Ave" autocomplete="off" style="margin-top:8px"></div>'+
     '<div class="fld"><label for="lgWith">Anyone else there</label>'+
       '<input type="text" id="lgWith" placeholder="Optional" autocomplete="off"></div>'+
+    '<div class="fld"><label for="lgNote">Note</label>'+
+      '<textarea id="lgNote" placeholder="How it went, what you talked about, anything to remember"></textarea>'+
+      '<label class="keep" style="text-transform:none;letter-spacing:0;font-weight:400"><input type="checkbox" id="lgKeep"> <span id="lgKeepTxt">Also keep this on their card, so it shows next time I log them</span></label></div>'+
     '<button class="go'+(future?' plan':'')+'" id="lgGo">'+(future?'Add to what is coming up':'Log it')+'</button>'+
     '<p class="why" id="lgWhy"></p>';
 
@@ -745,6 +809,23 @@ async function drawLog(){
         '<span class="sp"><button class="yes">It happened</button>'+
         '<button class="no">Did not</button></span></div>';
     }).join('')+'</div>';
+  }
+  var past=known.filter(function(k){ return k.id&&!k.planned&&k.happened_on&&k.happened_on<=DAY&&(!k.entity_type||k.entity_type==='person'); }).slice(0,6);
+  if(past.length){
+    html+='<div class="soon past"><h4>Recently logged</h4>'+
+      '<p class="sub" style="margin:-4px 0 10px">Add a note to anything you logged.</p>'+
+      past.map(function(k){
+        var meta=[whenWords(k.happened_on), k.place].filter(Boolean).join(' \u00b7 ');
+        return '<div class="row" data-cid="'+att(k.id)+'" data-who="'+att(k.person||'')+'">'+
+          '<span class="what">'+esc((k.kind?(k.kind.charAt(0).toUpperCase()+k.kind.slice(1)):'Time')+' with '+(k.person||''))+
+            '<span class="meta">'+esc(meta)+'</span>'+
+            (k.notes?'<span class="nt">'+esc(k.notes)+'</span>':'')+'</span>'+
+          '<span class="sp"><button class="an">Add note</button></span>'+
+          '<div class="addn"><textarea placeholder="Add to the note"></textarea>'+
+            '<label class="keep" style="text-transform:none;letter-spacing:0;font-weight:400"><input type="checkbox" class="ak"> Also keep this on '+esc(k.person||'their')+'\u2019s card</label>'+
+            '<div class="sp"><button class="sv">Save note</button><button class="cx">Cancel</button></div></div>'+
+        '</div>';
+      }).join('')+'</div>';
   }
   box.innerHTML=html;
 
@@ -788,7 +869,46 @@ async function drawLog(){
   whoBox.addEventListener('input',function(){ labelsTouched=false; showCarry(); });
   paintTags(); showCarry();
   el('lgGo').addEventListener('click',saveLog);
-  if(soon.length) box.querySelector('.soon').addEventListener('click',onSoon);
+  if(soon.length) box.querySelector('.soon:not(.past)').addEventListener('click',onSoon);
+  el('lgWhere').addEventListener('click',function(e){
+    var b=e.target.closest('.pl'); if(!b) return;
+    var v=b.getAttribute('data-pl');
+    pickPlace=(pickPlace===v)?'':v;
+    Array.prototype.forEach.call(el('lgWhere').children,function(x){ x.classList.toggle('on',x.getAttribute('data-pl')===pickPlace); });
+  });
+  if(el('lgPlacesUsed')) el('lgPlacesUsed').addEventListener('click',function(e){
+    var b=e.target.closest('.used'); if(!b) return;
+    el('lgPlace').value=b.getAttribute('data-used');
+  });
+  var pastBox=box.querySelector('.past'); if(pastBox) pastBox.addEventListener('click',onPast);
+}
+function placeValue(){
+  var t=String((el('lgPlace')||{}).value||'').trim();
+  return [pickPlace,t].filter(Boolean).join(' \u00b7 ')||null;
+}
+async function keepPersonNote(name,text,cid){
+  var c=carryFor(name)||{};
+  return sb.from('person_notes').insert({person_key:(c.person_key||name), note:text, noted_on:DAY, connection_id:cid||null});
+}
+async function onPast(e){
+  var b=e.target.closest('button'); if(!b) return;
+  var row=b.closest('.row'); if(!row) return;
+  var box=row.querySelector('.addn');
+  if(b.classList.contains('an')){ box.classList.add('open'); box.querySelector('textarea').focus(); return; }
+  if(b.classList.contains('cx')){ box.classList.remove('open'); return; }
+  if(!b.classList.contains('sv')) return;
+  var text=String(box.querySelector('textarea').value||'').trim(); if(!text) return;
+  var cid=row.getAttribute('data-cid'), who=row.getAttribute('data-who');
+  var k=null; for(var i=0;i<known.length;i++){ if(known[i].id===cid){ k=known[i]; break; } }
+  b.disabled=true;
+  var merged=k&&k.notes?(k.notes+'\n'+text):text;
+  var r=await sb.from('connections').update({notes:merged}).eq('id',cid);
+  if(!r.error&&box.querySelector('.ak').checked) await keepPersonNote(who,text,cid);
+  b.disabled=false;
+  var w=el('lgWhy');
+  if(r.error){ if(w){ w.textContent='That note did not save. Try again in a moment.'; w.className='why warn'; } return; }
+  knownLoaded=false; await drawLog();
+  var w2=el('lgWhy'); if(w2){ w2.textContent='Note added to '+who+'.'; w2.className='why ok'; }
 }
 async function saveLog(){
   var why=el('lgWhy'), who=String(el('lgWho').value||'').trim();
@@ -797,7 +917,9 @@ async function saveLog(){
   var tn=tidyName(who); who=tn.name;
   if(!who){ why.textContent='Put a name in first. A first name is enough.'; why.className='why warn'; el('lgWho').focus(); return; }
   var future=pickWhen>DAY, carry=carryFor(who)||{}, others=String(el('lgWith').value||'').trim();
-  var extraNote=[tn.note, others?('with '+others):''].filter(Boolean).join(' | ');
+  var typedNote=String((el('lgNote')||{}).value||'').trim(), keepIt=!!(el('lgKeep')&&el('lgKeep').checked);
+  var extraNote=[typedNote, tn.note, others?('with '+others):''].filter(Boolean).join(' | ');
+  var where=placeValue();
   el('lgGo').disabled=true;
   why.textContent='Saving...'; why.className='why';
   var r;
@@ -822,16 +944,17 @@ async function saveLog(){
       person:who, person_key:(carry.person_key||who), entity_type:'person',
       kind:pickKind, channel:channelFor(pickKind),
       happened_on:pickWhen, planned:false,
-      notes:extraNote||null,
+      notes:extraNote||null, place:where,
       circle:carry.circle||null, social_group:carry.social_group||null,
       age_band:carry.age_band||null, labels:pickLabels.slice(),
       source:'logged-by-hand', superseded:false
-    });
+    }).select('id').single();
   }
+  if(!r.error&&keepIt&&typedNote) await keepPersonNote(who,typedNote,(r.data&&r.data.id)||null);
   el('lgGo').disabled=false;
   if(r.error){ why.textContent='That did not save. Try again in a moment.'; why.className='why warn'; return; }
   var said=pickKind+' with '+who+', '+whenWords(pickWhen)+'.';
-  pickKind=''; pickLabels=[]; labelsTouched=false; knownLoaded=false;
+  pickKind=''; pickPlace=''; pickLabels=[]; labelsTouched=false; knownLoaded=false;
   await drawLog();
   var w2=el('lgWhy');
   if(w2){ w2.textContent=(future?'On your board under Social Well-Being: ':'Logged: ')+said; w2.className='why ok'; }
