@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --ink:#23211d; --soft:#5f5d55; --faint:#8d8b82;
+  --line:#e3e1d9; --chip:#eceae3;
+  --red:#c0392b; --amber:#c07f10; --green:#2f8f5b;
+  --b-do:#3f6f8f; --b-more:#c07f10; --b-did:#2f8f5b; --b-read:#6f7b8a; --b-kill:#a8724a;
+  --shadow:0 1px 2px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#181713; --panel:#211f1b; --ink:#eeece6; --soft:#b6b3aa; --faint:#8b897f;
+    --line:#33302a; --chip:#2b2925;
+    --red:#e26a5c; --amber:#e0a63c; --green:#5cbd85;
+    --b-do:#5f93b4; --b-more:#d69a2b; --b-did:#4bb17c; --b-read:#93a0af; --b-kill:#c8956a;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#181713; --panel:#211f1b; --ink:#eeece6; --soft:#b6b3aa; --faint:#8b897f;
+  --line:#33302a; --chip:#2b2925;
+  --red:#e26a5c; --amber:#e0a63c; --green:#5cbd85;
+  --b-do:#5f93b4; --b-more:#d69a2b; --b-did:#4bb17c; --b-read:#93a0af; --b-kill:#c8956a;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:820px; margin:0 auto; padding:22px 16px 64px}
+header.top{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:4px}
+h1{font-size:26px; margin:0; letter-spacing:.2px}
+.vchip{font-size:12px; font-weight:700; color:var(--soft); background:var(--chip);
+  border:1px solid var(--line); border-radius:6px; padding:2px 8px}
+.date{color:var(--soft); font-size:14px; margin:2px 0 18px}
+
+.panel{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:16px 18px; margin-bottom:16px; box-shadow:var(--shadow)}
+.panel h2{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--faint);
+  margin:0 0 10px}
+.glance p{margin:6px 0; font-size:15px}
+.glance .lead{font-weight:700}
+.glance b{color:var(--ink)}
+
+/* transport */
+.transport label{font-size:13px; font-weight:700; color:var(--soft); display:block; margin-bottom:8px}
+#answers{width:100%; min-height:120px; resize:vertical; font-family:Arial, Helvetica, sans-serif;
+  font-size:13.5px; line-height:1.55; color:var(--ink); background:var(--bg);
+  border:1px solid var(--line); border-radius:9px; padding:11px 12px}
+.copyrow{display:flex; align-items:center; gap:10px; margin-top:9px}
+.copybtn{font:600 13px Arial, Helvetica, sans-serif; color:#fff; background:var(--b-do);
+  border:1px solid var(--b-do); border-radius:8px; padding:8px 14px; cursor:pointer}
+.copyhint{font-size:12px; color:var(--faint)}
+
+/* key */
+.key ul{list-style:none; margin:0; padding:0; display:grid; gap:7px}
+.key li{font-size:13.5px; color:var(--soft)}
+.key b{display:inline-block; min-width:104px; color:#fff; text-align:center;
+  border-radius:6px; padding:2px 8px; font-size:12.5px; margin-right:8px}
+.k-do{background:var(--b-do)} .k-more{background:var(--b-more)} .k-did{background:var(--b-did)}
+.k-read{background:var(--b-read)} .k-kill{background:var(--b-kill)}
+.keynote{font-size:12.5px; color:var(--faint); margin-top:10px}
+
+/* rows */
+.rows{display:grid; gap:14px}
+.row{background:var(--panel); border:1px solid var(--line); border-left:5px solid var(--line);
+  border-radius:12px; padding:15px 17px; box-shadow:var(--shadow); transition:border-color .15s}
+.row.settled{opacity:.62}
+.rhead{display:flex; align-items:flex-start; gap:10px}
+.dot{width:12px; height:12px; border-radius:50%; margin-top:6px; flex:0 0 auto}
+.dot.red{background:var(--red)} .dot.amber{background:var(--amber)} .dot.green{background:var(--green)}
+.rtitle{font-size:17px; font-weight:700; margin:0}
+.rbody{font-size:14.5px; color:var(--soft); margin:9px 0 0}
+.rnext{font-size:14px; margin:11px 0 0}
+.rnext .lab{font-weight:700; color:var(--ink)}
+.state{font-size:12.5px; font-weight:700; margin:10px 0 0; min-height:16px}
+.state.open{color:var(--b-more)}
+.state.done{color:var(--faint)}
+
+.btns{display:flex; flex-wrap:wrap; gap:8px; margin-top:12px}
+.btns button{font:600 13px Arial, Helvetica, sans-serif; color:#fff; border:none;
+  border-radius:8px; padding:9px 14px; cursor:pointer; opacity:.94}
+.btns button:hover{opacity:1}
+.btns button.sel{outline:2px solid var(--ink); outline-offset:1px}
+.bdo{background:var(--b-do)} .bmore{background:var(--b-more)} .bdid{background:var(--b-did)}
+.bread{background:var(--b-read)} .bkill{background:var(--b-kill)}
+
+.cbox{margin-top:11px}
+.cbox input{width:100%; font:14px Arial, Helvetica, sans-serif; color:var(--ink);
+  background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:9px 11px}
+.proof{font-size:11.5px; color:var(--faint); margin-top:11px; padding-top:9px;
+  border-top:1px dashed var(--line); font-family:ui-monospace, Menlo, Consolas, monospace}
+
+/* rundown */
+.rundown .item{padding:9px 0; border-bottom:1px solid var(--line)}
+.rundown .item:last-child{border-bottom:none}
+.rundown .nm{font-weight:700; font-size:15px}
+.rundown .ln{font-size:14px; color:var(--soft); margin-top:2px}
+.rundown .nx{font-size:13.5px; margin-top:3px}
+.rundown .nx .lab{font-weight:700; color:var(--ink)}
+
+.closing{font-size:14px; color:var(--soft); font-style:normal; margin-top:8px}
+.closing b{color:var(--ink)}
+@media (max-width:600px){
+  h1{font-size:22px}
+  .key b{min-width:92px}
+  .btns button{flex:1 1 auto}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>Morning Report</h1>
+    <span class="vchip">v1.0</span>
+  </header>
+  <div class="date">Wednesday, September 16, 2026</div>
+
+  <!-- GLANCE -->
+  <section class="panel glance">
+    <h2>Today at a glance</h2>
+    <p class="lead">The day is wide open. One thing on the calendar: <b>breakfast with Todd, 8:30 to 9:30, at Tartinery.</b> Tomorrow is clear too.</p>
+    <p><b>Project pulse:</b> Project YOU is the engine and everything else rides on it. The build queue is deep, but it is not draining, because the helper that works it overnight has gone quiet. That is the headline below.</p>
+    <p><b>Community and AI scan:</b> nothing new is sitting in a keep-or-discard queue this morning. Your two auto-feeds roll on their own. The only snag is Fun Facts, which stopped dealing (see below).</p>
+    <p><b>Claude weekly usage:</b> I cannot read your usage meter from here, so I cannot give you a number. It lives in the app under Settings. Worth a mid-week glance, since the overnight jobs plus several chats running at once spend the weekly allowance faster than a steady pace would.</p>
+  </section>
+
+  <!-- KEY -->
+  <section class="panel key">
+    <h2>What each button means</h2>
+    <ul>
+      <li><b class="k-do">Do this</b>Go build it, run it, ship it. The row stays open until the work is finished.</li>
+      <li><b class="k-more">Tell me more</b>You lean yes but want the cost or reasoning first. Your question rides in the note. The row stays open and the next move is mine.</li>
+      <li><b class="k-did">I did it</b>You handled it yourself. Row closes.</li>
+      <li><b class="k-read">I read this</b>Just noting you saw it. Nothing is owed. Row closes, marked noted.</li>
+      <li><b class="k-kill">Kill this task</b>Drop it for good. It does not come back as a question. Row closes.</li>
+    </ul>
+    <p class="keynote">Two buttons keep a row open because they mean work is owed: Do this and Tell me more. The other three close it.</p>
+  </section>
+
+  <!-- TRANSPORT -->
+  <section class="panel transport">
+    <label for="answers">Your answers (select all, then paste back into the chat)</label>
+    <textarea id="answers" readonly aria-live="polite"></textarea>
+    <div class="copyrow">
+      <button class="copybtn" id="copyBtn" type="button">Copy</button>
+      <span class="copyhint">If Copy does nothing, select the text above and copy it by hand. That is the real way this gets back to me.</span>
+    </div>
+  </section>
+
+  <!-- ROWS -->
+  <div class="rows" id="rows">
+
+    <!-- ROW 1 -->
+    <div class="row" data-title="Overnight run never started">
+      <div class="rhead"><span class="dot red"></span>
+        <p class="rtitle">Last night's overnight run never started</p></div>
+      <p class="rbody">The helper that works through your queue while you sleep left no trace at all last night. Nothing in your list was touched after Tuesday morning, and there is no start time, no finish time, and no note anywhere. This exact silence has happened before, so it reads as the run never clocking in, not a run that died partway through. And there is a second gap underneath it: nothing was lined up for the run to do, so even if it had fired it would have found an empty list. Your deep build queue is sitting still as a result.</p>
+      <p class="rnext"><span class="lab">Next:</span> Tell me to find why it is not firing and re-arm it for tonight.</p>
+      <div class="state"></div>
+      <div class="btns"></div>
+      <div class="cbox"><input type="text" placeholder="Add a note (optional)"></div>
+      <p class="proof">Proof: no run_log row after brainfood-20260914-1113; session_todos queue_run last touched 2026-09-15 09:48 UTC; items with overnight status = 0.</p>
+    </div>
+
+    <!-- ROW 2 -->
+    <div class="row" data-title="Dictated notes not saving for 11 days">
+      <div class="rhead"><span class="dot red"></span>
+        <p class="rtitle">Your dictated notes have not saved for eleven days</p></div>
+      <p class="rbody">The quick notes you speak into Drafts through the day have not reached your to-do list since Thursday, September 5. The sweep that is meant to collect them every two hours has run about eighty-four times since then and reported success every single time, so nothing looked wrong from the outside. That is the worst kind of quiet: a green light on a dead pipe. Anything you have dictated in the last eleven days is still sitting in Drafts, uncaptured, waiting.</p>
+      <p class="rnext"><span class="lab">Next:</span> Say the word and I will trace where the capture breaks and get your spoken notes flowing again.</p>
+      <div class="state"></div>
+      <div class="btns"></div>
+      <div class="cbox"><input type="text" placeholder="Add a note (optional)"></div>
+      <p class="proof">Proof: dictated-notes capture last wrote 2026-09-05 20:19; ~84 two-hourly sweeps reported success since, zero notes written.</p>
+    </div>
+
+    <!-- ROW 3 -->
+    <div class="row" data-title="Four map pages crying wolf">
+      <div class="rhead"><span class="dot amber"></span>
+        <p class="rtitle">Four of your map pages are crying wolf</p></div>
+      <p class="rbody">Four of the six pages that draw how your system fits together are frozen on a September 6 snapshot. They wave a red STOPPED alarm over your Apple Health and Strava feeds when both are actually writing fine, a health reading landed Monday evening and a Strava row Monday morning. They also undercount you across the board, showing 156 pages when you now have 180. The one map that was rebuilt on the 14th is clean and honest, and it makes a good model for fixing the other four.</p>
+      <p class="rnext"><span class="lab">Next:</span> I can rebuild the four stale maps to match the live system and kill the false alarms.</p>
+      <div class="state"></div>
+      <div class="btns"></div>
+      <div class="cbox"><input type="text" placeholder="Add a note (optional)"></div>
+      <p class="proof">Proof: architecture-map, dfd, automated-tracking + maps index stamped Sep 6; live counts today 180 pages / 143 tables / 43 views.</p>
+    </div>
+
+    <!-- ROW 4 -->
+    <div class="row" data-title="Fun Facts stopped dealing">
+      <div class="rhead"><span class="dot amber"></span>
+        <p class="rtitle">Fun Facts stopped dealing two weeks ago</p></div>
+      <p class="rbody">The Fun Facts that are supposed to surface two a day on your Things Worth Knowing card have not shown a new one since September 3. Twenty-six of them are sitting unseen in the pool, the exact same count as two weeks ago, which means none are being dealt at all. The supply is full and fine; it is the dealing that is stuck. Small thing, but it is a daily habit surface that has quietly stopped giving you anything new.</p>
+      <p class="rnext"><span class="lab">Next:</span> I can find why the card stopped pulling and restart the two-a-day flow.</p>
+      <div class="state"></div>
+      <div class="btns"></div>
+      <div class="cbox"><input type="text" placeholder="Add a note (optional)"></div>
+      <p class="proof">Proof: news_queue source Fun Facts, 26 rows status=new, latest seen_on 2026-09-03; identical count to the Sep 7 check.</p>
+    </div>
+
+    <!-- ROW 5 -->
+    <div class="row" data-title="Four jobs waiting on your yes or no">
+      <div class="rhead"><span class="dot amber"></span>
+        <p class="rtitle">Four jobs are parked waiting on your yes or no</p></div>
+      <p class="rbody">Four items in your build queue are flagged as needing your call before anyone can move them. They are: dropping three unused columns you already said to kill, two separate write-ups of the same iPhone shortcut bug that fires every meeting about a dozen times over, and a request to let you attach a screenshot to any to-do. None of them can proceed until you weigh in, so they just sit there.</p>
+      <p class="rnext"><span class="lab">Next:</span> Tap Tell me more and I will lay out each one in plain terms so you can decide in a minute.</p>
+      <div class="state"></div>
+      <div class="btns"></div>
+      <div class="cbox"><input type="text" placeholder="Add a note (optional)"></div>
+      <p class="proof">Proof: session_todos run_status=needs_input, ids 289, 151, 167, 38.</p>
+    </div>
+
+    <!-- ROW 6 -->
+    <div class="row" data-title="Mike waiting on the home exchange">
+      <div class="rhead"><span class="dot amber"></span>
+        <p class="rtitle">Mike is waiting to hear back on the home exchange</p></div>
+      <p class="rbody">Mike replied about the dates you and Asa asked about. He says your window is his high season, but he offered those dates at twenty percent off the listed prices, and he passed along his email and phone number to sort it out directly. The thread has sat unanswered since last night. It is a quick yes, no, or let me think about it, and it is the only real back-and-forth waiting in your inbox this morning.</p>
+      <p class="rnext"><span class="lab">Next:</span> This is your call to make. Tap Do this only if you want me to draft a reply for you to send.</p>
+      <div class="state"></div>
+      <div class="btns"></div>
+      <div class="cbox"><input type="text" placeholder="Add a note (optional)"></div>
+      <p class="proof">Proof: Gmail thread 1a0a74dcdf80ef8b, HomeExchange, latest message 2026-09-16 01:25 UTC.</p>
+    </div>
+
+    <!-- ROW 7 -->
+    <div class="row" data-title="Run before last did its job">
+      <div class="rhead"><span class="dot green"></span>
+        <p class="rtitle">The run before last did its one job right</p></div>
+      <p class="rbody">Two nights ago the overnight helper noticed your Habit Worksheets notebook was nearly full and about to stop saving new notes. It split the notebook cleanly: a fresh one for everything from here forward, the old one left whole with every bit of history intact. I checked this claim against the actual files this morning and it holds up exactly as described. Nothing for you to do here, just proof that the last real run landed well before the silence set in.</p>
+      <p class="rnext"><span class="lab">Next:</span> Nothing.</p>
+      <div class="state"></div>
+      <div class="btns"></div>
+      <div class="cbox"><input type="text" placeholder="Add a note (optional)"></div>
+      <p class="proof">Proof: worksheets file 47,688 bytes near the ~48 KB cap; continuation file projectyou-worksheets-2 present and described as active.</p>
+    </div>
+
+    <!-- ROW 8 -->
+    <div class="row" data-title="Monarch flexible budget over by $6,776">
+      <div class="rhead"><span class="dot amber"></span>
+        <p class="rtitle">Monarch says you are $6,776 over this month</p></div>
+      <p class="rbody">Monarch flagged last night that you have gone past your Flexible budget for the month by six thousand seven hundred seventy-six dollars. This is a heads-up, not something the system fixes, and I am not touching anything money-related on your behalf. Just worth a glance before more September spending lands.</p>
+      <p class="rnext"><span class="lab">Next:</span> A look when you have a minute. Nothing for me to do here.</p>
+      <div class="state"></div>
+      <div class="btns"></div>
+      <div class="cbox"><input type="text" placeholder="Add a note (optional)"></div>
+      <p class="proof">Proof: Gmail alert email@email.monarch.com, 2026-09-14 23:13 UTC.</p>
+    </div>
+
+  </div>
+
+  <!-- RUNDOWN -->
+  <section class="panel rundown" style="margin-top:18px">
+    <h2>Where your projects stand</h2>
+
+    <div class="item">
+      <div class="nm">Project YOU / Quantified Self</div>
+      <div class="ln">The engine. Active work across worksheets, the maps, the food log, habit tracking, and the plan to fold Staging Area, All ToDos, and the overnight run into one input system. About 33 jobs are unstarted in the queue and 71 are parked.</div>
+      <div class="nx"><span class="lab">Next step:</span> Get the overnight run firing again (row one), so the queue actually drains.</div>
+    </div>
+
+    <div class="item">
+      <div class="nm">CrushingIt</div>
+      <div class="ln">Your Habit Bandit time wheel and web to-do, now largely woven into the Project YOU daily loop. Stable, and still the home of the AI habit tick.</div>
+      <div class="nx"><span class="lab">Next step:</span> Nothing pressing. It rides on Project YOU.</div>
+    </div>
+
+    <div class="item">
+      <div class="nm">Clever Phrases</div>
+      <div class="ln">Now one group of ten inside the Things Worth Knowing card, not a card of its own. Fun Facts share that same card.</div>
+      <div class="nx"><span class="lab">Next step:</span> Unstick the Fun Facts dealing (row four) and clear the last stray old-name label.</div>
+    </div>
+
+    <div class="item">
+      <div class="nm">AI Intelligence</div>
+      <div class="ln">Your daily four-card AI deck off the Habit Bandit AI item, tap-through style: a ways-of-working tip, an insight, a quote, and a new platform, each with a save box. The format is settled.</div>
+      <div class="nx"><span class="lab">Next step:</span> Confirm the deck is still generating fresh each day. Folder-side detail is pending until your computer connects.</div>
+    </div>
+
+    <div class="item">
+      <div class="nm">TreadWell</div>
+      <div class="ln">Your give-back travel platform. Prototype has the partners page, the TreadPoints give-forward system, and a consolidated build spec in the strategy bank.</div>
+      <div class="nx"><span class="lab">Next step:</span> Dormant this week. The build spec is your single source when you pick it back up. Detail pending folder connection.</div>
+    </div>
+
+    <div class="item">
+      <div class="nm">2026 Calendar</div>
+      <div class="ln">Now a live database page inside Project YOU, with the feed plumbing and week view in place.</div>
+      <div class="nx"><span class="lab">Next step:</span> The iPhone shortcut sending each meeting a dozen times over (row five) is the open blocker.</div>
+    </div>
+  </section>
+
+  <p class="closing"><b>One from Atomic Habits:</b> you do not rise to the level of your goals, you fall to the level of your systems. Two of your systems went quiet this week while still flashing green. The fix worth making is not just restarting them, it is making the signal honest, so a dead pipe looks dead.</p>
+
+</div>
+
+<script>
+(function(){
+  var ACTIONS = [
+    {cls:"bdo",   label:"Do this",        answer:"DO THIS",         open:true},
+    {cls:"bmore", label:"Tell me more",   answer:"TELL ME MORE",    open:true},
+    {cls:"bdid",  label:"I did it",       answer:"I DID IT",        open:false},
+    {cls:"bread", label:"I read this",    answer:"I READ THIS",     open:false},
+    {cls:"bkill", label:"Kill this task", answer:"KILL THIS TASK",  open:false}
+  ];
+  var BORDER = {bdo:"var(--b-do)", bmore:"var(--b-more)", bdid:"var(--b-did)", bread:"var(--b-read)", bkill:"var(--b-kill)"};
+  var rows = Array.prototype.slice.call(document.querySelectorAll("#rows .row"));
+  var out = document.getElementById("answers");
+
+  rows.forEach(function(row){
+    var holder = row.querySelector(".btns");
+    ACTIONS.forEach(function(a){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = a.cls;
+      b.textContent = a.label;
+      b.addEventListener("click", function(){ choose(row, a, b); });
+      holder.appendChild(b);
+    });
+    var input = row.querySelector(".cbox input");
+    if(input){ input.addEventListener("input", compile); }
+  });
+
+  function choose(row, a, btn){
+    row.dataset.answer = a.answer;
+    row.querySelector(".btns").querySelectorAll("button").forEach(function(x){ x.classList.remove("sel"); });
+    btn.classList.add("sel");
+    row.style.borderLeftColor = BORDER[a.cls];
+    var st = row.querySelector(".state");
+    if(a.open){
+      row.classList.remove("settled");
+      st.className = "state open";
+      st.textContent = (a.answer === "DO THIS") ? "Open. Work owed, mine to finish." : "Open. Waiting on my reply first.";
+    } else {
+      row.classList.add("settled");
+      st.className = "state done";
+      st.textContent = (a.answer === "I READ THIS") ? "Closed. Noted." : "Closed.";
+    }
+    compile();
+  }
+
+  function compile(){
+    var lines = ["Morning Report answers - Wed Sep 16, 2026", "(paste this whole block back into the chat)", ""];
+    var any = false;
+    rows.forEach(function(row){
+      var title = row.getAttribute("data-title");
+      var ans = row.dataset.answer || "";
+      var note = "";
+      var input = row.querySelector(".cbox input");
+      if(input && input.value.trim()){ note = input.value.trim(); }
+      if(ans || note){
+        any = true;
+        var line = "- " + title + ": " + (ans || "(no button)");
+        if(note){ line += "  | note: " + note; }
+        lines.push(line);
+      }
+    });
+    if(!any){ lines.push("(nothing selected yet)"); }
+    out.value = lines.join("\n");
+  }
+
+  document.getElementById("copyBtn").addEventListener("click", function(){
+    out.focus(); out.select();
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch(e){ ok = false; }
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(out.value).then(function(){}, function(){});
+    }
+    this.textContent = ok ? "Copied" : "Select it by hand";
+    var self = this;
+    setTimeout(function(){ self.textContent = "Copy"; }, 1600);
+  });
+
+  compile();
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>

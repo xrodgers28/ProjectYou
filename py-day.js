@@ -49,7 +49,55 @@
   PY.TZ = TZ;
   PY.BOUNDARY_HOUR = BOUNDARY_HOUR;
   PY.day = day;
-  PY.today = function () { return day(); };
+  /* VIEW DAY (Sep 16 2026). Scott steps back to a past day on the Cue Cards
+     board and every card must open on THAT day. The board adds ?day=YYYY-MM-DD
+     to each card link. Here PY.today() then answers that day, so every page
+     that already asks PY.today() follows it with no change of its own.
+     PY.realToday() is always the real day.
+     - never on the board itself (it keeps its own date nav)
+     - only a past day counts; today or a future day is ignored
+     - The Wall and The Feed show a live outside feed, so they stay on today
+       and say so in the strip
+     - the board remembers the day for one hour (sessionStorage py_view_day) */
+  var PAGE = (location.pathname.split('/').pop() || '').toLowerCase();
+  var BOARD = 'habit-modules.html';
+  var LIVE_FEED = { 'wall.html': 1, 'feed.html': 1 };
+  var VIEW = null;
+  try {
+    var q = new URLSearchParams(location.search).get('day');
+    if (q && /^\d{4}-\d{2}-\d{2}$/.test(q) && q < day() && PAGE !== BOARD) VIEW = q;
+  } catch (e) {}
+  PY.realToday = function () { return day(); };
+  PY.viewDay = function () { return VIEW; };
+  PY.today = function () { return (VIEW && !LIVE_FEED[PAGE]) ? VIEW : day(); };
+  if (VIEW) {
+    try { sessionStorage.setItem('py_view_day', JSON.stringify({ d: VIEW, t: Date.now() })); } catch (e) {}
+    var showStrip = function () {
+      if (document.getElementById('py-view-strip') || !document.body) return;
+      var p = VIEW.split('-').map(Number);
+      var label = new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).toLocaleDateString('en-US',
+        { timeZone: 'UTC', weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+      var s = document.createElement('div');
+      s.id = 'py-view-strip';
+      s.setAttribute('role', 'status');
+      s.style.cssText = 'position:sticky;top:0;z-index:9999;background:#b8962f;color:#1a1408;' +
+        'font:600 14px/1.35 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;' +
+        'padding:9px 16px;text-align:center';
+      var msg = LIVE_FEED[PAGE]
+        ? 'Looking back: ' + label + '. This card is a live feed, so it shows today’s.'
+        : 'Looking back: ' + label + '. Anything you save counts for that day.';
+      var a = document.createElement('a');
+      a.textContent = 'Back to today';
+      a.href = location.pathname + location.hash;
+      a.style.cssText = 'color:#1a1408;text-decoration:underline;margin-left:10px;white-space:nowrap';
+      a.onclick = function () { try { sessionStorage.removeItem('py_view_day'); } catch (e) {} };
+      s.appendChild(document.createTextNode(msg));
+      s.appendChild(a);
+      document.body.insertBefore(s, document.body.firstChild);
+    };
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', showStrip);
+    else showStrip();
+  }
   PY.etHour = etHour;
   PY.etYMD = etYMD;
 

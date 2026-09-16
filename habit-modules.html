@@ -470,13 +470,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.34</span>
+    <span class="pn-ver">v6.35</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.34</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.35</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -679,11 +679,23 @@ function isPast(){return VIEWDATE!==todayKey();}
 function fmtShort(d){var dt=new Date(d+"T12:00:00");return dt.toLocaleDateString("en-US",{month:"short",day:"numeric"});}
 function fmtLong(d){var dt=new Date(d+"T12:00:00");return dt.toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"});}
 function hrefFor(m){
-  /* deck pages (Takeaways, Open Mode, Environmental Health, Recreational Health,
-     Social Fitness, Bucket List) do not yet understand a past-day visit, so opening
-     one always behaves as an ordinary today visit. Backfilling a deck card for now
-     goes through its checkmark only, same as every other card. */
-  return m.href;
+  /* v6.35 (Sep 16 2026): when the board has stepped back to a past day, every
+     card opens on that day. The card page reads ?day= through py-day.js, so
+     PY.today() on that page answers the day the board is showing. */
+  if(!VIEWDATE||!isPast()) return m.href;
+  var h=m.href, i=h.indexOf('#'), base=(i<0?h:h.slice(0,i)), frag=(i<0?'':h.slice(i));
+  return base+(base.indexOf('?')<0?'?':'&')+'day='+encodeURIComponent(VIEWDATE)+frag;
+}
+/* the board remembers a past day for one hour, so coming back from a card
+   lands on the same day, and a stale day never sticks around */
+function viewKeep(d){try{ if(d&&d!==todayKey()) sessionStorage.setItem('py_view_day',JSON.stringify({d:d,t:Date.now()})); else sessionStorage.removeItem('py_view_day'); }catch(e){}}
+function viewRestore(){
+  try{
+    var v=JSON.parse(sessionStorage.getItem('py_view_day')||'null');
+    if(v&&v.d&&/^\d{4}-\d{2}-\d{2}$/.test(v.d)&&v.d<todayKey()&&(Date.now()-v.t)<3600000&&v.d>=PYBackfill.minDate()) return v.d;
+    sessionStorage.removeItem('py_view_day');
+  }catch(e){}
+  return null;
 }
 function renderDayNav(){
   if(!VIEWDATE) return;
@@ -700,6 +712,7 @@ function renderDayNav(){
 }
 async function setViewDate(d){
   VIEWDATE=d;
+  viewKeep(d);
   renderDayNav();
   if(VIEWDATE===todayKey()||!sb||!signedIn){ PASTLOG={}; render(); if(sb&&signedIn) RAIL.load(); return; }
   PASTLOG = await PYBackfill.loggedSet(sb, qsNames(), VIEWDATE);
@@ -2331,11 +2344,11 @@ async function signIn(){
   var r=await sb.auth.signInWithPassword({email:email,password:pass});
   if(r.error){document.getElementById('gateErr').textContent=r.error.message;return;}
   document.getElementById('gate').classList.add('hidden');
-  signedIn=true; await loadRows(); await handleReturn(); RAIL.load();
+  signedIn=true; await loadRows(); if(isPast()) await setViewDate(VIEWDATE); await handleReturn(); RAIL.load();
 }
 
 async function boot(){
-  VIEWDATE=todayKey();
+  VIEWDATE=viewRestore()||todayKey();
   var dnPrev=document.getElementById('dnPrev'), dnNext=document.getElementById('dnNext'), dnToday=document.getElementById('dnToday');
   if(dnPrev) dnPrev.onclick=function(){setViewDate(PYBackfill.shiftDate(VIEWDATE,-1));};
   if(dnNext) dnNext.onclick=function(){setViewDate(PYBackfill.shiftDate(VIEWDATE,1));};
@@ -2344,7 +2357,7 @@ async function boot(){
   render();  /* paint immediately, then reconcile with the database */
   if(!sb){document.querySelector('.wheelnote').innerHTML='Could not reach the database \u2014 ticks are being kept locally only. Reload to try again.';return;}
   var s=await sb.auth.getSession();
-  if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadRows();await handleReturn(); RAIL.load(); }
+  if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadRows(); if(isPast()) await setViewDate(VIEWDATE); await handleReturn(); RAIL.load(); }
   else{document.getElementById('gate').classList.remove('hidden');}
 }
 boot();
