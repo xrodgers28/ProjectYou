@@ -255,6 +255,7 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 .card .acts .gg{background:#1a73e8;color:#fff;border-color:#1a73e8}
 .card .acts .q{background:#2F8A5B;color:#fff;border-color:#2F8A5B}
 .card .acts .go1{background:#fff;color:#8a6a14;border-color:#e0c67c}
+.card .acts .soc1{background:#eef4fa;color:#2f5a7e;border-color:#c6d8ea}
 .card .acts .go1.on{background:#E39B1F;color:#fff;border-color:#E39B1F}
 .card .acts .close{margin-left:auto}
 .gsel{display:flex;gap:6px;align-items:center;margin-top:10px;font-size:11.5px;color:#666}
@@ -346,12 +347,12 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
   <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
   <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
   <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-  <span class="pn-ver">v3.7</span>
+  <span class="pn-ver">v3.8</span>
   <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
 </div>
 
 <div class="pagehead">
-  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.7</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
+  <div class="secbar"><h1>Project YOU OS · Calendar</h1><span class="ver">v3.8</span><span class="date" id="stamp"></span><span class="status" id="status">Loading…</span></div>
   <p class="sub">Say or type an event in plain English and it goes straight on. Your Google calendars feed in on their own. Live events sit dimmed because they are tour dates you are tracking; star one to say you are going and it comes forward. Hover a layer on the right to light up its entries, tick it to show or hide the whole layer, and use the small x on any event to hide just that one. Opens scrolled to <b>today</b>.</p>
 </div>
 
@@ -431,8 +432,10 @@ input[type=checkbox]:checked::after{content:"";position:absolute;left:4px;top:0.
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="py-day.js"></script>
+<script src="social-log.js"></script>
 <script>
-/* ===== Project YOU · Calendar v3.7 =====
+/* ===== Project YOU · Calendar v3.8 =====
    Events live in public.calendar_events, layers in public.calendar_categories.
    New in v1.2: sign-in (the Google feed brings personal appointments onto this
    page, so it can no longer be open to anyone with the URL), plain-English add
@@ -971,6 +974,7 @@ function openEvent(id){
   }
   h+='<div class="acts">'
     +(tracked(e)?'<button class="go1'+(e.attending?' on':'')+'" id="goBtn">'+(e.attending?'\u2605 You are going':'\u2606 I am going')+'</button>':'')
+    +'<button class="soc1" type="button">Log as a social thing</button>'
     +'<a class="btn gg" href="'+esc(gLink(e))+'" target="_blank" rel="noopener">Add to Google now</a>'
     +'<button class="hide" data-id="'+e.id+'">Hide</button>'
     +'<button class="close">Close</button></div>';
@@ -982,6 +986,19 @@ function openEvent(id){
   if(gb)gb.onclick=()=>{setAttending(id,!e.attending);openEvent(id);};
   pop.querySelector('.hide').onclick=()=>setHidden(id,true);
   pop.querySelector('.close').onclick=()=>pop.classList.remove('on');
+  const sc=pop.querySelector('.soc1');
+  if(sc)sc.onclick=()=>openSocial({when:e.date,start:e.start_time,end:e.end_time,title:e.title});
+}
+/* v3.8 (Sep 16 2026): log any event, or a fresh one on a day, as a social thing.
+   The form is social-log.js, shared with Todays Tasks and Social Fitness. It logs
+   what already happened and files what is still to come as a plan. */
+function toMin(t){ if(!t)return null; const p=String(t).split(':'); return (+p[0])*60+(+p[1]||0); }
+function openSocial(o){
+  if(!window.PYSocial||!sb){ toast('Sign in first, then try again.'); return; }
+  document.getElementById('pop').classList.remove('on');
+  const s=toMin(o.start), e2=toMin(o.end);
+  PYSocial.open({sb:sb,auto:false,when:o.when,startMin:s,mins:(s!=null&&e2!=null&&e2>s)?(e2-s):null,title:o.title||'',
+    onSaved:res=>toast(res.future?('On your board: '+res.title):('Logged: '+res.title+', Social ticked'))});
 }
 
 function openDay(ds){
@@ -990,8 +1007,9 @@ function openDay(ds){
   evs.forEach(e=>{h+='<div class="dli" data-open="'+e.id+'"><span class="cd" style="background:'+catOf(e.cat).color+'"></span>'
     +'<span class="dt"'+(tracked(e)&&!e.attending?' style="opacity:.55"':'')+'>'+(e.start_time?'<b>'+shortTime(e.start_time)+'</b> ':'')+(tracked(e)&&e.attending?'\u2605 ':'')+esc(labelOf(e))+(e.loc?' <span class="dloc">'+esc(e.loc)+'</span>':'')+'</span>'
     +'<span class="x" data-hide="'+e.id+'">&times;</span></div>';});
-  h+='</div><div class="acts"><button class="close">Close</button></div>';
+  h+='</div><div class="acts"><button class="soc1" type="button">+ Social thing on this day</button><button class="close">Close</button></div>';
   const pop=document.getElementById('pop');document.getElementById('popCard').innerHTML=h;pop.classList.add('on');
+  pop.querySelector('.soc1').onclick=()=>openSocial({when:ds});
   pop.querySelectorAll('.dli').forEach(el=>el.onclick=(ev)=>{if(ev.target.dataset.hide){setHidden(+ev.target.dataset.hide,true);return;}openEvent(+el.dataset.open);});
   pop.querySelector('.close').onclick=()=>pop.classList.remove('on');
 }
