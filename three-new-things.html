@@ -540,11 +540,12 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.6</span>
+    <span id="ver" class="ver">v2.7</span>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="social-log.js"></script>
 <script>
 /* ==========================================================
    THE SEVEN, straight off the routine card
@@ -1423,6 +1424,8 @@ function render(){
     h+='<div class="chiprow">';
     WITH.forEach(function(w,i){ h+='<button class="chip'+(N.withw.indexOf(i)>-1?' on':'')+'" data-w="'+i+'">'+w+'</button>'; });
     h+='</div>';
+    /* v2.7 (Sep 16 2026): log a proper social thing without leaving tonight. The form is social-log.js, shared across the site. */
+    if(window.PYSocial) h+='<button class="skiplink" data-go="social" style="text-align:left;margin-top:-4px">+ Log a social thing from today, with who, where and a note</button>';
     h+='<h2 style="font-size:22px;margin-top:8px">And mostly where?</h2>';
     h+='<div class="chiprow">';
     WHERE.forEach(function(w,i){ h+='<button class="chip peri'+(N.wherew===i?' on':'')+'" data-p="'+i+'">'+w+'</button>'; });
@@ -2122,6 +2125,13 @@ function act(a){
   }
 
   if(a==='board'){ location.href='habit-modules.html?done=tnt'; return; }
+  if(a==='social'){
+    if(!window.PYSocial||!sb) return;
+    PYSocial.open({sb:sb,when:DAY(),showRecent:false,onSaved:function(res){
+      try{ var m=res.future?('On your board: '+res.title):('Logged: '+res.title+'. Social ticked.'); var w=document.createElement('p'); w.className='gateline'; w.textContent=m; var f=document.querySelector('.foot'); if(f) f.parentNode.insertBefore(w,f); }catch(e){}
+    }});
+    return;
+  }
   if(a==='restart'){ N=null; view='start'; render(); return; }
 }
 
