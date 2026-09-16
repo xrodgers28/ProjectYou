@@ -505,6 +505,17 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 .gate input:focus-visible{outline:2px solid var(--ember);outline-offset:1px;border-color:var(--ember)}
 .gate .msg{color:var(--ember);font-size:13.5px;margin-top:9px;min-height:18px}
 .hidden{display:none !important}
+/* v2.5: bigger text on the opening step */
+.stage.big .kick{font-size:13px}
+.stage.big h2{font-size:clamp(32px,7.4vw,44px)}
+.stage.big .qcard{padding:20px 52px 20px 20px}
+.stage.big .qcard .lab{font-size:12px}
+.stage.big .qcard h4{font-size:clamp(24px,5.6vw,30px)}
+.stage.big .qcard p{font-size:19px;line-height:1.55}
+.stage.big .btn{font-size:19px}
+.relq{margin:20px 0;display:flex;flex-direction:column;gap:16px}
+.qcard{background:rgba(245,239,232,.05);border:1px solid var(--line);border-radius:12px;padding:16px}
+.qtext{font-size:15px;color:var(--ink);margin-bottom:10px;line-height:1.4}
 </style>
 </head>
 <body>
@@ -528,7 +539,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.4</span>
+    <span id="ver" class="ver">v2.5</span>
   </div>
 </div>
 
@@ -1249,16 +1260,17 @@ function seenBefore(t){
 }
 
 /* progress pips. The three things are ONE step now, not three. */
-var STEPS=['insight','words','tags','energy','three','extra','eight'];
+var STEPS=['insight','words','tags','energy','three','relationship','extra','eight'];
 function stepIndex(){
   if(view==='insight')return 0;
   if(view==='words')return 1;
   if(view==='tags')return 2;
   if(view==='energy')return 3;
   if(view==='three'||view==='savor')return 4;
-  if(view==='extra')return 5;
-  if(view==='eight')return 6;
-  if(view==='done')return 7;
+  if(view==='relationship')return 5;
+  if(view==='extra')return 6;
+  if(view==='eight')return 7;
+  if(view==='done')return 8;
   return -1;
 }
 function paintProg(){
@@ -1345,6 +1357,9 @@ function render(){
   whenLabel();
   var h='';
 
+  /* v2.5: the intro screen is skipped, tonight opens straight on step one */
+  if(view==='start'){ if(!N) N=newNight(); view='insight'; }
+
   /* ---------- start ---------- */
   if(view==='start'){
     stage.className='stage';
@@ -1364,7 +1379,7 @@ function render(){
 
   /* ---------- 1. tonight's thing worth knowing ---------- */
   else if(view==='insight'){
-    stage.className='stage top';
+    stage.className='stage top big';
     var G=tonight();
     h+='<p class="kick">First</p>';
     h+='<h2>Tonight&rsquo;s thing worth knowing.</h2>';
@@ -1468,6 +1483,44 @@ function render(){
     h+='<div class="breathe"></div>';
     h+='<p class="tiny" style="text-align:center">Feel '+(N.items.length===1?'it':'them')+' again for a few seconds before you move on.</p>';
     h+='<div class="foot"><button class="btn" data-go="keep">Keep '+(N.items.length===1?'it':'them')+'</button></div>';
+  }
+
+
+  else if(view==='relationship'){
+    h+='<h2>Relationship Check-In</h2>';
+    h+='<p class="sub">18 questions about Åsa and your connection. Rate each from 1 (not at all) to 10 (fully).</p>';
+    
+    var questions = [
+      {n:1, set:'gottman', text:'How contemptuous did I feel toward Åsa today?'},
+      {n:2, set:'gottman', text:'How defensive was I when she brought something up?'},
+      {n:3, set:'gottman', text:'How much did I shut down or avoid talking to her?'},
+      {n:4, set:'gottman', text:'How well did I try to de-escalate when tensions rose?'},
+      {n:5, set:'gottman', text:'How much affection or respect did I feel for her?'},
+      {n:6, set:'gottman', text:'How present was I when we were together?'},
+      {n:7, set:'gottman', text:'How curious was I about what she thinks or feels?'},
+      {n:8, set:'gottman', text:'How much did I accept her differences vs. judge them?'},
+      {n:9, set:'gottman', text:'How well did I own mistakes or apologize when wrong?'},
+      {n:10, set:'gottman', text:'How much romantic or sexual desire did I feel?'},
+      {n:11, set:'positivity', text:'How much genuine laughter or lightness did we share?'},
+      {n:12, set:'positivity', text:'How much affection or warmth was between us?'},
+      {n:13, set:'positivity', text:'How many small acts of kindness happened today?'},
+      {n:14, set:'positivity', text:'How much joy did I see in her face when we were together?'},
+      {n:15, set:'positivity', text:'How much did I make time to focus on her today?'},
+      {n:16, set:'positivity', text:'How much did she feel safe or supported by me?'},
+      {n:17, set:'positivity', text:'How much did we find something to smile about together?'},
+      {n:18, set:'positivity', text:'How much hope did I feel about our future together?'}
+    ];
+    
+    h+='<div class="relq">';
+    questions.forEach(function(q, i){
+      h+='<div class="qcard"><div class="qtext">'+q.text+'</div>';
+      h+='<input type="range" min="1" max="10" value="'+(N.relationship[i]||5)+'" onchange="N.relationship['+i+']=parseInt(this.value);render();" style="width:100%;cursor:pointer;margin:10px 0;">';
+      h+='<span style="color:var(--ink-3);font-size:13px;">Rating: <strong style="color:var(--ink);">'+(N.relationship[i]||'—')+'</strong></span></div>';
+    });
+    h+='</div>';
+    
+    var allFilled = N.relationship.every(function(r){return r>0;});
+    h+='<div class="buttons"><button class="btn" onclick="act(\'reldone\')" '+(allFilled?'':'disabled')+'>'+(allFilled?'Next':'Answer all questions')+'</button></div>';
   }
 
   else if(view==='extra'){
@@ -2031,11 +2084,19 @@ function act(a){
       saveThing(it,i+1);
     });
     save(); burst(14+N.items.length*8);
-    N.extra=EXTRAS[S.nights%EXTRAS.length]; N.etext=''; view='extra';
-    render(); return;
+    view='relationship'; render(); return;
   }
 
-  if(a==='edone'||a==='skip'){
+  if(a==='reldone'){
+    view='extra'; render(); return;
+  }
+
+  if(a==='skiprel'){
+    N.relationship=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    view='extra'; render(); return;
+  }
+
+    if(a==='edone'||a==='skip'){
     if(a==='edone'&&(N.extra.k==='thanks'||N.extra.k==='letter')){ S.told++; N.a.__told=1; }
     view='eight'; render();
     return;
@@ -2045,11 +2106,12 @@ function act(a){
     S.checks.push({
       d:Date.now(), p:presVal(), band:(presPrimaryBand()?presPrimaryBand().k:null),
       w:N.words.slice(), a:Object.assign({},N.a),
-      with:N.withw.map(function(i){return WITH[i];}), where:(N.wherew!==null?WHERE[N.wherew]:null)
+      with:N.withw.map(function(i){return WITH[i];}), where:(N.wherew!==null?WHERE[N.wherew]:null),
+      relationship:N.relationship.slice()
     });
     S.nights++; save(); burst(46); view='done'; render();
     loadBlocks().then(function(){ return loadDay(); }).then(function(){ drawDay(); saveCheckin(); });
-    saveCreative().then(function(){ return loadProjects(); }).then(function(){ if(view==='done') render(); });
+    saveCreative().then(function(){ return loadProjects(); }).then(function(){ if(view==='done') render(); }); saveRelationshipCheckin();
     loadTomorrow().then(function(){ drawTomorrow(); });
     tickHabit().then(function(ok){
       var f=document.getElementById('tickline');
@@ -2060,6 +2122,31 @@ function act(a){
 
   if(a==='board'){ location.href='habit-modules.html?done=tnt'; return; }
   if(a==='restart'){ N=null; view='start'; render(); return; }
+}
+
+async function saveRelationshipCheckin(){
+  if(!N.relationship || !N.relationship.some(function(r){return r>0;})) return;
+  try{
+    var today = new Date().toISOString().split('T')[0];
+    var payload = [];
+    var sources = ['gottman','gottman','gottman','gottman','gottman','gottman','gottman','gottman','gottman','gottman','positivity','positivity','positivity','positivity','positivity','positivity','positivity','positivity'];
+    for(var i=0; i<N.relationship.length; i++){
+      if(N.relationship[i]>0){
+        payload.push({
+          date:today,
+          question_number:i+1,
+          source_set:sources[i],
+          response_1_to_10:N.relationship[i]
+        });
+      }
+    }
+    if(payload.length && sb){
+      var res = await sb.from('relationship_checkins').insert(payload);
+      if(res.error) console.error('Relationship save error:', res.error);
+    }
+  }catch(e){
+    console.error('Could not save relationship data:', e);
+  }
 }
 
 (async function boot(){
