@@ -540,7 +540,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.10</span>
+    <span id="ver" class="ver">v2.11</span>
   </div>
 </div>
 
@@ -1376,8 +1376,8 @@ function render(){
         h+='<p class="tiny">How much of you has been here the last '+Math.min(presNights().length,20)+' nights.</p>';
       }
     }
-    h+='<div class="foot"><button class="btn" data-go="begin">Begin</button>';
-    h+='<button class="btn ghost" data-go="short">Short night, just the three good things</button></div>';
+    /* v2.11 (Sep 17 2026): the short-night shortcut is gone. Every step carries its own skip, so skip whichever ones you like. */
+    h+='<div class="foot"><button class="btn" data-go="begin">Begin</button></div>';
   }
 
   /* ---------- 1. tonight's thing worth knowing ---------- */
@@ -1388,7 +1388,8 @@ function render(){
     h+='<h2>Tonight&rsquo;s thing worth knowing.</h2>';
     h+='<div class="qcard"><button class="heart'+(hearted('i')?' on':'')+'" data-heart="i" title="Bring this one round more often" aria-label="Bring this one round more often">&#9829;</button>';
     h+='<p class="lab">Worth knowing</p><h4>'+G.i.t+'</h4><p>'+G.i.b+'</p></div>';
-    h+='<div class="foot"><button class="btn" data-go="words">Continue</button></div>';
+    h+='<div class="foot"><button class="btn" data-go="words">Continue</button>';
+    h+='<button class="skiplink" data-go="skipinsight">Skip this one tonight</button></div>';
   }
 
   /* ---------- 2. floating words ---------- */
@@ -1477,7 +1478,7 @@ function render(){
     h+='<div class="foot">';
     h+='<button class="btn" data-go="tdone">'+(N.dupes.length?'Keep them anyway':'Sit with them')+'</button>';
     h+='<p class="gateline" id="gate1">'+threeGate()+'</p>';
-    h+='<button class="skiplink" data-go="skipthings">Skip the three things tonight</button>';
+    h+='<button class="skiplink" data-go="skipthings">Skip this one tonight</button>';
     h+='</div>';
   }
 
@@ -1530,7 +1531,7 @@ function render(){
     
     var allFilled = N.relationship.every(function(r){return r>0;});
     h+='<div class="foot"><button class="btn" data-go="reldone"'+(allFilled?'':' disabled')+'>'+(allFilled?'Next':'Answer all questions')+'</button>';
-    h+='<button class="skiplink" data-go="skiprel">Skip the relationship check-in tonight</button></div>';
+    h+='<button class="skiplink" data-go="skiprel">Skip this one tonight</button></div>';
   }
 
   else if(view==='extra'){
@@ -1594,7 +1595,7 @@ function render(){
     h+='<label class="minrow"><span>How long did tonight take?</span>';
     h+='<input class="mins" id="mins" inputmode="numeric" placeholder="10" value="'+esc(N.mins)+'"><span class="mu">min</span></label>';
     h+='<button class="btn" data-go="finish">'+(n<8?'Done'+(n?', '+n+' of 8':', skip them tonight'):'Done')+'</button>';
-    h+='<button class="skiplink" data-go="finish">Skip these tonight</button></div>';
+    h+='<button class="skiplink" data-go="finish">Skip this one tonight</button></div>';
   }
 
   /* ---------- done ---------- */
@@ -2058,7 +2059,7 @@ function pickExtra(){ if(!N.extra){ N.extra=EXTRAS[S.nights%EXTRAS.length]; N.et
 
 function act(a){
   if(a==='begin'){ N=newNight(); view='insight'; render(); return; }
-  if(a==='short'){ N=newNight(); N.skipped=['insight','words','tags','energy']; view='three'; render(); return; }
+  if(a==='skipinsight'){ mark('insight'); view='words'; render(); return; }
 
   /* skips - the section is simply left out of tonight */
   if(a==='skipwords'){ mark('words'); N.words=[]; view='tags'; render(); return; }
