@@ -540,7 +540,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.11</span>
+    <span id="ver" class="ver">v2.12</span>
   </div>
 </div>
 
@@ -810,7 +810,8 @@ async function loadCloud(){
 
 async function saveThing(item,slot){
   if(!cloud) return;
-  try{ await sb.from('tnt_things').insert({for_date:DAY(), category:item.k, body:item.t, slot:slot}); }catch(e){}
+  /* v2.12 (Sep 17 2026): upsert, so pressing Keep twice cannot save the same thing twice. */
+  try{ await sb.from('tnt_things').upsert({for_date:DAY(), category:item.k, body:item.t, slot:slot},{onConflict:'for_date,body'}); }catch(e){}
 }
 
 function answerPayload(){
@@ -1276,6 +1277,18 @@ function stepIndex(){
   if(view==='done')return 8;
   return -1;
 }
+/* v2.12 (Sep 17 2026): a quiet way through to the history page, on every step of
+   the flow. Sits under the buttons so it never competes with the question. */
+function paintHistoryLink(){
+  var old=document.getElementById('histlink'); if(old) old.remove();
+  if(view==='start') return;
+  var a=document.createElement('a');
+  a.id='histlink'; a.className='skiplink'; a.href='nightly-checkin.html';
+  a.style.cssText='display:block;text-align:center;margin:22px auto 0;opacity:.75';
+  a.textContent='See every night so far';
+  var st=document.getElementById('stage'); if(st) st.appendChild(a);
+}
+
 function paintProg(){
   var el=document.getElementById('prog'); if(!el) return;
   if(view==='start'||view==='done'){ el.innerHTML=''; return; }
@@ -1669,6 +1682,7 @@ function render(){
   stopWords();
   stage.innerHTML=h;
   paintProg();
+  paintHistoryLink();
   bind();
   if(view==='eight'){ wireEight(); paintScratch(); }
   if(view==='done'){
@@ -2022,7 +2036,7 @@ function bind(){
   });
 
   stage.querySelectorAll('[data-go]').forEach(function(b){
-    b.addEventListener('click',function(){ act(b.getAttribute('data-go')); });
+    b.addEventListener('click',function(){ act(b.getAttribute('data-go')); stash(); });
   });
   var t=document.getElementById('tx');
   if(t){
@@ -2052,10 +2066,20 @@ function relSet(i,v){
   if(N.relationship[i]===v) return;
   N.relationship[i]=v;
   S.relDraft={d:DAY(), r:N.relationship.slice()}; save();
+  saveOneRating(i+1,v);
   render();
 }
 /* v2.9: the extra step must be picked before it is shown. Missing this froze Next on Sep 16 2026. */
 function pickExtra(){ if(!N.extra){ N.extra=EXTRAS[S.nights%EXTRAS.length]; N.etext=''; } }
+
+/* v2.12: the night is written down step by step, not only when Done is pressed.
+   A night stopped halfway now keeps everything answered up to that point. */
+function stash(){
+  if(!cloud||!N) return;
+  if(view==='start') return;
+  try{ saveCheckin(); }catch(e){}
+  try{ saveCreative(); }catch(e){}
+}
 
 function act(a){
   if(a==='begin'){ N=newNight(); view='insight'; render(); return; }
@@ -2154,6 +2178,17 @@ function act(a){
   if(a==='restart'){ N=null; view='start'; render(); return; }
 }
 
+/* v2.12: one rating, saved straight away. The whole set is saved again at the end as a backstop. */
+async function saveOneRating(qnum,val){
+  if(!cloud||!sb) return;
+  var sources=['gottman','gottman','gottman','gottman','gottman','gottman','gottman','gottman','gottman','gottman','positivity','positivity','positivity','positivity','positivity','positivity','positivity','positivity'];
+  try{
+    await sb.from('relationship_checkins').upsert(
+      {date:DAY(), question_number:qnum, source_set:sources[qnum-1], response_1_to_10:val},
+      {onConflict:'date,question_number'});
+  }catch(e){}
+}
+
 async function saveRelationshipCheckin(){
   if(!N.relationship || !N.relationship.some(function(r){return r>0;})) return;
   try{
@@ -2171,7 +2206,7 @@ async function saveRelationshipCheckin(){
       }
     }
     if(payload.length && sb){
-      var res = await sb.from('relationship_checkins').insert(payload);
+      var res = await sb.from('relationship_checkins').upsert(payload,{onConflict:'date,question_number'});
       if(res.error) console.error('Relationship save error:', res.error);
     }
   }catch(e){
