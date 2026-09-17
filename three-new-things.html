@@ -540,7 +540,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.7</span>
+    <span id="ver" class="ver">v2.8</span>
   </div>
 </div>
 
@@ -1191,7 +1191,8 @@ function newNight(){
     withw:[], wherew:null, energy:[], energyNote:'', mins:'',
     items:[], cat:null, text:'', extra:null, etext:'', skipped:[],
     three:['','',''], nudge:[], dupes:[],
-    cre:3, crePlaced:false, stars:[], creNote:'', tired:undefined
+    cre:3, crePlaced:false, stars:[], creNote:'', tired:undefined,
+    relationship:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
   };
 }
 /* Tonight's pair. Rebuilt once a day. The deck holds each card once,
@@ -1491,6 +1492,8 @@ function render(){
 
 
   else if(view==='relationship'){
+    if(!N.relationship||N.relationship.length!==18) N.relationship=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    stage.className='stage top';
     h+='<h2>Relationship Check-In</h2>';
     h+='<p class="sub">18 questions about Åsa and your connection. Rate each from 1 (not at all) to 10 (fully).</p>';
     
@@ -1524,7 +1527,8 @@ function render(){
     h+='</div>';
     
     var allFilled = N.relationship.every(function(r){return r>0;});
-    h+='<div class="buttons"><button class="btn" onclick="act(\'reldone\')" '+(allFilled?'':'disabled')+'>'+(allFilled?'Next':'Answer all questions')+'</button></div>';
+    h+='<div class="foot"><button class="btn" data-go="reldone"'+(allFilled?'':' disabled')+'>'+(allFilled?'Next':'Answer all questions')+'</button>';
+    h+='<button class="skiplink" data-go="skiprel">Skip the relationship check-in tonight</button></div>';
   }
 
   else if(view==='extra'){
@@ -2096,7 +2100,7 @@ function act(a){
   }
 
   if(a==='skiprel'){
-    N.relationship=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+    mark('relationship'); N.relationship=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
     view='extra'; render(); return;
   }
 
@@ -2111,7 +2115,7 @@ function act(a){
       d:Date.now(), p:presVal(), band:(presPrimaryBand()?presPrimaryBand().k:null),
       w:N.words.slice(), a:Object.assign({},N.a),
       with:N.withw.map(function(i){return WITH[i];}), where:(N.wherew!==null?WHERE[N.wherew]:null),
-      relationship:N.relationship.slice()
+      relationship:(N.relationship||[]).slice()
     });
     S.nights++; save(); burst(46); view='done'; render();
     loadBlocks().then(function(){ return loadDay(); }).then(function(){ drawDay(); saveCheckin(); });
