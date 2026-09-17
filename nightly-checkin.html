@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nightly Check-In</title>
+<!-- The one definition of a day, 2am to 2am Eastern. HEAD, before this page's script. -->
+<script src="py-day.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ground:#f4f5f6; --card:#ffffff; --inset:#eceef1; --line:#dfe3e8;
+    --ink:#1f2a44; --ink-2:#48505f; --ink-3:#5b6472;
+    --green:#3f8f5b; --amber:#b5811f; --rose:#b2445a; --blue:#2f6da3;
+    --green-bg:#e7f2ea; --amber-bg:#fbf2df; --rose-bg:#f8e7ea; --blue-bg:#e6eef6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --ground:#161a20; --card:#1e232b; --inset:#252b34; --line:#333b46;
+      --ink:#eef1f5; --ink-2:#c6ccd6; --ink-3:#a7b0bd;
+      --green:#7ec79a; --amber:#e0b463; --rose:#e78a9c; --blue:#8fc0e8;
+      --green-bg:#1f3227; --amber-bg:#332a19; --rose-bg:#332026; --blue-bg:#1c2a38;
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#161a20; --card:#1e232b; --inset:#252b34; --line:#333b46;
+    --ink:#eef1f5; --ink-2:#c6ccd6; --ink-3:#a7b0bd;
+    --green:#7ec79a; --amber:#e0b463; --rose:#e78a9c; --blue:#8fc0e8;
+    --green-bg:#1f3227; --amber-bg:#332a19; --rose-bg:#332026; --blue-bg:#1c2a38;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5;padding:22px 16px 70px}
+  .wrap{max-width:1020px;margin:0 auto}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+  .pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .pill{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;
+        background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px 10px;color:var(--ink-2)}
+  .pill.live{color:var(--green);border-color:var(--green)}
+  h1{font-size:27px;line-height:1.2;margin:0 0 8px}
+  h2{font-size:20px;margin:0 0 10px}
+  h3{font-size:16px;margin:0 0 6px}
+  .lede{margin:0 0 26px;color:var(--ink-2);max-width:74ch}
+  .eyebrow{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-3);margin:0 0 4px}
+  section{margin:0 0 34px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:30px}
+  .vcard{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:10px;padding:13px 15px}
+  .vcard.g{border-left-color:var(--green)} .vcard.a{border-left-color:var(--amber)} .vcard.r{border-left-color:var(--rose)}
+  .vcard .big{font-size:25px;font-weight:700;letter-spacing:-.01em;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums}
+  .vcard .lab{font-size:13.5px;color:var(--ink-2);margin-top:2px}
+  .box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:2px}
+  .scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;font-size:14.5px}
+  th{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11px;text-transform:uppercase;letter-spacing:.05em;
+     color:var(--ink-2);text-align:left;padding:10px 11px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--inset)}
+  td{padding:10px 11px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink)}
+  tr:last-child td{border-bottom:0}
+  td.num,th.num{text-align:right;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .chip{display:inline-block;font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;
+        padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2);background:var(--inset)}
+  .chip.g{color:var(--green);background:var(--green-bg);border-color:var(--green)}
+  .chip.a{color:var(--amber);background:var(--amber-bg);border-color:var(--amber)}
+  .chip.r{color:var(--rose);background:var(--rose-bg);border-color:var(--rose)}
+  .chip.b{color:var(--blue);background:var(--blue-bg);border-color:var(--blue)}
+  .note{border-left:4px solid var(--blue);background:var(--blue-bg);border-radius:8px;padding:11px 14px;margin:0 0 16px;font-size:15px;color:var(--ink)}
+  .note.a{border-left-color:var(--amber);background:var(--amber-bg)}
+  .bar{display:inline-block;height:9px;border-radius:5px;background:var(--blue);vertical-align:middle}
+  .thing{margin:0 0 5px}
+  .thing .cat{color:var(--ink-3);font-size:13px}
+  .foot{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;color:var(--ink-2);border-top:1px solid var(--line);padding-top:12px;margin-top:8px;line-height:1.7}
+  a{color:var(--blue)}
+  .gate{max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px}
+  .gate input{width:100%;padding:9px 10px;margin:0 0 9px;border:1px solid var(--line);border-radius:7px;font-size:15px;background:var(--ground);color:var(--ink)}
+  .gate button{width:100%;padding:10px;border:0;border-radius:7px;background:var(--blue);color:#fff;font-size:15px;cursor:pointer}
+  .hidden{display:none !important}
+  .spark{display:flex;align-items:flex-end;gap:3px;height:34px}
+  .spark i{display:block;width:9px;background:var(--blue);border-radius:2px 2px 0 0}
+  .qrow td:first-child{max-width:420px;white-space:normal}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="gate" class="gate hidden">
+    <h2>Nightly Check-In</h2>
+    <p class="lede" style="margin-bottom:14px">Sign in with your CrushingIt login to load your nights.</p>
+    <input id="email" type="email" placeholder="you@email.com" autocomplete="username">
+    <input id="pass" type="password" placeholder="password" autocomplete="current-password">
+    <button id="signin">Show my nights</button>
+    <p id="gateMsg" class="mono" style="color:var(--rose);font-size:12.5px"></p>
+  </div>
+
+  <div id="app" class="hidden">
+    <div class="pills">
+      <span class="pill">Project YOU</span>
+      <span class="pill">Nightly Check-In v1.0</span>
+      <span class="pill" id="pillDate">&nbsp;</span>
+      <span class="pill live" id="pillStatus">reading</span>
+    </div>
+
+    <h1>Every night you have checked in.</h1>
+    <p class="lede">This is the record of what Three New Things has collected, night by night. It only shows nights that
+      actually happened, and it changes nothing: to add a night, do the check-in itself. Where a night is missing, the
+      check-in was not finished that evening.</p>
+
+    <div class="cards" id="cards"></div>
+
+    <section>
+      <p class="eyebrow">Night by night</p>
+      <h2>The record</h2>
+      <p class="lede" style="margin-bottom:12px">One row per night, newest first. Blank means that step was skipped or left out.</p>
+      <div class="box scroll"><table id="nights"></table></div>
+    </section>
+
+    <section>
+      <p class="eyebrow">Åsa and your connection</p>
+      <h2>Relationship check-in</h2>
+      <div class="note" id="relNote">Reading.</div>
+      <div class="box scroll"><table id="relNights"></table></div>
+      <h3 style="margin:22px 0 6px">Question by question</h3>
+      <p class="lede" style="margin-bottom:12px">The average of every night answered, and your most recent answer.</p>
+      <div class="box scroll"><table id="relQ"></table></div>
+    </section>
+
+    <section>
+      <p class="eyebrow">Three good things</p>
+      <h2>What you noticed</h2>
+      <div class="box scroll"><table id="things"></table></div>
+    </section>
+
+    <p class="foot" id="foot"></p>
+  </div>
+</div>
+
+<script>
+/* Nightly Check-In, the history page for three-new-things.html.
+   READ ONLY. It writes nothing back, ever.
+   Sources: tnt_checkin (one row a night), tnt_things (the three good things),
+   relationship_checkins (18 answers a night), tnt_creative (the creative score). */
+var SB_URL='https://arnjntspmrhigodlssbn.supabase.co';
+var SB_KEY='sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
+var sb=window.supabase.createClient(SB_URL,SB_KEY);
+
+var BANDS=[
+  {k:'barely', n:'Barely showed up'},
+  {k:'inout',  n:'In and out'},
+  {k:'half',   n:'Half here'},
+  {k:'mostly', n:'Mostly here'},
+  {k:'allin',  n:'All in'}
+];
+var DIALS=[
+  {k:'stress',n:'Stress'},{k:'energy',n:'Energy'},{k:'mood',n:'Mood'},{k:'motivation',n:'Motivation'},
+  {k:'productivity',n:'Productivity'},{k:'social',n:'Social'},{k:'gratitude',n:'Gratitude'},{k:'creativity',n:'Creativity'}
+];
+/* The 18 questions, in the order the check-in saves them. The first three ask about
+   something you want LESS of, so a high answer is a bad night. They are flipped when
+   the connection score is worked out, and marked on the table so it reads honestly. */
+var QS=[
+  {n:1, set:'Gottman', flip:true,  t:'How contemptuous did I feel toward Åsa today?'},
+  {n:2, set:'Gottman', flip:true,  t:'How defensive was I when she brought something up?'},
+  {n:3, set:'Gottman', flip:true,  t:'How much did I shut down or avoid talking to her?'},
+  {n:4, set:'Gottman', flip:false, t:'How well did I try to de-escalate when tensions rose?'},
+  {n:5, set:'Gottman', flip:false, t:'How much affection or respect did I feel for her?'},
+  {n:6, set:'Gottman', flip:false, t:'How present was I when we were together?'},
+  {n:7, set:'Gottman', flip:false, t:'How curious was I about what she thinks or feels?'},
+  {n:8, set:'Gottman', flip:false, t:'How much did I accept her differences vs. judge them?'},
+  {n:9, set:'Gottman', flip:false, t:'How well did I own mistakes or apologize when wrong?'},
+  {n:10,set:'Gottman', flip:false, t:'How much romantic or sexual desire did I feel?'},
+  {n:11,set:'Positivity', flip:false, t:'How much genuine laughter or lightness did we share?'},
+  {n:12,set:'Positivity', flip:false, t:'How much affection or warmth was between us?'},
+  {n:13,set:'Positivity', flip:false, t:'How many small acts of kindness happened today?'},
+  {n:14,set:'Positivity', flip:false, t:'How much joy did I see in her face when we were together?'},
+  {n:15,set:'Positivity', flip:false, t:'How much did I make time to focus on her today?'},
+  {n:16,set:'Positivity', flip:false, t:'How much did she feel safe or supported by me?'},
+  {n:17,set:'Positivity', flip:false, t:'How much did we find something to smile about together?'},
+  {n:18,set:'Positivity', flip:false, t:'How much hope did I feel about our future together?'}
+];
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function fmt(ymd){
+  if(!ymd) return '';
+  var p=String(ymd).slice(0,10).split('-');
+  var M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return M[+p[1]-1]+' '+(+p[2])+', '+p[0];
+}
+function bandName(k){ for(var i=0;i<BANDS.length;i++){ if(BANDS[i].k===k) return BANDS[i].n; } return ''; }
+function avg(a){ return a.length? Math.round(a.reduce(function(x,y){return x+y;},0)/a.length*10)/10 : null; }
+
+var CHK=[], THINGS=[], REL=[], CRE=[];
+
+async function load(){
+  var c=await sb.from('tnt_checkin').select('for_date,presence,presence_band,words,answers,with_who,where_at,extra_kind,extra_body,energy_from,minutes').order('for_date',{ascending:false});
+  var t=await sb.from('tnt_things').select('for_date,category,body,slot').order('for_date',{ascending:false});
+  var r=await sb.from('relationship_checkins').select('date,question_number,source_set,response_1_to_10').order('date',{ascending:false});
+  var k=await sb.from('tnt_creative').select('for_date,score,note').order('for_date',{ascending:false});
+  var bad=[c.error,t.error,r.error,k.error].filter(Boolean);
+  if(bad.length){ throw bad[0]; }
+  CHK=c.data||[]; THINGS=t.data||[]; REL=r.data||[]; CRE=k.data||[];
+}
+
+function relByNight(){
+  var m={};
+  REL.forEach(function(row){
+    var d=String(row.date).slice(0,10);
+    if(!m[d]) m[d]={d:d, ans:{}};
+    m[d].ans[row.question_number]=row.response_1_to_10;
+  });
+  return Object.keys(m).sort().reverse().map(function(d){
+    var o=m[d], vals=[], flipped=[];
+    QS.forEach(function(q){
+      var v=o.ans[q.n];
+      if(v==null) return;
+      vals.push(v);
+      flipped.push(q.flip? (11-v) : v);
+    });
+    o.answered=vals.length;
+    o.score=avg(flipped);
+    o.gott=avg(QS.filter(function(q){return q.set==='Gottman'&&o.ans[q.n]!=null;}).map(function(q){return q.flip?11-o.ans[q.n]:o.ans[q.n];}));
+    o.posi=avg(QS.filter(function(q){return q.set==='Positivity'&&o.ans[q.n]!=null;}).map(function(q){return o.ans[q.n];}));
+    return o;
+  });
+}
+
+function paint(){
+  var relN=relByNight();
+  var creBy={}; CRE.forEach(function(x){ creBy[String(x.for_date).slice(0,10)]=x; });
+  var thingsBy={}; THINGS.forEach(function(x){ var d=String(x.for_date).slice(0,10); (thingsBy[d]=thingsBy[d]||[]).push(x); });
+
+  /* the cards */
+  var latest=CHK.length?String(CHK[0].for_date).slice(0,10):null;
+  var c='';
+  c+='<div class="vcard g"><div class="big">'+CHK.length+'</div><div class="lab">nights checked in</div></div>';
+  c+='<div class="vcard"><div class="big">'+THINGS.length+'</div><div class="lab">good things written down</div></div>';
+  c+='<div class="vcard'+(relN.length?'':' a')+'"><div class="big">'+relN.length+'</div><div class="lab">relationship check-ins</div></div>';
+  c+='<div class="vcard'+(latest?'':' r')+'"><div class="big" style="font-size:18px;padding-top:5px">'+(latest?fmt(latest):'none yet')+'</div><div class="lab">most recent night</div></div>';
+  document.getElementById('cards').innerHTML=c;
+
+  /* the record */
+  var h='<thead><tr><th>Night</th><th>How much of you was here</th><th class="num">Score</th>';
+  DIALS.forEach(function(d){ h+='<th class="num">'+d.n+'</th>'; });
+  h+='<th>Words</th><th>Who</th><th>Where</th><th class="num">Things</th><th class="num">Åsa</th><th class="num">Mins</th></tr></thead><tbody>';
+  if(!CHK.length) h+='<tr><td colspan="16">No nights recorded yet.</td></tr>';
+  CHK.forEach(function(n){
+    var d=String(n.for_date).slice(0,10);
+    var rel=relN.filter(function(x){return x.d===d;})[0];
+    var a=n.answers||{};
+    h+='<tr><td class="mono" style="white-space:nowrap">'+fmt(d)+'</td>';
+    h+='<td>'+(n.presence_band?'<span class="chip b">'+esc(bandName(n.presence_band))+'</span>':'')+'</td>';
+    h+='<td class="num">'+(n.presence!=null?n.presence:'')+'</td>';
+    DIALS.forEach(function(x){ h+='<td class="num">'+(a[x.k]!=null?a[x.k]:'')+'</td>'; });
+    h+='<td>'+esc((n.words||[]).join(', '))+'</td>';
+    h+='<td>'+esc((n.with_who||[]).join(', '))+'</td>';
+    h+='<td>'+esc(n.where_at||'')+'</td>';
+    h+='<td class="num">'+((thingsBy[d]||[]).length||'')+'</td>';
+    h+='<td class="num">'+(rel&&rel.score!=null?rel.score:'')+'</td>';
+    h+='<td class="num">'+(n.minutes!=null?n.minutes:'')+'</td></tr>';
+  });
+  h+='</tbody>';
+  document.getElementById('nights').innerHTML=h;
+
+  /* relationship */
+  var note=document.getElementById('relNote');
+  if(!relN.length){
+    note.className='note a';
+    note.innerHTML='<b>Nothing recorded yet.</b> The 18 questions save as you answer them, so the first completed night will show here.';
+  }else{
+    var best=relN[0];
+    note.className='note';
+    note.innerHTML='<b>'+relN.length+' night'+(relN.length===1?'':'s')+' recorded, most recently '+fmt(best.d)+'.</b> '+
+      'The connection score runs 1 to 10, and higher is always better: the first three questions ask about contempt, '+
+      'defensiveness and shutting down, so a high answer there counts against the score rather than for it. '+
+      'Your latest night scored <b>'+(best.score!=null?best.score:'-')+'</b>.';
+  }
+  var rh='<thead><tr><th>Night</th><th class="num">Connection score</th><th class="num">Gottman half</th><th class="num">Positivity half</th><th class="num">Answered</th><th>Shape</th></tr></thead><tbody>';
+  if(!relN.length) rh+='<tr><td colspan="6">No relationship check-ins yet.</td></tr>';
+  relN.forEach(function(x){
+    rh+='<tr><td class="mono" style="white-space:nowrap">'+fmt(x.d)+'</td>';
+    rh+='<td class="num">'+(x.score!=null?x.score:'')+'</td>';
+    rh+='<td class="num">'+(x.gott!=null?x.gott:'')+'</td>';
+    rh+='<td class="num">'+(x.posi!=null?x.posi:'')+'</td>';
+    rh+='<td class="num">'+x.answered+' of 18</td>';
+    rh+='<td><span class="bar" style="width:'+Math.round((x.score||0)*14)+'px"></span></td></tr>';
+  });
+  rh+='</tbody>';
+  document.getElementById('relNights').innerHTML=rh;
+
+  var qh='<thead><tr><th>Question</th><th>Set</th><th class="num">Average</th><th class="num">Latest</th><th class="num">Nights</th></tr></thead><tbody>';
+  QS.forEach(function(q){
+    var vals=[], latestV=null;
+    relN.forEach(function(x){ var v=x.ans[q.n]; if(v!=null){ vals.push(v); if(latestV===null) latestV=v; } });
+    qh+='<tr class="qrow"><td>'+esc(q.t)+(q.flip?' <span class="chip a">lower is better</span>':'')+'</td>';
+    qh+='<td><span class="chip">'+q.set+'</span></td>';
+    qh+='<td class="num">'+(avg(vals)!=null?avg(vals):'')+'</td>';
+    qh+='<td class="num">'+(latestV!=null?latestV:'')+'</td>';
+    qh+='<td class="num">'+vals.length+'</td></tr>';
+  });
+  qh+='</tbody>';
+  document.getElementById('relQ').innerHTML=qh;
+
+  /* the things */
+  var days=Object.keys(thingsBy).sort().reverse();
+  var th='<thead><tr><th>Night</th><th>What you noticed</th><th class="num">Creative score</th></tr></thead><tbody>';
+  if(!days.length) th+='<tr><td colspan="3">Nothing written down yet.</td></tr>';
+  days.forEach(function(d){
+    var list=thingsBy[d].slice().sort(function(a,b){ return (a.slot||0)-(b.slot||0); });
+    th+='<tr><td class="mono" style="white-space:nowrap">'+fmt(d)+'</td><td>';
+    list.forEach(function(x){ th+='<p class="thing">'+esc(x.body)+(x.category?' <span class="cat">'+esc(x.category)+'</span>':'')+'</p>'; });
+    th+='</td><td class="num">'+(creBy[d]&&creBy[d].score!=null?creBy[d].score:'')+'</td></tr>';
+  });
+  th+='</tbody>';
+  document.getElementById('things').innerHTML=th;
+
+  document.getElementById('pillDate').textContent=fmt(PY.today());
+  document.getElementById('pillStatus').textContent='live';
+  document.getElementById('foot').innerHTML=
+    'Project YOU · Nightly Check-In v1.0 · read on '+fmt(PY.today())+
+    ' · Every figure on this page is read live from the nightly check-in tables behind '+
+    '<a href="three-new-things.html">Three New Things</a>: the nightly row, the good things, the 18 relationship answers and the creative score. '+
+    'Nothing is typed in by hand and this page writes nothing back. A day runs 2am to 2am Eastern.';
+}
+
+async function show(){
+  document.getElementById('gate').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  try{
+    await load(); paint();
+  }catch(e){
+    document.getElementById('pillStatus').textContent='could not read';
+    document.getElementById('relNote').className='note a';
+    document.getElementById('relNote').textContent='Could not read the data just now. Try refreshing the page.';
+  }
+}
+
+document.getElementById('signin').onclick=async function(){
+  var m=document.getElementById('gateMsg'); m.textContent='';
+  var r=await sb.auth.signInWithPassword({
+    email:(document.getElementById('email').value||'').trim(),
+    password:document.getElementById('pass').value||''
+  });
+  if(r.error){ m.textContent=r.error.message; return; }
+  show();
+};
+document.getElementById('pass').addEventListener('keydown',function(e){ if(e.key==='Enter') document.getElementById('signin').click(); });
+
+(async function boot(){
+  var s=await sb.auth.getSession();
+  if(s.data&&s.data.session) show();
+  else document.getElementById('gate').classList.remove('hidden');
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>

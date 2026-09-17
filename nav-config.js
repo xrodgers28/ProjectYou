@@ -34,6 +34,9 @@ window.NAV_CONFIG = {
      reached from Mission Control. What is left is the hub and the wheel. */
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
+    /* Sep 17 2026, Scott: the history of the nightly check-in, everything
+       Three New Things has collected, night by night. Read only. */
+    { "label": "Nightly<br>Check-In", "href": "nightly-checkin.html" },
     /* Sep 6 2026, Scott. The end-of-week review: three scores, the habit grid,
        the quiz built from the week's dealt cards, and next week's goals. */
     { "label": "The PY Week<br>in Review", "href": "weekly-review.html" },
