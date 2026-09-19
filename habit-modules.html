@@ -11,6 +11,9 @@
      Habits tile reads the worksheet live, so it needs the whole set, not a
      handful copied in. Same file the Habit Worksheets page uses. -->
 <script src="py-icons.js"></script>
+<!-- THE social log form, shared by every page that logs a social thing.
+     The Mini Habits tile opens it for the human moment habit. -->
+<script src="social-log.js"></script>
 <style>
   :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--key:#c2c8d1;--accent:#3f6f8f}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -562,13 +565,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.40</span>
+    <span class="pn-ver">v6.41</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.40</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.41</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -1193,7 +1196,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
        its rows have to come back before the to-do query knows which trackers to
        ask for. One small query, then they join the list. */
     var mhRes = await sb.from('worksheet_rows')
-      .select('id,habit,icon,minutes,cadence,tile_pos,tile_label,tile_rule,tile_who,qs_tracker')
+      .select('id,habit,icon,minutes,cadence,tile_pos,tile_label,tile_rule,tile_who,tile_tip,qs_tracker')
       .not('tile_pos','is',null).eq('is_active',true)
       .order('tile_pos',{ascending:true});
     R.mh = (mhRes.data||[]).filter(function(x){ return x.qs_tracker; });
@@ -2052,6 +2055,14 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     return out;
   }
   function mhWhen(n){ return n===0?'today':(n===1?'tomorrow':'in 2 days'); }
+  function mhAnd(a){ return a.length<2 ? (a[0]||'') : a.slice(0,-1).join(', ')+' and '+a[a.length-1]; }
+  /* Two people can be due on different days at once, so the rollover groups them
+     by day rather than stamping everyone with the first one's day. */
+  function mhDueText(){
+    var due=mhDue(), by={}, order=[];
+    due.forEach(function(b){ if(!by[b.inDays]){by[b.inDays]=[];order.push(b.inDays);} by[b.inDays].push(b.person); });
+    return order.map(function(n){ return mhAnd(by[n])+' '+mhWhen(n); }).join('. ');
+  }
   function mhShown(){
     var due=mhDue();
     return R.mh.filter(function(x){ return x.tile_rule!=='birthday' || due.length>0; });
@@ -2077,10 +2088,11 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     var ICO=(window.ICONS||{});
     function btn(x){
       var isB=x.tile_rule==='birthday', on=mhDone(x);
-      var tip=isB
-        ? due.map(function(b){return b.person;}).join(' and ')+
-          ', '+mhWhen(due.length?due[0].inDays:0)
-        : mhName(x);
+      /* every icon says in plain words what a tap on it does, so none of them is a
+         guess. The text is written on the worksheet row, not here. Scott, Sep 19. */
+      var says=x.tile_tip||mhName(x);
+      var tip=isB ? (mhDueText()+'. '+says) : (mhName(x)+'. '+says);
+      if(on) tip='Done. Tap again to take it back off. '+tip;
       var img=ICO[x.icon]
         ? '<img class="rmhi" src="'+ICO[x.icon]+'" alt="'+esc(mhName(x))+'">'
         : '<span class="rmhi"></span>';
@@ -2169,6 +2181,20 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     if(!x) return;
     if(mhDone(x)){ await mhUndo(x); return; }
     if(x.tile_rule==='birthday'){ R.mhOpen=x; R.mhStep='bday'; mhDraw(); return; }
+    /* the human moment opens the one social log form rather than logging a bare
+       tick, because who it was and where is the part worth keeping. Scott, Sep 19.
+       If that file has not loaded for any reason it still logs the plain tick. */
+    if(x.tile_rule==='social-log' && window.PYSocial){
+      PYSocial.open({
+        sb:sb, when:viewDay(), auto:false,
+        onSaved:function(res){
+          R.mhName=(res&&res.who)||null;
+          R.mhMins=null;
+          mhCommit(x);
+        }
+      });
+      return;
+    }
     if(x.tile_who){ R.mhOpen=x; R.mhStep='who'; R.mhName=null; mhDraw(); return; }
     if((x.minutes||0) >= 15){ R.mhOpen=x; R.mhStep='mins'; R.mhMins=x.minutes; mhDraw(); return; }
     await mhCommit(x);

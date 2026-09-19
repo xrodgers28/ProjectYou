@@ -22,13 +22,56 @@
      for that day. It files itself into connections the day it is ticked, which is
      the rule Todays Tasks already follows. Nothing is tracked before it happens.
 
-   Change the form here and every page gets the change. Do not copy it into a page. */
+   Change the form here and every page gets the change. Do not copy it into a page.
+
+   v2.0, Sep 19 2026, Scott's changes:
+   - Every pill now comes from public.social_pills rather than from this file, so
+     one added here is there tomorrow. The lists below are only the fallback for
+     when that table cannot be read.
+   - Every row has a + on the end. Type a name, and it asks once whether to keep
+     it as a permanent pill or use it just this time.
+   - A new SOURCE row after IS: Outreach if he reached out, Inbound if it came to
+     him. Saved on the connection as `direction`.
+   - IS gained Friend and Barista Style Exchange. */
 window.PYSocial = (function () {
   'use strict';
 
-  var KINDS = ['Coffee','Lunch','Dinner','Drinks','Call','Text','Walk','Party','Meeting','Something else'];
-  var PLACES = ['Home','Coffee shop','Restaurant','Office','Outdoors','Event','Phone / video'];
-  var PLABELS = [['family','Family'],['colleague','Colleague'],['ex-colleague','Ex-Colleague'],['industry','Industry'],['group','Group']];
+  /* the fallback set. The real one is public.social_pills; this only shows if that
+     table cannot be read, so the form still works rather than coming up empty. */
+  var DEFAULTS = {
+    is:     [['family','Family'],['friend','Friend'],['colleague','Colleague'],['ex-colleague','Ex-Colleague'],
+             ['industry','Industry'],['group','Group'],['barista-style','Barista Style Exchange']],
+    source: [['outreach','Outreach'],['inbound','Inbound']],
+    what:   [['Coffee','Coffee'],['Lunch','Lunch'],['Dinner','Dinner'],['Drinks','Drinks'],['Call','Call'],
+             ['Text','Text'],['Walk','Walk'],['Party','Party'],['Meeting','Meeting'],['Something else','Other']],
+    where:  [['Home','Home'],['Coffee shop','Coffee shop'],['Restaurant','Restaurant'],['Office','Office'],
+             ['Outdoors','Outdoors'],['Event','Event'],['Phone / video','Phone / video']]
+  };
+  var FIELDS = ['is','source','what','where'];
+  var PILLS = null;
+  async function loadPills(sb){
+    if (PILLS) return PILLS;
+    var out = { is:[], source:[], what:[], where:[] };
+    try {
+      var r = await sb.from('social_pills').select('field,value,label,sort').eq('active', true)
+        .order('sort', { ascending: true });
+      (r.data || []).forEach(function(x){ if (out[x.field]) out[x.field].push([x.value, x.label]); });
+    } catch (e) {}
+    FIELDS.forEach(function(f){ if (!out[f].length) out[f] = DEFAULTS[f].slice(); });
+    PILLS = out;
+    return out;
+  }
+  function pillsFor(f){ return (PILLS && PILLS[f] && PILLS[f].length) ? PILLS[f] : (DEFAULTS[f] || []); }
+  function pillLabel(f, v){
+    var l = pillsFor(f);
+    for (var i = 0; i < l.length; i++) if (l[i][0] === v) return l[i][1];
+    return v;
+  }
+  function slug(t){
+    return String(t||'').toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,40);
+  }
+  var KINDS  = DEFAULTS.what.map(function(x){ return x[0]; });
+  var PLACES = DEFAULTS.where.map(function(x){ return x[0]; });
   var HABIT_TRACKER = 'Social', HABIT_GROUP = 'Social Well-Being';
   var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -85,13 +128,15 @@ window.PYSocial = (function () {
   function kindPill(s){
     if (!s) return '';
     var k = kindIn(s);
-    for (var i = 0; i < KINDS.length; i++) if (KINDS[i].toLowerCase() === k) return KINDS[i];
+    var l = pillsFor('what');
+    for (var i = 0; i < l.length; i++) if (String(l[i][0]).toLowerCase() === k) return l[i][0];
     return '';
   }
   function placeParts(p){
     var s = String(p||''), i = s.indexOf(' · ');
     if (i > -1) return { pill: s.slice(0, i), typed: s.slice(i+3) };
-    return PLACES.indexOf(s) > -1 ? { pill: s, typed: '' } : { pill: '', typed: s };
+    var known = pillsFor('where').some(function(x){ return x[0] === s; });
+    return known ? { pill: s, typed: '' } : { pill: '', typed: s };
   }
 
   /* ---------- the habit tick ---------- */
@@ -166,6 +211,18 @@ window.PYSocial = (function () {
       '.pysl .row button{font:inherit;font-size:10px;line-height:12px;padding:1px 7px;cursor:pointer;border:1px solid var(--sl-line);border-radius:99px;background:var(--sl-bg);color:var(--sl-ink2)}',
       '.pysl .past .row{flex-wrap:wrap}',
       '.pysl .addn{width:100%;display:none;margin-top:3px}.pysl .addn.open{display:block}',
+      /* the + on the end of every row, and the little strip it opens */
+      /* the rows scroll sideways, so the + is pinned to the right edge. A control
+         you have to scroll to find is a control you do not have. */
+      '.pysl .p.padd{position:sticky;right:0;z-index:2;font-weight:700;color:var(--sl-blue);border-style:dashed;padding:0 7px;background:var(--sl-bg);box-shadow:-7px 0 7px -5px rgba(0,0,0,.16)}',
+      '.pysl .addp{display:flex;gap:4px;margin-top:3px}',
+      '.pysl .addp[hidden]{display:none}',
+      '.pysl .addp input{flex:1;min-width:0}',
+      '.pysl .addp .ago{flex:none;padding:0 9px}',
+      '.pysl .keepq{margin-top:3px}',
+      '.pysl .keepq[hidden]{display:none}',
+      '.pysl .keepq button{font:inherit;font-size:10px;line-height:12px;padding:1px 7px;margin-left:5px;cursor:pointer;border:1px solid var(--sl-line);border-radius:99px;background:var(--sl-bg);color:var(--sl-ink2)}',
+      '.pysl .keepq button.yes{background:var(--sl-good);border-color:var(--sl-good);color:#fff;font-weight:700}',
       '.pysl .addn textarea{height:44px}.pysl .addn .sp{margin-top:4px}',
       '.pysl-ov{position:fixed;inset:0;z-index:10000;background:rgba(20,24,30,.38);display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px 12px;overflow:auto}',
       '.pysl-ov .pysl-card{position:relative;width:100%;max-width:440px;background:var(--sl-bg);border:1px solid var(--sl-line);border-radius:14px;padding:12px 14px;box-shadow:0 18px 50px rgba(0,0,0,.28)}',
@@ -182,7 +239,7 @@ window.PYSocial = (function () {
     var guess = this.o.title ? nameIn(this.o.title) : { person: '', others: '' };
     this.kind = kindPill(this.o.title);
     this.who0 = guess.person; this.with0 = guess.others;
-    this.place = ''; this.labels = []; this.labelsTouched = false;
+    this.place = ''; this.labels = []; this.labelsTouched = false; this.source = '';
     this.known = []; this.loaded = false; this.timer = null;
   }
   Form.prototype.isFuture = function(){
@@ -201,6 +258,7 @@ window.PYSocial = (function () {
     return null;
   };
   Form.prototype.load = async function(){
+    try { await loadPills(this.sb); } catch (e) {}
     try {
       var r = await this.sb.from('connections')
         .select('id,person,person_key,circle,social_group,labels,age_band,entity_type,happened_on,kind,place,notes,planned')
@@ -208,6 +266,33 @@ window.PYSocial = (function () {
       this.known = r.data || [];
     } catch (e) { this.known = []; }
     this.loaded = true;
+  };
+  /* One row of pills, drawn from the live list, with the + on the end. Used at
+     draw time and again whenever a row needs repainting, so there is one place
+     that decides what a row looks like. */
+  Form.prototype.picksHtml = function(field){
+    var self = this;
+    var attr = { is:'data-l', source:'data-src', what:'data-k', where:'data-pl' }[field];
+    function isOn(v){
+      if (field === 'is')     return self.labels.indexOf(v) > -1;
+      if (field === 'source') return self.source === v;
+      if (field === 'what')   return self.kind === v;
+      return self.place === v;
+    }
+    return pillsFor(field).map(function(x){
+      return '<button type="button" class="p' + (isOn(x[0]) ? ' on' : '') + '" ' + attr + '="' + att(x[0]) + '">' + esc(x[1]) + '</button>';
+    }).join('') +
+      '<button type="button" class="p padd" data-add="' + field + '" title="Add one of your own">+</button>';
+  };
+  Form.prototype.addHtml = function(field){
+    return '<div class="addp" data-af="' + field + '" hidden>' +
+      '<input type="text" class="ap" placeholder="Name it" autocomplete="off">' +
+      '<button type="button" class="p ago" data-ago="' + field + '">Add</button></div>' +
+      '<p class="why keepq" data-kq="' + field + '" hidden></p>';
+  };
+  Form.prototype.repaint = function(field){
+    var c = this.box.querySelector('[data-picks="' + field + '"]');
+    if (c) c.innerHTML = this.picksHtml(field);
   };
   Form.prototype.names = function(max){
     var seen = {}, out = [];
@@ -255,20 +340,19 @@ window.PYSocial = (function () {
         '<datalist id="sl-names">' + this.names().map(function(n){ return '<option value="' + att(n) + '">'; }).join('') + '</datalist>' +
         (this.names(6).length ? '<div class="picks recent">' + this.names(6).map(function(n){ return '<button type="button" class="p" data-who="' + att(n) + '">' + esc(n) + '</button>'; }).join('') + '</div>' : '') +
       '</div>' +
-      '<div class="fld"><span class="lab">Is</span><div class="picks tags">' +
-        PLABELS.map(function(x){ return '<button type="button" class="p" data-l="' + att(x[0]) + '">' + esc(x[1]) + '</button>'; }).join('') +
-        '</div><p class="why sl-whonote"></p><div class="pnote" hidden></div></div>' +
-      '<div class="fld"><span class="lab">What</span><div class="picks sl-kinds">' +
-        KINDS.map(function(k){ return '<button type="button" class="p' + (self.kind === k ? ' on' : '') + '" data-k="' + att(k) + '">' + esc(k === 'Something else' ? 'Other' : k) + '</button>'; }).join('') +
-      '</div></div>' +
+      '<div class="fld"><span class="lab">Is</span><div class="picks tags" data-picks="is">' + this.picksHtml('is') +
+        '</div>' + this.addHtml('is') + '<p class="why sl-whonote"></p><div class="pnote" hidden></div></div>' +
+      '<div class="fld"><span class="lab">Source</span><div class="picks" data-picks="source">' + this.picksHtml('source') +
+        '</div>' + this.addHtml('source') + '</div>' +
+      '<div class="fld"><span class="lab">What</span><div class="picks sl-kinds" data-picks="what">' + this.picksHtml('what') +
+      '</div>' + this.addHtml('what') + '</div>' +
       '<div class="fld"><span class="lab">When</span><div class="picks sl-when">' +
         '<button type="button" class="p' + (this.when === DAY ? ' on' : '') + '" data-w="0">Today</button>' +
         '<button type="button" class="p' + (this.when === shift(DAY,-1) ? ' on' : '') + '" data-w="-1">Yesterday</button>' +
         '<button type="button" class="p' + (this.when === shift(DAY,1) ? ' on' : '') + '" data-w="1">Tomorrow</button>' +
         '<button type="button" class="p' + (quick.indexOf(this.when) < 0 ? ' on' : '') + '" data-w="pick">' + (quick.indexOf(this.when) < 0 ? esc(shortD(this.when)) : 'Pick date') + '</button>' +
         '</div><input type="date" class="sl-date" value="' + att(this.when) + '"' + (quick.indexOf(this.when) > -1 ? ' style="display:none"' : '') + '></div>' +
-      '<div class="fld"><span class="lab">Where</span><div class="picks sl-where">' +
-        PLACES.map(function(x){ return '<button type="button" class="p' + (self.place === x ? ' on' : '') + '" data-pl="' + att(x) + '">' + esc(x) + '</button>'; }).join('') + '</div>' +
+      '<div class="fld"><span class="lab">Where</span><div class="picks sl-where" data-picks="where">' + this.picksHtml('where') + '</div>' + this.addHtml('where') +
         (this.usedPlaces().length ? '<div class="picks used">' + this.usedPlaces().map(function(x){ return '<button type="button" class="p" data-used="' + att(x) + '">' + esc(x) + '</button>'; }).join('') + '</div>' : '') +
         '<div class="pair"><input type="text" class="sl-place" placeholder="Where exactly?" autocomplete="off">' +
         '<input type="text" class="sl-with" placeholder="Anyone else?" autocomplete="off" value="' + att(this.with0) + '"></div></div>' +
@@ -303,10 +387,7 @@ window.PYSocial = (function () {
     this.wire();
     if (this.who0) this.showCarry();
   };
-  Form.prototype.paintTags = function(){
-    var self = this;
-    this.box.querySelectorAll('.tags .p').forEach(function(b){ b.classList.toggle('on', self.labels.indexOf(b.getAttribute('data-l')) > -1); });
-  };
+  Form.prototype.paintTags = function(){ this.repaint('is'); };
   Form.prototype.refreshGo = function(){
     var g = this.$('.go'); if (!g) return;
     var fut = this.isFuture();
@@ -321,7 +402,7 @@ window.PYSocial = (function () {
     var tn = tidyName(raw), c = this.carry(tn.name), line = '';
     if (tn.name !== raw) line = 'Filing as ' + tn.name + (tn.note ? ', with "' + tn.note + '" as the note' : '') + '. ';
     if (this.labelsTouched && this.labels.length) {
-      line += 'Filing under ' + this.labels.map(function(v){ for (var i = 0; i < PLABELS.length; i++) if (PLABELS[i][0] === v) return PLABELS[i][1]; return v; }).join(', ') + '.';
+      line += 'Filing under ' + this.labels.map(function(v){ return pillLabel('is', v); }).join(', ') + '.';
     } else if (c) {
       if (!this.labelsTouched) { this.labels = (c.labels || []).slice(); this.paintTags(); }
       line += (c.labels && c.labels.length) ? 'Known already. Tap to change.' : 'Known already, but never tagged. Tap who they are.';
@@ -364,8 +445,29 @@ window.PYSocial = (function () {
     box.addEventListener('click', function(e){
       var DAY = today(), who = self.$('.sl-who'), date = self.$('.sl-date');
       var b = e.target.closest('button'); if (!b || !box.contains(b)) return;
-      var grp = b.parentNode;
+      var grp = b.parentNode;   /* kept for the older handlers below */
       if (b.hasAttribute('data-who')) { who.value = b.getAttribute('data-who'); self.labelsTouched = false; self.showCarry(); return; }
+      /* + on a row: open the little strip, type a name, then it asks once whether
+         to keep the pill for good or use it just this time. */
+      if (b.hasAttribute('data-add')) {
+        var af = b.getAttribute('data-add');
+        var strip = box.querySelector('.addp[data-af="' + af + '"]');
+        if (strip) { strip.hidden = !strip.hidden; if (!strip.hidden) strip.querySelector('.ap').focus(); }
+        return;
+      }
+      if (b.hasAttribute('data-ago')) { self.addPill(b.getAttribute('data-ago')); return; }
+      if (b.hasAttribute('data-keepyes')) { self.keepPill(b.getAttribute('data-keepyes')); return; }
+      if (b.hasAttribute('data-keepno')) {
+        var kf = b.getAttribute('data-keepno');
+        var q = box.querySelector('.keepq[data-kq="' + kf + '"]');
+        if (q) { q.hidden = true; q.innerHTML = ''; }
+        return;
+      }
+      if (b.hasAttribute('data-src')) {
+        var sv = b.getAttribute('data-src');
+        self.source = (self.source === sv) ? '' : sv;
+        self.repaint('source'); return;
+      }
       if (b.hasAttribute('data-l')) {
         var v = b.getAttribute('data-l'), i = self.labels.indexOf(v);
         if (i > -1) self.labels.splice(i, 1); else self.labels.push(v);
@@ -373,7 +475,7 @@ window.PYSocial = (function () {
       }
       if (b.hasAttribute('data-k')) {
         self.kind = b.getAttribute('data-k');
-        grp.querySelectorAll('.p').forEach(function(x){ x.classList.toggle('on', x === b); }); return;
+        self.repaint('what'); return;
       }
       if (b.hasAttribute('data-w')) {
         var w = b.getAttribute('data-w');
@@ -385,7 +487,7 @@ window.PYSocial = (function () {
       if (b.hasAttribute('data-pl')) {
         var pv = b.getAttribute('data-pl');
         self.place = (self.place === pv) ? '' : pv;
-        grp.querySelectorAll('.p').forEach(function(x){ x.classList.toggle('on', x.getAttribute('data-pl') === self.place); }); return;
+        self.repaint('where'); return;
       }
       if (b.hasAttribute('data-used')) { self.$('.sl-place').value = b.getAttribute('data-used'); return; }
       if (b.classList.contains('go')) { self.save(); return; }
@@ -393,6 +495,54 @@ window.PYSocial = (function () {
       if (row && row.closest('.soon')) { self.onSoon(b, row); return; }
       if (row && row.closest('.past')) { self.onPast(b, row); return; }
     });
+  };
+  /* A pill typed into the + strip. It is usable straight away; whether it lasts
+     is the next question, asked once, right under the row. */
+  Form.prototype.addPill = function(field){
+    var box = this.box;
+    var strip = box.querySelector('.addp[data-af="' + field + '"]');
+    var inp = strip && strip.querySelector('.ap');
+    var label = inp ? String(inp.value || '').trim() : '';
+    if (!label) { if (inp) inp.focus(); return; }
+    var value = (field === 'is' || field === 'source') ? slug(label) : label;
+    if (!value) { if (inp) inp.focus(); return; }
+    var list = pillsFor(field);
+    var already = list.some(function(x){ return x[0] === value; });
+    if (!already) {
+      if (!PILLS) PILLS = { is:[], source:[], what:[], where:[] };
+      if (!PILLS[field] || !PILLS[field].length) PILLS[field] = DEFAULTS[field].slice();
+      PILLS[field].push([value, label]);
+    }
+    if (field === 'is') { if (this.labels.indexOf(value) < 0) this.labels.push(value); this.labelsTouched = true; }
+    else if (field === 'source') this.source = value;
+    else if (field === 'what')   this.kind = value;
+    else                         this.place = value;
+    inp.value = ''; strip.hidden = true;
+    this.repaint(field);
+    if (field === 'is') this.showCarry();
+    if (already) return;
+    var q = box.querySelector('.keepq[data-kq="' + field + '"]');
+    if (q) {
+      q.className = 'why keepq';
+      q.innerHTML = 'Keep <b>' + esc(label) + '</b> on this list for next time?' +
+        '<button type="button" class="yes" data-keepyes="' + att(field + '|' + value + '|' + label) + '">Keep it</button>' +
+        '<button type="button" data-keepno="' + att(field) + '">Just this once</button>';
+      q.hidden = false;
+    }
+  };
+  Form.prototype.keepPill = async function(spec){
+    var p = String(spec || '').split('|'), field = p[0], value = p[1], label = p.slice(2).join('|');
+    var q = this.box.querySelector('.keepq[data-kq="' + field + '"]');
+    var sorts = pillsFor(field).length * 10 + 10;
+    try {
+      var r = await this.sb.from('social_pills').insert({ field: field, value: value, label: label, sort: sorts, active: true, builtin: false });
+      if (q) {
+        q.className = 'why keepq ' + (r.error ? 'warn' : 'ok');
+        q.textContent = r.error ? 'That one could not be kept, so it counts for this entry only.' : 'Kept. It will be there next time.';
+      }
+    } catch (e) {
+      if (q) { q.className = 'why keepq warn'; q.textContent = 'That one could not be kept, so it counts for this entry only.'; }
+    }
   };
   Form.prototype.say = function(t, cls){ var m = this.$('.msg'); if (m) { m.textContent = t; m.className = 'msg' + (cls ? ' ' + cls : ''); } };
   Form.prototype.keepNote = function(name, text, cid){
@@ -412,7 +562,10 @@ window.PYSocial = (function () {
     var where = [this.place, t2].filter(Boolean).join(' · ') || null;
     var kindWord = this.kind === 'Something else' ? 'Time' : this.kind;
     var title = kindWord + ' with ' + who + (others ? ' and ' + others : '');
-    if (!fut && !this.labels.length) { this.say('Tap who ' + who + ' is first: Family, Colleague, Ex-Colleague, Industry or Group.', 'warn'); return; }
+    if (!fut && !this.labels.length) {
+      this.say('Tap who ' + who + ' is first: ' + pillsFor('is').map(function(x){ return x[1]; }).join(', ') + '.', 'warn');
+      return;
+    }
     var go = this.$('.go'); go.disabled = true; this.say('Saving...');
     var res = { future: fut, who: who, kind: this.kind, date: this.when, title: title, where: where, todoId: null, connectionId: null, habitId: null };
     var r;
@@ -428,7 +581,8 @@ window.PYSocial = (function () {
         kind: this.kind, channel: channelFor(this.kind), happened_on: this.when, planned: false,
         notes: notes || null, place: where,
         circle: carry.circle || null, social_group: carry.social_group || null, age_band: carry.age_band || null,
-        labels: this.labels.slice(), source: 'logged-by-hand', superseded: false
+        labels: this.labels.slice(), direction: this.source || null,
+        source: 'logged-by-hand', superseded: false
       }).select('id').single();
       if (!r.error && r.data) {
         res.connectionId = r.data.id;
@@ -440,7 +594,7 @@ window.PYSocial = (function () {
     if (r.error) { this.say('That did not save. Try again in a moment.', 'warn'); return; }
     var said = fut ? ('On your board under Social Well-Being: ' + title + ', ' + shortD(this.when) + '.')
                    : ('Logged: ' + title + ', ' + shortD(this.when) + '. Social habit ticked.');
-    this.kind = ''; this.place = ''; this.labels = []; this.labelsTouched = false; this.who0 = ''; this.with0 = '';
+    this.kind = ''; this.place = ''; this.labels = []; this.labelsTouched = false; this.source = ''; this.who0 = ''; this.with0 = '';
     this.loaded = false;
     if (typeof o.onSaved === 'function') { try { o.onSaved(res); } catch (e) {} }
     if (o.closeOnSave) return;
@@ -514,5 +668,5 @@ window.PYSocial = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '1.0' };
+  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.0' };
 })();
