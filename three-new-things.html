@@ -391,8 +391,12 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 .chip:focus-visible{outline:2px solid var(--peri);outline-offset:2px}
 /* v2.17 (Sep 19 2026): the energy chips at half height, the + chip that adds a
    tag of your own, and the bolt that sits beside that screen's headline. */
-.chiprow.sm{gap:6px}
-.chip.sm{font-size:12px;padding:3px 11px;line-height:1.5}
+.chiprow.sm{gap:5px}
+/* v2.18 (Sep 19 2026): a true half of the old 39px, as he asked for. */
+.chip.sm{font-size:11.5px;padding:1px 9px;line-height:1.4}
+/* His own tags come off with a press and hold, so stop the phone offering to
+   select the text or open its own menu on top of it. */
+.chip.mine{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none;touch-action:manipulation}
 .chip.add{color:var(--ember);border-style:dashed;font-weight:700;letter-spacing:.02em}
 .chip.add:hover{border-color:var(--ember);color:var(--ember)}
 .addtag{display:flex;gap:7px;align-items:center;margin-top:9px}
@@ -650,7 +654,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.18</span>
+    <span id="ver" class="ver">v2.19</span>
   </div>
 </div>
 
@@ -1004,6 +1008,7 @@ async function loadCloud(){
     S.told=(S.checks.filter(function(x){return x.a&&x.a.__told;})).length;
     cloud=true;
     await loadProjects();
+    await loadEnergyTags();
     return true;
   }catch(e){ return false; }
 }
@@ -1302,6 +1307,33 @@ function addProject(){
   i.value='';
   if(cloud){ try{ sb.from('tnt_projects').insert({name:nm, position:PROJ.length}); }catch(e){} }
   render();
+}
+
+/* v2.18 (Sep 19 2026): the tags he adds himself live on his account, like his
+   creative projects do, so they follow him from the phone to the laptop.
+   Taking one off sets active=false rather than deleting the row, so a night
+   already written against it still reads back. */
+async function loadEnergyTags(){
+  if(!cloud) return;
+  try{
+    var r=await sb.from('tnt_energy_tags').select('name,position,active').eq('active',true).order('position',{ascending:true});
+    if(!r.error){ S.energyTags=(r.data||[]).map(function(x){return x.name;}); save(); }
+  }catch(e){}
+}
+function removeEnergyTag(i){
+  var EL=energyList();
+  if(i<ENERGY.length||i>=EL.length) return;
+  var nm=EL[i];
+  S.energyTags.splice(i-ENERGY.length,1);
+  /* Everything after it shifts down one, so tonight's ticks have to shift too. */
+  N.energy=N.energy.filter(function(x){return x!==i;}).map(function(x){return x>i?x-1:x;});
+  save();
+  if(cloud){ try{ sb.from('tnt_energy_tags').update({active:false}).eq('name',nm); }catch(e){} }
+  ENTAGOPEN=false;
+  render();
+  /* Say it plainly, but not in the warning colour: nothing went wrong. */
+  var g=document.getElementById('gate1');
+  if(g){ g.textContent=nm+' is off the list.'; g.classList.remove('hot'); }
 }
 
 async function loadProjects(){
@@ -1760,19 +1792,19 @@ function render(){
     h+='<p class="kick">Third</p>';
     h+='<h2>How much of you was here today?</h2>';
     h+='<p class="sub">Not how good it was. How much of you actually turned up for it. Pick as many as felt true.</p>';
-    h+='<div class="chiprow">';
-    BANDS.forEach(function(b,i){ h+='<button class="chip'+(N.presel.indexOf(i)>-1?' on':'')+'" data-band="'+i+'">'+b.n+'</button>'; });
+    h+='<div class="chiprow sm">';
+    BANDS.forEach(function(b,i){ h+='<button class="chip sm'+(N.presel.indexOf(i)>-1?' on':'')+'" data-band="'+i+'">'+b.n+'</button>'; });
     h+='</div>';
     h+='<h2 style="font-size:22px;margin-top:14px">Who were you with today?</h2>';
     h+='<p class="sub">Everyone who was around. Zingo counts.</p>';
-    h+='<div class="chiprow">';
-    WITH.forEach(function(w,i){ h+='<button class="chip'+(N.withw.indexOf(i)>-1?' on':'')+'" data-w="'+i+'">'+w+'</button>'; });
+    h+='<div class="chiprow sm">';
+    WITH.forEach(function(w,i){ h+='<button class="chip sm'+(N.withw.indexOf(i)>-1?' on':'')+'" data-w="'+i+'">'+w+'</button>'; });
     h+='</div>';
     /* v2.7 (Sep 16 2026): log a proper social thing without leaving tonight. The form is social-log.js, shared across the site. */
     if(window.PYSocial) h+='<button class="skiplink" data-go="social" style="text-align:left;margin-top:-4px">+ Log a social thing from today, with who, where and a note</button>';
     h+='<h2 style="font-size:22px;margin-top:8px">And mostly where?</h2>';
-    h+='<div class="chiprow">';
-    WHERE.forEach(function(w,i){ h+='<button class="chip peri'+(N.wherew===i?' on':'')+'" data-p="'+i+'">'+w+'</button>'; });
+    h+='<div class="chiprow sm">';
+    WHERE.forEach(function(w,i){ h+='<button class="chip sm peri'+(N.wherew===i?' on':'')+'" data-p="'+i+'">'+w+'</button>'; });
     h+='</div>';
     h+='<div class="foot"><button class="btn" data-go="energy">Next</button>';
     h+='<button class="skiplink" data-go="skiptags">Skip this one tonight</button></div>';
@@ -1785,9 +1817,13 @@ function render(){
     h+='<div class="h2ico">'+BOLT+'<h2>What gave you energy today?</h2></div>';
     h+='<p class="sub">Whatever put something back in the tank. More than one is fine.</p>';
     h+='<div class="chiprow sm">';
-    energyList().forEach(function(w,i){ h+='<button class="chip sm'+(N.energy.indexOf(i)>-1?' on':'')+'" data-en="'+i+'">'+esc(w)+'</button>'; });
+    energyList().forEach(function(w,i){
+      h+='<button class="chip sm'+(i>=ENERGY.length?' mine':'')+(N.energy.indexOf(i)>-1?' on':'')+'" data-en="'+i+'">'+esc(w)+'</button>';
+    });
     h+='<button class="chip sm add" data-entag="1" aria-label="Add a tag of your own">+</button>';
     h+='</div>';
+    /* v2.18: the only way to take one off, so it has to be written down. */
+    if((S.energyTags||[]).length) h+='<p class="tiny" style="margin-top:7px">Press and hold one of your own tags to take it off the list.</p>';
     h+='<div class="addtag" id="entagrow"'+(ENTAGOPEN?'':' hidden')+'><input id="entagi" placeholder="Name it, and it stays for every night" autocomplete="off" maxlength="28">';
     h+='<button class="mini" data-entagadd="1">Add</button></div>';
     h+='<textarea class="box" id="entx" style="min-height:70px" placeholder="Or say it in your own words. Optional.">'+esc(N.energyNote)+'</textarea>';
@@ -2333,7 +2369,10 @@ function addEnergyTag(){
   if(!S.energyTags) S.energyTags=[];
   var at=-1;
   energyList().forEach(function(w,i){ if(String(w).toLowerCase()===v.toLowerCase()) at=i; });
-  if(at<0){ S.energyTags.push(v); save(); at=energyList().length-1; }
+  if(at<0){
+    S.energyTags.push(v); save(); at=energyList().length-1;
+    if(cloud){ try{ sb.from('tnt_energy_tags').upsert({name:v, position:S.energyTags.length, active:true},{onConflict:'name'}); }catch(e){} }
+  }
   if(N.energy.indexOf(at)<0) N.energy.push(at);
   f.value=''; ENTAGOPEN=true;
   render();
@@ -2479,8 +2518,20 @@ function bind(){
     });
   });
   stage.querySelectorAll('[data-en]').forEach(function(b){
+    var i=parseInt(b.getAttribute('data-en'),10);
+    var held=false, timer=null;
+    if(b.classList.contains('mine')){
+      var stop=function(){ if(timer){ clearTimeout(timer); timer=null; } };
+      b.addEventListener('contextmenu',function(e){ e.preventDefault(); });
+      b.addEventListener('pointerdown',function(){
+        held=false;
+        timer=setTimeout(function(){ held=true; timer=null; removeEnergyTag(i); },600);
+      });
+      ['pointerup','pointerleave','pointercancel'].forEach(function(ev){ b.addEventListener(ev,stop); });
+    }
     b.addEventListener('click',function(){
-      var i=parseInt(b.getAttribute('data-en'),10), at=N.energy.indexOf(i);
+      if(held){ held=false; return; }
+      var at=N.energy.indexOf(i);
       if(at>-1) N.energy.splice(at,1); else N.energy.push(i);
       b.classList.toggle('on');
       paintEnergyGate();
