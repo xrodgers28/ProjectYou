@@ -559,6 +559,15 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 .relq{margin:20px 0;display:flex;flex-direction:column;gap:16px}
 .qcard{background:rgba(245,239,232,.05);border:1px solid var(--line);border-radius:12px;padding:16px}
 .qtext{font-size:15px;color:var(--ink);margin-bottom:10px;line-height:1.4}
+/* v2.18: the three markers under a slider, and the note at the foot of the card. */
+.relanch{display:flex;gap:6px;margin:-2px 0 6px}
+.relanch span{flex:1;font-size:10.5px;line-height:1.3;color:var(--ink-3);opacity:.85;text-align:center}
+.relanch span:first-child{text-align:left}
+.relanch span:last-child{text-align:right}
+.relwhy{margin:22px 0 4px;padding-top:16px;border-top:1px solid var(--line)}
+.relwhy p{margin:0 0 12px;font-size:13px;line-height:1.6;color:var(--ink-3);opacity:.9}
+.relwhy p:last-child{margin-bottom:0}
+.relwhy b{color:var(--ink-2);font-weight:600}
 
 /* ==========================================================
    v2.15 (Sep 19 2026): the twelve additions.
@@ -641,7 +650,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.17</span>
+    <span id="ver" class="ver">v2.18</span>
   </div>
 </div>
 
@@ -817,12 +826,23 @@ var CRE_WORD=['Flat','Ticking over','Some sparks','Really flowing','On fire'];
    WRAPCATS/wc8, because it is the one metric that needs a description under
    every option instead of a plain dot. Saved into the same answers jsonb as
    everything else in WRAPCATS, key 'tired', no new column. */
+/* v2.18 (Sep 19 2026): seven points, not five. The old scale spent four of its
+   five options on being tired and only one on feeling good, so a brilliant day
+   and a merely fine day both landed on 'Fresh' and looked identical afterwards.
+   Energy and fatigue are measured as two separate things in the research (the
+   Profile of Mood States scores Vigor and Fatigue as different subscales), and
+   the Karolinska Sleepiness Scale, the standard one-question version of this,
+   gives the good half four of its nine steps. This gives it three, plus a real
+   neutral in the middle. The five nights already logged were migrated on the
+   same day: 1 to 2, 2 to 5, 3 to 6, 4 and 5 to 7. */
 var TIRED=[
- {n:1,w:'Fresh',d:'Rested, no drag anywhere today.'},
- {n:2,w:'A little tired',d:'An occasional low moment, never really slowed you down.'},
- {n:3,w:'Tired',d:'Noticeably tired for real stretches of the day.'},
- {n:4,w:'Very tired',d:'Dragging most of the day, sometimes from before it even started.'},
- {n:5,w:'Exhausted',d:'Running on empty, hard to push through anything.'}
+ {n:1,w:'Firing',d:'Sharp and clear all day, everything came easily.'},
+ {n:2,w:'Fresh',d:'Rested, no drag anywhere today.'},
+ {n:3,w:'Ready',d:'Not buzzing, but nothing slowing you down either.'},
+ {n:4,w:'Middling',d:'Neither sharp nor tired, an ordinary day.'},
+ {n:5,w:'A little tired',d:'An occasional low moment, never really slowed you down.'},
+ {n:6,w:'Tired',d:'Noticeably tired for real stretches of the day.'},
+ {n:7,w:'Running on empty',d:'Dragging most of the day, hard to push through anything.'}
 ];
 /* The fixed nightly check-in, Sep 7 2026. Replaces the old rotating 52-question
    bank (tnt_questions / QFALL / dealQuestions / saveQuestions, left below unused
@@ -846,7 +866,11 @@ var ICONS={
    Sep 15 2026, except Creativity, which had no words yet and is a first pass. */
 var WRAPCATS=[
  {k:'stress',n:'Stress level',icon:ICONS.stress,
-  w:['Calm','Relaxed','Steady','Tense','Overwhelmed']},
+  /* v2.18: reversed. The dots grow left to right and position 5 is the big
+     glowing one, which reads as 'this end is the good end' on every other row.
+     Stress used to put Overwhelmed there. The six nights already logged were
+     migrated the same day with stress = 6 - stress. */
+  w:['Overwhelmed','Tense','Steady','Relaxed','Calm']},
  {k:'energy',n:'Energy level',icon:ICONS.energy,
   w:['Exhausted','Drained','Steady','Energized','Wired']},
  {k:'mood',n:'General mood',icon:ICONS.mood,
@@ -1843,35 +1867,67 @@ function render(){
     h+='<h2>Relationship Check-In</h2>';
     h+='<p class="sub">18 questions about Åsa and your connection. Rate each from 1 (not at all) to 10 (fully).</p>';
     
+    /* v2.18 (Sep 19 2026): questions 1, 2 and 3 were the only ones where sliding
+       to 10 meant a bad night. Every other row runs the other way, and nothing on
+       screen said which was which, so any average across the eighteen was
+       meaningless. They are now worded so 10 is the good end everywhere. The three
+       nights already logged were migrated the same day with 11 - response.
+       lo / mid / hi are the markers under each slider. */
     var questions = [
-      {n:1, set:'gottman', text:'How contemptuous did I feel toward Åsa today?'},
-      {n:2, set:'gottman', text:'How defensive was I when she brought something up?'},
-      {n:3, set:'gottman', text:'How much did I shut down or avoid talking to her?'},
-      {n:4, set:'gottman', text:'How well did I try to de-escalate when tensions rose?'},
-      {n:5, set:'gottman', text:'How much affection or respect did I feel for her?'},
-      {n:6, set:'gottman', text:'How present was I when we were together?'},
-      {n:7, set:'gottman', text:'How curious was I about what she thinks or feels?'},
-      {n:8, set:'gottman', text:'How much did I accept her differences vs. judge them?'},
-      {n:9, set:'gottman', text:'How well did I own mistakes or apologize when wrong?'},
-      {n:10, set:'gottman', text:'How much romantic or sexual desire did I feel?'},
-      {n:11, set:'positivity', text:'How much genuine laughter or lightness did we share?'},
-      {n:12, set:'positivity', text:'How much affection or warmth was between us?'},
-      {n:13, set:'positivity', text:'How many small acts of kindness happened today?'},
-      {n:14, set:'positivity', text:'How much joy did I see in her face when we were together?'},
-      {n:15, set:'positivity', text:'How much did I make time to focus on her today?'},
-      {n:16, set:'positivity', text:'How much did she feel safe or supported by me?'},
-      {n:17, set:'positivity', text:'How much did we find something to smile about together?'},
-      {n:18, set:'positivity', text:'How much hope did I feel about our future together?'}
+      {n:1, set:'gottman', text:'How respectfully did I treat \u00c5sa today, even when irritated?',
+       lo:'Sneered, eye-rolled, felt superior', mid:'A flash of it, caught myself', hi:'Respectful throughout'},
+      {n:2, set:'gottman', text:'How openly did I listen when she brought something up?',
+       lo:'Counter-attacked, made it her fault', mid:'Defended once, then listened', hi:'Took it in, no pushback'},
+      {n:3, set:'gottman', text:'How well did I stay in the conversation instead of shutting down?',
+       lo:'Withdrew completely', mid:'Went quiet for a stretch', hi:'Stayed in every conversation'},
+      {n:4, set:'gottman', text:'How well did I try to de-escalate when tensions rose?',
+       lo:'Let it escalate, or added to it', mid:'Tried once, half-hearted', hi:'Stepped in early, cooled it'},
+      {n:5, set:'gottman', text:'How much affection or respect did I feel for her?',
+       lo:'Flat, none surfaced', mid:'There, but quiet', hi:'Strong, felt it clearly'},
+      {n:6, set:'gottman', text:'How present was I when we were together?',
+       lo:'Elsewhere, on my phone', mid:'Half there, drifted', hi:'Fully with her'},
+      {n:7, set:'gottman', text:'How curious was I about what she thinks or feels?',
+       lo:'Did not ask anything', mid:'Asked, did not dig', hi:'Asked real questions, wanted the answer'},
+      {n:8, set:'gottman', text:'How much did I accept her differences vs. judge them?',
+       lo:'Judged, wanted her different', mid:'Noticed, let most of it go', hi:'Took her as she is'},
+      {n:9, set:'gottman', text:'How well did I own mistakes or apologize when wrong?',
+       lo:'Owned nothing', mid:'Half apology, with a but', hi:'Said it plainly, no excuses'},
+      {n:10, set:'gottman', text:'How much romantic or sexual desire did I feel?',
+       lo:'None today', mid:'A flicker', hi:'Strong, wanted her'},
+      {n:11, set:'positivity', text:'How much genuine laughter or lightness did we share?',
+       lo:'None, all business', mid:'A smile or two', hi:'Properly laughed together'},
+      {n:12, set:'positivity', text:'How much affection or warmth was between us?',
+       lo:'No touch, no warmth', mid:'Brief, in passing', hi:'Warm all day, touch easy'},
+      {n:13, set:'positivity', text:'How many small acts of kindness happened today?',
+       lo:'None either way', mid:'One or two', hi:'Small kindnesses all day'},
+      {n:14, set:'positivity', text:'How much joy did I see in her face when we were together?',
+       lo:'Did not see any', mid:'Once or twice', hi:'She looked happy around me'},
+      {n:15, set:'positivity', text:'How much did I make time to focus on her today?',
+       lo:'Gave her no time', mid:'A window, distracted', hi:'Real, unhurried time'},
+      {n:16, set:'positivity', text:'How much did she feel safe or supported by me?',
+       lo:'I let her down', mid:'Fine, nothing special', hi:'She could lean on me'},
+      {n:17, set:'positivity', text:'How much did we find something to smile about together?',
+       lo:'Nothing shared', mid:'A passing moment', hi:'Several, and they mattered'},
+      {n:18, set:'positivity', text:'How much hope did I feel about our future together?',
+       lo:'Doubtful today', mid:'Steady, unexamined', hi:'Genuinely hopeful'}
     ];
     
     h+='<div class="relq">';
     questions.forEach(function(q, i){
       h+='<div class="qcard"><div class="qtext">'+q.text+'</div>';
       h+='<input type="range" min="1" max="10" value="'+(N.relationship[i]||5)+'" onchange="relSet('+i+',this.value)" onpointerup="relSet('+i+',this.value)" onkeyup="relSet('+i+',this.value)" style="width:100%;cursor:pointer;margin:10px 0;">';
+      /* v2.18: the three markers, so a 7 means the same thing every night. */
+      h+='<div class="relanch"><span>'+esc(q.lo)+'</span><span>'+esc(q.mid)+'</span><span>'+esc(q.hi)+'</span></div>';
       h+='<span style="color:var(--ink-3);font-size:13px;">'+(N.relationship[i]?'':'Tap the slider, even to keep 5. ')+'Rating: <strong style="color:var(--ink);">'+(N.relationship[i]||'—')+'</strong></span></div>';
     });
     h+='</div>';
     
+    /* v2.18: why these questions, one paragraph per body of research. */
+    h+='<div class="relwhy">';
+    h+='<p><b>The first ten, on what wears a relationship down.</b> These come from John Gottman\'s research on what actually predicts whether a couple lasts. His lab found that contempt, defensiveness and shutting down forecast a split more reliably than how often a couple argues, and that the attempt to cool things down matters more than the argument itself. So these ten are not asking whether tonight was pleasant. They are watching for corrosion, early, while it is still small enough to do something about.</p>';
+    h+='<p><b>The last eight, on what builds one up.</b> These measure the opposite end: the ordinary laughter, warmth, kindness and attention that make up a good day together. Gottman\'s other well known finding is a ratio, roughly five positive moments for every negative one in relationships that hold up. You cannot see a ratio in a single evening, but you can see it across a month of these. Between them the two sets answer two different questions: am I doing damage, and am I putting anything in. Tonight\'s number barely matters. The line it draws over weeks does.</p>';
+    h+='</div>';
+
     var allFilled = N.relationship.every(function(r){return r>0;});
     h+='<div class="foot"><button class="btn" data-go="reldone"'+(allFilled?'':' disabled')+'>'+(allFilled?'Next':'Answer all questions')+'</button>';
     h+='<button class="skiplink" data-go="skiprel">Skip this one tonight</button></div>';
@@ -1943,7 +1999,7 @@ function render(){
     h+='<div class="wc8card tiredcard" style="margin-top:10px"><p class="wc8lab">Tired level</p><div class="tiredlist">';
     TIRED.forEach(function(t){
       var sel=(N.tired===t.n);
-      h+='<button class="tiredopt'+(sel?' on':'')+'" data-tired="'+t.n+'" aria-label="'+t.n+' of 5, '+esc(t.w)+'">';
+      h+='<button class="tiredopt'+(sel?' on':'')+'" data-tired="'+t.n+'" aria-label="'+t.n+' of '+TIRED.length+', '+esc(t.w)+'">';
       h+='<span class="tn">'+t.n+'</span><span class="tbody"><span class="tw">'+esc(t.w)+'</span><span class="td">'+esc(t.d)+'</span></span>';
       h+='</button>';
     });
@@ -1985,7 +2041,7 @@ function render(){
     if(N.words.length) h+='<div class="item"><span class="c">Tonight you were</span><span class="t">'+N.words.join(' &middot; ')+'</span></div>';
     if(energyText()) h+='<div class="item"><span class="c">What put something back</span><span class="t">'+esc(energyText())+'</span></div>';
     if(eightDone()) h+='<div class="item"><span class="c">How today measured</span><span class="t">'+WRAPCATS.filter(function(c){return N.a8[c.k]!==undefined;}).map(function(c){return c.n+' '+N.a8[c.k];}).join(' &middot; ')+'</span></div>';
-    if(N.tired!==undefined) h+='<div class="item"><span class="c">Tired level</span><span class="t">'+esc(N.tired+' '+TIRED[N.tired-1].w)+'</span></div>';
+    if(N.tired!==undefined) h+='<div class="item"><span class="c">Tired level</span><span class="t">'+esc(N.tired+(TIRED[N.tired-1]?' '+TIRED[N.tired-1].w:''))+'</span></div>';
     if(N.a8.creativity!==undefined && N.stars.length) h+='<div class="item"><span class="c">Most creative today</span><span class="t">'+esc(N.stars.join(' &amp; '))+'</span></div>';
     h+='<div class="tally">';
     h+='<div><b>'+S.hist.length+'</b><span>things noticed</span></div>';
