@@ -535,10 +535,14 @@ window.PYSocial = (function () {
     var q = this.box.querySelector('.keepq[data-kq="' + field + '"]');
     var sorts = pillsFor(field).length * 10 + 10;
     try {
-      var r = await this.sb.from('social_pills').insert({ field: field, value: value, label: label, sort: sorts, active: true, builtin: false });
+      /* upsert, not insert: a name he used once before and turned off should come
+         back on rather than fail on the unique key and read as "could not be kept". */
+      var r = await this.sb.from('social_pills')
+        .upsert([{ field: field, value: value, label: label, sort: sorts, active: true, builtin: false }],
+                { onConflict: 'field,value' });
       if (q) {
         q.className = 'why keepq ' + (r.error ? 'warn' : 'ok');
-        q.textContent = r.error ? 'That one could not be kept, so it counts for this entry only.' : 'Kept. It will be there next time.';
+        q.textContent = r.error ? ('That one could not be kept, so it counts for this entry only. ' + (r.error.message || '')) : 'Kept. It will be there next time.';
       }
     } catch (e) {
       if (q) { q.className = 'why keepq warn'; q.textContent = 'That one could not be kept, so it counts for this entry only.'; }
