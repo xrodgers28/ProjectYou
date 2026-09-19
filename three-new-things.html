@@ -389,6 +389,29 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 .chip.on{background:var(--ember);border-color:var(--ember);color:var(--on-ember);font-weight:600}
 .chip.peri.on{background:var(--peri);border-color:var(--peri);color:#14110f}
 .chip:focus-visible{outline:2px solid var(--peri);outline-offset:2px}
+/* v2.17 (Sep 19 2026): the energy chips at half height, the + chip that adds a
+   tag of your own, and the bolt that sits beside that screen's headline. */
+.chiprow.sm{gap:6px}
+.chip.sm{font-size:12px;padding:3px 11px;line-height:1.5}
+.chip.add{color:var(--ember);border-style:dashed;font-weight:700;letter-spacing:.02em}
+.chip.add:hover{border-color:var(--ember);color:var(--ember)}
+.addtag{display:flex;gap:7px;align-items:center;margin-top:9px}
+.addtag[hidden]{display:none}
+.addtag .mini{
+  font-size:13px;padding:7px 15px;border-radius:99px;cursor:pointer;font-family:inherit;
+  background:var(--ember);border:1px solid var(--ember);color:var(--on-ember);font-weight:600;
+}
+.addtag .mini:hover{background:var(--ember-deep);border-color:var(--ember-deep)}
+.addtag .mini:focus-visible{outline:2px solid var(--peri);outline-offset:2px}
+.addtag input{
+  flex:1;min-width:0;font-family:inherit;font-size:13.5px;padding:7px 12px;border-radius:99px;
+  background:var(--bg-2);border:1px solid var(--line);color:var(--ink);
+}
+.addtag input::placeholder{color:var(--ink-3)}
+.addtag input:focus{outline:none;border-color:var(--ember)}
+.h2ico{display:flex;align-items:center;gap:11px}
+.h2ico h2{margin:0}
+.h2ico svg{flex:0 0 auto;width:clamp(24px,5.6vw,32px);height:clamp(24px,5.6vw,32px);color:var(--ember)}
 
 .crscale{display:flex;justify-content:space-between;margin-top:2px;font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
 .crnum{font-family:"Fraunces",Georgia,serif;font-size:34px;font-weight:600;text-align:center;line-height:1.1;margin:2px 0 0}
@@ -618,7 +641,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.15</span>
+    <span id="ver" class="ver">v2.17</span>
   </div>
 </div>
 
@@ -782,6 +805,11 @@ var QFALL=[
  {code:'tank',prompt:'How much is left in the tank right now?',source:'Energy',lo:'Empty',hi:'Plenty',reverse:false}
 ];
 var WITH=['Åsa','Carson','Max','Zingo','On my own','Family','Friends','Colleagues','Someone new'];
+/* v2.17: the bolt that sits beside the energy headline. */
+var BOLT='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M14.1 1.2 4.3 13.9h5.3L8.1 22.8l10.2-13.1h-5.9z"/></svg>';
+/* v2.17: the eleven that ship with the card, plus any he has added himself.
+   His own are kept in S so they come back every night. Added at the end, so
+   the numbers already written against tonight never shift. */
 var ENERGY=['A person','Being outside','Making something','Moving','Finishing something','Quiet','Music','A good meal','A win at work','Solving something','Nothing much did'];
 var WHERE=['Home','Out','Work','Travelling','Outside'];
 var CRE_WORD=['Flat','Ticking over','Some sparks','Really flowing','On fire'];
@@ -991,8 +1019,10 @@ function answerPayload(){
 function eightDone(){
   return WRAPCATS.filter(function(c){ return N.a8[c.k]!==undefined; }).length;
 }
+function energyList(){ return ENERGY.concat(S.energyTags||[]); }
 function energyText(){
-  var parts=N.energy.map(function(i){return ENERGY[i];});
+  var EL=energyList();
+  var parts=N.energy.map(function(i){return EL[i];}).filter(Boolean);
   if(N.energyNote.trim()) parts.push(N.energyNote.trim());
   return parts.length?parts.join(' · '):null;
 }
@@ -1728,11 +1758,14 @@ function render(){
   else if(view==='energy'){
     stage.className='stage top';
     h+='<p class="kick">Fourth</p>';
-    h+='<h2>What gave you energy today?</h2>';
+    h+='<div class="h2ico">'+BOLT+'<h2>What gave you energy today?</h2></div>';
     h+='<p class="sub">Whatever put something back in the tank. More than one is fine.</p>';
-    h+='<div class="chiprow">';
-    ENERGY.forEach(function(w,i){ h+='<button class="chip'+(N.energy.indexOf(i)>-1?' on':'')+'" data-en="'+i+'">'+w+'</button>'; });
+    h+='<div class="chiprow sm">';
+    energyList().forEach(function(w,i){ h+='<button class="chip sm'+(N.energy.indexOf(i)>-1?' on':'')+'" data-en="'+i+'">'+esc(w)+'</button>'; });
+    h+='<button class="chip sm add" data-entag="1" aria-label="Add a tag of your own">+</button>';
     h+='</div>';
+    h+='<div class="addtag" id="entagrow"'+(ENTAGOPEN?'':' hidden')+'><input id="entagi" placeholder="Name it, and it stays for every night" autocomplete="off" maxlength="28">';
+    h+='<button class="mini" data-entagadd="1">Add</button></div>';
     h+='<textarea class="box" id="entx" style="min-height:70px" placeholder="Or say it in your own words. Optional.">'+esc(N.energyNote)+'</textarea>';
     h+='<div class="foot"><button class="btn" data-go="creative">Next</button>';
     h+='<p class="gateline" id="gate1">'+((N.energy.length||N.energyNote.trim())?'Ready.':'Tap one, or write a line, or skip this one.')+'</p>';
@@ -2008,7 +2041,7 @@ function render(){
   paintBackLink();
   paintHistoryLink();
   bind();
-  if(view==='eight'){ wireEight(); paintScratch(); }
+  if(view==='eight'){ wireEight(); paintScratch(); loadSleep(); }
   if(view==='done'){
     var cv=document.getElementById('hd'); if(cv) setTimeout(function(){drawHead(cv,S.hist.length);},30);
     drawDay(); drawTomorrow();
@@ -2233,6 +2266,22 @@ function wireEight(){
   });
 }
 
+/* v2.17: a tag of his own. Kept in S, so it is on the row every night after
+   tonight, and it is ticked on the moment it is added. */
+var ENTAGOPEN=false;
+function addEnergyTag(){
+  var f=document.getElementById('entagi'); if(!f) return;
+  var v=f.value.trim().replace(/\s+/g,' ').slice(0,28);
+  if(!v){ f.focus(); return; }
+  v=v.charAt(0).toUpperCase()+v.slice(1);
+  if(!S.energyTags) S.energyTags=[];
+  var at=-1;
+  energyList().forEach(function(w,i){ if(String(w).toLowerCase()===v.toLowerCase()) at=i; });
+  if(at<0){ S.energyTags.push(v); save(); at=energyList().length-1; }
+  if(N.energy.indexOf(at)<0) N.energy.push(at);
+  f.value=''; ENTAGOPEN=true;
+  render();
+}
 function paintEnergyGate(){
   var g=document.getElementById('gate1'); if(!g) return;
   var ok=!!(N.energy.length||N.energyNote.trim());
@@ -2381,6 +2430,16 @@ function bind(){
       paintEnergyGate();
     });
   });
+  var etg=stage.querySelector('[data-entag]');
+  if(etg) etg.addEventListener('click',function(){
+    ENTAGOPEN=!ENTAGOPEN;
+    var row=document.getElementById('entagrow');
+    if(row){ row.hidden=!ENTAGOPEN; var f=document.getElementById('entagi'); if(ENTAGOPEN&&f) f.focus(); }
+  });
+  var etga=stage.querySelector('[data-entagadd]');
+  if(etga) etga.addEventListener('click',addEnergyTag);
+  var etgi=document.getElementById('entagi');
+  if(etgi) etgi.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); addEnergyTag(); } });
   var et=document.getElementById('entx');
   if(et) et.addEventListener('input',function(){
     N.energyNote=et.value;
@@ -2481,6 +2540,27 @@ function pickExtra(){ if(!N.extra){ N.extra=EXTRAS[S.nights%EXTRAS.length]; N.et
 
 /* v2.12: the night is written down step by step, not only when Done is pressed.
    A night stopped halfway now keeps everything answered up to that point. */
+/* v2.16 (Sep 19 2026): last night's sleep, posted by the Shortcut on his phone
+   each morning, so the four boxes on the last card are already filled in.
+   Anything he types himself wins: this only ever fills empty boxes. */
+var sleepPulled=false;
+async function loadSleep(){
+  if(!cloud||!N||sleepPulled) return;
+  sleepPulled=true;
+  try{
+    var r=await sb.from('tnt_sleep').select('deep,rem,light,awake').eq('for_date',DAY()).limit(1);
+    if(r.error||!r.data||!r.data[0]) return;
+    var row=r.data[0], touched=false;
+    if(!N.sleepNums) N.sleepNums={deep:'',rem:'',light:'',awake:''};
+    ['deep','rem','light','awake'].forEach(function(k){
+      if(!String(N.sleepNums[k]||'').trim() && row[k]!==null && row[k]!==undefined){
+        N.sleepNums[k]=String(row[k]); touched=true;
+      }
+    });
+    if(touched && view==='eight') render();
+  }catch(e){}
+}
+
 function stash(){
   if(!cloud||!N) return;
   if(view==='start') return;
