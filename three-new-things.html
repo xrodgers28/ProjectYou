@@ -654,7 +654,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.19</span>
+    <span id="ver" class="ver">v2.20</span>
   </div>
 </div>
 
@@ -1055,9 +1055,19 @@ function energyText(){
   if(N.energyNote.trim()) parts.push(N.energyNote.trim());
   return parts.length?parts.join(' · '):null;
 }
+/* v2.20: measured, from when tonight's card opened to now. Never under a minute,
+   never over three hours (a card left open overnight is not a three-hour habit). */
+function measuredTonight(){
+  try{
+    var ns=nightState(); if(!ns.startedAt) return 0;
+    var m=Math.round((Date.now()-ns.startedAt)/60000);
+    return Math.max(1, Math.min(180, m));
+  }catch(e){ return 0; }
+}
 function minutesTonight(){
   var v=parseInt(N.mins,10);
-  return (v>0&&v<=180)?v:10;
+  if(v>0&&v<=180) return v;
+  return measuredTonight()||10;
 }
 
 /* ---------- how the day actually went, off the same tally the wheel uses ---------- */
@@ -1727,7 +1737,12 @@ function render(){
   var h='';
 
   /* v2.5: the intro screen is skipped, tonight opens straight on step one */
-  if(view==='start'){ if(!N) N=newNight(); view='insight'; }
+  if(view==='start'){ if(!N) N=newNight(); view='insight';
+    /* v2.20 (Sep 19 2026), Scott: the time for It's a wrap "should be calculated from
+       when I complete" the card. The clock starts the moment tonight's card opens
+       and is kept with the night, so a reload does not restart it. */
+    try{ var ns0=nightState(); if(!ns0.startedAt){ ns0.startedAt=Date.now(); save(); } }catch(e){}
+  }
 
   /* ---------- start ---------- */
   if(view==='start'){
@@ -2051,8 +2066,9 @@ function render(){
     h+='<div class="ownrow" style="margin-top:8px"><input class="own" id="prown" placeholder="Add a project to the list" autocomplete="off">';
     h+='<button class="chip" data-praddb>Add</button></div>';
     h+='<div class="foot">';
-    h+='<label class="minrow"><span>How long did tonight take?</span>';
-    h+='<input class="mins" id="mins" inputmode="numeric" placeholder="10" value="'+esc(N.mins)+'"><span class="mu">min</span></label>';
+    var mt=measuredTonight();
+    h+='<label class="minrow"><span>How long did tonight take?'+(mt?' <span class="tiny">measured from when you opened the card; change it if that is wrong</span>':'')+'</span>';
+    h+='<input class="mins" id="mins" inputmode="numeric" placeholder="'+(mt||10)+'" value="'+esc(N.mins)+'"><span class="mu">min</span></label>';
     h+='<button class="btn" data-go="finish">'+(n<WRAPCATS.length?'Done'+(n?', '+n+' of '+WRAPCATS.length:', skip them tonight'):'Done')+'</button>';
     h+='<button class="skiplink" data-go="finish">Skip this one tonight</button></div>';
   }
