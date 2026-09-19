@@ -53,7 +53,11 @@
      switches it off there, so both forms always agree.
    - GROUP row (coloured, the year-grid colours the Social page uses) and a
      CIRCLE row that only appears for a new or untagged person. Both are carried
-     from the person's last entry, so a regular still logs in three taps. */
+     from the person's last entry, so a regular still logs in three taps.
+
+   v2.3, Sep 19 2026: Scott chose Option C of the three colour mock-ups. Every row
+   has its own tint (Is lilac, Circle slate, Source amber, What warm, When blue,
+   Where green) and the chosen pill goes solid; Group keeps its year-grid colours. */
 window.PYSocial = (function () {
   'use strict';
 
@@ -226,6 +230,21 @@ window.PYSocial = (function () {
       '.pysl .p.gp.on{color:#1f2a44;border-color:transparent;box-shadow:0 0 0 2px #6f8fae;font-weight:700}',
       '.pysl .circ .p.on{background:var(--sl-tag);border-color:var(--sl-tag)}',
       '.pysl .fld[hidden]{display:none}',
+      /* v2.3, Scott's pick (Option C): every row wears its own tint and the chosen
+         pill goes solid in that hue. Group keeps its nine year-grid colours. The +,
+         the pencil and a pill in remove mode keep their own look. */
+      '.pysl [data-picks="is"] .p:not(.padd):not(.ptidy):not(.rm){background:#e9e4fa;border-color:transparent;color:#2b3348}',
+      '.pysl [data-picks="is"] .p.on{background:#6f5aa8;color:#fff}',
+      '.pysl [data-picks="circle"] .p:not(.rm){background:#e6eaf0;border-color:transparent;color:#2b3348}',
+      '.pysl [data-picks="circle"] .p.on{background:#4d5a64;color:#fff}',
+      '.pysl [data-picks="source"] .p:not(.padd):not(.ptidy):not(.rm){background:#f8eed6;border-color:transparent;color:#2b3348}',
+      '.pysl [data-picks="source"] .p.on{background:#b8801f;color:#fff}',
+      '.pysl [data-picks="what"] .p:not(.padd):not(.ptidy):not(.rm){background:#fbe7dc;border-color:transparent;color:#2b3348}',
+      '.pysl [data-picks="what"] .p.on{background:#c06a35;color:#fff}',
+      '.pysl .sl-when .p{background:#e2ecf3;border-color:transparent;color:#2b3348}',
+      '.pysl .sl-when .p.on{background:#4a7fa8;color:#fff}',
+      '.pysl [data-picks="where"] .p:not(.padd):not(.ptidy):not(.rm){background:#e0efe6;border-color:transparent;color:#2b3348}',
+      '.pysl [data-picks="where"] .p.on{background:#3f7d5c;color:#fff}',
       '.pysl .recent .p{color:var(--sl-blue)}',
       '.pysl .used .p{border-style:dashed;color:var(--sl-blue)}',
       '.pysl input[type=text],.pysl input[type=date],.pysl textarea{width:100%;font:inherit;font-size:16px;line-height:1.25;padding:3px 8px;border:1px solid var(--sl-line);border-radius:7px;background:var(--sl-soft);color:var(--sl-ink)}',
@@ -834,5 +853,5 @@ window.PYSocial = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.2' };
+  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.3' };
 })();
