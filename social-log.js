@@ -32,7 +32,14 @@
      it as a permanent pill or use it just this time.
    - A new SOURCE row after IS: Outreach if he reached out, Inbound if it came to
      him. Saved on the connection as `direction`.
-   - IS gained Friend and Barista Style Exchange. */
+   - IS gained Friend and Barista Style Exchange.
+
+   v2.1, Sep 19 2026: every row also has a pencil next to its +. Tap it and the
+   pills on that row grow a small grey x, so a tap removes instead of selects.
+   Removing only switches the pill off; it stays on the entries that already used
+   it, and an Undo sits under the row for as long as the form is open. Scott asked
+   for an x on every pill; it lives behind the pencil because these pills are
+   12 pixels tall and an always-there x would be hit by a thumb aiming to select. */
 window.PYSocial = (function () {
   'use strict';
 
@@ -212,9 +219,15 @@ window.PYSocial = (function () {
       '.pysl .past .row{flex-wrap:wrap}',
       '.pysl .addn{width:100%;display:none;margin-top:3px}.pysl .addn.open{display:block}',
       /* the + on the end of every row, and the little strip it opens */
-      /* the rows scroll sideways, so the + is pinned to the right edge. A control
-         you have to scroll to find is a control you do not have. */
-      '.pysl .p.padd{position:sticky;right:0;z-index:2;font-weight:700;color:var(--sl-blue);border-style:dashed;padding:0 7px;background:var(--sl-bg);box-shadow:-7px 0 7px -5px rgba(0,0,0,.16)}',
+      /* the rows scroll sideways, so the + and the pencil are pinned to the right
+         edge. A control you have to scroll to find is a control you do not have. */
+      '.pysl .pends{position:sticky;right:0;z-index:2;flex:none;display:flex;gap:3px;padding-left:5px;background:var(--sl-bg);box-shadow:-9px 0 9px -6px rgba(0,0,0,.18)}',
+      '.pysl .p.padd{font-weight:700;color:var(--sl-blue);border-style:dashed;padding:0 7px}',
+      '.pysl .p.ptidy{font-weight:700;color:var(--sl-ink2);border-style:solid;padding:0 7px}',
+      '.pysl .p.ptidy.on{background:var(--sl-blue);border-style:solid;border-color:var(--sl-blue);color:#fff}',
+      '.pysl .p .xx{margin-left:4px;font-weight:700;color:var(--sl-mut)}',
+      '.pysl .p.rm{border-style:dashed;border-color:var(--sl-warm);color:var(--sl-ink2)}',
+      '.pysl .p.rm:hover{border-color:var(--sl-warm);background:var(--sl-soft)}',
       '.pysl .addp{display:flex;gap:4px;margin-top:3px}',
       '.pysl .addp[hidden]{display:none}',
       '.pysl .addp input{flex:1;min-width:0}',
@@ -240,6 +253,7 @@ window.PYSocial = (function () {
     this.kind = kindPill(this.o.title);
     this.who0 = guess.person; this.with0 = guess.others;
     this.place = ''; this.labels = []; this.labelsTouched = false; this.source = '';
+    this.tidy = { is:false, source:false, what:false, where:false }; this.lastRm = null;
     this.known = []; this.loaded = false; this.timer = null;
   }
   Form.prototype.isFuture = function(){
@@ -279,10 +293,22 @@ window.PYSocial = (function () {
       if (field === 'what')   return self.kind === v;
       return self.place === v;
     }
-    return pillsFor(field).map(function(x){
+    var tidy = !!this.tidy[field];
+    var pills = pillsFor(field).map(function(x){
+      /* in tidy mode the pill carries the remove attributes instead of the select
+         one, so the same tap cannot do both things */
+      if (tidy) {
+        return '<button type="button" class="p rm" data-rmf="' + att(field) + '" data-rmv="' + att(x[0]) + '">' +
+          esc(x[1]) + '<span class="xx">&times;</span></button>';
+      }
       return '<button type="button" class="p' + (isOn(x[0]) ? ' on' : '') + '" ' + attr + '="' + att(x[0]) + '">' + esc(x[1]) + '</button>';
-    }).join('') +
-      '<button type="button" class="p padd" data-add="' + field + '" title="Add one of your own">+</button>';
+    }).join('');
+    return pills +
+      '<span class="pends">' +
+        '<button type="button" class="p padd" data-add="' + field + '" title="Add one of your own">+</button>' +
+        '<button type="button" class="p ptidy' + (tidy ? ' on' : '') + '" data-tidy="' + att(field) + '" title="' +
+          (tidy ? 'Finished removing' : 'Remove ones you do not use') + '">' + (tidy ? 'Done' : 'Edit') + '</button>' +
+      '</span>';
   };
   Form.prototype.addHtml = function(field){
     return '<div class="addp" data-af="' + field + '" hidden>' +
@@ -456,6 +482,14 @@ window.PYSocial = (function () {
         return;
       }
       if (b.hasAttribute('data-ago')) { self.addPill(b.getAttribute('data-ago')); return; }
+      if (b.hasAttribute('data-tidy')) {
+        var tf = b.getAttribute('data-tidy');
+        self.tidy[tf] = !self.tidy[tf];
+        if (!self.tidy[tf]) { var qq = box.querySelector('.keepq[data-kq="' + tf + '"]'); if (qq) { qq.hidden = true; qq.innerHTML = ''; } }
+        self.repaint(tf); return;
+      }
+      if (b.hasAttribute('data-rmf')) { self.removePill(b.getAttribute('data-rmf'), b.getAttribute('data-rmv')); return; }
+      if (b.hasAttribute('data-undo')) { self.undoRemove(); return; }
       if (b.hasAttribute('data-keepyes')) { self.keepPill(b.getAttribute('data-keepyes')); return; }
       if (b.hasAttribute('data-keepno')) {
         var kf = b.getAttribute('data-keepno');
@@ -530,6 +564,49 @@ window.PYSocial = (function () {
       q.hidden = false;
     }
   };
+  /* Removing only switches a pill off. Anything already logged with it keeps it,
+     which is why this is an update and not a delete. One Undo is held for as long
+     as the form is open, so a mis-tap costs nothing. */
+  Form.prototype.removePill = async function(field, value){
+    var list = pillsFor(field), i = -1, label = value;
+    for (var n = 0; n < list.length; n++) if (list[n][0] === value) { i = n; label = list[n][1]; }
+    if (i < 0) return;
+    if (!PILLS) PILLS = { is:[], source:[], what:[], where:[] };
+    if (!PILLS[field] || !PILLS[field].length) PILLS[field] = DEFAULTS[field].slice();
+    PILLS[field].splice(i, 1);
+    this.lastRm = { field: field, value: value, label: label, at: i };
+    if (field === 'is') { var li = this.labels.indexOf(value); if (li > -1) this.labels.splice(li, 1); }
+    else if (field === 'source' && this.source === value) this.source = '';
+    else if (field === 'what'   && this.kind   === value) this.kind = '';
+    else if (field === 'where'  && this.place  === value) this.place = '';
+    this.repaint(field);
+    var q = this.box.querySelector('.keepq[data-kq="' + field + '"]');
+    if (q) {
+      q.className = 'why keepq';
+      q.innerHTML = 'Removed <b>' + esc(label) + '</b>. It stays on anything you already logged with it.' +
+        '<button type="button" class="yes" data-undo="1">Undo</button>';
+      q.hidden = false;
+    }
+    try {
+      var r = await this.sb.from('social_pills').update({ active: false }).eq('field', field).eq('value', value);
+      if (r.error && q) {
+        q.className = 'why keepq warn';
+        q.innerHTML = 'Taken off this list, but it will be back next time. ' + esc(r.error.message || '') +
+          '<button type="button" class="yes" data-undo="1">Undo</button>';
+      }
+    } catch (e) {}
+  };
+  Form.prototype.undoRemove = async function(){
+    var r = this.lastRm; if (!r) return;
+    this.lastRm = null;
+    if (!PILLS[r.field] || !PILLS[r.field].length) PILLS[r.field] = DEFAULTS[r.field].slice();
+    var already = PILLS[r.field].some(function(x){ return x[0] === r.value; });
+    if (!already) PILLS[r.field].splice(Math.min(r.at, PILLS[r.field].length), 0, [r.value, r.label]);
+    this.repaint(r.field);
+    var q = this.box.querySelector('.keepq[data-kq="' + r.field + '"]');
+    if (q) { q.hidden = true; q.innerHTML = ''; }
+    try { await this.sb.from('social_pills').update({ active: true }).eq('field', r.field).eq('value', r.value); } catch (e) {}
+  };
   Form.prototype.keepPill = async function(spec){
     var p = String(spec || '').split('|'), field = p[0], value = p[1], label = p.slice(2).join('|');
     var q = this.box.querySelector('.keepq[data-kq="' + field + '"]');
@@ -599,6 +676,7 @@ window.PYSocial = (function () {
     var said = fut ? ('On your board under Social Well-Being: ' + title + ', ' + shortD(this.when) + '.')
                    : ('Logged: ' + title + ', ' + shortD(this.when) + '. Social habit ticked.');
     this.kind = ''; this.place = ''; this.labels = []; this.labelsTouched = false; this.source = ''; this.who0 = ''; this.with0 = '';
+    this.tidy = { is:false, source:false, what:false, where:false }; this.lastRm = null;
     this.loaded = false;
     if (typeof o.onSaved === 'function') { try { o.onSaved(res); } catch (e) {} }
     if (o.closeOnSave) return;
@@ -672,5 +750,5 @@ window.PYSocial = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.0' };
+  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.1' };
 })();
