@@ -562,13 +562,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.38</span>
+    <span class="pn-ver">v6.39</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.38</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.39</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -1130,7 +1130,17 @@ var RAIL = (function(){
   /* Scott, Sep 17 2026: his morning routine runs at fixed times, so a tick files
      at those times, not at the moment he tapped. Meditation 6:10-6:20 (10 min),
      Stretching 6:20-6:35 (15 min). Eastern, on the day being viewed. */
-  var PHYSSLOT={meditation:{start:'06:10',mins:10},stretch:{start:'06:20',mins:15}};
+  /* Sep 19 2026, Scott's call. Weekdays start at 6:10, weekends at 9:00.
+     The lengths never change: meditation 10, stretching 15. */
+  var PHYSSLOT_WD={meditation:{start:'06:10',mins:10},stretch:{start:'06:20',mins:15}};
+  var PHYSSLOT_WE={meditation:{start:'09:00',mins:10},stretch:{start:'09:10',mins:15}};
+  function isWeekendDay(day){
+    var q=String(day).split('-').map(Number);
+    var w=new Date(Date.UTC(q[0],q[1]-1,q[2])).getUTCDay();
+    return w===0||w===6;
+  }
+  function physSlotFor(k,day){ return (isWeekendDay(day)?PHYSSLOT_WE:PHYSSLOT_WD)[k]; }
+  var PHYSSLOT=PHYSSLOT_WD;   /* left in place so nothing else that reads it breaks */
   /* an Eastern wall-clock time on a YYYY-MM-DD day, as a real instant (DST-safe) */
   function etInstant(day,hhmm){
     var p=day.split('-').map(Number), t=hhmm.split(':').map(Number);
@@ -1178,7 +1188,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
   async function load(){
     if(!sb) return;
     var d=viewDay(), wd=today();
-    var trackers=['Coffee','Water','Photo Booth',"Today's Plan",'Exercise','Medicine','Elevate','Imprint','Impulse','Social','Meditation','Stretching','Balance','Vices'];
+    var trackers=['Mental Fitness','Coffee','Water','Photo Booth',"Today's Plan",'Exercise','Medicine','Elevate','Imprint','Impulse','Social','Meditation','Stretching','Balance','Vices'];
     /* MINI HABITS, Sep 18 2026. The tile is whatever the worksheet says it is, so
        its rows have to come back before the to-do query knows which trackers to
        ask for. One small query, then they join the list. */
@@ -1300,7 +1310,8 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     'Medicine':     {task:'Medicine',          group:'Physical Health',   est:1,  pos:15},
     'Meditation':   {task:'Meditate',          group:'Physical Health',   est:10, pos:16},
     'Stretching':   {task:'Stretching',        group:'Physical Health',   est:15, pos:17},
-    'Balance':      {task:'Balance',           group:'Physical Health',   est:10, pos:18}
+    'Balance':      {task:'Balance',           group:'Physical Health',   est:10, pos:18},
+    'Mental Fitness':{task:'\ud83e\udde0 Mental Fitness', group:'Mental Fitness', est:15, pos:19}
   };
   async function ensureRailRow(tracker){
     var r=row(tracker); if(r) return r;
@@ -1540,7 +1551,14 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     draw();
     if(on) await sb.from('mf_sessions').upsert({day:d,app:k});
     else   await sb.from('mf_sessions').delete().eq('day',d).eq('app',k);
-    await tick(APPS.filter(function(a){return a.k===k;})[0].n, on, {mins:10});
+    /* Sep 19 2026, Scott's call. The three apps are ONE habit on the day:
+       15 minutes when all three are done, 5 for each one on a part day.
+       Before this only Imprint had a line of its own, so Elevate and Impulse
+       never reached the calendar at all and every day came up five minutes
+       short under the wrong name. */
+    var mfn=APPS.filter(function(a){return R.mf[a.k];}).length;
+    if(mfn>0) await tick('Mental Fitness', true,  {mins:Math.min(15,mfn*5)});
+    else      await tick('Mental Fitness', false);
   }
   async function togglePhys(k){
     var m=PHYS.filter(function(a){return a.k===k;})[0]; if(!m) return;
@@ -1550,7 +1568,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     var on=!R.physOn[k];
     R.physOn[k]=on;
     draw();
-    var slot=PHYSSLOT[k];
+    var slot=physSlotFor(k, viewDay());
     var ok=await tick(m.n, on, slot?{mins:slot.mins,start:slot.start}:{mins:((r&&r.est_minutes)||10)});
     if(!ok){ R.physOn[k]=!on; draw(); }
   }
