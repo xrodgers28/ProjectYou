@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local Safari · 5 mock options · Project YOU</title>
+<link rel="icon" href="project-you-logo.png">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--bg:#f4f6f9;--card:#fff;--line:#e3e7ee;--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--accent:#3f6f8f;--env:#4fa08a;--envbg:#e8f4f0;--good:#1e8e5a;--goodbg:#e9f5ef;--gold:#c6a63f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.45}
+.page{max-width:1000px;margin:0 auto;padding:14px 16px 60px;display:flex;flex-direction:column;gap:14px}
+.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.secbar h1{font-size:24px;color:var(--accent);margin:0;font-weight:800}
+.ver{font-size:11px;font-weight:800;color:var(--faint);border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+.date{font-size:11.5px;color:var(--faint);font-weight:700}
+.intro{font-size:13px;color:var(--muted);line-height:1.5}
+.intro b{color:var(--ink)}
+.toggle{margin-left:auto;display:flex;gap:4px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px}
+.toggle button{border:0;background:transparent;border-radius:999px;padding:5px 12px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit}
+.toggle button.on{background:var(--accent);color:#fff}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 0 rgba(31,42,68,.04)}
+.block{padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.kick{font-size:10.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted)}
+.kick.env{color:var(--env)}
+.opt{display:grid;grid-template-columns:1fr 300px;gap:0}
+.opt .tilewrap{padding:14px 16px;border-right:1px solid var(--line);background:#f8fafc;border-radius:12px 0 0 12px}
+.opt .side{padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.opt .side h3{margin:0;font-size:17px;font-weight:800;color:var(--accent)}
+.opt .side .why{font-size:12.5px;color:var(--muted);line-height:1.45}
+.opt .side textarea{font-family:inherit;font-size:13px;padding:9px;border:1px solid #cfd3d9;border-radius:7px;width:100%;color:var(--ink);min-height:74px;resize:vertical}
+.pick{font-family:inherit;font-size:13px;font-weight:800;padding:8px 12px;border:1px solid var(--env);border-radius:8px;background:#fff;color:var(--env);cursor:pointer}
+.pick.on{background:var(--env);color:#fff}
+.side .n{font-size:11px;font-weight:800;color:var(--faint)}
+@media (max-width:760px){.opt{grid-template-columns:1fr}.opt .tilewrap{border-right:0;border-bottom:1px solid var(--line);border-radius:12px 12px 0 0}}
+
+/* the tile itself, shared */
+.tile{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;position:relative}
+.tile .head{display:flex;align-items:baseline;gap:10px;padding:10px 14px 0;flex-wrap:wrap}
+.tile .t{font-size:18px;font-weight:800;color:var(--ink)}
+.tile .t small{font-size:12px;font-weight:400;color:var(--muted);margin-left:6px}
+.tile .body{padding:10px 14px 12px}
+.pins{display:flex;gap:6px;flex-wrap:wrap}
+.pin{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit}
+.pin.on{border-color:var(--env);color:var(--env);background:var(--envbg)}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 14px 10px;font-size:11.5px;color:var(--faint)}
+/* the very subtle Google map prompt */
+.gm{font-size:11px;color:#b9c2cc;text-decoration:none;cursor:pointer;user-select:none}
+.gm:hover{color:var(--muted)}
+.gm .ask{display:none;margin-left:6px}
+.gm.open .ask{display:inline}
+.gm .ask b{color:var(--env);cursor:pointer;margin:0 3px}
+.gm .ask i{font-style:normal;cursor:pointer;margin-left:3px}
+.gm.saved{color:var(--good)}
+.gm.saved a{color:var(--good)}
+
+/* A: Postcard */
+.post{position:relative;height:260px;background:#dfe7ee center/cover no-repeat}
+.post .shade{position:absolute;inset:0;z-index:500;pointer-events:none;background:linear-gradient(180deg,rgba(31,42,68,0) 40%,rgba(31,42,68,.78))}
+.post .cap{position:absolute;left:14px;right:14px;bottom:12px;color:#fff;z-index:501}
+.post .stamp{z-index:501}
+.post .cap .name{font-size:22px;font-weight:800;line-height:1.1}
+.post .cap .meta{font-size:12px;opacity:.85;margin-top:3px}
+.post .stamp{position:absolute;top:10px;right:10px;background:rgba(255,255,255,.92);color:var(--env);font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;padding:4px 8px;border-radius:6px;transform:rotate(-4deg)}
+
+/* B: Map */
+.map{height:250px;background:#e6ebf0}
+.leaflet-container{font-family:inherit}
+.mapcount{position:absolute;z-index:500;left:12px;top:12px;background:#fff;border-radius:9px;padding:6px 10px;box-shadow:0 1px 4px rgba(0,0,0,.15);display:flex;align-items:baseline;gap:6px}
+.mapcount b{font-size:26px;font-weight:800;color:var(--env);line-height:1}
+.mapcount span{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted)}
+
+/* C: Stamps */
+.stamps{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.stamp{border:2px dashed var(--env);border-radius:10px;padding:10px 10px 8px;background:#fff;position:relative;min-height:112px;display:flex;flex-direction:column;justify-content:space-between;transform:rotate(-1.2deg);cursor:pointer}
+.stamp:nth-child(2n){transform:rotate(1.4deg)}
+.stamp:nth-child(3n){transform:rotate(-.6deg)}
+.stamp .d{font-size:9.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--env)}
+.stamp .nm{font-size:14px;font-weight:800;line-height:1.15;margin:6px 0}
+.stamp .ct{font-size:11px;color:var(--muted)}
+.stamp .ring{position:absolute;right:8px;top:8px;width:34px;height:34px;border:2px solid var(--env);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:var(--env);opacity:.55;transform:rotate(12deg);text-align:center;line-height:1}
+.stamp.open{background:var(--envbg)}
+.stamp .more{display:none;font-size:11px;color:var(--muted);margin-top:4px}
+.stamp.open .more{display:block}
+.stamp .more img{height:90px;object-fit:cover}
+
+/* D: Ledger */
+.ledger{display:grid;grid-template-columns:110px 1fr;gap:14px;align-items:start}
+.ledger .big{font-size:64px;font-weight:800;line-height:.9;letter-spacing:-3px;color:var(--env)}
+.ledger .big small{display:block;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);letter-spacing:1.5px;margin-top:6px}
+.ledger .rows{display:flex;flex-direction:column}
+.lrow{display:grid;grid-template-columns:54px 1fr auto;gap:10px;align-items:center;padding:7px 0;border-top:1px solid #edf0f4}
+.lrow:first-child{border-top:0}
+.lrow .day{font-size:11px;font-weight:800;color:var(--faint);text-transform:uppercase;letter-spacing:.5px}
+.lrow .nm{font-size:14px;font-weight:700}
+.lrow .nm span{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px}
+.lrow .mini{width:54px;height:38px;border-radius:6px;background:#e6ebf0;overflow:hidden}
+.trend{display:flex;gap:4px;align-items:flex-end;height:36px;margin-top:8px}
+.trend i{display:block;width:100%;background:var(--envbg);border-top:3px solid var(--env);border-radius:2px 2px 0 0;position:relative}
+.trend i.now{background:var(--env)}
+.trendlab{display:flex;justify-content:space-between;font-size:10px;color:var(--faint);font-weight:700}
+
+/* E: Compass ring */
+.ring{display:grid;grid-template-columns:200px 1fr;gap:14px;align-items:center}
+.ringsvg{width:200px;height:200px}
+.ring .list{display:flex;flex-direction:column;gap:6px}
+.ring .li{display:flex;align-items:center;gap:8px;font-size:13px}
+.ring .li i{width:10px;height:10px;border-radius:50%;background:var(--env);flex:none}
+.ring .li b{font-weight:700}
+.ring .li span{color:var(--muted);font-size:11.5px;margin-left:auto;white-space:nowrap}
+@media (max-width:560px){.ring{grid-template-columns:1fr}.ringsvg{margin:0 auto}}
+
+/* empty week, shared */
+.empty{padding:22px 14px;text-align:center}
+.empty .n{font-size:44px;font-weight:800;color:var(--env);line-height:1}
+.empty .l{font-size:12px;color:var(--muted);margin-top:4px}
+.empty .last{font-size:13px;margin-top:10px}
+.empty .nudge{font-size:12px;color:var(--faint);margin-top:6px;font-style:italic}
+
+/* answers */
+.q{border-top:1px solid #edf0f4;padding:10px 0}
+.prompt{font-size:15px;font-weight:700;margin:0 0 6px}
+.hint{font-size:12.5px;color:var(--muted);margin:0 0 8px}
+.btns{display:flex;flex-wrap:wrap;gap:6px}
+.pbtn{font-family:inherit;font-size:13px;padding:7px 12px;border:1px solid #cfd3d9;border-radius:7px;background:#fff;color:var(--ink);cursor:pointer;min-height:34px;text-align:left}
+.pbtn.picked{outline:3px solid #6f8fbe}
+textarea.out{font-family:inherit;font-size:12px;line-height:1.4;padding:9px;border:1px solid #cfd3d9;border-radius:7px;width:100%;min-height:150px;color:var(--ink)}
+.cta{background:var(--gold);color:var(--ink);font-weight:800;font-size:13px;padding:9px 16px;border-radius:9px;border:0;cursor:pointer;font-family:inherit}
+.tech{font-size:11px;color:var(--faint);line-height:1.4}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="secbar">
+    <h1>Local Safari</h1><span class="ver">mock v0.1</span><span class="date">Sep 19, 2026 · Environmental Health · Week in Review</span>
+    <div class="toggle"><button class="on" onclick="setMode('week',this)">This week (real)</button><button onclick="setMode('empty',this)">An empty week</button></div>
+  </div>
+  <div class="card"><div class="block">
+    <div class="kick env">What this is</div>
+    <div class="intro"><b>One new tile for the Week in Review.</b> It shows only places you had never checked into before, pulled from your Swarm check-ins. Regular spots never appear. Offices and stores are hidden as errands. Every mock below uses the real week of Sep 14, 2026: <b>Tartinery Café</b> (Tue), <b>Black Press Coffee</b> (Thu) and <b>Taco Tequila Taqueria</b> in Norwalk (Sat). EuroOptica was hidden as an errand. Tap the pill or pin in any mock to switch which place is the hero. The <b>very quiet</b> "NYC map" prompt sits at the bottom right of each tile, only on New York places. Type a comment under any mock, tap <b>Pick this one</b> on your favourite, answer the two questions at the foot, then <b>Copy my answers</b> and paste them into the chat.</div>
+  </div></div>
+
+  <!-- A -->
+  <div class="card opt" id="optA">
+    <div class="tilewrap"><div class="tile" id="tileA"></div></div>
+    <div class="side"><div class="n">OPTION A</div><h3>Postcard</h3>
+      <div class="why">Your own photo, full bleed, one place at a time. Feels like a postcard you sent yourself. When a place has no photo it falls back to a small map. Best if the point is the memory, not the geography.</div>
+      <textarea placeholder="Your comment on A" data-c="A"></textarea><button class="pick" data-p="A" onclick="pick('A',this)">Pick this one</button></div>
+  </div>
+  <!-- B -->
+  <div class="card opt" id="optB">
+    <div class="tilewrap"><div class="tile" id="tileB"></div></div>
+    <div class="side"><div class="n">OPTION B</div><h3>Map of the week</h3>
+      <div class="why">A real map (free OpenStreetMap, no key, no cost) with a green pin on each new place. Tap a pin for the name, day and your photo if you took one. Best if the point is seeing how far you roamed.</div>
+      <textarea placeholder="Your comment on B" data-c="B"></textarea><button class="pick" data-p="B" onclick="pick('B',this)">Pick this one</button></div>
+  </div>
+  <!-- C -->
+  <div class="card opt" id="optC">
+    <div class="tilewrap"><div class="tile" id="tileC"></div></div>
+    <div class="side"><div class="n">OPTION C</div><h3>Passport stamps</h3>
+      <div class="why">Each new place is a stamp in a passport. Tap a stamp to open it. Gamified and collectable, and it grows into a book over the year. Best if the point is the habit and the count.</div>
+      <textarea placeholder="Your comment on C" data-c="C"></textarea><button class="pick" data-p="C" onclick="pick('C',this)">Pick this one</button></div>
+  </div>
+  <!-- D -->
+  <div class="card opt" id="optD">
+    <div class="tilewrap"><div class="tile" id="tileD"></div></div>
+    <div class="side"><div class="n">OPTION D</div><h3>The ledger</h3>
+      <div class="why">One big number, the list underneath, and an eight week strip showing how each past week compared. Reads like the rest of the Week in Review. Best if you want it to sit quietly in the page and match the other numbers.</div>
+      <textarea placeholder="Your comment on D" data-c="D"></textarea><button class="pick" data-p="D" onclick="pick('D',this)">Pick this one</button></div>
+  </div>
+  <!-- E -->
+  <div class="card opt" id="optE">
+    <div class="tilewrap"><div class="tile" id="tileE"></div></div>
+    <div class="side"><div class="n">OPTION E</div><h3>Range rings</h3>
+      <div class="why">Home in the middle, rings at 5, 20 and 50 miles, each new place plotted by how far from Old Greenwich it is. Shows reach, not streets. Best if "go further" is the habit you want to reinforce.</div>
+      <textarea placeholder="Your comment on E" data-c="E"></textarea><button class="pick" data-p="E" onclick="pick('E',this)">Pick this one</button></div>
+  </div>
+
+  <div class="card"><div class="block">
+    <div class="kick">Two things only you can decide</div>
+    <div class="q"><p class="prompt">What counts as a regular spot, so it never shows?</p><p class="hint">You did not tick "first ever check-in" earlier, so pick the line you want.</p>
+      <div class="btns" data-q="regular"><button class="pbtn" onclick="ans(this)">Any place I have checked into before</button><button class="pbtn" onclick="ans(this)">Fewer than 3 visits ever still counts as new</button><button class="pbtn" onclick="ans(this)">First check-in this year counts as new</button></div></div>
+    <div class="q"><p class="prompt">Where should your weekly comments go?</p>
+      <div class="btns" data-q="comments"><button class="pbtn" onclick="ans(this)">Shown on next week's tile as "Last week you said"</button><button class="pbtn" onclick="ans(this)">Into the All ToDos hub as a fix for Claude</button><button class="pbtn" onclick="ans(this)">Both</button></div></div>
+    <div class="q"><p class="prompt">Anything else</p><textarea id="extra" style="min-height:60px;width:100%;font-family:inherit;font-size:13px;padding:9px;border:1px solid #cfd3d9;border-radius:7px" placeholder="Optional"></textarea></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px"><button class="cta" onclick="buildOut()">Copy my answers</button><span id="copied" class="hint" style="margin:0"></span></div>
+    <textarea class="out" id="out" readonly placeholder="Your answers appear here. Copy this block and paste it into the chat."></textarea>
+    <div class="tech">Technical line you can ignore: data is the checkins table, new place = no earlier check-in at that venue across all 8,888 rows; offices and stores filtered by category; maps are Leaflet + OpenStreetMap tiles; photos are your Swarm photos.</div>
+  </div></div>
+</div>
+
+<script>
+const HOME=[41.0226,-73.5665];
+const WEEK={label:'Week of Sep 14, 2026',places:[
+ {n:'Tartinery Café',full:'Tartinery Café - Bar | Park Ave',day:'Tue Sep 16',d:'Tue',cat:'Café',city:'New York',nyc:true,lat:40.7508071762732,lng:-73.9789922423603,photo:null},
+ {n:'Black Press Coffee',full:'Black Press Coffee',day:'Thu Sep 17',d:'Thu',cat:'Coffee shop',city:'Upper West Side',nyc:true,lat:40.778021,lng:-73.978676,photo:'https://fastly.4sqi.net/img/general/original/11575_o2wmeI8N7dRyE1DpgMbtEA8o9fE_7EAUJ5-wbDYmlKE.jpg'},
+ {n:'Taco Tequila Taqueria',full:'Taco Tequila Taqueria',day:'Sat Sep 19',d:'Sat',cat:'Taco restaurant',city:'Norwalk, CT',nyc:false,lat:41.126222,lng:-73.419994,photo:'https://fastly.4sqi.net/img/general/original/11575_hYJIS9guc1jj6ClX4DdJZgBOj6HiV1iAhjAzsSmWQCE.jpg'}
+],hidden:1,history:[{w:'Jul 27',n:12},{w:'Aug 3',n:6},{w:'Aug 10',n:0},{w:'Aug 17',n:10},{w:'Aug 24',n:6},{w:'Aug 31',n:2},{w:'Sep 7',n:10},{w:'Sep 14',n:3}]};
+const EMPTY={label:'Week of Aug 10, 2026',places:[],hidden:0,lastName:'Vivibowl',lastDay:'Aug 8, 2026',since:8,history:[{w:'Jun 15',n:1},{w:'Jun 22',n:4},{w:'Jun 29',n:0},{w:'Jul 6',n:3},{w:'Jul 13',n:2},{w:'Jul 20',n:5},{w:'Jul 27',n:12},{w:'Aug 3',n:6}]};
+let MODE='week', HERO=1, saved={}, picks={}, answers={};
+const maps={};
+
+function miles(a,b){const R=3958.8,r=x=>x*Math.PI/180;const dLat=r(b[0]-a[0]),dLng=r(b[1]-a[1]);const h=Math.sin(dLat/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
+function gmap(p,key){ if(!p.nyc) return '<span></span>';
+  const id=key+'-'+p.n.replace(/\W/g,'');
+  if(saved[p.n]) return `<span class="gm saved">saved to the list · <a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}">open in Google Maps to pin it</a></span>`;
+  return `<span class="gm" id="${id}" onclick="if(!event.target.closest('.ask'))this.classList.toggle('open')">+ NYC map<span class="ask">add to your Master NYC map? <b onclick="saveGm('${p.n.replace(/'/g,"\\'")}')">yes</b> · <i onclick="this.closest('.gm').classList.remove('open')">not this one</i></span></span>`;}
+function saveGm(n){saved[n]=true;render();}
+function head(t,sub){return `<div class="head"><span class="kick env">Local Safari</span><span class="t">${t}<small>${sub||''}</small></span></div>`;}
+function emptyBlock(){const e=EMPTY;return head(e.label,'no new places')+`<div class="empty"><div class="n">${e.since}</div><div class="l">days since your last new place</div><div class="last"><b>${e.lastName}</b> · ${e.lastDay}</div><div class="nudge">The week before, you found 6.</div></div>`;}
+function pills(key){return `<div class="pins">${WEEK.places.map((p,i)=>`<button class="pin ${i===HERO?'on':''}" onclick="HERO=${i};render()">${p.d} · ${p.n}</button>`).join('')}</div>`;}
+function foot(p,key){return `<div class="foot"><span>${WEEK.hidden} errand hidden</span>${gmap(p,key)}</div>`;}
+
+function render(){
+  const E=MODE==='empty';
+  const p=WEEK.places[HERO];
+  // A postcard
+  let a=document.getElementById('tileA');
+  if(E){a.innerHTML=emptyBlock();}
+  else{const bg=p.photo?`style="background-image:url('${p.photo}')"`:'';
+    a.innerHTML=head(WEEK.label,`${WEEK.places.length} new places`)+`<div class="body" style="padding-bottom:8px">${pills('A')}</div><div class="post" ${bg} id="postA"><div class="shade"></div><div class="stamp">New · ${p.day}</div><div class="cap"><div class="name">${p.n}</div><div class="meta">${p.cat} · ${p.city} · your first time</div></div></div>`+foot(p,'A');
+    if(!p.photo){const el=document.getElementById('postA');const m=document.createElement('div');m.style.cssText='position:absolute;inset:0';el.insertBefore(m,el.firstChild);const mp=L.map(m,{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false}).setView([p.lat,p.lng],15);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mp);L.circleMarker([p.lat,p.lng],{radius:9,color:'#4fa08a',fillColor:'#4fa08a',fillOpacity:.9}).addTo(mp);}
+  }
+  // B map
+  let b=document.getElementById('tileB');
+  if(maps.B){maps.B.remove();delete maps.B;}
+  if(E){b.innerHTML=emptyBlock();}
+  else{b.innerHTML=head(WEEK.label,'where you went that was new')+`<div style="position:relative"><div class="mapcount"><b>${WEEK.places.length}</b><span>new places</span></div><div class="map" id="mapB"></div></div><div class="body">${pills('B')}</div>`+foot(p,'B');
+    const mp=L.map('mapB',{scrollWheelZoom:false,attributionControl:false});maps.B=mp;L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mp);
+    const grp=[];WEEK.places.forEach((q,i)=>{const mk=L.circleMarker([q.lat,q.lng],{radius:i===HERO?11:8,color:'#fff',weight:2,fillColor:'#4fa08a',fillOpacity:.95}).addTo(mp);mk.bindPopup(`<b>${q.n}</b><br>${q.day} · ${q.cat}${q.photo?`<br><img src="${q.photo}" style="width:160px;border-radius:6px;margin-top:6px">`:''}`);mk.on('click',()=>{HERO=i;});grp.push([q.lat,q.lng]);});
+    L.circleMarker(HOME,{radius:5,color:'#9aa6b4',fillColor:'#9aa6b4',fillOpacity:.8}).addTo(mp).bindTooltip('home');
+    mp.fitBounds(grp.concat([HOME]),{padding:[30,30]});
+  }
+  // C stamps
+  let c=document.getElementById('tileC');
+  if(E){c.innerHTML=emptyBlock();}
+  else{c.innerHTML=head(WEEK.label,`${WEEK.places.length} stamps`)+`<div class="body"><div class="stamps">${WEEK.places.map((q,i)=>`<div class="stamp ${i===HERO?'open':''}" onclick="HERO=${i};render()"><div class="ring">FIRST<br>TIME</div><div class="d">${q.day}</div><div class="nm">${q.n}</div><div class="ct">${q.cat} · ${q.city}</div><div class="more">${q.photo?`<img src="${q.photo}" style="width:100%;border-radius:6px;margin-top:6px">`:`Distance from home: ${Math.round(miles(HOME,[q.lat,q.lng]))} miles`}</div></div>`).join('')}</div></div>`+foot(p,'C');}
+  // D ledger
+  let d=document.getElementById('tileD');
+  const H=E?EMPTY.history:WEEK.history;const mx=Math.max(...H.map(h=>h.n),1);
+  const strip=`<div class="trend">${H.map((h,i)=>`<i class="${i===H.length-1?'now':''}" style="height:${Math.max(4,Math.round(h.n/mx*36))}px" title="${h.w}: ${h.n}"></i>`).join('')}</div><div class="trendlab"><span>${H[0].w}</span><span>last 8 weeks</span><span>${H[H.length-1].w}</span></div>`;
+  if(E){d.innerHTML=head(EMPTY.label,'')+`<div class="body"><div class="ledger"><div class="big">0<small>new places</small></div><div><div style="font-size:13px">${EMPTY.since} days since <b>${EMPTY.lastName}</b>, ${EMPTY.lastDay}.</div>${strip}</div></div></div>`;}
+  else{d.innerHTML=head(WEEK.label,'')+`<div class="body"><div class="ledger"><div class="big">${WEEK.places.length}<small>new places</small></div><div><div class="rows">${WEEK.places.map((q,i)=>`<div class="lrow"><div class="day">${q.d}</div><div class="nm">${q.n}<span>${q.cat} · ${q.city}</span></div><div class="mini" id="miniD${i}"></div></div>`).join('')}</div>${strip}</div></div></div>`+foot(p,'D');
+    WEEK.places.forEach((q,i)=>{const mp=L.map('miniD'+i,{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false}).setView([q.lat,q.lng],14);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mp);L.circleMarker([q.lat,q.lng],{radius:4,color:'#4fa08a',fillColor:'#4fa08a',fillOpacity:1}).addTo(mp);});
+  }
+  // E rings
+  let e=document.getElementById('tileE');
+  if(E){e.innerHTML=emptyBlock();}
+  else{const R=[5,20,50];const cx=100,cy=100,rmax=92;const sc=m=>Math.min(rmax,Math.sqrt(m/50)*rmax);
+    const dots=WEEK.places.map((q,i)=>{const m=miles(HOME,[q.lat,q.lng]);const ang=Math.atan2(q.lng-HOME[1],-(q.lat-HOME[0]))-Math.PI/2;const r=sc(m);const x=cx+Math.cos(ang)*r,y=cy+Math.sin(ang)*r;return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i===HERO?8:6}" fill="#4fa08a" stroke="#fff" stroke-width="2" style="cursor:pointer" onclick="HERO=${i};render()"><title>${q.n} · ${Math.round(m)} mi</title></circle>`;}).join('');
+    const rings=R.map(m=>`<circle cx="${cx}" cy="${cy}" r="${sc(m)}" fill="none" stroke="#dfe7ee" stroke-width="1"/><text x="${cx+3}" y="${cy-sc(m)+10}" font-size="8" fill="#9aa6b4" font-weight="700">${m} mi</text>`).join('');
+    e.innerHTML=head(WEEK.label,'how far you reached')+`<div class="body"><div class="ring"><svg class="ringsvg" viewBox="0 0 200 200">${rings}<circle cx="${cx}" cy="${cy}" r="3.5" fill="#1f2a44"/><text x="${cx}" y="${cy+14}" font-size="8" text-anchor="middle" fill="#5b6472" font-weight="700">HOME</text>${dots}</svg><div class="list">${WEEK.places.map((q,i)=>`<div class="li" style="cursor:pointer;${i===HERO?'font-weight:800':''}" onclick="HERO=${i};render()"><i></i><b>${q.n}</b><span>${Math.round(miles(HOME,[q.lat,q.lng]))} mi · ${q.d}</span></div>`).join('')}<div class="li" style="color:var(--faint);font-size:11.5px">Furthest this week: ${(()=>{let b=WEEK.places.reduce((a,q)=>{const m=miles(HOME,[q.lat,q.lng]);return m>a.m?{m,n:q.n}:a},{m:0,n:''});return `${b.n}, ${Math.round(b.m)} miles`;})()}</div></div></div></div>`+foot(p,'E');}
+}
+function setMode(m,btn){MODE=m;document.querySelectorAll('.toggle button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');render();}
+function pick(k,btn){picks={};picks[k]=true;document.querySelectorAll('.pick').forEach(b=>b.classList.toggle('on',b.dataset.p===k));}
+function ans(btn){const g=btn.parentElement;g.querySelectorAll('.pbtn').forEach(b=>b.classList.remove('picked'));btn.classList.add('picked');answers[g.dataset.q]=btn.textContent;}
+function buildOut(){const L=['Local Safari mock answers, '+new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})+' EST'];
+  const pk=Object.keys(picks)[0];L.push('Picked: '+(pk?'Option '+pk:'none yet'));
+  document.querySelectorAll('textarea[data-c]').forEach(t=>{if(t.value.trim())L.push('Comment on '+t.dataset.c+': '+t.value.trim());});
+  L.push('Regular spot rule: '+(answers.regular||'not answered'));L.push('Comments go: '+(answers.comments||'not answered'));
+  const x=document.getElementById('extra').value.trim();if(x)L.push('Also: '+x);
+  const s=L.join('\n');const o=document.getElementById('out');o.value=s;o.select();
+  navigator.clipboard&&navigator.clipboard.writeText(s).then(()=>{document.getElementById('copied').textContent='Copied. Paste it into the chat.';}).catch(()=>{document.getElementById('copied').textContent='Select the box and copy.';});}
+render();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
