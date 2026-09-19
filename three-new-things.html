@@ -265,6 +265,17 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 }
 .skiplink:hover{color:var(--ink-2);text-decoration-color:var(--ink-3)}
 .skiplink:focus-visible{outline:2px solid var(--peri);outline-offset:3px;border-radius:6px}
+/* v2.14 (Sep 18 2026): the way back. One step at a time, quieter than the skip
+   links and sitting under them, so it never competes with tonight's question.
+   Nothing to save: every screen already redraws itself from what was answered. */
+.backlink{
+  font-family:inherit;font-size:13.5px;font-weight:500;cursor:pointer;
+  background:none;border:0;color:var(--ink-3);padding:7px 0 2px;width:100%;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;opacity:.78;
+}
+.backlink .arw{font-size:16px;line-height:1;transform:translateY(-1px)}
+.backlink:hover{color:var(--ink-2);opacity:1}
+.backlink:focus-visible{outline:2px solid var(--peri);outline-offset:3px;border-radius:6px}
 .gateline{font-size:13.5px;color:var(--ink-3);margin:0;text-align:center;min-height:18px}
 .gateline.hot{color:var(--q-yellow)}
 
@@ -548,7 +559,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.13</span>
+    <span id="ver" class="ver">v2.14</span>
   </div>
 </div>
 
@@ -832,6 +843,12 @@ async function saveThing(item,slot){
   if(!cloud) return;
   /* v2.12 (Sep 17 2026): upsert, so pressing Keep twice cannot save the same thing twice. */
   try{ await sb.from('tnt_things').upsert({for_date:DAY(), category:item.k, body:item.t, slot:slot},{onConflict:'for_date,body'}); }catch(e){}
+}
+
+/* v2.14: clears a moment that has been reworded, so the night keeps one per box. */
+async function dropThing(body){
+  if(!cloud) return;
+  try{ await sb.from('tnt_things').delete().eq('for_date',DAY()).eq('body',body); }catch(e){}
 }
 
 function answerPayload(){
@@ -1210,7 +1227,7 @@ function newNight(){
     words:[], shown:[], deal:null, narrow:false,
     qs:[], a:{}, a8:{}, ownQ:'', ownV:null,
     withw:[], wherew:null, energy:[], energyNote:'', mins:'',
-    items:[], cat:null, text:'', extra:null, etext:'', skipped:[],
+    items:[], cat:null, text:'', extra:null, etext:'', skipped:[], kept:[],
     three:['','',''], nudge:[], dupes:[],
     cre:3, crePlaced:false, stars:[], creNote:'', tired:undefined,
     relationship:[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
@@ -1258,6 +1275,73 @@ function threeGate(){
 
 /* the sections he left out tonight - a skipped dial is saved as nothing, not as a 50 */
 function mark(k){ if(N.skipped.indexOf(k)<0) N.skipped.push(k); }
+
+/* ==========================================================
+   v2.14 (Sep 18 2026): the way back through tonight.
+
+   Every screen already paints itself from N, so stepping back shows
+   whatever was already caught, tapped, slid or typed. Three things
+   needed care and are handled here:
+
+   1. Back steps past 'savor'. That screen is a breath, not a question,
+      so from the relationship check-in one tap lands in the three boxes.
+   2. A step answered after having been skipped stops counting as skipped
+      (settleSkip, run on every forward move).
+   3. A reworded moment REPLACES the one it came from, in tonight's list
+      and in the saved things, instead of being kept twice (commitThings).
+
+   The done screen has no way back: by then the night is signed off, the
+   streak has moved and the habit is ticked on the board.
+   ========================================================== */
+var BACKTO={words:'insight', tags:'words', energy:'tags', three:'energy',
+            savor:'three', relationship:'three', extra:'relationship', eight:'extra'};
+var BACKLAB={insight:'tonight\u2019s insight', words:'the words',
+             tags:'how much of you was here', energy:'what gave you energy',
+             three:'your three moments', relationship:'the relationship check-in'};
+
+function unmark(k){ var at=N.skipped.indexOf(k); if(at>-1) N.skipped.splice(at,1); }
+
+/* Leaving a step having answered it clears any earlier skip on it. Skipping it
+   again re-marks it, because every skip handler marks after this has run. */
+function settleSkip(){
+  if(!N) return;
+  if(view==='insight') unmark('insight');
+  if(view==='words' && N.words.length) unmark('words');
+  if(view==='tags' && (N.presel.length||N.withw.length||N.wherew!==null)) unmark('tags');
+  if(view==='energy' && (N.energy.length||N.energyNote.trim())) unmark('energy');
+  if(view==='three' && threeFilled().length) unmark('things');
+  if(view==='relationship' && N.relationship.some(function(r){return r>0;})) unmark('relationship');
+}
+
+function goBack(){
+  var to=BACKTO[view]; if(!to) return;
+  /* the repeat check is re-run against the new wording, not the old verdict */
+  if(to==='three') N.dupes=[];
+  if(to==='extra') pickExtra();
+  view=to; render();
+}
+
+/* One moment per box. Reword a moment after stepping back and the new wording
+   takes the old one's place, here and in the saved list, rather than both being
+   kept. N.kept holds what has actually been written down, box by box. */
+function commitThings(){
+  if(!N.kept) N.kept=[];
+  for(var s=0;s<3;s++){
+    var was=N.kept[s], now=(N.items[s]?N.items[s].t:null);
+    if(was && was!==now){
+      for(var j=S.hist.length-1;j>=0;j--){ if(S.hist[j].t===was){ S.hist.splice(j,1); break; } }
+      dropThing(was);
+      N.kept[s]=null;
+    }
+  }
+  N.items.forEach(function(it,i){
+    if(N.kept[i]===it.t) return;
+    S.hist.push({k:it.k,t:it.t,d:Date.now()});
+    saveThing(it,i+1);
+    N.kept[i]=it.t;
+  });
+  save();
+}
 function presVal(){
   if(!N.presel||!N.presel.length) return null;
   var sum=0; N.presel.forEach(function(i){ sum+=BANDS[i].mid; });
@@ -1276,6 +1360,10 @@ function seenBefore(t){
   var n=t.toLowerCase().replace(/[^a-z0-9 ]/g,'').split(/\s+/).filter(function(w){return w.length>3;});
   if(n.length<2) return null;
   for(var i=S.hist.length-1;i>=0;i--){
+    /* v2.14 (Sep 18 2026): a moment already written down for tonight is never a
+       repeat of itself. Without this, stepping back and rewording one made the
+       page warn him he was repeating his own words from thirty seconds ago. */
+    if(N&&N.kept&&N.kept.indexOf(S.hist[i].t)>-1) continue;
     var o=S.hist[i].t.toLowerCase().replace(/[^a-z0-9 ]/g,''); var hit=0;
     for(var j=0;j<n.length;j++){ if(o.indexOf(n[j])>-1) hit++; }
     if(hit>=Math.max(2,Math.ceil(n.length*0.6))) return S.hist[i];
@@ -1307,6 +1395,24 @@ function paintHistoryLink(){
   a.style.cssText='display:block;text-align:center;margin:22px auto 0;opacity:.75';
   a.textContent='See every night so far';
   var st=document.getElementById('stage'); if(st) st.appendChild(a);
+}
+
+/* v2.14: the back link, last thing in the footer. Painted before bind(), so the
+   shared data-go wiring picks it up like every other button on the page. */
+function backLabel(to){
+  /* the written question changes nightly, so it names itself */
+  if(to==='extra'&&N&&N.extra&&N.extra.kick) return N.extra.kick.charAt(0).toLowerCase()+N.extra.kick.slice(1);
+  return BACKLAB[to]||'the step before';
+}
+function paintBackLink(){
+  var to=BACKTO[view]; if(!to) return;
+  var foot=stage.querySelector('.foot'); if(!foot) return;
+  var lab=backLabel(to);
+  var b=document.createElement('button');
+  b.className='backlink'; b.type='button'; b.setAttribute('data-go','back');
+  b.setAttribute('aria-label','Go back to '+lab);
+  b.innerHTML='<span class="arw" aria-hidden="true">\u2190</span>Back to '+lab;
+  foot.appendChild(b);
 }
 
 function paintProg(){
@@ -1704,6 +1810,7 @@ function render(){
   stopWords();
   stage.innerHTML=h;
   paintProg();
+  paintBackLink();
   paintHistoryLink();
   bind();
   if(view==='eight'){ wireEight(); paintScratch(); }
@@ -2104,6 +2211,9 @@ function stash(){
 }
 
 function act(a){
+  /* v2.14: back never counts as answering, so it runs before settleSkip */
+  if(a==='back'){ goBack(); return; }
+  settleSkip();
   if(a==='begin'){ N=newNight(); view='insight'; render(); return; }
   if(a==='skipinsight'){ mark('insight'); view='words'; render(); return; }
 
@@ -2148,11 +2258,8 @@ function act(a){
   }
 
   if(a==='keep'){
-    N.items.forEach(function(it,i){
-      S.hist.push({k:it.k,t:it.t,d:Date.now()});
-      saveThing(it,i+1);
-    });
-    save(); burst(14+N.items.length*8);
+    /* v2.14: one moment per box, so a reworded one replaces rather than doubles */
+    commitThings(); burst(14+N.items.length*8);
     view='relationship'; render(); return;
   }
 
