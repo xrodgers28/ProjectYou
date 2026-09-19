@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Social · ProjectYou</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="social-log.js"></script>
 <style>
   :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;--blue:#5b8fce}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -30,6 +31,7 @@
   .chip.on.c-outer{background:#5b95bd}
   .chip.on.lb{background:#6f5aa8}
   .chip.on.ag{background:#2f8f8a}
+  .chip.on.sc{background:#b8801f}
   .chip .n{font-weight:800;opacity:.62;margin-left:4px;font-size:10px}
   .chip:focus-within{outline:2px solid #9fc0da;outline-offset:1px}
   /* The GROUP chips: which part of Scott's life the person sits in. These are the
@@ -466,30 +468,28 @@
     <!-- ============ LOG VIEW ============ -->
     <div id="viewLog" class="hidden">
       <div class="intro">Your connection log: every coffee, lunch, dinner and get-together, growing over time. The occasions run in the order a day does; who someone <b>is</b> — family, industry — is a label rather than an occasion. Both match the <b><a href="import.html" style="color:var(--accent)">Import</a></b> page. Say <b>"add lunch with [name] to my Connections board"</b> in any Claude chat.</div>
-      <div class="addbar">
-        <input id="person" placeholder="Who (e.g. Priya)">
-        <select id="k"></select>
-        <select id="kch"><option value="in person">In person</option><option value="phone">Phone</option><option value="text">Text</option></select>
-        <input id="pl" placeholder="Where (optional)">
-        <input id="dt" type="date">
-        <button onclick="addConn()">Log it</button>
-        <div class="tagrow" id="grouprow" data-kind="group"></div>
-        <div class="tagrow" id="circlerow" data-kind="circle"></div>
-        <div class="tagrow" id="labelrow" data-kind="label"></div>
-        <div class="tagrow" id="agerow" data-kind="age"></div>
-      </div>
+      <!-- v3.2 (Sep 19 2026): the page's own one-line log bar is gone. Every way in
+     is now the ONE shared form, Log Social Moment (social-log.js), so this page
+     offers the same words, colours and rows as the other six pages that open it.
+     The old bar's fields are kept hidden so nothing that reads them breaks. -->
+<div class="addbar" style="justify-content:flex-start;align-items:center;gap:10px">
+<button class="ebtn pri" type="button" onclick="openSocialMoment()">+ Log Social Moment</button>
+<span style="font-size:12px;color:#7d8b9a">The same form as everywhere else: who, is, group, what, when, where, note.</span>
+<div style="display:none"><input id="person"><select id="k"></select><select id="kch"><option value="in person">In person</option></select><input id="pl"><input id="dt" type="date">
+<div class="tagrow" id="grouprow" data-kind="group"></div><div class="tagrow" id="circlerow" data-kind="circle"></div><div class="tagrow" id="labelrow" data-kind="label"></div><div class="tagrow" id="agerow" data-kind="age"></div></div>
+</div>
       <div class="wheelcard" id="wheelcard"></div>
       <div class="stat" id="stat"></div>
       <div id="log"></div>
     </div>
 
   </div>
-  <div class="badge">Social v3.1</div>
+  <div class="badge">Social v3.2</div>
 <!-- The page DECLARES its version here. It used to live in the .ver chip beside
      the h1 in the blue section bar, and removing that bar on Aug 30 2026 left
      this page declaring nothing at all: the nav chip and the badge above are
      both mirrors that navpatch overwrites, so neither can be the source. -->
-<script>window.PY_VERSION='v3.1';</script>
+<script>window.PY_VERSION='v3.2';</script>
 </div>
 <div class="pop" id="pop"></div>
 <div class="ovl" id="ovl">
@@ -507,7 +507,9 @@
       <div class="fld"><label class="cap" for="e_from">Date</label><input id="e_from" type="date"></div>
       <div class="fld"><label class="cap" for="e_to">Ends (optional)</label><input id="e_to" type="date"></div>
     </div>
-    <div class="erow"><div class="fld wide"><label class="cap" for="e_notes">Notes</label><textarea id="e_notes" placeholder="Anything worth remembering"></textarea></div></div>
+    <div class="erow"><div class="fld wide"><label class="cap" for="e_notes">Notes</label><textarea id="e_notes" placeholder="Anything worth remembering"></textarea>
+    <label style="display:flex;gap:6px;align-items:center;font-size:12px;color:#4a5a6b;margin-top:4px;cursor:pointer"><input type="checkbox" id="e_keep"> Keep this note on their card</label></div></div>
+    <div class="tagrow" id="e_source" data-kind="source"></div>
     <div class="tagrow" id="e_group" data-kind="group"></div>
     <div class="tagrow" id="e_circle" data-kind="circle"></div>
     <div class="tagrow" id="e_label" data-kind="label"></div>
@@ -613,7 +615,8 @@ async function loadVocab(){
     var v=await sb.from('v_people_vocab').select('*').eq('active',true).order('sort_order');
     var rows=(v&&v.data)||[];
     var by=function(d){return rows.filter(function(r){return r.dimension===d;});};
-    var occ=by('occasion'), cir=by('circle'), lab=by('label'), age=by('age'), grp=by('social_group');
+    var occ=by('occasion'), cir=by('circle'), lab=by('label'), age=by('age'), grp=by('social_group'), src=by('source');
+    if(src.length) SOURCES=src.map(function(r){return [r.value,r.label,(r.meta||{}).hint||''];});
     if(occ.length) OCCASIONS=occ.map(function(r){return [r.value,r.label];});
     if(cir.length){
       CIRCLES=cir.map(function(r){
@@ -693,6 +696,7 @@ let IMPLIES={'colleague':'industry','ex-colleague':'industry'};
 let EXCLUDES={'colleague':'ex-colleague','ex-colleague':'colleague'};
 /* Roughly which decade someone is in. One per person, so radio chips like Circle
    rather than toggles like Labels. Short enough that all ten sit on one row. */
+let SOURCES=[['outreach','Outreach','You reached out'],['inbound','Inbound','It came to you']];
 let AGES=[['kids','Kids'],['teens','Teens'],['20s','20s'],['30s','30s'],['40s','40s'],
             ['50s','50s'],['60s','60s'],['70s','70s'],['80s','80s'],['90s','90s'],
             ['mixed','Mixed']];   /* several people, a spread of ages */
@@ -1009,6 +1013,8 @@ function openEditor(id){
   setChip('e_circle', r.circle||'');
   setChip('e_label', (r.labels||[]).join(','));
   setChip('e_age', r.age_band||'');
+  setChip('e_source', r.direction||'');
+  document.getElementById('e_keep').checked=false;
   document.getElementById('edtSub').textContent=dayLabel(r.happened_on)+' '+(r.happened_on||'').slice(0,4)+
     (r.ends_on&&r.ends_on!==r.happened_on?'  \u2192  '+dayLabel(r.ends_on):'');
   var prov=[]; if(r.source) prov.push('Source: '+r.source);
@@ -1057,11 +1063,16 @@ async function saveEditor(goNext){
     social_group:chipVal('e_group')||null,
     circle:chipVal('e_circle')||null,
     labels:chipVal('e_label').split(',').filter(Boolean),
-    age_band:chipVal('e_age')||null
+    age_band:chipVal('e_age')||null,
+    direction:chipVal('e_source')||null
   };
   var id=EDITING.id;
   var res=await sb.from('connections').update(patch).eq('id',id);
   if(res.error){ toast('Could not save: '+res.error.message); return; }
+  /* v3.2: the same lasting note the pop-up can write, so opening the editor loses nothing */
+  if(document.getElementById('e_keep').checked && patch.notes){
+    try{ await sb.from('person_notes').insert({person_key:(EDITING.person_key||person), note:patch.notes, noted_on:ymd(new Date()), connection_id:id}); }catch(e){}
+  }
   toast('Saved.');
   var wasUntagged=!EDITING.social_group;
   closeEditor();
@@ -1536,6 +1547,7 @@ function chipSpec(kind){
   if(kind==='circle') return {lab:'Circle',multi:false, items:CIRCLES.map(function(o){return [o[0],o[1]+(o[2]?' '+o[2]:''),o[3],null,'c-'+o[0]];})};
   if(kind==='label')  return {lab:'Labels',multi:true,  items:LABELS.map(function(o){return [o[0],o[1],o[2],null,'lb'];})};
   if(kind==='age')    return {lab:'Age',   multi:false, items:AGES.map(function(o){return [o[0],o[1],'',null,'ag'];})};
+  if(kind==='source') return {lab:'Source',multi:false, items:SOURCES.map(function(o){return [o[0],o[1],o[2]||'',null,'sc'];})};
   return {lab:'',multi:false,items:[]};
 }
 function paintChips(hostId){
@@ -1598,6 +1610,11 @@ function paintOccasions(selId){
     OCCASIONS.map(function(o){return '<option value="'+esc(o[0])+'">'+esc(o[1])+'</option>';}).join('')+
     retired.map(function(v){return '<option value="'+esc(v)+'">'+esc(kindLabel(v))+' (retired)</option>';}).join('');
   if(cur) sel.value=cur;
+}
+/* v3.2: the one shared form. When it saves, the list reloads like the old bar did. */
+function openSocialMoment(){
+  if(!window.PYSocial){ toast('The form did not load. Refresh and try again.'); return; }
+  PYSocial.open({ sb: sb, showRecent: false, onSaved: function(){ toast('Logged.'); load(); } });
 }
 async function addConn(){
   const person=document.getElementById('person').value.trim(); if(!person){toast('Who did you connect with?');return;}
