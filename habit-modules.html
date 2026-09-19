@@ -180,7 +180,19 @@
       font-weight:700;line-height:1;cursor:pointer;border-radius:4px;transition:background .14s,color .14s}
   .rundo:hover{background:#f1f3f6;color:#8f99a6}
 
-  /* ----- Vices (Sep 13 2026): slim like every other tile, a plum edge that only
+
+  /* ----- Relationship Check-in (Sep 19 2026) ----- */
+  .rt.relchk{height:auto;flex-direction:column;align-items:stretch;padding:6px;overflow:visible}
+  .relchkhead{display:flex;align-items:center;height:42px;padding:0 5px 0 6px;justify-content:space-between;gap:6px}
+  .relchklabel{display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0}
+  .rn-rel{font-size:6.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;line-height:1.22}
+  .relchkq{font-size:11px;font-weight:700;color:#1f2a44;line-height:1.15;margin:8px 6px 4px}
+  .relchkslider{width:calc(100% - 12px);margin:0 6px 6px;accent-color:#8a6b9f;cursor:pointer}
+  .relchksummary{font-size:9.5px;color:#8a93a0;margin:8px 6px 4px;padding:6px;background:#f7f9fc;border-radius:4px}
+  .relchkdone{width:calc(100% - 12px);margin:0 6px 6px;padding:6px 10px;border:1px solid #d4a8c8;background:#fff;color:#5c3c6b;border-radius:6px;font-size:10px;font-weight:800;cursor:pointer;font-family:inherit}
+  .relchkdone:hover{background:#f7e8f4;border-color:#c282ba}
+
+    /* ----- Vices (Sep 13 2026): slim like every other tile, a plum edge that only
      turns to warning red on hover. The why field shades down under the tile the
      same way Coffee's type/milk drawer does, and only the bottle opens it. ----- */
   .rt.rvicetile{height:auto;flex-direction:column;align-items:stretch;padding:0;overflow:visible;
@@ -991,6 +1003,29 @@ async function toggle(m,el){
    habit tracker reads "3 cups" rather than just "done".
    ========================================================================== */
 var RAIL = (function(){
+
+  // Relationship check-in questions: 18 total (10 Gottman + 8 Positivity)
+  const REL_QUESTIONS = [
+    {n:1,q:"How contemptuous did I feel toward Åsa today?",s:"gottman"},
+    {n:2,q:"How defensive was I when she brought something up?",s:"gottman"},
+    {n:3,q:"How much did I shut down or avoid talking to her?",s:"gottman"},
+    {n:4,q:"How well did I try to de-escalate when tensions rose?",s:"gottman"},
+    {n:5,q:"How much affection or respect did I feel for her?",s:"gottman"},
+    {n:6,q:"How present was I when we were together?",s:"gottman"},
+    {n:7,q:"How curious was I about what she thinks or feels?",s:"gottman"},
+    {n:8,q:"How much did I accept her differences vs. judge them?",s:"gottman"},
+    {n:9,q:"How well did I own mistakes or apologize when wrong?",s:"gottman"},
+    {n:10,q:"How much romantic or sexual desire did I feel?",s:"gottman"},
+    {n:11,q:"How much genuine laughter or lightness did we share?",s:"positivity"},
+    {n:12,q:"How much affection or warmth was between us?",s:"positivity"},
+    {n:13,q:"How many small acts of kindness happened today?",s:"positivity"},
+    {n:14,q:"How much joy did I see in her face when we were together?",s:"positivity"},
+    {n:15,q:"How much did I make time to focus on her today?",s:"positivity"},
+    {n:16,q:"How much did she feel safe or supported by me?",s:"positivity"},
+    {n:17,q:"How much did we find something to smile about together?",s:"positivity"},
+    {n:18,q:"How much hope did I feel about our future together?",s:"positivity"}
+  ];
+
   var R = {rows:{}, presets:{}, plist:[], pby:{}, slots:{}, more:false, moreFilter:null, moreQ:'', bagPick:null,
            countPick:null, countN:1,
            addOpen:false, addBusy:false, addName:'', addSlot:'', addPhoto:null, addLabel:null,
@@ -2610,6 +2645,14 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
        Sits under Exercise, Scott's call Sep 18 2026. */
     h+=mhCard();
 
+    /* Relationship check-in — 18 questions from Gottman + Daily Positivity */
+    h+='<div class="rt relchk" style="--ra:#8a6b9f">'+
+       '<div class="relchkhead">'+
+       '<div class="relchklabel"><div class="rn-rel">Relationship</div><div class="rv"></div></div>'+
+       '</div>'+
+       '<div id="relchk-container"></div>'+
+       '</div>';
+
     /* Social — plans forward, so it used to be last. Vices is last now. */
     h+=socCard();
 
@@ -2660,12 +2703,100 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
       if(vd0){ requestAnimationFrame(function(){ vd0.style.maxHeight=vd0.scrollHeight+'px'; }); }
       R.viceJustOpened=false;
     }
+    el.querySelector('#relchk-container').addEventListener('change', function(e){
+      if(e.target.classList.contains('relchk-slider')) relChkSave(e.target);
+      if(e.target.classList.contains('relchk-done')) relChkDone();
+    });
     var vu=el.querySelector('.rundoVice'); if(vu) vu.onclick=undoVice;
     var sc=el.querySelector('[data-soc]'); if(sc) sc.onclick=socOpen;
     el.querySelectorAll('[data-mh]').forEach(function(b){b.onclick=function(){mhTap(b.dataset.mh);};});
   }
 
-  return {load:load, draw:draw, state:R};
+
+  // Relationship check-in functions
+  async function relChkLoad(){
+    const today=PYBackfill.dateKey(new Date());
+    const existing=await sb.from('relationship_checkins').select('*').eq('date',today);
+    if(existing.data){
+      existing.data.forEach(function(row){
+        R.relResponses[row.question_number]=row.response_1_to_10;
+      });
+    }
+  }
+
+  function relChkRender(){
+    if(!R.relQuestions || !R.relQuestions.length) return;
+    const container=document.getElementById('relchk-container');
+    let html='';
+    R.relQuestions.forEach(function(q){
+      const resp=R.relResponses[q.n]||0;
+      html+='<div class="relchkitem">'+
+            '<div class="relchkq">'+esc(q.q)+'</div>'+
+            '<input type="range" min="1" max="10" value="'+resp+'" class="relchkslider" data-qn="'+q.n+'" data-src="'+q.s+'">'+
+            '<div class="relchksummary">'+resp+'/10</div>'+
+            '</div>';
+    });
+    html+='<button class="relchkdone" data-done="1">Done</button>';
+    container.innerHTML=html;
+    relChkUpdateSummary();
+  }
+
+  function relChkRandomize(){
+    if(!R.relQuestions || !R.relQuestions.length){
+      // Initialize 18 questions in random order (seeded by date so same order doesn't repeat mid-day)
+      const today=PYBackfill.dateKey(new Date());
+      const dateSeed=parseInt(today.replace(/-/g,''));
+      const shuffled=[...REL_QUESTIONS];
+      // Fisher-Yates shuffle with date seed
+      let seed=dateSeed;
+      for(let i=shuffled.length-1;i>0;i--){
+        seed=(seed*9301+49297)%233280;
+        const j=Math.floor((seed/233280)*( i+1));
+        [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
+      }
+      R.relQuestions=shuffled;
+      R.relResponses={};
+    }
+  }
+
+  async function relChkSave(slider){
+    const qn=parseInt(slider.dataset.qn);
+    const resp=parseInt(slider.value);
+    const src=slider.dataset.src;
+    const today=PYBackfill.dateKey(new Date());
+    R.relResponses[qn]=resp;
+    if(!sb)return;
+    await sb.from('relationship_checkins').upsert({date:today,question_number:qn,source_set:src,response_1_to_10:resp},
+      {onConflict:'date,question_number'});
+    relChkUpdateSummary();
+  }
+
+  function relChkUpdateSummary(){
+    const gottman=R.relQuestions.filter(q=>q.s==='gottman').map(q=>R.relResponses[q.n]||0).filter(r=>r>0);
+    const positivity=R.relQuestions.filter(q=>q.s==='positivity').map(q=>R.relResponses[q.n]||0).filter(r=>r>0);
+    const gottAvg=gottman.length?Math.round(gottman.reduce((a,b)=>a+b,0)/gottman.length*10)/10:0;
+    const posAvg=positivity.length?Math.round(positivity.reduce((a,b)=>a+b,0)/positivity.length*10)/10:0;
+    // Update summary display if visible
+    const done=R.relQuestions.every(q=>R.relResponses[q.n]>0);
+    if(done){
+      const summary=document.querySelector('.relchksummary.final');
+      if(summary) summary.innerHTML='Gottman '+gottAvg+'/10 · Positivity '+posAvg+'/10 ✓';
+    }
+  }
+
+  async function relChkDone(){
+    relChkUpdateSummary();
+    // Show summary instead of questions
+    const container=document.getElementById('relchk-container');
+    const gottman=R.relQuestions.filter(q=>q.s==='gottman').map(q=>R.relResponses[q.n]||0).filter(r=>r>0);
+    const positivity=R.relQuestions.filter(q=>q.s==='positivity').map(q=>R.relResponses[q.n]||0).filter(r=>r>0);
+    const gottAvg=gottman.length?Math.round(gottman.reduce((a,b)=>a+b,0)/gottman.length*10)/10:0;
+    const posAvg=positivity.length?Math.round(positivity.reduce((a,b)=>a+b,0)/positivity.length*10)/10:0;
+    container.innerHTML='<div class="relchksummary final">Gottman '+gottAvg+'/10 · Positivity '+posAvg+'/10 ✓</div>';
+  }
+
+
+    return {load:load, draw:draw, state:R};
 })();
 
 
