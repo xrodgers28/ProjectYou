@@ -48,16 +48,19 @@ ANON = ("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im
 PUTKEY = "py-put-6f2a9c41d83b"
 
 # ---- the only place to add a project -------------------------------------
+# url is the page this card opens on the live site, a plain name ending in
+# .html sitting beside habit-modules.html. Fixed here on purpose (Scott,
+# Sep 20, 2026) so a rebuild can never lose it. A url handed in on stdin wins.
 # The picture, in order: hero_pin (a file inside the project folder), then
 # hero_url (a picture already on the site), then the newest picture in the
 # folder, then nothing at all. Set neither and the card looks after itself.
 PROJECTS = [
     dict(slug="project-you", name="Project YOU", accent="#3f6f8f",
-         folder="Project YOU",
+         folder="Project YOU", url="mission.html",
          hero_pin=None, hero_url="https://xrodgers28.github.io/ProjectYou/project-you-logo.png",
          hero_fit="contain"),
     dict(slug="treadwell", name="TreadWell", accent="#2f5d50",
-         folder="TreadWell",
+         folder="TreadWell", url="treadwell.html",
          hero_pin="08-Strategy-Bank/The TreadWell community - infographic.png",
          hero_url=None, hero_fit="cover"),
     dict(slug="elevator-pitch", name="Elevator Pitch", accent="#c2622a",
@@ -139,6 +142,31 @@ def pretty(d):
     return d.strftime("%b %-d, %Y")
 
 
+# ---- running without Scott's machine -------------------------------------
+# The numbers come from the database, which anything can read. The folders only
+# exist on his Mac. When this runs somewhere that cannot see them, it does NOT
+# pretend the projects are empty: it carries the folder-side facts forward from
+# the board already on the site and recomputes the "days since" from the stored
+# date, so the card stays true rather than resetting to "brand new".
+LIVE = "https://xrodgers28.github.io/ProjectYou/projects-data.json"
+
+def previous_board():
+    data = fetch(LIVE)
+    if not data:
+        return {}
+    try:
+        return {p["slug"]: p for p in json.loads(data).get("projects", [])}
+    except Exception:
+        return {}
+
+
+def parse_day(s):
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except Exception:
+        return None
+
+
 def main():
     facts = {}
     if not sys.stdin.isatty():
@@ -146,13 +174,25 @@ def main():
         if raw:
             facts = json.loads(raw)
 
+    # always read the board already on the site: it is the safety net for a
+    # picture that cannot be remade, as well as the source of the carried facts.
+    folders_read = os.path.isdir(ROOT) and "--no-folders" not in sys.argv
+    prev = previous_board()
+
     out = []
     for p in PROJECTS:
         f = facts.get(p["slug"], {})
+        old = prev.get(p["slug"], {})
         folder = os.path.join(ROOT, p["folder"])
-        has = os.path.isdir(folder)
+        has = folders_read and os.path.isdir(folder)
         n, newest, pics = walk(folder) if has else (0, None, [])
-        state, tone, days = state_for(newest, has)
+        carried = False
+        if not has and old.get("last_touched"):
+            # the date is a fact that was true when it was read; the number of
+            # days since it is worked out fresh, so the card never goes stale.
+            newest = parse_day(old["last_touched"])
+            carried = newest is not None
+        state, tone, days = state_for(newest, has or carried)
 
         if state == "Brand new":
             status = "Nothing in it yet. <b>Give it a folder</b> and this card starts filling itself in."
@@ -182,6 +222,8 @@ def main():
             if img is None and pics:
                 src = os.path.relpath(pics[0], folder)
                 img = hero(pics[0], p["hero_fit"])
+            if img is None and old.get("hero"):
+                img, src = old["hero"], old.get("hero_from")
         except Exception as e:
             sys.stderr.write("picture skipped for %s: %s\n" % (p["slug"], e))
             img, src = None, None
@@ -194,8 +236,14 @@ def main():
         if not figures:
             def fig(count, one, many):
                 return {"n": str(count), "l": one if count == 1 else many}
-            first = (fig(f["pages"], "Page live", "Pages live") if f.get("pages") is not None
-                     else fig(n, "File", "Files"))
+            if f.get("pages") is not None:
+                first = fig(f["pages"], "Page live", "Pages live")
+            elif has:
+                first = fig(n, "File", "Files")
+            elif (old.get("figures") or [None])[0]:
+                first = old["figures"][0]
+            else:
+                first = fig(0, "File", "Files")
             figures = [first,
                        fig(f.get("open_jobs", 0), "Open job", "Open jobs"),
                        fig(f.get("sessions", 0),  "Session",  "Sessions")]
@@ -204,14 +252,18 @@ def main():
                         state=state, tone=tone, status=status,
                         hero=img, hero_fit=p["hero_fit"], hero_from=src,
                         figures=figures[:3],
+                        last_touched=(newest.isoformat() if newest else None),
                         last_label=f.get("last_label", "Last thing finished" if f.get("last_text") else "Waiting on you"),
                         last_text=f.get("last_text", "A first note from you about what this project is for"),
-                        url=f.get("url")))
+                        url=f.get("url") or p.get("url")))
 
     now = datetime.now(ET)
-    doc = {"version": "1.0",
+    label = now.strftime("%b %-d, %Y at %-I:%M%p ET").replace("AM", "am").replace("PM", "pm")
+    if not folders_read:
+        label += " (numbers only, the folders on your Mac were not read)"
+    doc = {"version": "1.1",
            "checked": now.isoformat(timespec="seconds"),
-           "checked_label": now.strftime("%b %-d, %Y at %-I:%M%p ET").replace("AM", "am").replace("PM", "pm"),
+           "checked_label": label,
            "projects": out}
     body = json.dumps(doc, separators=(",", ":"))
     open(OUT, "w").write(body)
