@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#fcfcfb; --panel:#ffffff; --ink:#23272e; --soft:#5b6570; --faint:#8b95a1;
+  --line:#e4e6ea; --chip:#eef1f4; --chipink:#41505f; --shade:#f6f7f9;
+  --green:#2f8f5b; --amber:#c07f10; --red:#c0492f;
+  --b-do:#3f6f8f; --b-more:#c07f10; --b-did:#2f8f5b; --b-read:#6f7b8a; --b-kill:#a8724a;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181c; --panel:#1c2026; --ink:#e7eaee; --soft:#aab3bd; --faint:#7f8994;
+    --line:#2b3138; --chip:#242a31; --chipink:#c3ccd5; --shade:#191d22;
+    --green:#4bb97d; --amber:#e0a53a; --red:#e46a52;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181c; --panel:#1c2026; --ink:#e7eaee; --soft:#aab3bd; --faint:#7f8994;
+  --line:#2b3138; --chip:#242a31; --chipink:#c3ccd5; --shade:#191d22;
+  --green:#4bb97d; --amber:#e0a53a; --red:#e46a52;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:820px;margin:0 auto;padding:20px 16px 64px}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:6px 0 2px}
+h1{font-size:26px;margin:0;letter-spacing:-.2px}
+.vchip{font-size:12px;font-weight:700;color:var(--chipink);background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:2px 8px}
+.datel{color:var(--soft);font-size:14px;margin:2px 0 4px}
+.dayl{color:var(--soft);font-size:14px;margin:0 0 16px}
+.dayl b{color:var(--ink)}
+
+/* pinned answer box */
+.pin{position:sticky;top:0;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 18px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.pin h2{font-size:13px;margin:0 0 6px;text-transform:uppercase;letter-spacing:.5px;color:var(--soft)}
+.pin p{margin:0 0 8px;font-size:12.5px;color:var(--soft)}
+#out{width:100%;min-height:74px;resize:vertical;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:var(--ink);background:var(--shade);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+.copybtn{margin-top:8px;font-size:12.5px;font-weight:600;color:#fff;background:var(--b-do);border:none;border-radius:8px;padding:8px 14px;cursor:pointer}
+.copybtn:active{transform:translateY(1px)}
+
+/* key */
+.key{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:0 0 20px;background:var(--panel)}
+.key h2{font-size:13px;margin:0 0 8px;text-transform:uppercase;letter-spacing:.5px;color:var(--soft)}
+.keyrow{display:flex;flex-wrap:wrap;gap:6px 8px}
+.kk{font-size:12.5px;color:var(--soft);display:flex;align-items:center;gap:6px;width:100%}
+.kk b{color:var(--ink)}
+.dot{width:10px;height:10px;border-radius:3px;flex:none}
+
+.sect{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin:26px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+
+.row{border:1px solid var(--line);border-left:4px solid var(--line);border-radius:12px;background:var(--panel);padding:14px 16px;margin:0 0 12px;transition:opacity .15s}
+.row.settled{opacity:.6}
+.rowtop{display:flex;align-items:flex-start;gap:10px}
+.tl{width:12px;height:12px;border-radius:50%;margin-top:5px;flex:none}
+.tl.green{background:var(--green)} .tl.amber{background:var(--amber)} .tl.red{background:var(--red)}
+.rh{font-size:16.5px;font-weight:700;margin:0}
+.body{color:var(--soft);font-size:14px;margin:8px 0 0;padding-left:22px}
+.body .next{color:var(--ink)}
+.body b{color:var(--ink)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0;padding-left:22px}
+.btn{font-size:13px;font-weight:600;color:#fff;border:none;border-radius:8px;padding:9px 16px;cursor:pointer}
+.btn:active{transform:translateY(1px)}
+.b-do{background:var(--b-do)} .b-more{background:var(--b-more)} .b-did{background:var(--b-did)} .b-read{background:var(--b-read)} .b-kill{background:var(--b-kill)}
+.picked{font-size:12.5px;font-weight:700;margin:10px 0 0;padding-left:22px;display:none}
+.cbox{margin:10px 0 0;padding-left:22px}
+.cbox textarea{width:100%;min-height:34px;resize:vertical;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:var(--ink);background:var(--shade);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+
+/* projects + notes */
+.proj{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:6px 16px}
+.p{border-bottom:1px solid var(--line);padding:11px 0}
+.p:last-child{border-bottom:none}
+.p .pn{font-weight:700;font-size:14.5px}
+.p .pd{color:var(--soft);font-size:13.5px;margin-top:3px}
+.p .pd .ns{color:var(--ink);font-weight:600}
+.habit{background:var(--shade);border:1px solid var(--line);border-radius:10px;padding:11px 14px;color:var(--soft);font-size:13.5px;font-style:italic;margin:0 0 20px}
+.tech{margin-top:26px;border-top:1px dashed var(--line);padding-top:12px;color:var(--faint);font-size:11.5px;line-height:1.55;font-style:normal}
+.tech b{color:var(--soft)}
+.foot{color:var(--faint);font-size:12px;margin-top:18px;text-align:center}
+@media(max-width:560px){h1{font-size:22px}.btns{gap:7px}.btn{padding:9px 12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>Morning Report</h1>
+    <span class="vchip">v1.0</span>
+  </div>
+  <div class="datel">Sunday, September 21, 2026</div>
+  <div class="dayl">An <b>open Sunday</b>. Two short things on the calendar, the rest is yours. Six things want a tap from you, three are just so you know.</div>
+
+  <!-- PINNED ANSWER BOX -->
+  <div class="pin">
+    <h2>Your answers</h2>
+    <p>Tap a button on any card below. Your choices gather here as plain text. Select all of this box and paste it back into the chat. (The copy button may not work inside the panel, so selecting the text is the sure way.)</p>
+    <textarea id="out" readonly>No taps yet. Your answers will show up here.</textarea>
+    <button class="copybtn" onclick="doCopy(this)">Copy my answers</button>
+  </div>
+
+  <!-- KEY -->
+  <div class="key">
+    <h2>What each button means</h2>
+    <div class="keyrow">
+      <div class="kk"><span class="dot" style="background:#3f6f8f"></span><b>Do this:</b> go build it, run it, ship it. An instruction, not an answer. The card stays open until the work is finished.</div>
+      <div class="kk"><span class="dot" style="background:#c07f10"></span><b>Tell me more:</b> you lean yes, but you want the cost, the risk, or the reasoning first. The card stays open, next move is mine.</div>
+      <div class="kk"><span class="dot" style="background:#2f8f5b"></span><b>I did it:</b> you handled it yourself. The card settles.</div>
+      <div class="kk"><span class="dot" style="background:#6f7b8a"></span><b>I read this:</b> noted, nothing owed by anyone. The card settles.</div>
+      <div class="kk"><span class="dot" style="background:#a8724a"></span><b>Kill this task:</b> dead, and it does not come back. The card settles.</div>
+    </div>
+  </div>
+
+  <div class="sect">Needs you</div>
+  <div id="needs"></div>
+
+  <div class="sect">Just so you know</div>
+  <div id="fyi"></div>
+
+  <!-- ATOMIC HABITS NOTE -->
+  <div class="sect">A habit note</div>
+  <div class="habit">"You do not rise to the level of your goals, you fall to the level of your systems." Two of this morning's flags are systems that quietly stopped checking themselves. A rule that leans on memory needs a check that does not. Worth fixing the check, not just the miss.</div>
+
+  <!-- PROJECTS -->
+  <div class="sect">Projects at a glance</div>
+  <div class="proj" id="proj"></div>
+
+  <div class="tech" id="tech"></div>
+
+  <div class="foot">Built for you while you slept. Nothing here has been saved, changed, or sent. Your taps live only on this page until you paste them back.</div>
+
+</div>
+
+<script>
+// ---- data ----
+var NEEDS=[
+ {id:1,tl:"amber",h:"Last night's run did the work but never signed the logbook",
+  body:["This morning's automatic run finished three jobs between about 4:06 and 4:26am, plus it left you a costed choice (the next card). All good work, and I checked one of its claims against the real thing: it holds up.",
+        "The problem is the logbook. There is no entry for last night at all. The run worked, but it did not record that it ran. A night that quietly dies would look exactly the same as a night that succeeded, which is the one thing this log exists to prevent.",
+        "The fix is small: make the run always stamp the logbook, start and finish, so silence can never pass as success again."],
+  next:"Tap Do this to have me add that self-check, or Tell me more for the risk first."},
+ {id:2,tl:"amber",h:"Your work-hours counter is ready, it just needs you to pick how wide",
+  body:["Right now the counter only sees meetings on your dedicated work calendar. Over two weeks that is about 76 hours, roughly 38 a week, but it is nearly all meetings and misses your real focus and build time.",
+        "Two choices. Option A, narrow: count that calendar plus anything you tag \u201cWork\u201d. Predictable, you stay in control, adds about 12 hours a fortnight, and you keep tagging the odd stray. Option B, wide: also auto-count focus, build, writing, and Project YOU blocks by their titles. Catches far more, adds about 45 hours a fortnight, but it will sometimes count a block you did not actually work.",
+        "Either way it never writes hours into your tracker. You still enter those. This only shows calendar time toward your 40, clearly labeled. My suggestion is A now, widen to B in a week if the number feels low."],
+  next:"Tap Do this for Option A, use the comment box for B, or Tell me more."},
+ {id:3,tl:"amber",h:"One page shows a newer version than the menu admits",
+  body:["Your AI page has moved up a version, but the site menu still lists the older number. It is cosmetic, nobody hits a broken page, but the two disagree and you like them to match.",
+        "This morning's run already wrote the two-line correction and set it aside for you. Changes to the menu are yours to publish, so nothing to the live menu was touched.",
+        "Separate but reassuring: I checked the site itself and publishing is healthy. There was one alarm email about a failed publish overnight, but it was a single hiccup, and every publish before and after it landed cleanly."],
+  next:"Tap Do this to publish the prepared menu fix, or I did it if you would rather do it by hand."},
+ {id:4,tl:"amber",h:"Your rulebook was refreshed and is waiting for your eye",
+  body:["You keep a master file of how we work together, and it is meant to get refreshed regularly so it never drifts from reality. It had gone a while. Last night's run refreshed it.",
+        "It is a refresh, not a rewrite. Every existing rule was kept word for word. The only thing folded in is last night's lesson, that a rule leaning on memory needs an automatic check behind it. Nothing was softened or removed.",
+        "It has not been made live, because rule changes made while you are away are meant to get your read first."],
+  next:"Tap Tell me more for the exact lines that changed, or I did it once you have reviewed and saved it."},
+ {id:5,tl:"amber",h:"Six new sources are lined up for your picture wall",
+  body:["The recurring source scan offered six fresh feeds last night, waiting on your keep or bin.",
+        "They are: r/comics, Atlas Obscura, Messy Nessy Chic, r/RetroFuturism, r/AccidentalWesAnderson, and r/PhotoshopBattles. A mix of comics, strange places, and visual jokes.",
+        "Nothing gets added until you say so. The ones you skip just fall off the list."],
+  next:"Use the comment box to name the ones you want kept, then tap Do this. Or Kill this task to pass on all six."},
+ {id:6,tl:"red",h:"Your Fun Facts feed has been frozen for three weeks",
+  body:["The Fun Facts card has not shown you anything new since September 3. The waiting pile has not moved since September 7 either, so nothing is being consumed.",
+        "The pile is full, so the weekly top-up check keeps reporting healthy and will do so forever. That is the trap: the supply never runs low, so the alarm never fires, while the card quietly shows you nothing.",
+        "Best read so far is that the card is failing to mark facts as seen, silently. It needs a proper look rather than another green light."],
+  next:"Tap Do this to have me chase the card bug, Tell me more for what I have ruled out, or Kill this task if you are done with Fun Facts."}
+];
+
+var FYI=[
+ {id:7,tl:"green",h:"Today's AI scan brought five fresh cards",
+  body:["The daily AI scan landed five new cards this morning, none kept yet. Three tools worth a glance: Suno, which writes and produces full songs from a short description; Gamma, which builds slide decks, docs, and simple web pages from a prompt; and Ideogram, which is unusually good at spelling words correctly inside a picture.",
+        "There are also two short lessons, on saying why and not just what, and on trading drudgery for output.",
+        "Low stakes, star any keepers when you have a minute."],
+  next:"Nothing owed. Tap I read this, or Do this if you want me to save the keepers you name."},
+ {id:8,tl:"green",h:"Your Sunday, and the inbox",
+  body:["Two things on the calendar: call the vet at 10am, and an Engineering Tour at 1pm. Parking is already booked near West 113th from noon to 10pm.",
+        "The inbox is quiet in the way a Sunday should be, newsletters and receipts, nobody waiting on a reply.",
+        "Asa sent you a New York Times piece titled \u201cWorth reading,\u201d about phrases couples use in arguments. A share, not a question, so nothing is owed there either."],
+  next:"Nothing to do. Tap I read this."},
+ {id:9,tl:"green",h:"Your Claude usage limit is not readable from here",
+  body:["You asked where you stand on your weekly usage limit. That meter lives on Anthropic's side and is not something this run can read, so I will not guess a number at you.",
+        "As a rough stand-in from your own records: about 15 chat sessions and close to eight hours of active chat time in the last seven days. That is your working footprint, not the official meter.",
+        "For the real figure, the usage view in your Claude settings is the one place that has it."],
+  next:"Nothing owed. Tap I read this."}
+];
+
+var PROJECTS=[
+ {n:"Project YOU / Quantified Self",d:"The engine, active daily. Health and habit logging is flowing, and the overnight pipeline is nearly clear. <span class='ns'>Next:</span> clear the two drafts above (menu fix and rulebook) and pick A or B on work hours."},
+ {n:"TreadWell",d:"Had a session Saturday and the page is live. One thing still open. <span class='ns'>Next:</span> listen to Mike Cann's feedback recording from the August 7 call, still unopened in the folder."},
+ {n:"AI Intelligence",d:"The daily scan is running, today's five cards landed on time. Plenty of unsorted cards have built up over time. <span class='ns'>Next:</span> skim today's five and star any keepers."},
+ {n:"Clever Phrases",d:"Eighteen phrases are waiting, but the source has been quiet since September 2. <span class='ns'>Next:</span> decide whether it keeps running, or clear the eighteen that are waiting."},
+ {n:"2026 Calendar",d:"Part of Project YOU. Events are importing fine, about 1,900 on file. Pushing changes back out remains a known, parked item. <span class='ns'>Next:</span> nothing needed, it is healthy."},
+ {n:"CrushingIt",d:"Lives only in your folder, and this run had no line to your computer, so I could not read its state. <span class='ns'>Next:</span> pending until your desktop is connected."}
+];
+
+var TECH="<b>Technical proof (for the record):</b> Run audit against public.run_log and public.session_todos (lane=queue_run). No run_log row exists for the night of Sep 20\u201321; overnight_build shows todo 377, 378, 379 finished 08:06\u201308:26 UTC and brief:411 written 08:28 UTC. Verified claim: cron job 22 \u201ccheck-chat-register\u201d (schedule 45 8 * * *, active=true) and function public.check_chat_register() both exist live. Version drift confirmed on origin/main: ai.html self-badge v1.18 vs nav-config.js PAGE_VERSIONS \u201cai.html\u201d:\u201cv1.17\u201d; qs-health.html, tracker.html, midnight-run.html all present (false alarm). Publish path healthy: origin/main HEAD 52157e2 at 08:51 UTC, commits landing continuously; the failed Actions run f65fdca (03:17 UTC) is isolated, adjacent commits succeeded. Fun Facts: news_queue source='Fun Facts' unseen=26 unchanged since Sep 7, last seen_on 2026-09-03. Usage proxy from public.chat_register, trailing 7 days.";
+
+// ---- render ----
+var answers={}; // id -> {label,h,comment}
+
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function makeRow(item){
+  var r=document.createElement('div'); r.className='row'; r.id='row'+item.id;
+  var bodyHtml=item.body.map(function(p){return '<div>'+p+'</div>';}).join('');
+  r.innerHTML=
+    '<div class="rowtop"><span class="tl '+item.tl+'"></span><div class="rh">'+esc(item.h)+'</div></div>'+
+    '<div class="body">'+bodyHtml+'<div class="next" style="margin-top:8px"><b>Next:</b> '+item.next+'</div></div>'+
+    '<div class="btns">'+
+      '<button class="btn b-do" onclick="pick('+item.id+',\'Do this\',true)">Do this</button>'+
+      '<button class="btn b-more" onclick="pick('+item.id+',\'Tell me more\',true)">Tell me more</button>'+
+      '<button class="btn b-did" onclick="pick('+item.id+',\'I did it\',false)">I did it</button>'+
+      '<button class="btn b-read" onclick="pick('+item.id+',\'I read this\',false)">I read this</button>'+
+      '<button class="btn b-kill" onclick="pick('+item.id+',\'Kill this task\',false)">Kill this task</button>'+
+    '</div>'+
+    '<div class="picked" id="pk'+item.id+'"></div>'+
+    '<div class="cbox"><textarea placeholder="Add a comment (optional)" oninput="setComment('+item.id+',this.value)"></textarea></div>';
+  return r;
+}
+NEEDS.forEach(function(it){document.getElementById('needs').appendChild(makeRow(it));});
+FYI.forEach(function(it){document.getElementById('fyi').appendChild(makeRow(it));});
+
+var COLORS={'Do this':'#3f6f8f','Tell me more':'#c07f10','I did it':'#2f8f5b','I read this':'#6f7b8a','Kill this task':'#a8724a'};
+var TITLES={}; NEEDS.concat(FYI).forEach(function(it){TITLES[it.id]=it.h;});
+
+function pick(id,label,keepOpen){
+  var row=document.getElementById('row'+id);
+  row.style.borderLeftColor=COLORS[label];
+  if(keepOpen){row.classList.remove('settled');}else{row.classList.add('settled');}
+  var pk=document.getElementById('pk'+id);
+  pk.style.display='block'; pk.style.color=COLORS[label];
+  pk.textContent='You tapped: '+label+(keepOpen?' (staying open)':'');
+  if(!answers[id])answers[id]={};
+  answers[id].label=label; answers[id].h=TITLES[id];
+  recompile();
+}
+function setComment(id,val){
+  if(!answers[id])answers[id]={h:TITLES[id]};
+  answers[id].comment=val; recompile();
+}
+function recompile(){
+  var lines=['MORNING REPORT, Sun Sep 21, 2026, my answers',''];
+  var n=0;
+  NEEDS.concat(FYI).forEach(function(it){
+    var a=answers[it.id];
+    if(!a||(!a.label&&!(a.comment&&a.comment.trim())))return;
+    n++;
+    lines.push(n+'. '+it.h);
+    if(a.label)lines.push('   choice: '+a.label);
+    if(a.comment&&a.comment.trim())lines.push('   note: '+a.comment.trim());
+    lines.push('');
+  });
+  var out=document.getElementById('out');
+  out.value = n? lines.join('\n') : 'No taps yet. Your answers will show up here.';
+}
+function doCopy(btn){
+  var out=document.getElementById('out');
+  out.removeAttribute('readonly'); out.focus(); out.select();
+  var ok=false; try{ok=document.execCommand('copy');}catch(e){ok=false;}
+  out.setAttribute('readonly','readonly');
+  btn.textContent = ok? 'Copied. Paste it into the chat.' : 'Copy blocked. Select the text above and copy by hand.';
+  setTimeout(function(){btn.textContent='Copy my answers';},4000);
+}
+
+// projects + tech
+var pd=document.getElementById('proj');
+PROJECTS.forEach(function(p){var d=document.createElement('div');d.className='p';d.innerHTML='<div class="pn">'+esc(p.n)+'</div><div class="pd">'+p.d+'</div>';pd.appendChild(d);});
+document.getElementById('tech').innerHTML=TECH;
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
