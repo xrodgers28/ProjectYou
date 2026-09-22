@@ -770,7 +770,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.0';
+const VERSION='v5.1';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1726,9 +1726,13 @@ function swSlot(person){
 /* Scott, Sep 22 2026, Q2: a name still sitting in "next week" once that week
    has gone slides into "next month", so the week box stays about this week.
    A confirmed name has a date attached, so it stays put. */
+/* The week stamp is called ws on a slot from swSlot and week_start on a raw
+   saved row. Both arrive here, so read either. */
+function swWs(r){ return (r&&(r.ws||r.week_start))||null; }
 function swEffKind(r){
   if(!r)return null;
-  return (r.kind==='week'&&r.ws<D.ws&&r.state!=='confirmed')?'month':r.kind;
+  const w=swWs(r);
+  return (r.kind==='week'&&w&&w<D.ws&&r.state!=='confirmed')?'month':r.kind;
 }
 /* Q5: the last time he logged seeing this person, on or after the day he put
    them in a lane. Null means the meet-up has not happened yet. */
@@ -1740,7 +1744,8 @@ function swSeenSince(person,since){
 /* Q4: confirmed, the week has passed, and nothing was ever logged. Not proof
    it did not happen, which is why it asks rather than deciding. */
 function swStale(r){
-  return !!(r&&r.state==='confirmed'&&r.ws<D.ws&&!swSeenSince(r.person,r.ws));
+  const w=swWs(r);
+  return !!(r&&r.state==='confirmed'&&w&&w<D.ws&&!swSeenSince(r.person,w));
 }
 function swSlotState(kind,person){
   const r=swSlot(person);
@@ -1885,7 +1890,7 @@ function swRenderPens(){
     if(hidden.indexOf(x.person)>=0)return;
     /* Q5: seen in an earlier week means the plan is finished and the name is
        gone. Seen this week means it shows with a tick until the week turns. */
-    const seen=swSeenSince(x.person,x.ws);
+    const seen=swSeenSince(x.person,swWs(x));
     if(seen&&seen<D.ws)return;
     x.seen=seen||null;
     placed[x.person]=x;
@@ -1900,21 +1905,21 @@ function swRenderPens(){
     const kind=pl?swEffKind(pl):(idx<3?'week':(idx<6?'month':null));
     if(!kind)return;
     used[p.person]=1;
-    if(pl){p=Object.assign({},p,{seen:pl.seen,stale:swStale(pl),ws:pl.ws});}
+    if(pl){p=Object.assign({},p,{seen:pl.seen,stale:swStale(pl),ws:swWs(pl)});}
     (kind==='week'?week:month).push(p);
   });
   /* then anyone he typed in himself, who is in no suggestion list */
   Object.keys(placed).forEach(n=>{
     if(used[n])return;
     const pl=placed[n];
-    const row={person:n,days_since:swDaysSince(n),seen:pl.seen,stale:swStale(pl),ws:pl.ws};
+    const row={person:n,days_since:swDaysSince(n),seen:pl.seen,stale:swStale(pl),ws:swWs(pl)};
     (swEffKind(pl)==='week'?week:month).push(row);
   });
   /* Q4: one line per confirmed date that came and went with nothing logged. */
   const stale=Object.keys(placed).map(n=>placed[n]).filter(swStale);
   const staleHtml=stale.length?'<div class="swask">'+stale.map(r=>
     '<div class="swaskr"><span><b>'+esc(r.person)+'</b> was confirmed for the week of '+
-    esc(fmt(r.ws))+' and nothing is logged. Did it happen?</span>'+
+    esc(fmt(swWs(r)))+' and nothing is logged. Did it happen?</span>'+
     '<a class="swaskb go" href="connections.html">Yes, log it</a>'+
     '<button class="swaskb" type="button" data-swnot="'+esc(r.person)+'">Not yet</button></div>').join('')+
     '</div>':'';
@@ -1925,7 +1930,7 @@ function swRenderPens(){
     (hidden.length?'<div class="swpfoot" style="border:0;padding:0;margin-top:2px;grid-column:1/-1">'+
       '<span class="swnone">'+hidden.length+' name'+(hidden.length>1?'s':'')+' not being suggested'+
         ((D.never||[]).length?', '+(D.never||[]).length+' for good':'')+'</span>'+
-      '<button class="swundo" type="button" id="swUndo">bring back this week\u2019s</button></div>':'');
+      '<button class="swundo" type="button" id="swUndo">bring them back</button></div>':'');
   swWirePens(box);
   swWireDrag(box);
 }
