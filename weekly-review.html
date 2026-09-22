@@ -360,6 +360,21 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .swp:hover{border-color:var(--accent)}
 .swp.conf{background:var(--goodbg);border-color:#9ccfb5;font-weight:700}
 .swnone{font-size:10px;color:#c3cad3}
+/* v5.0: a name carried over that was confirmed for a week that has gone. */
+.swp.stale{background:#fdf4e3;border-color:#e0b568}
+.swp.stale .qm{font-weight:800;color:#b8801f}
+/* v5.0: logged this week, shown with a tick until the week turns over. */
+.swp.seen{background:var(--goodbg);border-color:#9ccfb5;color:var(--muted);cursor:default}
+.swp.seen .tk{color:#3f7d5f;font-weight:800}
+.swask{grid-column:1/-1;margin-top:4px;display:grid;gap:4px}
+.swaskr{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:11px;
+  background:#fdf4e3;border:1px solid #e8d3ab;border-radius:7px;padding:5px 9px;color:var(--ink)}
+.swaskr span{flex:1;min-width:180px}
+.swaskb{font-family:inherit;font-size:10.5px;font-weight:700;cursor:pointer;
+  border:1px solid #d9c299;background:#fff;color:var(--ink);border-radius:999px;
+  padding:3px 10px;text-decoration:none;white-space:nowrap}
+.swaskb.go{background:#b8801f;border-color:#b8801f;color:#fff}
+.swaskb:hover{border-color:var(--accent)}
 .swkey{display:flex;gap:4px;align-items:center;margin-top:11px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:3px}
 .swkey .kl{font-size:9px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);flex:none}
 .swkey .k{font-size:10px;padding:3px 8px;border-radius:999px;color:#2b3440;border:1px solid rgba(0,0,0,.08);
@@ -755,7 +770,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v4.9';
+const VERSION='v5.0';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -860,7 +875,11 @@ async function load(){
       q('person_notes','person_key,note,noted_on'),
       /* v3.7: pictures Scott picked himself, one per person per meet-up */
       q('person_photos','person_key,happened_on,data_url'),
-      q('social_bullpen','week_start,kind,person,state',r=>r.eq('week_start',ws)),
+      /* v5.0, Sep 22 2026: every live row, not just this week's. Scott dragged
+         names in one week and found empty lanes the next, because a row was
+         filed under the week it was made in. A plan to see someone ends when he
+         sees them or waves them away, never because the calendar turned over. */
+      q('social_bullpen','week_start,kind,person,state,updated_at',r=>r.neq('kind','never')),
       /* v3.5: this year in full, for the sweep and the beam. Small, about 50 rows. */
       q('connections','id,person,kind,place,happened_on,social_group,direction,superseded',
         r=>r.gte('happened_on','2026-01-01').order('happened_on',{ascending:false})),
@@ -874,7 +893,7 @@ async function load(){
     D={days,ws,we,from28,from14,qs:qs.data||[],wr:wr.data||[],strava:strava.data||[],sess:sess.data||[],cal:(cal.data||[]).filter(c=>!c.hidden&&!c.dismissed),tl:tl.data||[],deck:deck.data||[],sf:sf.data||[],ai:ai.data||[],fav:fav.data||[],quotes:quotes.data||[],prev:prevrow.data||null,row:thisrow.data||null,fs:(fs&&fs.data)||[],stacks:(hstk&&hstk.data)||[],chatreg:(chatreg&&chatreg.data)||[],sleep:(sleepq&&sleepq.data)||[],train:(trainq&&trainq.data)||[],conns:(connq&&connq.data)||[],
       quiet:(quietq&&quietq.data)||[],pnotes:(notesq&&notesq.data)||[],
       pphotos:(photoq&&photoq.data)||[],
-      slots:(slotsq&&slotsq.data)||[],cks:(ckq&&ckq.data)||[],
+      slots:swDedupeSlots((slotsq&&slotsq.data)||[]),cks:(ckq&&ckq.data)||[],
       year:((yearq&&yearq.data)||[]).filter(c=>!c.superseded),
       never:((neverq&&neverq.data)||[]).map(r=>r.person)};
     S={quiz:{},goals:[],own:'',lastGoals:{}};
@@ -1688,20 +1707,57 @@ function swDatesHtml(){
 
 /* ---- the bullpen, split in half, confirmed on the left ---- */
 /* v2.9: where a person sits is stored, not positional, so a drag sticks. */
+/* v5.0: one live row per person, whatever week it was first placed in. The
+   week stamp is now "when he last moved this name", which is what the slide
+   and the amber flag below are measured from. */
+function swDedupeSlots(rows){
+  const by={};
+  (rows||[]).forEach(r=>{
+    const c=by[r.person];
+    if(!c||r.week_start>c.week_start||
+       (r.week_start===c.week_start&&(r.updated_at||'')>(c.updated_at||'')))by[r.person]=r;
+  });
+  return Object.keys(by).map(k=>by[k]);
+}
 function swSlot(person){
   const r=(D.slots||[]).filter(x=>x.person===person)[0];
-  return r?{kind:r.kind,state:r.state}:null;
+  return r?{kind:r.kind,state:r.state,ws:r.week_start,person:person}:null;
+}
+/* Scott, Sep 22 2026, Q2: a name still sitting in "next week" once that week
+   has gone slides into "next month", so the week box stays about this week.
+   A confirmed name has a date attached, so it stays put. */
+function swEffKind(r){
+  if(!r)return null;
+  return (r.kind==='week'&&r.ws<D.ws&&r.state!=='confirmed')?'month':r.kind;
+}
+/* Q5: the last time he logged seeing this person, on or after the day he put
+   them in a lane. Null means the meet-up has not happened yet. */
+function swSeenSince(person,since){
+  const d=swLive().filter(c=>c.person===person&&c.happened_on&&(!since||c.happened_on>=since))
+          .map(c=>c.happened_on).sort();
+  return d.length?d[d.length-1]:null;
+}
+/* Q4: confirmed, the week has passed, and nothing was ever logged. Not proof
+   it did not happen, which is why it asks rather than deciding. */
+function swStale(r){
+  return !!(r&&r.state==='confirmed'&&r.ws<D.ws&&!swSeenSince(r.person,r.ws));
 }
 function swSlotState(kind,person){
   const r=swSlot(person);
-  return (r&&r.kind===kind)?r.state:'idea';
+  return (r&&swEffKind(r)===kind)?r.state:'idea';
 }
 async function swPlace(person,kind,state){
   const was=swSlot(person);
-  if(was&&was.kind===kind&&was.state===state)return;
+  if(was&&swEffKind(was)===kind&&was.state===state&&was.ws===D.ws)return;
   D.slots=(D.slots||[]).filter(x=>x.person!==person);
-  D.slots.push({week_start:D.ws,kind:kind,person:person,state:state});
+  D.slots.push({week_start:D.ws,kind:kind,person:person,state:state,
+                updated_at:new Date().toISOString()});
   swRenderPens(); swSay('Saving...');
+  /* v5.0: clear every earlier row for this person first, so one name never
+     ends up in two lanes at once. The never list is kind 'never' and is left
+     alone, it is the permanent ban and outlives all of this. */
+  await sb.from('social_bullpen').delete()
+    .eq('person',person).neq('kind','never').neq('week_start',D.ws);
   if(was&&was.kind!==kind){
     await sb.from('social_bullpen').delete()
       .eq('week_start',D.ws).eq('kind',was.kind).eq('person',person);
@@ -1715,7 +1771,7 @@ async function swPlace(person,kind,state){
    path. Waiting on a reply is reached by dragging into the middle lane. */
 function swToggle(person,kind){
   const r=swSlot(person);
-  const k=(r&&r.kind)||kind;
+  const k=(r&&swEffKind(r))||kind;
   swPlace(person,k,(r&&r.state==='confirmed')?'idea':'confirmed');
 }
 function swGroupOf(person){
@@ -1724,8 +1780,18 @@ function swGroupOf(person){
 }
 function swChipHtml(p,kind){
   const g=swGroupOf(p.person), st=swSlotState(kind,p.person);
-  return '<span class="swp'+(st==='confirmed'?' conf':'')+'" data-k="'+kind+'" data-n="'+esc(p.person)+'">'+
+  /* v5.0: a chip can now carry two extra marks. A tick means he logged the
+     meet-up this week, so the name is on its way out. Amber means it was
+     confirmed for a week that has gone with nothing logged against it. */
+  if(p.seen)
+    return '<span class="swp seen" data-n="'+esc(p.person)+'" title="You logged this on '+esc(fmt(p.seen))+'">'+
+      '<span class="dot" style="background:'+(g?SWGC[g]:SWGC['no group yet'])+'"></span>'+esc(p.person)+
+      ' <span class="tk">\u2713</span></span>';
+  return '<span class="swp'+(st==='confirmed'?' conf':'')+(p.stale?' stale':'')+
+    '" data-k="'+kind+'" data-n="'+esc(p.person)+'"'+
+    (p.stale?' title="Confirmed for the week of '+esc(fmt(p.ws))+', nothing logged yet"':'')+'>'+
     '<span class="dot" style="background:'+(g?SWGC[g]:SWGC['no group yet'])+'"></span>'+esc(p.person)+
+    (p.stale?' <span class="qm">?</span>':'')+
     (p.days_since||p.days_since===0?' <span class="gp">'+p.days_since+'d</span>':'')+
     '<button class="swx" type="button" title="Not this week" data-swx="'+esc(p.person)+'">&times;</button>'+
     '<button class="swx swnever" type="button" title="Never suggest again" data-swnever="'+esc(p.person)+'">\u2298</button>'+
@@ -1744,6 +1810,9 @@ async function swNever(person){
   D.never=(D.never||[]).concat([person]);
   D.slots=(D.slots||[]).filter(x=>x.person!==person);
   swRenderPens(); swSay('Saving...');
+  /* v5.0: drop the lane rows too. Before this, a banned name could walk back
+     in from a lane he filled before he banned them. */
+  await sb.from('social_bullpen').delete().eq('person',person).neq('kind','never');
   const {error}=await sb.from('social_bullpen')
     .upsert({week_start:'2000-01-01',kind:'never',person:person,state:'never',
              updated_at:new Date().toISOString()},{onConflict:'week_start,kind,person'});
@@ -1752,8 +1821,11 @@ async function swNever(person){
 async function swDismiss(person){
   const was=swSlot(person);
   D.slots=(D.slots||[]).filter(x=>x.person!==person);
-  D.slots.push({week_start:D.ws,kind:(was&&was.kind)||'week',person:person,state:'hidden'});
+  D.slots.push({week_start:D.ws,kind:(was&&was.kind)||'week',person:person,state:'hidden',
+                updated_at:new Date().toISOString()});
   swRenderPens(); swSay('Saving...');
+  await sb.from('social_bullpen').delete()
+    .eq('person',person).neq('kind','never').neq('week_start',D.ws);
   const {error}=await sb.from('social_bullpen')
     .upsert({week_start:D.ws,kind:(was&&was.kind)||'week',person:person,state:'hidden',
              updated_at:new Date().toISOString()},{onConflict:'week_start,kind,person'});
@@ -1764,7 +1836,7 @@ async function swUndismissAll(){
   D.slots=(D.slots||[]).filter(x=>x.state!=='hidden');
   swRenderPens(); swSay('Saving...');
   const {error}=await sb.from('social_bullpen').delete()
-    .eq('week_start',D.ws).eq('state','hidden');
+    .eq('state','hidden').neq('kind','never');
   swSay(error?('Could not save: '+error.message):'Saved');
 }
 /* days since he last saw someone, for a name he typed in himself */
@@ -1805,7 +1877,19 @@ function swPenBox(title,kind,list){
 function swRenderPens(){
   const box=el('swPens'); if(!box)return;
   const hidden=swDismissed();
-  const placed={}; (D.slots||[]).forEach(x=>{if(x.state!=='hidden')placed[x.person]=x;});
+  /* v5.0: a name he has banned never comes back, even from a lane he filled
+     before he banned them. This is what let Claire Zammit reappear. */
+  const placed={};
+  (D.slots||[]).forEach(x=>{
+    if(x.state==='hidden')return;
+    if(hidden.indexOf(x.person)>=0)return;
+    /* Q5: seen in an earlier week means the plan is finished and the name is
+       gone. Seen this week means it shows with a tick until the week turns. */
+    const seen=swSeenSince(x.person,x.ws);
+    if(seen&&seen<D.ws)return;
+    x.seen=seen||null;
+    placed[x.person]=x;
+  });
   const week=[],month=[];
   /* the suggestions first, in order of how long it has been */
   const q=(D.quiet||[]).slice().sort((a,b)=>a.days_since-b.days_since)
@@ -1813,20 +1897,31 @@ function swRenderPens(){
   const used={};
   q.forEach((p,idx)=>{
     const pl=placed[p.person];
-    const kind=pl?pl.kind:(idx<3?'week':(idx<6?'month':null));
+    const kind=pl?swEffKind(pl):(idx<3?'week':(idx<6?'month':null));
     if(!kind)return;
     used[p.person]=1;
+    if(pl){p=Object.assign({},p,{seen:pl.seen,stale:swStale(pl),ws:pl.ws});}
     (kind==='week'?week:month).push(p);
   });
   /* then anyone he typed in himself, who is in no suggestion list */
   Object.keys(placed).forEach(n=>{
     if(used[n])return;
-    const row={person:n,days_since:swDaysSince(n)};
-    (placed[n].kind==='week'?week:month).push(row);
+    const pl=placed[n];
+    const row={person:n,days_since:swDaysSince(n),seen:pl.seen,stale:swStale(pl),ws:pl.ws};
+    (swEffKind(pl)==='week'?week:month).push(row);
   });
+  /* Q4: one line per confirmed date that came and went with nothing logged. */
+  const stale=Object.keys(placed).map(n=>placed[n]).filter(swStale);
+  const staleHtml=stale.length?'<div class="swask">'+stale.map(r=>
+    '<div class="swaskr"><span><b>'+esc(r.person)+'</b> was confirmed for the week of '+
+    esc(fmt(r.ws))+' and nothing is logged. Did it happen?</span>'+
+    '<a class="swaskb go" href="connections.html">Yes, log it</a>'+
+    '<button class="swaskb" type="button" data-swnot="'+esc(r.person)+'">Not yet</button></div>').join('')+
+    '</div>':'';
   box.innerHTML='<datalist id="swNames">'+swKnownNames().map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist>'+
     swPenBox("Who's next week",'week',week)+
     swPenBox('Who in the next month','month',month)+
+    staleHtml+
     (hidden.length?'<div class="swpfoot" style="border:0;padding:0;margin-top:2px;grid-column:1/-1">'+
       '<span class="swnone">'+hidden.length+' name'+(hidden.length>1?'s':'')+' not being suggested'+
         ((D.never||[]).length?', '+(D.never||[]).length+' for good':'')+'</span>'+
@@ -1846,6 +1941,10 @@ function swWirePens(box){
     }else{
       b.onclick=ev=>{ev.stopPropagation();swDismiss(b.dataset.swx);};
     }
+  });
+  box.querySelectorAll('[data-swnot]').forEach(b=>b.onclick=()=>{
+    const n=b.dataset.swnot, r=swSlot(n);
+    swPlace(n,(r&&swEffKind(r))||'week','asked');
   });
   box.querySelectorAll('[data-swaddbtn]').forEach(b=>b.onclick=()=>{
     const k=b.dataset.swaddbtn;
