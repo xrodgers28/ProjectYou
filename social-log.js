@@ -57,7 +57,30 @@
 
    v2.3, Sep 19 2026: Scott chose Option C of the three colour mock-ups. Every row
    has its own tint (Is lilac, Circle slate, Source amber, What warm, When blue,
-   Where green) and the chosen pill goes solid; Group keeps its year-grid colours. */
+   Where green) and the chosen pill goes solid; Group keeps its year-grid colours.
+
+   v2.4, Sep 21 2026, the four taps. Scott picked six measures for the Year view
+   and three of them were undercounting, because a room with six friends in it
+   counted as one person seen. These four taps are what stop that:
+
+   - ELSE, a row of its own. "Anyone else?" already existed, buried in the Where
+     row next to "Where exactly?", and it wrote itself into the note as the string
+     "with Claire, Sarah". A string in a note cannot be counted, which is why it
+     had been used zero times in 158 entries. It is now its own row under Who,
+     it reads the same name list, and it saves to connections.others as an array.
+     Nothing goes into the note any more.
+   - LONG, four fixed lengths (30 min, 1 hour, 2 hours, Longer), saved as
+     connections.mins. This is what the habit tick already wanted and had to be
+     handed by the calling page.
+   - FIRST MOVE, the old Source row, relabelled. It was already saving to
+     connections.direction; the words Outreach and Inbound were the problem. They
+     are now "I did" and "They did" in people_vocab, so the Social page agrees.
+   - FELT, 1 to 7, saved as connections.felt. Never required, and it is not shown
+     for something still to come.
+
+   LONG and FELT are fixed scales, not vocabulary: no + and no pencil, and they
+   are not in people_vocab. A plan (a future date) still writes only a to-do, so
+   both rows hide themselves when the date is ahead. */
 window.PYSocial = (function () {
   'use strict';
 
@@ -66,7 +89,7 @@ window.PYSocial = (function () {
   var DEFAULTS = {
     is:     [['family','Family'],['friend','Friend'],['colleague','Colleague'],['ex-colleague','Ex-Colleague'],
              ['industry','Industry'],['group','Group'],['barista-style','Barista Style Exchange']],
-    source: [['outreach','Outreach'],['inbound','Inbound']],
+    source: [['outreach','I did'],['inbound','They did']],
     what:   [['breakfast','Breakfast'],['coffee','Coffee'],['lunch','Lunch'],['dinner','Dinner'],['drinks','Drinks'],
              ['party','Party'],['get together','Get Together'],['creative event','Creative Event'],['call','Call'],
              ['text','Text'],['walk','Walk'],['meeting','Meeting'],['other','Other']],
@@ -78,6 +101,10 @@ window.PYSocial = (function () {
              ['ex work','Ex Work',{color:'#c4dfc6'}],['tribe','Tribe',{color:'#44c1ff'}],['mom','Mom',{color:'#c9d0da'}]],
     circle: [['inner','Inner 5',{}],['middle','Middle 15',{}],['affinity','Affinity',{}],['outer','Outer',{}]]
   };
+  /* v2.4. Fixed scales, not vocabulary: the same four lengths and the same 1 to 7
+     every time, so they are not in people_vocab and neither row has a + or pencil. */
+  var LONGS = [[30,'30 min'],[60,'1 hour'],[120,'2 hours'],[240,'Longer']];
+  var FELTS = [1,2,3,4,5,6,7];
   var FIELDS = ['is','source','what','where','group','circle'];
   /* how this form's rows map onto the one shared list */
   var DIM = { is:'label', source:'source', what:'occasion', where:'where', group:'social_group', circle:'circle' };
@@ -147,6 +174,18 @@ window.PYSocial = (function () {
     return { name: t.trim(), note: note };
   }
   /* the same reading of a line Todays Tasks does */
+  /* v2.4. "Claire, Sarah and PJ" becomes three names. Used by the Else row. */
+  function splitNames(s){
+    var seen = {}, out = [];
+    String(s||'').split(/\s*(?:,|\band\b|&|\+|\/)\s*/i).forEach(function(x){
+      var n = String(x||'').trim().replace(/[.;]+$/, '');
+      if (!n) return;
+      var k = n.toLowerCase();
+      if (seen[k]) return;
+      seen[k] = 1; out.push(n);
+    });
+    return out;
+  }
   function nameIn(s){
     var t = String(s||'').trim().replace(/\s*[-:]\s*/, ' with ');
     var m = t.match(/\bwith\s+(.+)$/i);
@@ -239,6 +278,13 @@ window.PYSocial = (function () {
       '.pysl [data-picks="circle"] .p.on{background:#4d5a64;color:#fff}',
       '.pysl [data-picks="source"] .p:not(.padd):not(.ptidy):not(.rm){background:#f8eed6;border-color:transparent;color:#2b3348}',
       '.pysl [data-picks="source"] .p.on{background:#b8801f;color:#fff}',
+      /* v2.4. Long borrows the When blue because it is a time question; Felt gets
+         its own teal and runs 1 to 7 left to right, so the row reads as a scale. */
+      '.pysl .sl-long .p{background:#e2ecf3;border-color:transparent;color:#2b3348}',
+      '.pysl .sl-long .p.on{background:#4a7fa8;color:#fff}',
+      '.pysl .sl-felt{gap:2px}',
+      '.pysl .sl-felt .p{min-width:20px;justify-content:center;text-align:center;background:#dcecec;border-color:transparent;color:#2b3348}',
+      '.pysl .sl-felt .p.on{background:#37716f;color:#fff}',
       '.pysl [data-picks="what"] .p:not(.padd):not(.ptidy):not(.rm){background:#fbe7dc;border-color:transparent;color:#2b3348}',
       '.pysl [data-picks="what"] .p.on{background:#c06a35;color:#fff}',
       '.pysl .sl-when .p{background:#e2ecf3;border-color:transparent;color:#2b3348}',
@@ -308,6 +354,7 @@ window.PYSocial = (function () {
     this.kind = kindPill(this.o.title);
     this.who0 = guess.person; this.with0 = guess.others;
     this.place = ''; this.labels = []; this.labelsTouched = false; this.source = '';
+    this.mins = this.o.mins || null; this.felt = null;
     this.tidy = { is:false, source:false, what:false, where:false, group:false }; this.lastRm = null;
     this.group = ''; this.circle = ''; this.groupTouched = false; this.circleTouched = false;
     this.known = []; this.loaded = false; this.timer = null;
@@ -371,6 +418,20 @@ window.PYSocial = (function () {
           (tidy ? 'Finished removing' : 'Remove ones you do not use') + '">' + (tidy ? 'Done' : 'Edit') + '</button>' +
       '</span>';
   };
+  /* v2.4. The two fixed rows. Both toggle, so a mis-tap is undone by tapping it
+     again, and neither one is ever required to save. */
+  Form.prototype.longHtml = function(){
+    var self = this;
+    return LONGS.map(function(x){
+      return '<button type="button" class="p' + (self.mins === x[0] ? ' on' : '') + '" data-long="' + x[0] + '">' + esc(x[1]) + '</button>';
+    }).join('');
+  };
+  Form.prototype.feltHtml = function(){
+    var self = this;
+    return FELTS.map(function(n){
+      return '<button type="button" class="p' + (self.felt === n ? ' on' : '') + '" data-felt="' + n + '" aria-label="' + n + ' out of 7">' + n + '</button>';
+    }).join('');
+  };
   Form.prototype.addHtml = function(field){
     return '<div class="addp" data-af="' + field + '" hidden>' +
       '<input type="text" class="ap" placeholder="Name it" autocomplete="off">' +
@@ -378,6 +439,8 @@ window.PYSocial = (function () {
       '<p class="why keepq" data-kq="' + field + '" hidden></p>';
   };
   Form.prototype.repaint = function(field){
+    if (field === 'long') { var l = this.box.querySelector('.sl-long'); if (l) l.innerHTML = this.longHtml(); return; }
+    if (field === 'felt') { var f = this.box.querySelector('.sl-felt'); if (f) f.innerHTML = this.feltHtml(); return; }
     var c = this.box.querySelector('[data-picks="' + field + '"]');
     if (c) c.innerHTML = this.picksHtml(field);
   };
@@ -427,6 +490,11 @@ window.PYSocial = (function () {
         '<datalist id="sl-names">' + this.names().map(function(n){ return '<option value="' + att(n) + '">'; }).join('') + '</datalist>' +
         (this.names(6).length ? '<div class="picks recent">' + this.names(6).map(function(n){ return '<button type="button" class="p" data-who="' + att(n) + '">' + esc(n) + '</button>'; }).join('') + '</div>' : '') +
       '</div>' +
+      /* v2.4. Who else was there, its own row, right under Who because it is the
+         same question. It reads the same name list, and commas separate names. */
+      '<div class="fld"><span class="lab">Else</span>' +
+        '<input type="text" class="sl-with" list="sl-names" placeholder="Anyone else? Commas between names" autocomplete="off" value="' + att(this.with0) + '">' +
+        '<p class="why">Everyone you name here counts as someone you saw.</p></div>' +
       '<div class="fld"><span class="lab">Is</span><div class="picks tags" data-picks="is">' + this.picksHtml('is') +
         '</div>' + this.addHtml('is') + '<p class="why sl-whonote"></p><div class="pnote" hidden></div></div>' +
       '<div class="fld"><span class="lab">Group</span><div class="picks" data-picks="group">' + this.picksHtml('group') +
@@ -434,7 +502,8 @@ window.PYSocial = (function () {
       /* Circle only shows for a new or untagged person; a regular already has one. */
       '<div class="fld sl-circle"' + (this.needsCircle() ? '' : ' hidden') + '><span class="lab">Circle</span><div class="picks circ" data-picks="circle">' + this.picksHtml('circle') +
         '</div></div>' +
-      '<div class="fld"><span class="lab">Source</span><div class="picks" data-picks="source">' + this.picksHtml('source') +
+      /* v2.4. The same field, the same column, honest words. */
+      '<div class="fld"><span class="lab">First move</span><div class="picks" data-picks="source">' + this.picksHtml('source') +
         '</div>' + this.addHtml('source') + '</div>' +
       '<div class="fld"><span class="lab">What</span><div class="picks sl-kinds" data-picks="what">' + this.picksHtml('what') +
       '</div>' + this.addHtml('what') + '</div>' +
@@ -444,10 +513,15 @@ window.PYSocial = (function () {
         '<button type="button" class="p' + (this.when === shift(DAY,1) ? ' on' : '') + '" data-w="1">Tomorrow</button>' +
         '<button type="button" class="p' + (quick.indexOf(this.when) < 0 ? ' on' : '') + '" data-w="pick">' + (quick.indexOf(this.when) < 0 ? esc(shortD(this.when)) : 'Pick date') + '</button>' +
         '</div><input type="date" class="sl-date" value="' + att(this.when) + '"' + (quick.indexOf(this.when) > -1 ? ' style="display:none"' : '') + '></div>' +
+      /* v2.4. Length sits with the date because it is a time question. Hidden for
+         something still to come: a plan writes a to-do, and this would not save. */
+      '<div class="fld sl-longrow"' + (fut ? ' hidden' : '') + '><span class="lab">Long</span><div class="picks sl-long">' + this.longHtml() + '</div></div>' +
       '<div class="fld"><span class="lab">Where</span><div class="picks sl-where" data-picks="where">' + this.picksHtml('where') + '</div>' + this.addHtml('where') +
         (this.usedPlaces().length ? '<div class="picks used">' + this.usedPlaces().map(function(x){ return '<button type="button" class="p" data-used="' + att(x) + '">' + esc(x) + '</button>'; }).join('') + '</div>' : '') +
-        '<div class="pair"><input type="text" class="sl-place" placeholder="Where exactly?" autocomplete="off">' +
-        '<input type="text" class="sl-with" placeholder="Anyone else?" autocomplete="off" value="' + att(this.with0) + '"></div></div>' +
+        '<input type="text" class="sl-place" placeholder="Where exactly?" autocomplete="off"></div>' +
+      /* v2.4. How it was, last, after the fact, and never required. */
+      '<div class="fld sl-feltrow"' + (fut ? ' hidden' : '') + '><span class="lab">Felt</span><div class="picks sl-felt">' + this.feltHtml() + '</div>' +
+        '<p class="why">1 draining, 7 the best kind. Leave it alone if you would rather not say.</p></div>' +
       '<div class="fld"><span class="lab">Note</span><textarea class="sl-note" rows="1" placeholder="How it went"></textarea>' +
         '<label class="keep"><input type="checkbox" class="sl-keep"> Keep on their card</label></div>' +
       '<button type="button" class="go' + (fut ? ' plan' : '') + '">' + (fut ? 'Add to what is coming up' : 'Log it') + '</button>' +
@@ -497,6 +571,11 @@ window.PYSocial = (function () {
     var fut = this.isFuture();
     g.textContent = fut ? 'Add to what is coming up' : 'Log it';
     g.classList.toggle('plan', fut);
+    /* v2.4. A plan writes a to-do, so length and how it felt have nowhere to go
+       and should not be sitting there asking. Tapping back to today brings them. */
+    var lr = this.$('.sl-longrow'), fr = this.$('.sl-feltrow');
+    if (lr) lr.hidden = fut;
+    if (fr) fr.hidden = fut;
   };
   Form.prototype.showCarry = function(){
     var self = this, w = this.$('.sl-who'), note = this.$('.sl-whonote'); if (!w || !note) return;
@@ -598,6 +677,16 @@ window.PYSocial = (function () {
         var sv = b.getAttribute('data-src');
         self.source = (self.source === sv) ? '' : sv;
         self.repaint('source'); return;
+      }
+      if (b.hasAttribute('data-long')) {
+        var lv = parseInt(b.getAttribute('data-long'), 10);
+        self.mins = (self.mins === lv) ? null : lv;
+        self.repaint('long'); return;
+      }
+      if (b.hasAttribute('data-felt')) {
+        var fv = parseInt(b.getAttribute('data-felt'), 10);
+        self.felt = (self.felt === fv) ? null : fv;
+        self.repaint('felt'); return;
       }
       if (b.hasAttribute('data-l')) {
         var v = b.getAttribute('data-l'), i = self.labels.indexOf(v);
@@ -740,11 +829,14 @@ window.PYSocial = (function () {
     if (!this.kind) { this.say('Pick what it was.', 'warn'); return; }
     var fut = this.isFuture(), carry = this.carry(who) || {};
     var others = String(this.$('.sl-with').value || '').trim();
+    /* v2.4. One field, many people. Commas, "and", & and + all split, the same way
+       nameIn reads a calendar title, and Scott's own name never lands in the list. */
+    var othersList = splitNames(others).filter(function(n){ return n.toLowerCase() !== who.toLowerCase(); });
     var typed = String(this.$('.sl-note').value || '').trim(), keep = this.$('.sl-keep').checked;
     var t2 = String(this.$('.sl-place').value || '').trim();
     var where = [this.place, t2].filter(Boolean).join(' · ') || null;
     var kindWord = (this.kind === 'other' || this.kind === 'Something else') ? 'Time' : pillLabel('what', this.kind);
-    var title = kindWord + ' with ' + who + (others ? ' and ' + others : '');
+    var title = kindWord + ' with ' + who + (othersList.length ? ' and ' + othersList.join(', ') : '');
     if (!fut && !this.labels.length) {
       this.say('Tap who ' + who + ' is first: ' + pillsFor('is').map(function(x){ return x[1]; }).join(', ') + '.', 'warn');
       return;
@@ -758,26 +850,34 @@ window.PYSocial = (function () {
         bucket: 'today', status: 'todo', done: false, for_date: this.when, source_project: 'social-log' }).select('id').single();
       if (!r.error && r.data) res.todoId = r.data.id;
     } else {
-      var notes = [typed, tn.note, others ? ('with ' + others) : ''].filter(Boolean).join(' | ');
+      /* v2.4. Who else was there is a column now, not a string in the note. */
+      var notes = [typed, tn.note].filter(Boolean).join(' | ');
       r = await sb.from('connections').insert({
         person: who, person_key: (carry.person_key || who), entity_type: 'person',
         kind: this.kind, channel: channelFor(this.kind), happened_on: this.when, planned: false,
         notes: notes || null, place: where,
         circle: this.circle || carry.circle || null, social_group: this.group || carry.social_group || null, age_band: carry.age_band || null,
         labels: this.labels.slice(), direction: this.source || null,
+        others: othersList, mins: this.mins || null, felt: this.felt || null,
         source: 'logged-by-hand', superseded: false
       }).select('id').single();
       if (!r.error && r.data) {
         res.connectionId = r.data.id;
-        res.habitId = await tickHabit(sb, this.when, o.mins || null);
+        res.others = othersList.slice(); res.mins = this.mins || null; res.felt = this.felt || null;
+        res.habitId = await tickHabit(sb, this.when, this.mins || o.mins || null);
       }
     }
     if (!r.error && keep && typed) { try { await this.keepNote(who, typed, res.connectionId); } catch (e) {} }
     go.disabled = false;
     if (r.error) { this.say('That did not save. Try again in a moment.', 'warn'); return; }
+    /* v2.4. If a room was named, say how many the day counted. That number is the
+       whole reason the Else row exists, so it should be visible at the save. */
+    var head = 1 + othersList.length;
     var said = fut ? ('On your board under Social Well-Being: ' + title + ', ' + shortD(this.when) + '.')
-                   : ('Logged: ' + title + ', ' + shortD(this.when) + '. Social habit ticked.');
+                   : ('Logged: ' + title + ', ' + shortD(this.when) + '. Social habit ticked.' +
+                      (head > 1 ? ' ' + head + ' people counted for today.' : ''));
     this.kind = ''; this.place = ''; this.labels = []; this.labelsTouched = false; this.source = ''; this.who0 = ''; this.with0 = '';
+    this.mins = null; this.felt = null;
     this.tidy = { is:false, source:false, what:false, where:false, group:false }; this.lastRm = null;
     this.group = ''; this.circle = ''; this.groupTouched = false; this.circleTouched = false;
     this.loaded = false;
