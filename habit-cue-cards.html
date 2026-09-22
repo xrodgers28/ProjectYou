@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Habit Building Cue Cards · ProjectYou</title>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;--gold:#d9a400}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  .secbar-wrap{max-width:900px;margin:0 auto;padding:16px 16px 0}
+  .secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .secbar h1{font-size:23px;color:var(--accent)}
+  .secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}
+  .intro{max-width:900px;margin:2px auto 0;padding:4px 16px 0;font-size:13px;color:var(--muted);line-height:1.5}
+  .toggle{display:flex;gap:6px;justify-content:center;margin:14px auto 2px}
+  .toggle button{font-family:inherit;font-weight:800;font-size:13px;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:7px 16px;cursor:pointer}
+  .toggle button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  /* section chips */
+  .chips{max-width:900px;margin:12px auto 0;padding:0 16px;display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+  .chip{font-family:inherit;font-weight:800;font-size:12.5px;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:7px 13px;cursor:pointer}
+  .chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+  /* deck */
+  .stage{max-width:560px;margin:0 auto;padding:12px 16px 40px}
+  .dots{display:flex;gap:7px;justify-content:center;margin:6px 0 16px;flex-wrap:wrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--line)} .dot.on{background:var(--accent);width:22px;border-radius:5px}
+  .flip{perspective:1600px;min-height:420px}
+  .flip-inner{position:relative;width:100%;min-height:420px;transition:transform .55s cubic-bezier(.4,.1,.2,1);transform-style:preserve-3d}
+  .flip.flipped .flip-inner{transform:rotateY(180deg)}
+  .face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;background:var(--card);border:1px solid var(--line);border-radius:20px;padding:30px 26px;display:flex;flex-direction:column;box-shadow:0 14px 40px rgba(31,42,68,.10)}
+  .face.back{transform:rotateY(180deg);background:linear-gradient(180deg,#fbfcfe,#f2f6fb)}
+  .kicker{font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent)}
+  .secname{font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;margin-bottom:8px;font-weight:800}
+  .face h2{font-size:26px;line-height:1.22;margin-top:14px}
+  .face h2.sm{font-size:21px;line-height:1.34}
+  .face .idea{font-size:17px;color:var(--muted);line-height:1.5;margin-top:14px;flex:1}
+  .face .cuelabel{font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--green);margin-top:14px}
+  .face .cue{font-size:18.5px;line-height:1.45;margin-top:10px;flex:1;font-weight:600}
+  .face .tip{font-size:12.5px;color:var(--muted);font-style:italic;margin-top:8px}
+  .fstar{position:absolute;top:18px;right:20px;font-size:25px;line-height:1;cursor:pointer;color:var(--line);z-index:3;user-select:none} .fstar.on{color:var(--gold)}
+  .flipbtn{align-self:flex-start;margin-top:6px;background:#fff;border:1px solid var(--accent);color:var(--accent);font-weight:700;font-size:13.5px;padding:9px 16px;border-radius:11px;cursor:pointer;font-family:inherit}
+  .navbtns{display:flex;justify-content:space-between;margin-top:18px;gap:10px}
+  .btn{font-family:inherit;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:12px;padding:12px 18px;cursor:pointer;font-size:15px}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:disabled{opacity:.4;cursor:default}
+  /* browse */
+  .wrap{max-width:900px;margin:0 auto;padding:8px 16px 50px}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .tools input{font-family:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;flex:1;min-width:180px}
+  .count{font-size:12px;color:var(--muted);margin:2px 0 12px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+  .pcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px 16px;position:relative;box-shadow:0 6px 16px rgba(31,42,68,.06)}
+  .pcard .ptag{font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--accent)}
+  .pcard .txt{font-size:15px;font-weight:700;line-height:1.32;margin-top:7px;padding-right:20px}
+  .pcard .pc{font-size:13px;color:var(--muted);line-height:1.4;margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
+  .star{position:absolute;top:12px;right:13px;font-size:17px;cursor:pointer;color:var(--line)} .star.on{color:var(--gold)}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}.toast.show{opacity:1}
+  .hidden{display:none}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ---- MasterClass card + the dark theatre (v2.0) ---- */
+  .mcface{position:absolute;inset:0;background:linear-gradient(165deg,#1b2430,#0f1620);border:1px solid #2b3744;border-radius:20px;padding:30px 26px;display:flex;flex-direction:column;color:#eef3f8;box-shadow:0 14px 40px rgba(15,22,32,.3)}
+  .mcface .secname{color:#7f93a5}
+  .mcface .kicker{color:#d9a400}
+  .mcface h2{font-size:26px;line-height:1.22;margin-top:14px;color:#fff}
+  .mcface .idea{font-size:16px;color:#aebecd;line-height:1.5;margin-top:12px;flex:1}
+  .mcface .mcnow{font-size:13.5px;color:#d9e3ec;background:rgba(255,255,255,.06);border:1px solid #2f3d4c;border-radius:10px;padding:10px 12px;margin-top:12px}
+  .mcface .mcnow b{color:#fff}
+  .mcbig{align-self:stretch;margin-top:14px;background:#fff;color:#14202b;border:0;border-radius:12px;padding:14px 18px;font-family:inherit;font-weight:800;font-size:15.5px;cursor:pointer}
+  .mcbig:hover{filter:brightness(.94)}
+  .mchint{font-size:11.5px;color:#7f93a5;margin-top:9px;text-align:center}
+
+  .theatre{position:fixed;inset:0;z-index:900;background:rgba(6,9,13,.97);opacity:0;pointer-events:none;transition:opacity .34s ease;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  @media (prefers-reduced-motion: reduce){.theatre{transition:none}}
+  .theatre.on{opacity:1;pointer-events:auto}
+  .theatre .tin{max-width:620px;margin:0 auto;padding:54px 18px 70px;color:#e9eff5}
+  .theatre .tclose{position:fixed;top:14px;right:16px;background:rgba(255,255,255,.1);border:1px solid #33414f;color:#cfdae4;border-radius:999px;width:38px;height:38px;font-size:19px;line-height:1;cursor:pointer;font-family:inherit;z-index:2}
+  .theatre .teyebrow{font-size:11px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:#d9a400;margin-bottom:10px}
+  .theatre h3.tt{font-size:25px;line-height:1.15;margin:0 0 6px;color:#fff;font-weight:800}
+  .theatre .tsub{font-size:13.5px;color:#8d9fb0;margin:0 0 24px}
+  .tcourse{background:#131c26;border:1px solid #2a3643;border-radius:14px;padding:16px 17px;margin-bottom:12px}
+  .tcourse .ct{font-size:17px;font-weight:700;color:#fff;line-height:1.28}
+  .tcourse .ci{font-size:12.5px;color:#8d9fb0;margin-top:3px}
+  .tcourse .cprog{display:flex;align-items:center;gap:9px;margin-top:11px}
+  .tcourse .cbar{flex:1;height:6px;background:#22303d;border-radius:99px;overflow:hidden}
+  .tcourse .cbar i{display:block;height:100%;background:#d9a400;border-radius:99px}
+  .tcourse .cnum{font-size:11.5px;color:#8d9fb0;white-space:nowrap}
+  .tcourse .clast{font-size:12.5px;color:#aebecd;margin-top:9px;font-style:italic}
+  .tcourse .crow{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+  .tbtn{font-family:inherit;font-weight:700;font-size:13.5px;cursor:pointer;border-radius:9px;padding:9px 15px;border:1px solid #3a4856;background:transparent;color:#cfdae4}
+  .tbtn:hover{border-color:#6d8298;color:#fff}
+  .tbtn.play{background:#fff;color:#14202b;border-color:#fff}
+  .tbtn.play:hover{filter:brightness(.93)}
+  .tbtn.done{border-color:#3f7d5f;color:#8fd3ae}
+  .tbtn.ghost{border-color:#2a3643;color:#7f93a5;font-weight:600}
+  .tadd{background:#101820;border:1px dashed #33414f;border-radius:14px;padding:15px 16px;margin-top:18px}
+  .tadd .al{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#7f93a5;margin-bottom:9px}
+  .tadd input{width:100%;font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid #2f3d4c;border-radius:8px;background:#0a1017;color:#e9eff5;margin-bottom:8px}
+  .tadd input::placeholder{color:#5f7385}
+  .tadd input:focus{outline:2px solid #d9a400;outline-offset:1px}
+  .tnote{font-size:12px;color:#6d8298;line-height:1.5;margin-top:20px;border-top:1px solid #22303d;padding-top:14px}
+  .tmsg{font-size:13px;margin-top:10px;min-height:18px}
+  .tmsg.ok{color:#8fd3ae} .tmsg.warn{color:#e0ab52} .tmsg.bad{color:#e08b83}
+  .tempty{color:#8d9fb0;font-size:14.5px;line-height:1.6;background:#131c26;border:1px solid #2a3643;border-radius:14px;padding:18px}
+  .pyll-dark{color:#e9eff5}
+</style>
+</head>
+<body>
+  <div class="secbar-wrap"><div class="secbar"><h1>Habit Building Cue Cards</h1><span class="ver">v2.0</span><span class="date" id="date"></span></div></div>
+  <div class="intro">Small cards for building better habits, organized in seven sections that follow the Atomic Habits framework: your <b>identity</b>, the four laws (make it <b>obvious</b>, <b>attractive</b>, <b>easy</b>, <b>satisfying</b>), <b>stacking &amp; environment</b>, and <b>breaking bad habits</b>. Front = the principle. Flip for a cue you can act on today.</div>
+
+  <div class="toggle">
+    <button id="tgDeck" class="on" onclick="showView('deck')">Study deck</button>
+    <button id="tgBrowse" onclick="showView('browse')">Browse all</button>
+  </div>
+
+  <div id="deckView">
+    <div class="chips" id="chips"></div>
+    <div class="stage">
+      <div class="dots" id="dots"></div>
+      <div id="deck"></div>
+    </div>
+  </div>
+
+  <div id="browse" class="hidden">
+    <div class="wrap">
+      <div class="tools"><input id="q" placeholder="Search every cue card…" oninput="drawBrowse()"></div>
+      <div class="chips" id="bchips" style="justify-content:flex-start;margin-bottom:6px"></div>
+      <div class="count" id="bcount"></div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </div>
+
+  <div class="theatre" id="theatre" role="dialog" aria-modal="true" aria-label="MasterClass">
+    <button class="tclose" onclick="MC.close()" aria-label="Leave the theatre">&times;</button>
+    <div class="tin">
+      <div class="teyebrow">MasterClass</div>
+      <h3 class="tt">The room is dark. Pick a class.</h3>
+      <p class="tsub">Press Escape, or the cross, to come back to the deck.</p>
+      <div id="tbody"><div class="tempty">Loading your courses...</div></div>
+    </div>
+  </div>
+  <div class="badge">Starter deck · Atomic Habits framework</div>
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ---- MasterClass card + dark theatre. Project YOU, Sep 21 2026. ----------
+   MasterClass cannot be embedded: every page it serves carries
+   x-frame-options: SAMEORIGIN, and the video is DRM and plays only in their
+   own signed-in player. So the theatre is ours and the video is theirs: this
+   dims the whole page, holds his place, and hands off to a MasterClass tab.
+
+   A finished lesson is NOT logged here. It goes through PYLearn
+   (learning-log.js), the ONE learning form, which writes learning_log and
+   ticks the Learning habit. Do not copy that form into this page.
+   Courses live in Supabase masterclass_courses so the phone sees them too.  */
+var MC = (function(){
+  'use strict';
+  var URL_ = "https://arnjntspmrhigodlssbn.supabase.co";
+  var KEY_ = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+  var sb = null, courses = [], authed = false, booted = false;
+
+  function client(){
+    if (!sb && window.supabase) sb = window.supabase.createClient(URL_, KEY_);
+    return sb;
+  }
+  function esc2(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function att(s){ return esc2(s).replace(/"/g,'&quot;'); }
+  function today(){
+    if (window.PY && typeof window.PY.today === 'function'){ try { return window.PY.today(); } catch(e){} }
+    var n = new Date(), e = new Date(n.toLocaleString('en-US',{timeZone:'America/New_York'}));
+    if (e.getHours() < 2) e.setDate(e.getDate()-1);
+    return e.getFullYear()+'-'+String(e.getMonth()+1).padStart(2,'0')+'-'+String(e.getDate()).padStart(2,'0');
+  }
+  function say(m, cls){
+    var el = document.getElementById('tmsg');
+    if (el){ el.className = 'tmsg ' + (cls||''); el.textContent = m || ''; }
+  }
+
+  /* ---------- the card face inside the deck ---------- */
+  function face(c, total){
+    var live = courses.filter(function(x){ return x.status === 'active'; });
+    var now = '';
+    if (!authed){
+      now = '<div class="mcnow">Tap through to sign in and see your courses.</div>';
+    } else if (!live.length){
+      now = '<div class="mcnow">No courses on the go yet. Tap to add the one you are taking.</div>';
+    } else {
+      var t = live[0];
+      now = '<div class="mcnow">Up next: <b>' + esc2(t.title) + '</b>'
+          + (t.lessons_total ? ' &middot; lesson ' + ((t.lessons_done||0)+1) + ' of ' + t.lessons_total : '')
+          + (live.length > 1 ? '<br>and ' + (live.length-1) + ' more course' + (live.length>2?'s':'') : '')
+          + '</div>';
+    }
+    var html = '<div class="mcface">'
+      + '<div class="secname">MasterClass</div>'
+      + '<div class="kicker">Learning &middot; watch one lesson</div>'
+      + '<h2>Sit down and take a class</h2>'
+      + '<div class="idea">One lesson is the two-minute rule for learning: short enough to start, long enough to count. The page goes dark so nothing else is competing.</div>'
+      + now
+      + '<button class="mcbig" onclick="event.stopPropagation();MC.open()">Enter the theatre &rarr;</button>'
+      + '<div class="mchint">Plays on MasterClass in a new tab. Your place is kept here.</div>'
+      + '</div>';
+    document.getElementById('deck').innerHTML =
+      '<div class="flip"><div class="flip-inner">' + html + '</div></div>'
+      + '<div class="navbtns"><button class="btn" onclick="go(-1)">Back</button>'
+      + '<span style="align-self:center;font-size:12px;color:var(--muted)">' + (idx+1) + ' / ' + total + '</span>'
+      + '<button class="btn primary" ' + (idx === total-1 ? 'disabled' : '') + ' onclick="go(1)">Next</button></div>';
+  }
+
+  /* ---------- the theatre ---------- */
+  function open(){
+    var t = document.getElementById('theatre');
+    t.classList.add('on');
+    document.body.style.overflow = 'hidden';
+    if (!booted){ booted = true; boot(); } else { paint(); }
+  }
+  function close(){
+    document.getElementById('theatre').classList.remove('on');
+    document.body.style.overflow = '';
+    if (typeof render === 'function') render();
+  }
+
+  async function boot(){
+    var c = client();
+    if (!c){ document.getElementById('tbody').innerHTML = '<div class="tempty">Could not reach your course list. Check your connection and reopen.</div>'; return; }
+    try {
+      var s = await c.auth.getSession();
+      authed = !!(s && s.data && s.data.session);
+    } catch(e){ authed = false; }
+    if (authed) await load();
+    paint();
+  }
+
+  async function load(){
+    try {
+      var r = await client().from('masterclass_courses').select('*').order('position',{ascending:true}).order('created_at',{ascending:true});
+      courses = (r && r.data) || [];
+    } catch(e){ courses = []; }
+  }
+
+  function paint(){
+    var box = document.getElementById('tbody');
+    if (!authed){ box.innerHTML = loginHtml(); return; }
+    var live = courses.filter(function(x){ return x.status === 'active'; });
+    var h = '';
+    if (!live.length){
+      h += '<div class="tempty">Nothing here yet. Open the class you are taking on MasterClass, copy the address from the bar, and paste it below.</div>';
+    }
+    live.forEach(function(x){
+      var done = x.lessons_done || 0, tot = x.lessons_total || 0;
+      var pct = tot ? Math.min(100, Math.round(done/tot*100)) : 0;
+      h += '<div class="tcourse">'
+        + '<div class="ct">' + esc2(x.title) + '</div>'
+        + (x.instructor ? '<div class="ci">' + esc2(x.instructor) + '</div>' : '')
+        + (tot ? '<div class="cprog"><span class="cbar"><i style="width:' + pct + '%"></i></span><span class="cnum">' + done + ' of ' + tot + ' watched</span></div>'
+               : '<div class="cprog"><span class="cnum">' + done + ' lesson' + (done===1?'':'s') + ' watched</span></div>')
+        + (x.last_lesson ? '<div class="clast">Last time: ' + esc2(x.last_lesson) + '</div>' : '')
+        + '<div class="crow">'
+        + '<button class="tbtn play" data-go="' + att(x.id) + '">Play on MasterClass</button>'
+        + '<button class="tbtn done" data-done="' + att(x.id) + '">I watched a lesson</button>'
+        + '<button class="tbtn ghost" data-park="' + att(x.id) + '">Finished this course</button>'
+        + '</div></div>';
+    });
+    h += '<div class="tadd"><div class="al">Add a course</div>'
+      + '<input type="text" id="mc-t" maxlength="90" placeholder="Course name, e.g. the negotiation one">'
+      + '<input type="text" id="mc-i" maxlength="60" placeholder="Who teaches it (optional)">'
+      + '<input type="url" id="mc-u" placeholder="Paste the MasterClass address">'
+      + '<input type="number" id="mc-n" min="1" max="99" placeholder="How many lessons (optional)">'
+      + '<button class="tbtn" id="mc-save">Add it</button></div>'
+      + '<div class="tmsg" id="tmsg"></div>'
+      + '<div class="tnote">The video plays on MasterClass, not here: their site tells every other website to refuse to display it, and the video is copy protected. This page keeps the dark screen, your place, and the record of what you actually watched.</div>';
+    box.innerHTML = h;
+    wire();
+  }
+
+  function loginHtml(){
+    return '<div class="tadd"><div class="al">Sign in to see your courses</div>'
+      + '<input type="email" id="mc-e" placeholder="Your email" autocomplete="username">'
+      + '<input type="password" id="mc-p" placeholder="Your password" autocomplete="current-password">'
+      + '<button class="tbtn play" id="mc-in">Sign in</button></div>'
+      + '<div class="tmsg" id="tmsg"></div>'
+      + '<div class="tnote">Same sign in as the rest of Project YOU. The cue cards themselves never ask for it; only the course list does, because it is saved to your own database.</div>';
+  }
+
+  function wire(){
+    var s = document.getElementById('mc-in');
+    if (s) s.onclick = signIn;
+    var a = document.getElementById('mc-save');
+    if (a) a.onclick = add;
+    document.querySelectorAll('[data-go]').forEach(function(b){ b.onclick = function(){ play(b.getAttribute('data-go')); }; });
+    document.querySelectorAll('[data-done]').forEach(function(b){ b.onclick = function(){ watched(b.getAttribute('data-done')); }; });
+    document.querySelectorAll('[data-park]').forEach(function(b){ b.onclick = function(){ finish(b.getAttribute('data-park')); }; });
+  }
+
+  async function signIn(){
+    var e = (document.getElementById('mc-e').value || '').trim();
+    var p = document.getElementById('mc-p').value || '';
+    if (!e || !p){ say('Both boxes, please.', 'warn'); return; }
+    say('Signing in...');
+    var r = await client().auth.signInWithPassword({ email: e, password: p });
+    if (r.error){ say(r.error.message, 'bad'); return; }
+    authed = true;
+    await load();
+    paint();
+    if (typeof render === 'function') { /* keep the card face fresh behind the theatre */ }
+  }
+
+  function byId(id){ return courses.filter(function(x){ return x.id === id; })[0]; }
+
+  function play(id){
+    var x = byId(id);
+    if (!x) return;
+    window.open(x.url, '_blank', 'noopener');
+    say('Opened on MasterClass. Come back and tap "I watched a lesson" when you are done.', 'ok');
+  }
+
+  async function watched(id){
+    var x = byId(id);
+    if (!x) return;
+    var n = (x.lessons_done || 0) + 1;
+    var up = await client().from('masterclass_courses')
+      .update({ lessons_done: n, last_watched_on: today(), last_lesson: 'Lesson ' + n })
+      .eq('id', id).select();
+    if (up.error){ say('Could not save that: ' + up.error.message, 'bad'); return; }
+    if (up.data && up.data.length) { x.lessons_done = n; x.last_lesson = 'Lesson ' + n; }
+    paint();
+    say('Lesson ' + n + ' recorded. Now say how long it took.', 'ok');
+    logIt(x, n);
+  }
+
+  /* The ONE learning form does the time and the habit tick. */
+  function logIt(x, n){
+    if (!window.PYLearn){ say('Lesson saved. The learning form did not load, so the minutes are not logged.', 'warn'); return; }
+    window.PYLearn.open({
+      sb: client(),
+      when: today(),
+      what: x.title + ' - lesson ' + n,
+      onSaved: function(){ say('Logged. That is a lesson and the minutes on it.', 'ok'); }
+    });
+  }
+
+  async function add(){
+    var t = (document.getElementById('mc-t').value || '').trim();
+    var i = (document.getElementById('mc-i').value || '').trim();
+    var u = (document.getElementById('mc-u').value || '').trim();
+    var n = parseInt(document.getElementById('mc-n').value, 10);
+    if (!t){ say('It needs a name.', 'warn'); return; }
+    if (!/^https?:\/\//i.test(u)){ say('Paste the full address, starting with https.', 'warn'); return; }
+    say('Adding...');
+    var r = await client().from('masterclass_courses')
+      .insert({ title: t, instructor: i || null, url: u, lessons_total: (n>0?n:null), position: courses.length })
+      .select();
+    if (r.error){ say('Could not add it: ' + r.error.message, 'bad'); return; }
+    if (r.data && r.data.length) courses.push(r.data[0]);
+    paint();
+    say('Added. Tap Play when you are ready.', 'ok');
+  }
+
+  async function finish(id){
+    var r = await client().from('masterclass_courses').update({ status: 'finished' }).eq('id', id).select();
+    if (r.error){ say('Could not do that: ' + r.error.message, 'bad'); return; }
+    var x = byId(id); if (x) x.status = 'finished';
+    paint();
+    say('Moved off the list. Nice.', 'ok');
+  }
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape'){
+      var t = document.getElementById('theatre');
+      if (t && t.classList.contains('on')) close();
+    }
+  });
+
+  return { face: face, open: open, close: close };
+})();
+function mcFace(c, total){ return MC.face(c, total); }
+</script>
+<script>
+/* ---- Card data: 7 sections. front principle + idea; back cue (act-on-it prompt). ---- */
+const SECTIONS = ["Identity","Make It Obvious","Make It Attractive","Make It Easy","Make It Satisfying","Stacking & Environment","Breaking Bad Habits","MasterClass"];
+const CARDS = [
+  // 1. Identity
+  {sec:"Identity", title:"Vote for who you want to be", idea:"Every action you take is a small vote for the type of person you wish to become. No single rep transforms you; the tally does.", cue:"Finish this: “I am the kind of person who ______.” Then pick one tiny action today that casts a vote for that person."},
+  {sec:"Identity", title:"Change starts with identity, not outcomes", idea:"Most people aim at what they want to achieve. Lasting change comes from deciding who they want to be, and letting habits prove it.", cue:"Reframe a goal from outcome to identity: not “I want to run a marathon,” but “I am a runner.” Write the identity version of one current goal."},
+  {sec:"Identity", title:"Let the habit be the evidence", idea:"You don't need to believe the identity first. Each time you do the habit, you gather proof that you already are that person.", cue:"Name the identity behind a habit you're building, and say out loud after you do it: “That's what a ______ does.”"},
+  {sec:"Identity", title:"Small habits, compound self", idea:"A 1% improvement is invisible today and unmistakable a year out. You are the accumulation of your habits, not your intentions.", cue:"Pick the ONE habit that, repeated daily for a year, would most change who you are. That's your keystone. Circle it."},
+
+  // 2. Make It Obvious (cue)
+  {sec:"Make It Obvious", title:"Name the cue and the time", idea:"Vague intentions lose to specific plans. A habit needs a clear trigger — a time and a place — to fire reliably.", cue:"Write an implementation intention: “I will [habit] at [time] in [place].” Fill in all three blanks for one habit."},
+  {sec:"Make It Obvious", title:"Design your surroundings", idea:"You don't rise to the level of your willpower; you fall to the level of your environment. Cues you see, you do.", cue:"Make one good cue visible: put the book on the pillow, the vitamins by the kettle, the shoes by the door. Do it now."},
+  {sec:"Make It Obvious", title:"One space, one use", idea:"When a place serves many purposes, habits blur. Give a behavior its own spot and the spot starts to pull the behavior out of you.", cue:"Assign one behavior a dedicated place today (a chair only for reading, a desk only for deep work). Where will it be?"},
+  {sec:"Make It Obvious", title:"Score the day with a habits scorecard", idea:"You can't change a habit you haven't noticed. Awareness comes before action.", cue:"List your current daily habits and mark each +, –, or =. Just noticing them is the first change. Name one you'd flip."},
+
+  // 3. Make It Attractive (craving)
+  {sec:"Make It Attractive", title:"Temptation bundling", idea:"Pair something you need to do with something you want to do. The wanting pulls the needing along.", cue:"Bundle one: “Only [thing I love] while I [habit I resist].” e.g. only podcasts while walking. Write your pairing."},
+  {sec:"Make It Attractive", title:"Join a tribe where it's normal", idea:"We copy the habits of the close, the many, and the powerful. Nothing sustains a behavior like belonging.", cue:"Name one group where your desired habit is the ordinary thing to do. What's one step toward being around them?"},
+  {sec:"Make It Attractive", title:"Reframe the story", idea:"Highlight the benefit, not the burden. “I get to” beats “I have to.” The craving follows the framing.", cue:"Rewrite one “have to” as a “get to”: “I get to train because ______.” Say your version."},
+
+  // 4. Make It Easy (response)
+  {sec:"Make It Easy", title:"The two-minute rule", idea:"Scale a habit down until it can be started in two minutes. A habit must be established before it can be improved.", cue:"Shrink one habit to its two-minute version: “read a page,” “put on running shoes.” What's yours?"},
+  {sec:"Make It Easy", title:"Reduce the friction", idea:"Habits are easier when the path is short. Remove steps between you and the good behavior.", cue:"Cut one step out of a good habit (lay out clothes tonight, pre-fill the water bottle). What friction will you remove?"},
+  {sec:"Make It Easy", title:"Prime the environment", idea:"Set the stage in advance so the next good action is the default, not a decision.", cue:"Prepare one thing tonight so tomorrow's habit is automatic. What will you set out before bed?"},
+  {sec:"Make It Easy", title:"Master the art of showing up", idea:"On days you don't feel it, do the two-minute version anyway. Missing once is an accident; missing twice starts a new habit.", cue:"Decide your “never miss twice” rule for one habit. What's the smallest version you'll always do?"},
+
+  // 5. Make It Satisfying (reward)
+  {sec:"Make It Satisfying", title:"Make it feel good now", idea:"What's rewarded is repeated. Because good habits pay off later, add an immediate reward so the brain votes to do it again.", cue:"Attach one immediate reward to a habit whose payoff is distant. What small thing will you enjoy right after?"},
+  {sec:"Make It Satisfying", title:"Don't break the chain", idea:"A habit tracker turns the habit into its own reward — the satisfaction of the mark, the pull of the streak.", cue:"Start a chain: a dot grid, a calendar X. Mark today. What habit gets the chain? (This ties into your QS dot-grid tracker.)"},
+  {sec:"Make It Satisfying", title:"Measure what matters", idea:"When you track a behavior, the number becomes a nudge. What gets measured tends to get done.", cue:"Pick the one metric that captures a habit best (pages, minutes, reps) and log today's. Which metric?"},
+
+  // 6. Stacking & Environment
+  {sec:"Stacking & Environment", title:"Habit stacking", idea:"Anchor a new habit to one you already do. The existing habit becomes the reliable cue for the new one.", cue:"Write a stack: “After I [current habit], I will [new habit].” Fill both blanks with real habits of yours."},
+  {sec:"Stacking & Environment", title:"Make the good obvious, the bad invisible", idea:"Environment beats willpower over time. Put good cues in sight; put bad cues out of reach.", cue:"Do one of each today: make a good cue visible AND hide/remove one bad cue. Name both moves."},
+  {sec:"Stacking & Environment", title:"Stack toward the identity", idea:"A chain of small habits, each triggering the next, builds a routine that runs itself and proves who you are.", cue:"Sketch a 3-link morning or evening stack (habit → habit → habit). Write the three links."},
+
+  // 7. Breaking Bad Habits (inversion)
+  {sec:"Breaking Bad Habits", title:"Make it invisible", idea:"Inversion of the 1st law: remove the cue. You can't crave what you don't see. Reduce exposure and the urge fades.", cue:"Remove one trigger of a bad habit from your environment (app off the home screen, snacks out of the house). Which one goes?"},
+  {sec:"Breaking Bad Habits", title:"Make it unattractive", idea:"Inversion of the 2nd law: reframe the mindset. Highlight the true cost of the bad habit so the craving loses its shine.", cue:"Write the real cost of one bad habit — what it takes from the person you want to be. One sentence."},
+  {sec:"Breaking Bad Habits", title:"Make it difficult", idea:"Inversion of the 3rd law: add friction. Every extra step between you and the bad behavior makes it less likely.", cue:"Add one barrier to a bad habit (log out, unplug, hand your phone to someone). What friction will you add?"},
+  {sec:"Breaking Bad Habits", title:"Make it unsatisfying", idea:"Inversion of the 4th law: add an immediate cost. A habit contract or a witness makes the bad behavior sting now, not later.", cue:"Set one visible consequence or accountability partner for a habit you're breaking. Who or what will hold the line?"},
+
+  // 8. MasterClass (a live card, not a flip card)
+  {sec:"MasterClass", type:"mc", title:"Sit down and take a class", idea:"One lesson is the two-minute rule for learning: short enough to start, long enough to count.", cue:"Tap into the theatre, watch one lesson, then log it. The page goes dark so nothing else competes."}
+];
+CARDS.forEach((c,i)=>c.id='c'+i);
+
+const KICK = {
+  "Identity":"Identity","Make It Obvious":"1st Law · Obvious","Make It Attractive":"2nd Law · Attractive",
+  "Make It Easy":"3rd Law · Easy","Make It Satisfying":"4th Law · Satisfying",
+  "Stacking & Environment":"Stacking & Environment","Breaking Bad Habits":"Breaking Bad Habits",
+  "MasterClass":"Learning \u00b7 MasterClass"
+};
+const FAV = new Set();
+let sec='All', idx=0, flipped=false, filter='All';
+
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1900);}
+function h2class(t){return (t||'').length>34?' sm':'';}
+function pool(){return sec==='All'?CARDS:sec==='★'?CARDS.filter(c=>FAV.has(c.id)):CARDS.filter(c=>c.sec===sec);}
+
+function buildChips(){
+  const mk=(host,active,onclick,extra)=>{
+    const opts=['All',...SECTIONS,'★'];
+    host.innerHTML=opts.map(o=>{
+      const lbl=o==='★'?'★ Favorites':o;
+      return '<button class="chip '+(o===active?'on':'')+'" data-s="'+esc(o)+'">'+esc(lbl)+'</button>';
+    }).join('');
+    host.querySelectorAll('.chip').forEach(b=>b.onclick=()=>onclick(b.getAttribute('data-s')));
+  };
+  mk(document.getElementById('chips'),sec,s=>{sec=s;idx=0;flipped=false;render();});
+  mk(document.getElementById('bchips'),filter,s=>{filter=s;drawBrowse();
+    document.getElementById('bchips').querySelectorAll('.chip').forEach(b=>b.classList.toggle('on',b.getAttribute('data-s')===filter));});
+}
+
+function render(){
+  const list=pool();
+  const dots=document.getElementById('dots');
+  if(!list.length){dots.innerHTML='';document.getElementById('deck').innerHTML='<div class="face" style="position:static"><div class="secname">'+esc(sec)+'</div><h2>Nothing here yet.</h2><div class="idea">No favorites saved — tap the ★ on a card to keep it.</div></div>';return;}
+  if(idx>=list.length)idx=0;
+  dots.innerHTML=list.map((_,i)=>'<div class="dot '+(i===idx?'on':'')+'"></div>').join('');
+  const c=list[idx];
+  if(c.type==='mc'&&window.mcFace){mcFace(c,list.length);return;}
+  const front='<div class="face front">'+
+      '<span class="fstar '+(FAV.has(c.id)?'on':'')+'" title="Save" onclick="event.stopPropagation();toggleFav(\''+c.id+'\')">&#9733;</span>'+
+      '<div class="secname">'+esc(c.sec)+'</div>'+
+      '<div class="kicker">'+esc(KICK[c.sec])+'</div>'+
+      '<h2 class="'+h2class(c.title).trim()+'">'+esc(c.title)+'</h2>'+
+      '<div class="idea">'+esc(c.idea)+'</div>'+
+      '<button class="flipbtn" onclick="event.stopPropagation();doFlip()">Flip for the cue →</button>'+
+    '</div>';
+  const back='<div class="face back">'+
+      '<span class="fstar '+(FAV.has(c.id)?'on':'')+'" title="Save" onclick="event.stopPropagation();toggleFav(\''+c.id+'\')">&#9733;</span>'+
+      '<div class="secname">'+esc(c.sec)+'</div>'+
+      '<div class="cuelabel">Your cue</div>'+
+      '<div class="cue">'+esc(c.cue)+'</div>'+
+      '<div class="tip">Tap the card to flip back.</div>'+
+    '</div>';
+  const prevDis=idx===0?'disabled':'', nextDis=idx===list.length-1?'disabled':'';
+  document.getElementById('deck').innerHTML=
+    '<div class="flip'+(flipped?' flipped':'')+'" id="flip" onclick="doFlip()"><div class="flip-inner">'+front+back+'</div></div>'+
+    '<div class="navbtns"><button class="btn" '+prevDis+' onclick="go(-1)">Back</button>'+
+    '<span style="align-self:center;font-size:12px;color:var(--muted)">'+(idx+1)+' / '+list.length+'</span>'+
+    '<button class="btn primary" '+nextDis+' onclick="go(1)">Next</button></div>';
+}
+function doFlip(){flipped=!flipped;const f=document.getElementById('flip');if(f)f.classList.toggle('flipped',flipped);}
+function go(d){const n=pool().length;idx=Math.max(0,Math.min(n-1,idx+d));flipped=false;render();}
+function toggleFav(id){if(FAV.has(id)){FAV.delete(id);toast('Removed from favorites.');}else{FAV.add(id);toast('Saved to favorites ★');}render();if(!document.getElementById('browse').classList.contains('hidden'))drawBrowse();}
+
+function showView(v){
+  document.getElementById('deckView').classList.toggle('hidden',v!=='deck');
+  document.getElementById('browse').classList.toggle('hidden',v!=='browse');
+  document.getElementById('tgDeck').classList.toggle('on',v==='deck');
+  document.getElementById('tgBrowse').classList.toggle('on',v==='browse');
+  if(v==='browse')drawBrowse(); else render();
+}
+function drawBrowse(){
+  const term=(document.getElementById('q').value||'').toLowerCase();
+  let list=CARDS.filter(c=>{
+    const secOk=filter==='All'?true:filter==='★'?FAV.has(c.id):c.sec===filter;
+    const hit=(c.title+' '+c.idea+' '+c.cue).toLowerCase().includes(term);
+    return secOk&&hit;
+  });
+  document.getElementById('bcount').textContent=list.length+' of '+CARDS.length+' cards';
+  document.getElementById('grid').innerHTML=list.map(c=>
+    '<div class="pcard"><span class="star '+(FAV.has(c.id)?'on':'')+'" onclick="toggleFav(\''+c.id+'\')">&#9733;</span>'+
+    '<div class="ptag">'+esc(KICK[c.sec])+'</div><div class="txt">'+esc(c.title)+'</div>'+
+    '<div class="pc"><b>Cue:</b> '+esc(c.cue)+'</div></div>'
+  ).join('') || '<div style="color:var(--muted);font-size:14px;padding:10px">Nothing matches.</div>';
+}
+
+(function(){var d=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('date').textContent=M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();})();
+buildChips(); render();
+</script>
+<script src="learning-log.js"></script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>
