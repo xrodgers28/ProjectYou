@@ -8,6 +8,10 @@
      PYLearn.mount(el, opts)   draws the form inside el
      PYLearn.open(opts)        draws it in a pop-up sheet (Todays Tasks)
 
+   opts also takes tracker and group (Sep 21 2026): the habit box to tick and
+   the Compass section it files under. Leave them out and it is the shared
+   Learning habit under Mental Fitness, which is what every page did before.
+
    opts: sb (Supabase client, required), when (YYYY-MM-DD), startMin (minutes after
    midnight, optional; timeIsGuess:true when the page picked the slot itself), mins
    (length, optional), what (a title to prefill), onSaved(result), onClose().
@@ -55,11 +59,14 @@ window.PYLearn = (function () {
   }
 
   /* ---------- the habit tick ---------- */
-  async function tickHabit(sb, date, minutes){
+  async function tickHabit(sb, date, minutes, tracker, group){
     var DAY = today();
+    /* A caller can name its own habit box. Omit them and it is the shared
+       Learning habit, exactly as before, so every existing page is unchanged. */
+    var TR = tracker || HABIT_TRACKER, GR = group || HABIT_GROUP;
     try {
       if (date === DAY) {
-        var r = await sb.from('todos').select('id,done,actual_minutes').eq('is_habit', true).eq('tracker', HABIT_TRACKER).limit(1);
+        var r = await sb.from('todos').select('id,done,actual_minutes').eq('is_habit', true).eq('tracker', TR).limit(1);
         var row = r.data && r.data[0];
         if (!row) return null;
         var now = new Date().toISOString();
@@ -72,7 +79,7 @@ window.PYLearn = (function () {
         return row.id;
       }
       if (date < DAY) {
-        await sb.from('qs_log').upsert([{ date: date, group: HABIT_GROUP, tracker: HABIT_TRACKER, value: 1, unit: 'done',
+        await sb.from('qs_log').upsert([{ date: date, group: GR, tracker: TR, value: 1, unit: 'done',
           minutes: minutes || null, minutes_estimated: !minutes, status: 'done', source: 'habit-bandit',
           logged_at: new Date().toISOString(), note: 'Logged from the learning log on ' + DAY }], { onConflict: 'date,tracker,source' });
       }
@@ -184,7 +191,7 @@ window.PYLearn = (function () {
         while_doing: this.doing || null, takeaway: this.takeaway || null, block_id: o.blockId || null, source: o.source || 'learning-log'
       }).select('id').single();
       if (ins.error) throw ins.error;
-      var habitId = await tickHabit(this.sb, this.when, this.mins);
+      var habitId = await tickHabit(this.sb, this.when, this.mins, o.tracker, o.group);
       var res = { id: ins.data && ins.data.id, title: title, what: what, kind: this.kind, minutes: this.mins, whileDoing: this.doing, habitId: habitId, when: this.when };
       this.say('Logged: ' + title, 'ok');
       if (typeof o.onSaved === 'function') { try { o.onSaved(res); } catch (e) {} }
@@ -222,5 +229,5 @@ window.PYLearn = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, kindIn: kindIn, version: '1.0' };
+  return { mount: mount, open: open, tickHabit: tickHabit, kindIn: kindIn, version: '1.1' };
 })();

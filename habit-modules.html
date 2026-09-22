@@ -597,7 +597,7 @@
   .pjfoot{margin:16px auto 0;text-align:center;font-size:12px;color:#4d5769;max-width:640px;line-height:1.5}
   .pjnote{background:#fff;border:1px solid var(--key);border-left:4px solid #b04a4a;border-radius:12px;padding:14px 16px;font-size:14px;color:#37404f;line-height:1.5}
   @media(max-width:640px){.pjgrid{grid-template-columns:1fr}}
-  /* ---- MasterClass theatre (v6.45) ------------------------------------
+  /* ---- MasterClass theatre (v6.46) ------------------------------------
      MasterClass cannot be embedded: every page they serve carries
      x-frame-options: SAMEORIGIN and the video is DRM. So the dark room is
      ours and the video is theirs. Watch actions are real links, never
@@ -647,13 +647,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.45</span>
+    <span class="pn-ver">v6.46</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.45</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.46</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -782,7 +782,7 @@ const MODS=[
  {id:'creativity',name:"Creativity",       href:"creativity.html", acc:"#6a8f3f", icon:'pencil', kick:"Today's warm-up",       ds:"Ten circles to turn into something, or one everyday object and every daft use you can find for it. They take it in turns.", habit:"Creativity Challenge", qs:"Creativity", est:10, pos:22},
  {id:'bucket',  name:"Bucket List",          href:"bucket-list.html", acc:"#5f5aa8",icon:'flag',    kick:"One idea a day",         ds:"Build the list, then get one done. Ben Nemtin's ten categories of life.", habit:"Bucket List", qs:"Bucket List", est:10, pos:17, deck:'bucket-list', sect:'future', sleep:true},
  {id:'wall',    name:"The Wall",             href:"wall.html",        acc:"#9c5f7a", icon:'frame',   kick:"This morning's pictures", ds:"Twelve outside feeds, dealt fresh every morning. Star anything you want to keep.", habit:"The Wall", qs:"The Wall", est:10, pos:19},
- {id:'masterclass',name:"MasterClass",     href:"#",                acc:"#8c3f52", icon:'play',    kick:"One lesson a day",      ds:"A class you are actually taking. The board goes dark, you watch one lesson on MasterClass, then log it.", habit:"Learning", qs:"Learning", est:30, pos:11, theatre:true},
+ {id:'masterclass',name:"MasterClass",     href:"#",                acc:"#8c3f52", icon:'play',    kick:"One lesson a day",      ds:"A class you are actually taking. The board goes dark, you watch one lesson on MasterClass, then log it.", habit:"MasterClass", qs:"MasterClass", est:20, pos:11.5, theatre:true},
  /* last in this list means last on the board, which is the point: it is the
     last thing of the day. `scene` swaps the white badge card for the night
     picture in ART.night. */
@@ -3328,6 +3328,22 @@ var MCT = (function(){
   }
   function byId(id){ return rows.filter(function(x){ return x.id===id; })[0]; }
 
+  /* Scott, Sep 21: once he saves, the dark screen should get out of the way by
+     itself and put the board back. loadRows() then render() is the same pair
+     the page already runs when he comes back from a module page. */
+  function backToBoard(msg, wait){
+    say(msg, 'ok');
+    setTimeout(function(){
+      close_();
+      try{
+        if (typeof loadRows === 'function' && typeof signedIn !== 'undefined' && signedIn){
+          Promise.resolve(loadRows()).then(function(){ if(typeof render==='function') render(); });
+        } else if (typeof render === 'function'){ render(); }
+        if (typeof toast === 'function') toast(msg);
+      }catch(e){}
+    }, wait || 850);
+  }
+
   async function watched(id){
     var x = byId(id); if (!x || !sb) return;
     var n = (x.lessons_done||0) + 1;
@@ -3339,7 +3355,8 @@ var MCT = (function(){
     paint(); say('Lesson '+n+' recorded. Now say how long it took.','ok');
     if (window.PYLearn){
       window.PYLearn.open({ sb: sb, when: day(), what: x.title+' - lesson '+n,
-        onSaved: function(){ say('Logged, with the minutes.','ok'); } });
+        tracker: 'MasterClass', group: 'Mental Fitness',
+        onSaved: function(){ backToBoard('Lesson '+n+' logged, with the minutes.'); } });
     } else {
       say('Lesson saved, but the learning form did not load, so the minutes are not logged.','warn');
     }
@@ -3357,7 +3374,8 @@ var MCT = (function(){
               .insert({title:t, instructor:i||null, url:u, lessons_total:(n>0?n:null), position:rows.length}).select();
     if (r.error){ say('Could not save it: '+r.error.message,'bad'); return; }
     if (r.data && r.data.length) rows.push(r.data[0]);
-    paint(); say('Saved. The Watch button at the top now goes straight to it.','ok');
+    paint();
+    backToBoard('Saved. Tap the card again and Watch goes straight to it.');
   }
   async function fin(id){
     if (!sb) return;
