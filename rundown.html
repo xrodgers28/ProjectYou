@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Workout &middot; ProjectYou</title>
+<script src="py-day.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+<div class="pynav"></div>
+<style>
+  :root{
+    --ink:#1f2a44; --onbg:#1f2a44; --muted:#5b6472; --faint:#9aa6b4;
+    --line:#e3e7ee; --bg:#eef1f6; --card:#fff; --key:#c2c8d1;
+    --sunk:#f6f8fb; --accent:#3f6f8f; --acc:#a35a4e; --good:#2f8f5b; --goodbg:#e6f4ec;
+    --star:#c98a1f; --shadow:0 12px 34px rgba(31,42,68,.10);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --onbg:#e7eaf0; --bg:#0f1420; --card:#e7eaf0; --sunk:#d9dee8; --line:#c9d0dc; --shadow:0 12px 34px rgba(0,0,0,.55); }
+  }
+  :root[data-theme="dark"]{ --onbg:#e7eaf0; --bg:#0f1420; --card:#e7eaf0; --sunk:#d9dee8; --line:#c9d0dc; --shadow:0 12px 34px rgba(0,0,0,.55); }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+  .wrap{max-width:760px;margin:0 auto;padding:18px 16px 80px}
+  .kick{font-size:10.5px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--acc)}
+  h1{font-size:27px;margin:5px 0 0;letter-spacing:-.2px;color:var(--onbg)}
+  h1 .ver{font-size:11px;font-weight:700;letter-spacing:.6px;vertical-align:middle;color:var(--muted);border:1px solid var(--key);border-radius:20px;padding:3px 9px;margin-left:9px;background:var(--card)}
+  .sub{font-size:12.5px;color:var(--onbg);opacity:.72;margin-top:5px}
+  .dots{display:flex;gap:6px;margin:16px 0 10px}
+  .dots i{flex:1;height:4px;border-radius:3px;background:var(--key)}
+  .dots i.on{background:var(--accent)}
+  .tile{background:var(--card);border:1px solid var(--key);border-radius:18px;box-shadow:var(--shadow);min-height:520px;display:flex;flex-direction:column;overflow:hidden;position:relative}
+  .tile .pic{background:#10141d;max-height:300px;overflow:hidden;display:grid;place-items:center}
+  .tile .pic img{width:100%;max-height:300px;object-fit:cover;display:block}
+  .tile .top{padding:18px 20px 22px}
+  .tile .k{font-size:10.5px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--acc)}
+  .tile h2{font-size:21px;font-weight:700;line-height:1.22;margin:6px 0 12px;color:var(--ink);text-wrap:balance}
+  .tile p{margin:0 0 10px;font-size:14.5px;line-height:1.55}
+  .tile p b{color:var(--ink)}
+  .tile ol{margin:4px 0 12px;padding-left:22px;font-size:14.5px;line-height:1.55}
+  .tile ol li{margin-bottom:8px}
+  .tile .more{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
+  .st{position:absolute;top:12px;left:12px;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.92);color:#1f2a44;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .st svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9}
+  .st[aria-pressed="true"]{background:var(--star);color:#fff}
+  .st[aria-pressed="true"] svg{fill:currentColor}
+  .prac{margin-top:auto;background:var(--sunk);border-top:1px solid var(--line);padding:14px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .btn{font:700 12px/1 Arial,sans-serif;letter-spacing:.4px;text-transform:uppercase;padding:11px 16px;border-radius:10px;border:1px solid var(--key);background:var(--card);color:var(--ink);cursor:pointer}
+  .btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn:disabled{opacity:.4;cursor:default}
+  .minl{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+  .minl input{width:62px;font:inherit;font-size:14px;padding:8px;border-radius:8px;border:1px solid var(--key);background:var(--card);color:var(--ink)}
+  .note{font-size:12px;color:var(--onbg);opacity:.7;margin-top:14px}
+  .empty{padding:40px 20px;text-align:center;color:var(--muted)}
+  .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1f2a44;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:2147483002}
+  .stamp{margin-top:20px;font-size:10.5px;color:var(--onbg);opacity:.45;text-align:center}
+</style>
+
+<div class="wrap">
+  <div class="kick">Cue card &middot; from The Rundown AI</div>
+  <h1>AI Workout <span class="ver">v1.0</span></h1>
+  <div class="sub" id="sub">Loading today&rsquo;s drill</div>
+  <div class="dots" id="dots"></div>
+  <div id="deck"></div>
+  <div class="note">Only three parts of the newsletter make it here: AI Training, Workflow of the Day, and the Roundtable when there is one. Everything else stays in your inbox.</div>
+  <div class="stamp" id="stamp">v1.0</div>
+</div>
+
+<script>
+var SB="https://arnjntspmrhigodlssbn.supabase.co";
+var KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+var HABIT="AI Workout", BOARD_ID="rundown";
+var ORDER={"AI Training":0,"Workflow of the Day":1,"Roundtable":2};
+var STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
+var TILES=[], idx=0, sb=null, habitRow=null, ticked=false;
+try{ if(window.supabase && window.supabase.createClient) sb=window.supabase.createClient(SB,KEY); }catch(e){ sb=null; }
+
+function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function today(){
+  if(window.PY&&PY.today) return PY.today();
+  var d=new Date(Date.now()-2*3600*1000);
+  return new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York"}).format(d);
+}
+function nice(iso){
+  var mo=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], p=String(iso).split("-");
+  return mo[+p[1]-1]+" "+(+p[2])+", "+p[0];
+}
+function api(path,opts){
+  opts=opts||{};
+  var h={apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"};
+  if(opts.prefer) h.Prefer=opts.prefer;
+  return fetch(SB+"/rest/v1/"+path,{method:opts.method||"GET",headers:h,body:opts.body})
+    .then(function(r){ if(!r.ok) return r.text().then(function(t){ throw new Error(r.status+" "+t.slice(0,140)); });
+      return r.text().then(function(t){ return t?JSON.parse(t):null; }); });
+}
+function toast(m){ var t=document.createElement("div"); t.className="toast"; t.textContent=m; document.body.appendChild(t); setTimeout(function(){ t.remove(); },3200); }
+
+/* a headline is never repeated in the body */
+function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
+
+/* The day's unit is one whole issue: its two or three sections together.
+   seen_on is the ledger. Today's issue is whatever was stamped today; if nothing
+   was, the newest issue not yet seen is stamped today in the same act. */
+function deal(){
+  var t=today();
+  return api("rundown_items?select=*&seen_on=eq."+t+"&order=issue_date.desc").then(function(rows){
+    if(rows && rows.length) return rows;
+    return api("rundown_items?select=issue_link,issue_date&seen_on=is.null&order=issue_date.desc&limit=1").then(function(nx){
+      if(!nx || !nx.length) return [];
+      var link=nx[0].issue_link;
+      return api("rundown_items?issue_link=eq."+encodeURIComponent(link),{method:"PATCH",prefer:"return=representation",
+        body:JSON.stringify({seen_on:t})});
+    });
+  });
+}
+
+function tileHTML(r,i,n){
+  var body=(r.blocks||[]), h='', inList=false;
+  body.forEach(function(b){
+    if(norm(b.x)===norm(r.title)) return;
+    if(/How do you use AI\?|Tell us for a chance|^See .{0,40}full workflow/i.test(b.x)) return;
+    b={t:b.t,x:String(b.x).replace(/\s+([:.,;!?])/g,"$1")};
+    if(b.t==="li"){ if(!inList){ h+='<ol>'; inList=true; } h+='<li>'+esc(b.x)+'</li>'; return; }
+    if(inList){ h+='</ol>'; inList=false; }
+    var x=esc(b.x).replace(/^(The Rundown:|Step-by-step:|Pro tip:|Why it matters:)/,'<b>$1</b>');
+    h+='<p>'+x+'</p>';
+  });
+  if(inList) h+='</ol>';
+  var last=(i===n-1);
+  return '<div class="tile">'+
+    '<button class="st" type="button" data-save="'+r.id+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
+    (r.img?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
+    '<div class="top"><div class="k">'+esc(r.section)+'</div><h2>'+esc(r.title)+'</h2>'+h+
+    (r.link?'<a class="more" href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">Open the full '+(r.section==="AI Training"?"guide":"story")+'</a>':'')+
+    '</div><div class="prac">'+
+      '<button class="btn" type="button" id="back"'+(i===0?' disabled':'')+'>Back</button>'+
+      (last
+        ? '<label class="minl">Minutes <input id="mins" type="number" min="1" max="180" value="10"></label><button class="btn pri" type="button" id="fin">'+(ticked?"Done today":"I&rsquo;m done")+'</button>'
+        : '<span style="font-size:12px;color:var(--muted)">'+(i+1)+' of '+n+'</span><button class="btn pri" type="button" id="next">Next</button>')+
+    '</div></div>';
+}
+function render(){
+  var n=TILES.length, d="";
+  for(var i=0;i<n;i++) d+='<i class="'+(i<=idx?"on":"")+'"></i>';
+  document.getElementById("dots").innerHTML=d;
+  if(!n){ document.getElementById("deck").innerHTML='<div class="tile"><div class="empty">Nothing new from The Rundown yet. It lands around 6am on weekdays.</div></div>'; return; }
+  document.getElementById("deck").innerHTML=tileHTML(TILES[idx],idx,n);
+  var b=document.getElementById("back"); if(b) b.onclick=function(){ if(idx>0){ idx--; render(); window.scrollTo(0,0);} };
+  var x=document.getElementById("next"); if(x) x.onclick=function(){ if(idx<n-1){ idx++; render(); window.scrollTo(0,0);} };
+  var f=document.getElementById("fin"); if(f) f.onclick=finish;
+  var m=document.getElementById("mins"); if(m) m.onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); finish(); } };
+}
+
+/* ---- the cue-card finish: tick the habit, log the minutes, back to the board ---- */
+function toBoard(){ setTimeout(function(){ location.href="habit-modules.html?done="+BOARD_ID; },550); }
+function loadHabit(){
+  if(!sb) return Promise.resolve();
+  return sb.auth.getSession().then(function(s){
+    if(!(s && s.data && s.data.session)) return;
+    return sb.from("todos").select("id,task,done,actual_minutes,for_date").eq("is_habit",true).eq("task",HABIT)
+      .order("for_date",{ascending:false}).limit(1).then(function(r){
+        habitRow=(r.data&&r.data[0])||null;
+        ticked=!!(habitRow && habitRow.done && habitRow.for_date===today());
+      });
+  }).catch(function(){});
+}
+function finish(){
+  if(ticked){ toBoard(); return; }
+  if(!sb){ toast("The sign-in did not load. Reload the page."); return; }
+  if(!habitRow){ toast("AI Workout is not on your cue cards yet, so there is nothing to tick."); return; }
+  var el=document.getElementById("mins"), v=parseInt(el&&el.value,10);
+  var mins=(v>0&&v<=180)?v:(habitRow.actual_minutes||10), now=new Date().toISOString(), t=today();
+  sb.from("todos").update({done:true,status:"done",done_at:now,actual_minutes:mins,for_date:t,updated_at:now}).eq("id",habitRow.id)
+    .then(function(res){
+      if(res.error){ toast("Did not save: "+res.error.message); return; }
+      ticked=true; toast("AI Workout to the wheel, "+mins+" min"); toBoard();
+    });
+}
+
+document.addEventListener("click",function(e){
+  var s=e.target.closest("[data-save]"); if(!s) return;
+  var id=+s.getAttribute("data-save"), on=s.getAttribute("aria-pressed")!=="true";
+  s.setAttribute("aria-pressed",on?"true":"false");
+  api("rundown_items?id=eq."+id,{method:"PATCH",body:JSON.stringify({saved:on})})
+    .then(function(){ toast(on?"Kept.":"Taken out of your keeps."); })
+    .catch(function(err){ s.setAttribute("aria-pressed",on?"false":"true"); toast("Could not save: "+err.message); });
+});
+
+Promise.all([deal(), loadHabit()]).then(function(res){
+  var rows=(res[0]||[]).slice().sort(function(a,b){ return (a.section in ORDER?ORDER[a.section]:9)-(b.section in ORDER?ORDER[b.section]:9); });
+  TILES=rows;
+  if(rows.length){
+    document.getElementById("sub").textContent=nice(rows[0].issue_date)+" issue · "+rows.length+(rows.length===1?" card":" cards")+" · about 10 minutes";
+    document.getElementById("stamp").textContent="v1.0 · from The Rundown AI, "+nice(rows[0].issue_date);
+  } else document.getElementById("sub").textContent="";
+  render();
+}).catch(function(e){
+  document.getElementById("sub").textContent="";
+  document.getElementById("deck").innerHTML='<div class="tile"><div class="empty">Could not load today&rsquo;s drill: '+esc(e.message)+'</div></div>';
+});
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
