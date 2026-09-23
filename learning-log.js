@@ -28,6 +28,8 @@
    v1.2, Sep 22 2026: more room between rows (buttons the same size), kinds wrap
    instead of scrolling sideways, and a + New kind button that saves to learning_kinds.
 
+   v1.3, Sep 22 2026: a small x on the kinds he added removes them (with Undo).
+
    Change the form here and every page gets the change. Do not copy it into a page. */
 window.PYLearn = (function () {
   'use strict';
@@ -110,6 +112,10 @@ window.PYLearn = (function () {
       '.pyll .p{flex:none;white-space:nowrap;font:inherit;font-size:10px;line-height:12px;padding:0 6px;cursor:pointer;border:1px solid var(--ll-line);border-radius:99px;background:var(--ll-bg);color:var(--ll-ink2)}',
       '.pyll .p:hover{border-color:var(--ll-acc)}',
       '.pyll .p.add{border-style:dashed;color:var(--ll-mut);background:transparent}',
+      '.pyll .p .kx{display:inline-block;margin:0 -2px 0 5px;padding:0 2px;color:var(--ll-mut);font-weight:400}',
+      '.pyll .p .kx:hover{color:var(--ll-warm)}',
+      '.pyll .p.on .kx{color:#fff;opacity:.8}',
+      '.pyll .why .undo{margin-left:8px;border:0;background:none;padding:0;font:inherit;font-weight:700;color:var(--ll-acc);text-decoration:underline;cursor:pointer}',
       '.pyll .newk{display:inline-flex;gap:6px;align-items:center}',
       '.pyll .newk input[type=text]{width:150px;padding:2px 8px}',
       '.pyll .p.on{background:var(--ll-acc);border-color:var(--ll-acc);color:#fff;font-weight:700}',
@@ -159,7 +165,7 @@ window.PYLearn = (function () {
     this.el.innerHTML = h;
     var q = function(id){ return self.el.querySelector('#' + id); };
     q('ll-what').addEventListener('input', function(){ self.what = this.value.trim(); if (!self.kindPicked) { self.kind = kindIn(self.what); self.paintKind(); } });
-    q('ll-kind').addEventListener('click', function(e){ var b = e.target.closest('.p'); if (!b) return; if (b.id === 'll-addk') { self.askKind(); return; } if (b.id === 'll-addk-ok') { self.addKind(); return; } if (b.id === 'll-addk-no') { self.drawKinds(); return; } self.kind = (self.kind === b.dataset.k) ? '' : b.dataset.k; self.kindPicked = !!self.kind; self.paintKind(); });
+    q('ll-kind').addEventListener('click', function(e){ var b = e.target.closest('.p'); if (!b) return; if (b.id === 'll-addk') { self.askKind(); return; } if (b.id === 'll-addk-ok') { self.addKind(); return; } if (b.id === 'll-addk-no') { self.drawKinds(); return; } var rm = e.target.closest('.kx'); if (rm) { e.stopPropagation(); self.removeKind(rm.dataset.rm); return; } self.kind = (self.kind === b.dataset.k) ? '' : b.dataset.k; self.kindPicked = !!self.kind; self.paintKind(); });
     q('ll-while').addEventListener('click', function(e){ var b = e.target.closest('.p'); if (!b) return; self.doing = (self.doing === b.dataset.k) ? '' : b.dataset.k; self.paintWhile(); });
     q('ll-quick').addEventListener('click', function(e){ var b = e.target.closest('.p'); if (!b) return; self.mins = +b.dataset.m; q('ll-mins').value = self.mins; self.paintMins(); });
     q('ll-mins').addEventListener('input', function(){ self.mins = Math.max(1, +this.value || 0); self.paintMins(); });
@@ -182,7 +188,10 @@ window.PYLearn = (function () {
   };
   Form.prototype.drawKinds = function(){
     var k = this.kind, box = this.el.querySelector('#ll-kind'); if (!box) return;
-    box.innerHTML = this.allKinds().map(function(x){ return '<button type="button" class="p' + (x === k ? ' on' : '') + '" data-k="' + att(x) + '">' + esc(x) + '</button>'; }).join('')
+    var mine = {}; this.custom.forEach(function(x){ mine[String(x).toLowerCase()] = 1; });
+    box.innerHTML = this.allKinds().map(function(x){ var own = mine[String(x).toLowerCase()];
+      return '<button type="button" class="p' + (x === k ? ' on' : '') + '" data-k="' + att(x) + '">' + esc(x)
+        + (own ? '<span class="kx" data-rm="' + att(x) + '" role="button" aria-label="Remove ' + att(x) + '" title="Remove ' + att(x) + '">&times;</span>' : '') + '</button>'; }).join('')
       + '<button type="button" class="p add" id="ll-addk">+ New kind</button>';
   };
   Form.prototype.askKind = function(){
@@ -209,10 +218,33 @@ window.PYLearn = (function () {
       this.say('Added ' + name + ' to your kinds', 'ok');
     } catch (e) { this.say('Could not add that kind: ' + (e && e.message ? e.message : e), 'warn'); }
   };
+  /* Remove a kind he added (v1.3, Sep 22 2026). Built-in kinds have no x. Past
+     entries keep their kind; it only leaves the list of choices. The delete is
+     checked: zero rows back means it did not happen, and he is told so. */
+  Form.prototype.removeKind = async function(name){
+    var self = this;
+    try {
+      var r = await this.sb.from('learning_kinds').delete().eq('name', name).select('name');
+      if (r.error) throw r.error;
+      if (!r.data || !r.data.length) throw new Error('nothing was removed');
+      this.custom = this.custom.filter(function(x){ return String(x).toLowerCase() !== String(name).toLowerCase(); });
+      if (this.kind === name) { this.kind = ''; this.kindPicked = false; }
+      this.drawKinds();
+      this.say('Removed ' + name, 'ok');
+      var w = this.el.querySelector('#ll-why'), u = document.createElement('button');
+      u.type = 'button'; u.className = 'undo'; u.textContent = 'Undo';
+      u.onclick = async function(){
+        try { var a = await self.sb.from('learning_kinds').insert({ name: name }).select('name'); if (a.error) throw a.error;
+          if (!a.data || !a.data.length) throw new Error('nothing was stored');
+          self.custom.push(name); self.drawKinds(); self.say('Put ' + name + ' back', 'ok'); }
+        catch (e) { self.say('Could not put it back: ' + (e && e.message ? e.message : e), 'warn'); }
+      };
+      if (w) w.appendChild(u);
+    } catch (e) { this.say('Could not remove ' + name + ': ' + (e && e.message ? e.message : e), 'warn'); }
+  };
   Form.prototype.loadKinds = async function(){
     var self = this, add = [];
     try { var a = await this.sb.from('learning_kinds').select('name').order('created_at'); (a.data || []).forEach(function(x){ add.push(x.name); }); } catch (e) {}
-    try { var b = await this.sb.from('learning_log').select('kind').not('kind', 'is', null).limit(500); (b.data || []).forEach(function(x){ add.push(x.kind); }); } catch (e) {}
     this.custom = add;
     if (!this.el.querySelector('#ll-newk')) this.drawKinds();
   };
@@ -284,5 +316,5 @@ window.PYLearn = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, kindIn: kindIn, version: '1.2' };
+  return { mount: mount, open: open, tickHabit: tickHabit, kindIn: kindIn, version: '1.3' };
 })();
