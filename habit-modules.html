@@ -635,6 +635,16 @@
   .mcadd input:focus{outline:2px solid #c6a63f;outline-offset:1px}
   .mcmsg{font-size:13px;margin-top:10px;min-height:18px}
   .mcmsg.ok{color:#8fd3ae} .mcmsg.warn{color:#e0ab52} .mcmsg.bad{color:#e08b83}
+  .mccard .chd{display:flex;align-items:flex-start;gap:10px}
+  .mccard .chd .ctx{flex:1;min-width:0}
+  .mcedit{flex:none;font-family:inherit;font-size:12.5px;font-weight:700;background:transparent;border:1px solid #33414f;color:#9fb1c2;border-radius:8px;padding:6px 11px;cursor:pointer;min-height:32px}
+  .mcedit:hover{border-color:#6d8298;color:#fff}
+  .mcef{margin-top:12px}
+  .mcef label{display:block;font-size:11.5px;font-weight:700;color:#8d9fb0;margin:0 0 4px}
+  .mcef input{width:100%;font-family:inherit;font-size:14px;padding:9px 11px;border:1px solid #2f3d4c;border-radius:8px;background:#0a1017;color:#e9eff5;margin-bottom:10px}
+  .mcef input:focus{outline:2px solid #c6a63f;outline-offset:1px}
+  .mcef .two{display:flex;gap:10px}
+  .mcef .two>div{flex:1;min-width:0}
   .mcwhy{font-size:12px;color:#6d8298;line-height:1.55;margin-top:20px;border-top:1px solid #22303d;padding-top:14px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -647,13 +657,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.46</span>
+    <span class="pn-ver">v6.47</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.46</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.47</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -3259,7 +3269,7 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
 var MCT = (function(){
   'use strict';
   var BROWSE = 'https://www.masterclass.com/classes';
-  var rows = [], loaded = false;
+  var rows = [], loaded = false, editing = null;
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function att(s){ return esc(s).replace(/"/g,'&quot;'); }
@@ -3294,11 +3304,14 @@ var MCT = (function(){
 
     if (L.length) h += '<div class="mcor">Your courses</div>';
     L.forEach(function(x){
+      if (editing === x.id){ h += editCard(x); return; }
       var d = x.lessons_done||0, t = x.lessons_total||0;
       var pct = t ? Math.min(100, Math.round(d/t*100)) : 0;
       h += '<div class="mccard">'
+        + '<div class="chd"><div class="ctx">'
         + '<div class="cnm">' + esc(x.title) + '</div>'
         + (x.instructor ? '<div class="cwho">' + esc(x.instructor) + '</div>' : '')
+        + '</div><button type="button" class="mcedit" data-edit="' + att(x.id) + '">Edit</button></div>'
         + (t ? '<div class="cbarw"><span class="cbar"><i style="width:'+pct+'%"></i></span><span class="cn">'+d+' of '+t+' watched</span></div>'
              : '<div class="cbarw"><span class="cn">'+d+' lesson'+(d===1?'':'s')+' watched</span></div>')
         + '<div class="mcrow">'
@@ -3321,7 +3334,47 @@ var MCT = (function(){
     wire();
   }
 
+  /* v6.47, Scott Sep 22: edit a saved course. One card at a time turns into
+     a small form with every detail filled in, including the watched count so
+     a stray "I watched a lesson" tap can be taken back. */
+  function editCard(x){
+    return '<div class="mccard"><div class="cnm">Edit this course</div><div class="mcef">'
+      + '<label for="me-t">Course name</label><input type="text" id="me-t" maxlength="90" value="' + att(x.title) + '">'
+      + '<label for="me-i">Who teaches it</label><input type="text" id="me-i" maxlength="60" value="' + att(x.instructor||'') + '">'
+      + '<label for="me-u">MasterClass address</label><input type="url" id="me-u" value="' + att(x.url||'') + '">'
+      + '<div class="two"><div><label for="me-d">Lessons watched</label><input type="number" id="me-d" min="0" max="99" value="' + (x.lessons_done||0) + '"></div>'
+      + '<div><label for="me-n">Lessons in the course</label><input type="number" id="me-n" min="1" max="99" value="' + (x.lessons_total||'') + '" placeholder="Not sure"></div></div>'
+      + '<div class="mcrow" style="margin-top:2px">'
+      + '<button type="button" class="mcb w" data-esave="' + att(x.id) + '">Save changes</button>'
+      + '<button type="button" class="mcb" data-ecancel="1">Cancel</button>'
+      + '</div></div></div>';
+  }
+  async function saveEdit(id){
+    var x = byId(id); if (!x || !sb) return;
+    var t=(document.getElementById('me-t').value||'').trim();
+    var i=(document.getElementById('me-i').value||'').trim();
+    var u=(document.getElementById('me-u').value||'').trim();
+    var dv=document.getElementById('me-d').value, nv=document.getElementById('me-n').value;
+    var d=parseInt(dv,10), n=parseInt(nv,10);
+    if(!t){ say('It needs a name.','warn'); return; }
+    if(!/^https?:\/\//i.test(u)){ say('Paste the full address, starting with https.','warn'); return; }
+    if(!(d>=0)) d=0;
+    var tot = n>0 ? n : null;
+    if(tot && d>tot){ say('Watched cannot be more than the lessons in the course.','warn'); return; }
+    var patch={title:t, instructor:i||null, url:u, lessons_total:tot, lessons_done:d,
+               last_lesson: d>0 ? 'Lesson '+d : null};
+    say('Saving...');
+    var r = await sb.from('masterclass_courses').update(patch).eq('id', id).select();
+    if (r.error){ say('Could not save that: '+r.error.message,'bad'); return; }
+    if (!r.data || !r.data.length){ say('Nothing was saved. The course list refused the change.','bad'); return; }
+    Object.assign(x, r.data[0]);
+    editing = null; paint(); say('Changes saved.','ok');
+  }
+
   function wire(){
+    document.querySelectorAll('[data-edit]').forEach(function(b){ b.onclick=function(){ editing=b.getAttribute('data-edit'); paint(); var f=document.getElementById('me-t'); if(f) f.focus(); }; });
+    document.querySelectorAll('[data-esave]').forEach(function(b){ b.onclick=function(){ saveEdit(b.getAttribute('data-esave')); }; });
+    document.querySelectorAll('[data-ecancel]').forEach(function(b){ b.onclick=function(){ editing=null; paint(); }; });
     var s = document.getElementById('mc-save'); if (s) s.onclick = add;
     document.querySelectorAll('[data-done]').forEach(function(b){ b.onclick=function(){ watched(b.getAttribute('data-done')); }; });
     document.querySelectorAll('[data-fin]').forEach(function(b){ b.onclick=function(){ fin(b.getAttribute('data-fin')); }; });
@@ -3393,6 +3446,7 @@ var MCT = (function(){
     paint();
   }
   function close_(){
+    editing = null;
     document.getElementById('mcmask').classList.remove('on');
     document.body.style.overflow='';
   }
