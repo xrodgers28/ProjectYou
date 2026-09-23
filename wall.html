@@ -89,6 +89,29 @@
   .hicard .st svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.5}
   .hicard .st[aria-pressed="true"]{background:none;color:var(--ink)}
   .hicard .st[aria-pressed="true"] svg{fill:currentColor;stroke:currentColor}
+  /* v1.30 (Sep 22, 2026): Harper's Index is a small plain tile now. Tap it and
+     the same plain list opens full screen. Done at the end hides the tile
+     until the next month's issue arrives. */
+  .hitile{display:block;width:210px;max-width:100%;margin:14px auto 0;padding:18px 14px 16px;
+    background:var(--card);border:1px solid var(--key);border-radius:12px;cursor:pointer;
+    text-align:center;color:var(--ink);font:inherit;box-shadow:var(--shadow)}
+  .hitile:hover{border-color:var(--ink)}
+  .hitile .hitt{display:block;font-family:Georgia,"Times New Roman",serif;font-size:21px;font-weight:400}
+  .hitile .hitm{display:block;margin-top:6px;font-family:Georgia,"Times New Roman",serif;
+    font-style:italic;font-size:12.5px;color:var(--muted)}
+  .hiview{position:fixed;inset:0;z-index:2147483600;background:var(--card);overflow-y:auto;
+    -webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+  .hiview[hidden]{display:none}
+  .hiview .hicard{max-width:900px;margin:0 auto;padding-top:56px}
+  .hix{position:fixed;top:12px;right:14px;z-index:2;width:38px;height:38px;border-radius:50%;
+    border:1px solid var(--key);background:var(--card);color:var(--ink);font-size:20px;
+    line-height:1;cursor:pointer}
+  .hidone{display:block;margin:26px auto 0;padding:11px 34px;border-radius:24px;
+    border:1px solid var(--ink);background:var(--ink);color:var(--card);font-size:14px;
+    font-weight:700;cursor:pointer}
+  .hidone:disabled{opacity:.5;cursor:default}
+  .hidnote{text-align:center;font-size:12px;color:var(--muted);margin-top:8px}
+  body.hiopen{overflow:hidden}
 
   .st{position:absolute;top:7px;left:7px;width:28px;height:28px;border-radius:50%;
       border:0;background:rgba(15,18,25,.55);color:#fff;cursor:pointer;display:grid;
@@ -216,14 +239,10 @@
        background:linear-gradient(135deg,#3b2a5a,#8a2f6b 46%,#d6763a)}
   /* v1.29: every source tile has a small x in the top right corner that takes
      that source off the Wall, with a one-tap undo and a Removed list to bring it back */
-  /* v1.30: the x is small and faint so it does not compete with the picture.
-     Always visible (a phone has no hover), it firms up when you point at the tile. */
-  .stile .srm{position:absolute;top:5px;right:5px;z-index:3;width:20px;height:20px;
-       border-radius:50%;border:0;background:rgba(0,0,0,.28);color:rgba(255,255,255,.85);
-       font:400 13px/1 sans-serif;font-family:inherit;display:grid;place-items:center;
-       padding:0;cursor:pointer;opacity:.55;transition:opacity .15s,background .15s}
-  .stile:hover .srm,.stile .srm:focus-visible{opacity:.9}
-  .stile .srm:hover{background:rgba(0,0,0,.6);opacity:1}
+  .stile .srm{position:absolute;top:6px;right:6px;z-index:3;width:26px;height:26px;
+       border-radius:50%;border:1px solid rgba(255,255,255,.7);background:rgba(20,19,17,.62);
+       color:#fff;font:700 15px/1 sans-serif;font-family:inherit;display:grid;place-items:center;padding:0;cursor:pointer}
+  .stile .srm:hover{background:var(--acc)}
   .stile .sask{position:absolute;inset:0;z-index:4;background:rgba(20,19,17,.9);color:#fff;
        display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;
        padding:12px;text-align:center;font-size:12.5px;font-weight:700;line-height:1.35}
@@ -496,13 +515,23 @@
     <div class="note">Things you sent yourself to watch when you have the time. Say &ldquo;add this to my watchlist&rdquo; with a link in any chat and it turns up here the next time you load the page. The badge on the picture is how long it runs, so you can pick one that fits the gap you have. Tap Watched and it moves out of the way.</div>
   </div>
 
-  <div class="card hicard" id="hicard" hidden>
-    <div class="hihead">
-      <h2>Harper&rsquo;s Index</h2>
-    </div>
-    <div class="hilist" id="hir"></div>
-    <div class="hifoot">
-      <span class="hidate" id="himeta"></span>
+  <button class="hitile" type="button" id="hitile" hidden aria-label="Open Harper's Index full screen">
+    <span class="hitt">Harper&rsquo;s Index</span>
+    <span class="hitm" id="hitm"></span>
+  </button>
+
+  <div class="hiview" id="hiview" hidden role="dialog" aria-label="Harper's Index">
+    <button class="hix" type="button" id="hix" aria-label="Close">&times;</button>
+    <div class="hicard" id="hicard">
+      <div class="hihead">
+        <h2>Harper&rsquo;s Index</h2>
+      </div>
+      <div class="hilist" id="hir"></div>
+      <div class="hifoot">
+        <span class="hidate" id="himeta"></span>
+      </div>
+      <button class="hidone" type="button" id="hidone">Done, I&rsquo;ve read it</button>
+      <div class="hidnote" id="hidnote">It will come back when next month&rsquo;s issue is out.</div>
     </div>
   </div>
 
@@ -1330,25 +1359,59 @@ function hiRow(e,i){
     '<button class="st" type="button" data-i="'+i+'" aria-label="Star this fact" aria-pressed="'+(starred?"true":"false")+'">'+STAR+'</button>'+
     '</div>';
 }
+var HI_ID=null;
+function hiOpen(){
+  var v=document.getElementById("hiview");
+  v.hidden=false; v.scrollTop=0;
+  document.body.classList.add("hiopen");
+}
+function hiClose(){
+  document.getElementById("hiview").hidden=true;
+  document.body.classList.remove("hiopen");
+}
+function hiDone(){
+  var b=document.getElementById("hidone");
+  if(!HI_ID) return;
+  b.disabled=true; b.textContent="Saving...";
+  api("harpers_index_weeks?id=eq."+HI_ID,{method:"PATCH",prefer:"return=representation",
+      body:JSON.stringify({read_at:new Date().toISOString()})})
+    .then(function(rows){
+      if(!rows || !rows.length) throw new Error("nothing was saved");
+      hiClose();
+      document.getElementById("hitile").hidden=true;
+    })
+    .catch(function(err){
+      b.disabled=false; b.textContent="Done, I’ve read it";
+      document.getElementById("hidnote").textContent="Could not save that, try again: "+err.message;
+    });
+}
 function loadHarpers(){
-  var card=document.getElementById("hicard");
-  if(!card) return;
-  var t=today();
-  api("harpers_index_weeks?select=*&week_date=lte."+t+"&order=week_date.desc&limit=1")
+  var tile=document.getElementById("hitile");
+  if(!tile) return;
+  /* the newest issue wins; once Done is tapped it stays hidden until a newer issue row arrives */
+  api("harpers_index_weeks?select=*&order=issue_year.desc,issue_month.desc,week_date.desc&limit=1")
     .then(function(rows){
       var row=rows && rows[0];
-      if(!row){ card.hidden=true; return; }
+      if(!row || row.read_at){ tile.hidden=true; return; }
       HI_ROWS=row.entries||[];
       HI_WEEK=row.week_date;
+      HI_ID=row.id;
       return hiLoadStars(HI_WEEK).then(function(){
+        var when=MON[row.issue_month-1]+" "+row.issue_year;
         document.getElementById("hir").innerHTML=HI_ROWS.map(hiRow).join("");
-        document.getElementById("himeta").textContent=
-          MON[row.issue_month-1]+" "+row.issue_year;
-        card.hidden=false;
+        document.getElementById("himeta").textContent=when;
+        document.getElementById("hitm").textContent=when+" · "+HI_ROWS.length+" facts";
+        tile.hidden=false;
       });
     })
-    .catch(function(){ card.hidden=true; });
+    .catch(function(){ tile.hidden=true; });
 }
+document.getElementById("hitile").onclick=hiOpen;
+document.getElementById("hix").onclick=hiClose;
+document.getElementById("hidone").onclick=hiDone;
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape" && !document.getElementById("hiview").hidden){ e.preventDefault(); hiClose(); }
+});
 
 function loadSources(){
   return api("wall_sources?select=key,name,active,removed_at").then(function(rows){
