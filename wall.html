@@ -214,6 +214,38 @@
   .stile .iglogo{height:130px;display:grid;place-items:center;color:#fff;font-size:13px;
        font-weight:700;letter-spacing:.4px;
        background:linear-gradient(135deg,#3b2a5a,#8a2f6b 46%,#d6763a)}
+  /* v1.29: every source tile has a small x in the top right corner that takes
+     that source off the Wall, with a one-tap undo and a Removed list to bring it back */
+  .stile .srm{position:absolute;top:6px;right:6px;z-index:3;width:26px;height:26px;
+       border-radius:50%;border:1px solid rgba(255,255,255,.7);background:rgba(20,19,17,.62);
+       color:#fff;font:700 15px/1 sans-serif;font-family:inherit;display:grid;place-items:center;padding:0;cursor:pointer}
+  .stile .srm:hover{background:var(--acc)}
+  .stile .sask{position:absolute;inset:0;z-index:4;background:rgba(20,19,17,.9);color:#fff;
+       display:flex;flex-direction:column;justify-content:center;align-items:center;gap:10px;
+       padding:12px;text-align:center;font-size:12.5px;font-weight:700;line-height:1.35}
+  .stile .sask div{display:flex;gap:8px}
+  .stile .sask button{font:700 11px/1 sans-serif;font-family:inherit;letter-spacing:.4px;text-transform:uppercase;
+       padding:8px 11px;border-radius:8px;border:1px solid #fff;background:none;color:#fff;cursor:pointer}
+  .stile .sask button.yes{background:var(--acc);border-color:var(--acc)}
+  .stile.igt{padding:0}
+  .stile.igt > button[data-src]{display:block;width:100%;padding:0;border:0;background:none;
+       font-family:inherit;text-align:left;cursor:pointer}
+  .tool[hidden],.rmpanel[hidden]{display:none}
+  .wtoast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:2147483002;
+       background:#1b1d22;color:#fff;border-radius:10px;padding:10px 12px 10px 16px;
+       display:flex;gap:14px;align-items:center;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.3);
+       max-width:calc(100% - 32px)}
+  .wtoast button{font:700 11px/1 sans-serif;font-family:inherit;letter-spacing:.4px;text-transform:uppercase;
+       padding:8px 11px;border-radius:8px;border:1px solid #fff;background:none;color:#fff;cursor:pointer}
+  .rmpanel{margin-top:12px;background:var(--card);border:1px solid var(--key);border-radius:12px;
+       padding:12px 14px}
+  .rmpanel h3{margin:0 0 8px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
+  .rmrow{display:flex;justify-content:space-between;align-items:center;gap:10px;
+       padding:7px 0;border-top:1px solid var(--line);font-size:13px;color:var(--ink)}
+  .rmrow:first-of-type{border-top:0}
+  .rmrow button{font:700 10.5px/1 sans-serif;font-family:inherit;letter-spacing:.4px;text-transform:uppercase;
+       padding:7px 10px;border-radius:8px;border:1px solid var(--key);background:var(--card);
+       color:var(--ink);cursor:pointer}
   .tray{grid-column:1/-1;min-width:0;max-width:100%;overflow:hidden}
   .tray[hidden]{display:none}
   .trayr{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;
@@ -393,7 +425,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v1.28</span></h1>
+      <h1>The Wall <span class="ver">v1.29</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="hint">Tap any picture to see it big, then swipe or use the arrow keys.</div>
     </div>
@@ -402,8 +434,10 @@
       <button class="tool" type="button" id="sizebtn">Bigger pictures</button>
       <a class="tool" href="wall-saved.html" id="savedlink">Saved</a>
       <a class="tool" href="wall-humor.html">Six more to pick from</a>
+      <button class="tool" type="button" id="rmbtn" hidden>Removed</button>
     </div>
   </div>
+  <div id="rmpanel" class="rmpanel" hidden></div>
 
   <div id="stage"></div>
 
@@ -469,7 +503,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.28</div>
+  <div class="stamp" id="stamp">v1.29</div>
 </div>
 
 <aside class="stx-col">
@@ -555,10 +589,14 @@ function shuffled(arr,seed){
 function bySource(){
   var m={}, order=[];
   ITEMS.forEach(function(i){ if(!m[i.source]){m[i.source]=[];order.push(i.source);} m[i.source].push(i); });
-  return order.map(function(s){ return {name:s, items:m[s]}; });
+  return order.map(function(s){ return {name:s, key:m[s][0].source_key, items:m[s]}; });
 }
 
-var IGLIVE={h:"wrold_scope", n:"world_scope"};
+var IGLIVE={h:"wrold_scope", n:"world_scope", key:"ig_wrold_scope"};
+/* v1.29: the sources list, so a tile can be taken off the Wall and put back.
+   SRCS[key] = {name, active, removed_at}. If it fails to load, nothing is hidden. */
+var SRCS={};
+function igOn(){ var r=SRCS[IGLIVE.key]; return !r || r.active!==false; }
 
 /* Thumbnails or big pictures. Remembered in this browser. Switching only swaps a
    class name, so no picture is ever fetched twice. */
@@ -624,9 +662,9 @@ function drawGrouped(){
   var h='<div class="feed sm" id="feed">';
   var live = GROUPS.length ? (seedFrom("live"+(DAY||"")) % Math.min(4,GROUPS.length)) : 0;
   GROUPS.forEach(function(g,n){
-    if(n===live) h+=liveTile();
+    if(n===live && igOn()) h+=liveTile();
     var top=g.items[0];
-    h+='<div class="stile">'+
+    h+='<div class="stile">'+rmBtn(g.key,g.name)+
        '<a class="stimg" href="'+esc(top.link)+'" data-open="'+top.item_id+
        '" title="Tap to see it full screen" target="_blank" rel="noopener noreferrer">'+
        '<img src="'+esc(top.img)+'" alt="'+esc(g.name)+'" decoding="async"></a>'+
@@ -636,15 +674,16 @@ function drawGrouped(){
        '</button></div>'+
        '<div class="tray" data-tray="'+n+'" hidden></div>';
   });
-  if(live>=GROUPS.length) h+=liveTile();
+  if(live>=GROUPS.length && igOn()) h+=liveTile();
   return h+'</div>';
 }
 
 function liveTile(){
-  return '<button class="stile" type="button" data-src="ig" aria-expanded="false">'+
+  return '<div class="stile igt">'+rmBtn(IGLIVE.key,IGLIVE.n)+
+    '<button type="button" data-src="ig" aria-expanded="false">'+
     '<div class="iglogo">@'+esc(IGLIVE.h)+'</div>'+
     '<div class="sb"><div class="sn">'+esc(IGLIVE.n)+'</div>'+
-    '<div class="sc">Instagram, live</div></div></button>'+
+    '<div class="sc">Instagram, live</div></div></button></div>'+
     '<div class="tray" data-tray="ig" hidden></div>';
 }
 
@@ -750,7 +789,69 @@ function drawOne(){
     '<button type="button" id="oaNext">Next</button></div></div></div></div>';
 }
 
+function rmBtn(key,name){
+  if(!key) return "";
+  return '<button class="srm" type="button" data-rm="'+esc(key)+'" data-rmname="'+esc(name)+
+    '" aria-label="Take '+esc(name)+' off the Wall" title="Take this source off the Wall">&times;</button>';
+}
+function setSource(key,on){
+  return api("rpc/wall_set_source",{method:"POST",body:JSON.stringify({p_key:key,p_on:on})})
+    .then(function(r){
+      if(!r || !r.length) throw new Error("no such source");
+      if(!SRCS[key]) SRCS[key]={name:key};
+      SRCS[key].active=on;
+      SRCS[key].removed_at= on ? null : new Date().toISOString();
+    });
+}
+var HIDDEN_ITEMS={};
+function removeSource(key,name){
+  setSource(key,false).then(function(){
+    HIDDEN_ITEMS[key]=ITEMS.filter(function(i){ return i.source_key===key; });
+    ITEMS=ITEMS.filter(function(i){ return i.source_key!==key; });
+    paint();
+    toast(name+" is off the Wall.", "Undo", function(){ restoreSource(key,name); });
+  }).catch(function(e){ toast("Could not remove "+name+": "+e.message); });
+}
+function restoreSource(key,name){
+  setSource(key,true).then(function(){
+    if(HIDDEN_ITEMS[key]){
+      ITEMS=shuffled(ITEMS.concat(HIDDEN_ITEMS[key]), seedFrom(DAY));
+      delete HIDDEN_ITEMS[key];
+    }
+    paint();
+    toast(name+" is back on the Wall.");
+  }).catch(function(e){ toast("Could not put back "+name+": "+e.message); });
+}
+var TOASTT=null;
+function toast(msg,act,fn){
+  var old=document.querySelector(".wtoast"); if(old) old.remove();
+  clearTimeout(TOASTT);
+  var t=document.createElement("div"); t.className="wtoast"; t.setAttribute("role","status");
+  var sp=document.createElement("span"); sp.textContent=msg; t.appendChild(sp);
+  if(act){
+    var b=document.createElement("button"); b.type="button"; b.textContent=act;
+    b.onclick=function(){ t.remove(); fn(); }; t.appendChild(b);
+  }
+  document.body.appendChild(t);
+  TOASTT=setTimeout(function(){ t.remove(); }, act?8000:3500);
+}
+/* only the sources taken off with the x are listed, not the ones retired by hand */
+function paintRemoved(){
+  var btn=document.getElementById("rmbtn"), pn=document.getElementById("rmpanel");
+  if(!btn||!pn) return;
+  var list=Object.keys(SRCS).filter(function(k){ return SRCS[k].active===false && SRCS[k].removed_at; })
+    .sort(function(a,b){ return String(SRCS[b].removed_at).localeCompare(String(SRCS[a].removed_at)); });
+  btn.hidden = !list.length;
+  btn.textContent = "Removed, "+list.length;
+  if(!list.length){ pn.hidden=true; return; }
+  pn.innerHTML='<h3>Taken off the Wall</h3>'+list.map(function(k){
+    return '<div class="rmrow"><span>'+esc(SRCS[k].name)+'</span>'+
+      '<button type="button" data-putback="'+esc(k)+'">Put back</button></div>';
+  }).join("")+'<div class="hint" style="margin-top:8px">A source you put back shows up again from tomorrow morning\'s pictures, or right away if it was on today\'s Wall.</div>';
+}
+
 function paint(){
+  paintRemoved();
   document.getElementById("stage").innerHTML=drawFeed();
   paintSize();
   var sb=document.getElementById("sizebtn"); if(sb) sb.onclick=toggleSize;
@@ -865,6 +966,28 @@ function vGo(step){
 }
 
 document.addEventListener("click",function(e){
+  var rm=e.target.closest("[data-rm]");
+  if(rm){
+    e.preventDefault(); e.stopPropagation();
+    var tile=rm.closest(".stile"); if(!tile) return;
+    var old=tile.querySelector(".sask"); if(old){ old.remove(); return; }
+    var k=rm.getAttribute("data-rm"), nm=rm.getAttribute("data-rmname");
+    var ask=document.createElement("div"); ask.className="sask";
+    ask.innerHTML='Take '+esc(nm)+' off the Wall?<div>'+
+      '<button type="button" class="yes" data-rmyes="'+esc(k)+'" data-rmname="'+esc(nm)+'">Remove</button>'+
+      '<button type="button" data-rmno="1">Keep</button></div>';
+    tile.appendChild(ask);
+    return;
+  }
+  var ry=e.target.closest("[data-rmyes]");
+  if(ry){ e.preventDefault(); e.stopPropagation();
+    removeSource(ry.getAttribute("data-rmyes"), ry.getAttribute("data-rmname")); return; }
+  var rn=e.target.closest("[data-rmno]");
+  if(rn){ e.preventDefault(); e.stopPropagation(); var a=rn.closest(".sask"); if(a) a.remove(); return; }
+  var pb=e.target.closest("[data-putback]");
+  if(pb){ e.preventDefault(); var pk=pb.getAttribute("data-putback");
+    restoreSource(pk, (SRCS[pk]&&SRCS[pk].name)||pk); return; }
+  if(e.target.closest("#rmbtn")){ var pn=document.getElementById("rmpanel"); pn.hidden=!pn.hidden; return; }
   var b=e.target.closest("[data-item]");
   if(b){
     e.preventDefault();
@@ -1223,8 +1346,14 @@ function loadHarpers(){
     .catch(function(){ card.hidden=true; });
 }
 
+function loadSources(){
+  return api("wall_sources?select=key,name,active,removed_at").then(function(rows){
+    (rows||[]).forEach(function(r){ SRCS[r.key]=r; });
+  }).catch(function(){ SRCS={}; });
+}
 function boot(){
-  api("v_wall_today?select=*&order=day.desc,slot.asc&limit=200").then(function(rows){
+  Promise.all([api("v_wall_today?select=*&order=day.desc,slot.asc&limit=200"), loadSources()])
+  .then(function(res){ return res[0]; }).then(function(rows){
     if(!rows || !rows.length) throw new Error("nothing has been dealt yet");
     DAY=rows[0].day;
     ITEMS=rows.filter(function(r){ return r.day===DAY; });
@@ -1237,7 +1366,7 @@ function boot(){
       days[d.getDay()]+", "+months[d.getMonth()]+" "+d.getDate()+", "+ITEMS.length+
       " pictures from "+nSrc+" sources";
     document.getElementById("stamp").textContent=
-      "v1.28, dealt "+DAY+", the order is shuffled fresh every day, and none of the pictures are about you";
+      "v1.29, dealt "+DAY+", the order is shuffled fresh every day, and none of the pictures are about you";
     if(DAY!==today()){
       document.getElementById("err").innerHTML=
         '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
