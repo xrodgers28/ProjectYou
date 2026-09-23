@@ -25,6 +25,9 @@
    - Nothing is tracked before it happens: this form only records learning that
      has already been done.
 
+   v1.2, Sep 22 2026: more room between rows (buttons the same size), kinds wrap
+   instead of scrolling sideways, and a + New kind button that saves to learning_kinds.
+
    Change the form here and every page gets the change. Do not copy it into a page. */
 window.PYLearn = (function () {
   'use strict';
@@ -96,31 +99,35 @@ window.PYLearn = (function () {
       ' color:var(--ll-ink);font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;text-align:left}',
       '@media (prefers-color-scheme:dark){html:not([data-theme="light"]) .pyll.pyll-auto{--ll-bg:#1e2328;--ll-soft:#262a24;--ll-line:#333a41;--ll-ink:#e8eaec;--ll-ink2:#bcc3c9;--ll-mut:#8b949b;--ll-acc:#d2b556;--ll-good:#5fae7e;--ll-warm:#e29a63}}',
       '.pyll *{box-sizing:border-box}',
-      '.pyll h3{font-size:16px;font-weight:700;margin:0 0 8px;letter-spacing:-.01em}',
+      '.pyll h3{font-size:16px;font-weight:700;margin:0 0 18px;padding-right:24px;letter-spacing:-.01em}',
       '.pyll .ll-at{font-size:11px;font-weight:600;color:var(--ll-mut);margin-left:6px}',
-      '.pyll .fld{display:grid;grid-template-columns:54px minmax(0,1fr);column-gap:6px;row-gap:3px;align-items:start;margin:0 0 6px}',
-      '.pyll .fld>.lab{grid-column:1;padding-top:2px;font-size:9px;font-weight:700;letter-spacing:.06em;line-height:12px;text-transform:uppercase;color:var(--ll-mut)}',
+      '.pyll .fld{display:grid;grid-template-columns:66px minmax(0,1fr);column-gap:12px;row-gap:6px;align-items:start;margin:0 0 16px}',
+      '.pyll .fld>.lab{grid-column:1;padding-top:5px;font-size:9px;font-weight:700;letter-spacing:.06em;line-height:12px;text-transform:uppercase;color:var(--ll-mut)}',
       '.pyll .fld>*:not(.lab){grid-column:2;min-width:0}',
-      '.pyll .picks{display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}',
+      '.pyll .picks{display:flex;gap:7px 6px;flex-wrap:wrap;padding-top:2px}',
+      '.pyll .recent:not(:empty){margin-top:8px}',
       '.pyll .picks::-webkit-scrollbar{display:none}',
       '.pyll .p{flex:none;white-space:nowrap;font:inherit;font-size:10px;line-height:12px;padding:0 6px;cursor:pointer;border:1px solid var(--ll-line);border-radius:99px;background:var(--ll-bg);color:var(--ll-ink2)}',
       '.pyll .p:hover{border-color:var(--ll-acc)}',
+      '.pyll .p.add{border-style:dashed;color:var(--ll-mut);background:transparent}',
+      '.pyll .newk{display:inline-flex;gap:6px;align-items:center}',
+      '.pyll .newk input[type=text]{width:150px;padding:2px 8px}',
       '.pyll .p.on{background:var(--ll-acc);border-color:var(--ll-acc);color:#fff;font-weight:700}',
       '.pyll .recent .p{color:var(--ll-acc)}',
-      '.pyll input[type=text],.pyll input[type=number],.pyll textarea{width:100%;font:inherit;font-size:16px;line-height:1.25;padding:3px 8px;border:1px solid var(--ll-line);border-radius:7px;background:var(--ll-soft);color:var(--ll-ink)}',
+      '.pyll input[type=text],.pyll input[type=number],.pyll textarea{width:100%;font:inherit;font-size:16px;line-height:1.25;padding:6px 10px;border:1px solid var(--ll-line);border-radius:8px;background:var(--ll-soft);color:var(--ll-ink)}',
       '@media (hover:hover) and (pointer:fine){.pyll input[type=text],.pyll input[type=number],.pyll textarea{font-size:13px}}',
       '.pyll input:focus-visible,.pyll textarea:focus-visible{outline:2px solid var(--ll-acc);outline-offset:1px}',
-      '.pyll textarea{height:28px;resize:vertical}.pyll textarea:focus{height:60px}',
-      '.pyll .pair{display:flex;gap:6px;align-items:center}',
+      '.pyll textarea{height:36px;resize:vertical}.pyll textarea:focus{height:70px}',
+      '.pyll .pair{display:flex;gap:12px;align-items:center;flex-wrap:wrap}',
       '.pyll .pair input[type=number]{width:64px}',
-      '.pyll .why{margin:0;font-size:11px;line-height:1.3;color:var(--ll-mut)}',
+      '.pyll .why{margin:0 0 6px;font-size:11px;line-height:1.3;color:var(--ll-mut)}',
       '.pyll .why:empty{display:none}',
       '.pyll .why.warn{color:var(--ll-warm)}.pyll .why.ok{color:var(--ll-good);font-weight:600}',
-      '.pyll .go{width:100%;margin-top:3px;padding:7px;border:0;border-radius:8px;background:var(--ll-good);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}',
+      '.pyll .go{width:100%;margin-top:8px;padding:7px;border:0;border-radius:8px;background:var(--ll-good);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}',
       '.pyll .go[disabled]{opacity:.55;cursor:default}',
       '.pyll-ov{position:fixed;inset:0;z-index:10000;background:rgba(20,24,30,.38);display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px 12px;overflow:auto}',
-      '.pyll-ov .pyll-card{position:relative;width:100%;max-width:440px;background:var(--ll-bg);border:1px solid var(--ll-line);border-radius:14px;padding:12px 14px;box-shadow:0 18px 50px rgba(0,0,0,.28)}',
-      '.pyll-ov .pyll-x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:20px;line-height:1;color:var(--ll-mut);cursor:pointer;padding:2px 4px}'
+      '.pyll-ov .pyll-card{position:relative;width:100%;max-width:480px;background:var(--ll-bg);border:1px solid var(--ll-line);border-radius:16px;padding:22px 24px 20px;box-shadow:0 18px 50px rgba(0,0,0,.28)}',
+      '.pyll-ov .pyll-x{position:absolute;top:14px;right:14px;border:0;background:none;font-size:20px;line-height:1;color:var(--ll-mut);cursor:pointer;padding:2px 4px}'
     ].join('\n');
     document.head.appendChild(s);
   }
@@ -135,6 +142,7 @@ window.PYLearn = (function () {
     this.mins = +opts.mins || 30;
     this.takeaway = '';
     this.recent = [];
+    this.custom = [];
   }
   Form.prototype.draw = function(){
     var self = this, o = this.opts;
@@ -142,7 +150,7 @@ window.PYLearn = (function () {
                                 : '<span class="ll-at">' + esc(shortD(this.when)) + '</span>';
     var h = '<h3>Learning' + at + '</h3>';
     h += '<div class="fld"><span class="lab">What</span><div><input type="text" id="ll-what" maxlength="80" placeholder="Claude podcast, chapter 4 of Atomic Habits, a course module..." value="' + att(this.what) + '"><div class="picks recent" id="ll-recent"></div></div></div>';
-    h += '<div class="fld"><span class="lab">Kind</span><div class="picks" id="ll-kind">' + KINDS.map(function(k){ return '<button type="button" class="p' + (k === self.kind ? ' on' : '') + '" data-k="' + att(k) + '">' + esc(k) + '</button>'; }).join('') + '</div></div>';
+    h += '<div class="fld"><span class="lab">Kind</span><div class="picks" id="ll-kind"></div></div>';
     h += '<div class="fld"><span class="lab">While</span><div class="picks" id="ll-while">' + WHILE.map(function(k){ return '<button type="button" class="p" data-k="' + att(k) + '">' + esc(k) + '</button>'; }).join('') + '</div></div>';
     h += '<div class="fld"><span class="lab">Minutes</span><div class="pair"><input type="number" id="ll-mins" min="1" max="600" step="5" value="' + this.mins + '"><div class="picks" id="ll-quick">' + QUICK.map(function(m){ return '<button type="button" class="p' + (m === self.mins ? ' on' : '') + '" data-m="' + m + '">' + m + '</button>'; }).join('') + '</div></div></div>';
     h += '<div class="fld"><span class="lab">Takeaway</span><textarea id="ll-take" placeholder="One line worth keeping (optional)"></textarea></div>';
@@ -151,15 +159,62 @@ window.PYLearn = (function () {
     this.el.innerHTML = h;
     var q = function(id){ return self.el.querySelector('#' + id); };
     q('ll-what').addEventListener('input', function(){ self.what = this.value.trim(); if (!self.kindPicked) { self.kind = kindIn(self.what); self.paintKind(); } });
-    q('ll-kind').addEventListener('click', function(e){ var b = e.target.closest('.p'); if (!b) return; self.kind = (self.kind === b.dataset.k) ? '' : b.dataset.k; self.kindPicked = !!self.kind; self.paintKind(); });
+    q('ll-kind').addEventListener('click', function(e){ var b = e.target.closest('.p'); if (!b) return; if (b.id === 'll-addk') { self.askKind(); return; } if (b.id === 'll-addk-ok') { self.addKind(); return; } if (b.id === 'll-addk-no') { self.drawKinds(); return; } self.kind = (self.kind === b.dataset.k) ? '' : b.dataset.k; self.kindPicked = !!self.kind; self.paintKind(); });
     q('ll-while').addEventListener('click', function(e){ var b = e.target.closest('.p'); if (!b) return; self.doing = (self.doing === b.dataset.k) ? '' : b.dataset.k; self.paintWhile(); });
     q('ll-quick').addEventListener('click', function(e){ var b = e.target.closest('.p'); if (!b) return; self.mins = +b.dataset.m; q('ll-mins').value = self.mins; self.paintMins(); });
     q('ll-mins').addEventListener('input', function(){ self.mins = Math.max(1, +this.value || 0); self.paintMins(); });
     q('ll-take').addEventListener('input', function(){ self.takeaway = this.value.trim(); });
     q('ll-recent').addEventListener('click', function(e){ var b = e.target.closest('.p'); if (!b) return; self.what = b.dataset.k; q('ll-what').value = self.what; if (b.dataset.kind) { self.kind = b.dataset.kind; self.kindPicked = true; self.paintKind(); } if (b.dataset.doing) { self.doing = b.dataset.doing; self.paintWhile(); } });
     q('ll-go').addEventListener('click', function(){ self.save(); });
+    this.drawKinds();
+    this.loadKinds();
     this.loadRecent();
     setTimeout(function(){ try { q('ll-what').focus(); } catch (e) {} }, 30);
+  };
+  /* Kinds: the built-in eight, plus any he added himself (learning_kinds, Sep 22 2026),
+     plus any kind already used in the log, with Something else kept last. */
+  Form.prototype.allKinds = function(){
+    var seen = {}, out = [];
+    KINDS.filter(function(k){ return k !== 'Something else'; }).concat(this.custom, this.kind ? [this.kind] : [], ['Something else']).forEach(function(k){
+      var key = String(k||'').toLowerCase(); if (!key || seen[key]) return; seen[key] = 1; out.push(k); });
+    var e = out.indexOf('Something else'); if (e > -1) { out.splice(e, 1); out.push('Something else'); }
+    return out;
+  };
+  Form.prototype.drawKinds = function(){
+    var k = this.kind, box = this.el.querySelector('#ll-kind'); if (!box) return;
+    box.innerHTML = this.allKinds().map(function(x){ return '<button type="button" class="p' + (x === k ? ' on' : '') + '" data-k="' + att(x) + '">' + esc(x) + '</button>'; }).join('')
+      + '<button type="button" class="p add" id="ll-addk">+ New kind</button>';
+  };
+  Form.prototype.askKind = function(){
+    var self = this, b = this.el.querySelector('#ll-addk'); if (!b) return;
+    var w = document.createElement('span'); w.className = 'newk';
+    w.innerHTML = '<input type="text" id="ll-newk" maxlength="30" placeholder="e.g. Workshop"><button type="button" class="p on" id="ll-addk-ok">Add</button><button type="button" class="p" id="ll-addk-no">Cancel</button>';
+    b.replaceWith(w);
+    var i = w.querySelector('#ll-newk');
+    i.addEventListener('keydown', function(e){ if (e.key === 'Enter') { e.preventDefault(); self.addKind(); } else if (e.key === 'Escape') { e.stopPropagation(); self.drawKinds(); } });
+    setTimeout(function(){ try { i.focus(); } catch (e) {} }, 20);
+  };
+  Form.prototype.addKind = async function(){
+    var i = this.el.querySelector('#ll-newk'); if (!i) return;
+    var name = String(i.value || '').trim().replace(/\s+/g, ' ');
+    if (!name) { this.say('Type a name for the new kind', 'warn'); i.focus(); return; }
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+    var hit = this.allKinds().filter(function(k){ return k.toLowerCase() === name.toLowerCase(); })[0];
+    if (hit) { this.kind = hit; this.kindPicked = true; this.drawKinds(); this.say(hit + ' is already on the list, picked it', 'ok'); return; }
+    try {
+      var r = await this.sb.from('learning_kinds').insert({ name: name }).select('name');
+      if (r.error) throw r.error;
+      if (!r.data || !r.data.length) throw new Error('nothing was stored');
+      this.custom.push(name); this.kind = name; this.kindPicked = true; this.drawKinds();
+      this.say('Added ' + name + ' to your kinds', 'ok');
+    } catch (e) { this.say('Could not add that kind: ' + (e && e.message ? e.message : e), 'warn'); }
+  };
+  Form.prototype.loadKinds = async function(){
+    var self = this, add = [];
+    try { var a = await this.sb.from('learning_kinds').select('name').order('created_at'); (a.data || []).forEach(function(x){ add.push(x.name); }); } catch (e) {}
+    try { var b = await this.sb.from('learning_log').select('kind').not('kind', 'is', null).limit(500); (b.data || []).forEach(function(x){ add.push(x.kind); }); } catch (e) {}
+    this.custom = add;
+    if (!this.el.querySelector('#ll-newk')) this.drawKinds();
   };
   Form.prototype.paintKind = function(){ var k = this.kind; this.el.querySelectorAll('#ll-kind .p').forEach(function(b){ b.classList.toggle('on', b.dataset.k === k); }); };
   Form.prototype.paintWhile = function(){ var k = this.doing; this.el.querySelectorAll('#ll-while .p').forEach(function(b){ b.classList.toggle('on', b.dataset.k === k); }); };
@@ -229,5 +284,5 @@ window.PYLearn = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, kindIn: kindIn, version: '1.1' };
+  return { mount: mount, open: open, tickHabit: tickHabit, kindIn: kindIn, version: '1.2' };
 })();
