@@ -60,6 +60,13 @@
         color:var(--ink);cursor:pointer;text-decoration:none;display:inline-block}
   .tool:hover{border-color:var(--accent);color:var(--accent)}
   .tool.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .daystep{display:flex;align-items:center;gap:8px;margin-top:8px}
+  .daybtn{font-size:13px;font-weight:800;width:26px;height:26px;border-radius:8px;border:1px solid var(--key);
+        background:var(--card);color:var(--ink);cursor:pointer;line-height:1;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .daybtn:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+  .daybtn:disabled{opacity:.35;cursor:default}
+  .daylabel{font-size:12px;font-weight:700;color:var(--onbg);opacity:.85;min-width:100px;text-align:center}
+  .daystep.past .daylabel{color:var(--acc)}
 
   .card{background:var(--card);border:1px solid var(--key);border-radius:16px;
         box-shadow:var(--shadow);overflow:hidden;margin-top:14px}
@@ -624,9 +631,14 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v2.4</span></h1>
+      <h1>The Wall <span class="ver">v2.5</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
-      <div class="hint">Tap a tile. The mark in its corner says what it does. The dots change how it behaves.</div>
+      <div class="daystep" id="daystep" hidden>
+        <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
+        <span class="daylabel" id="daylabel"></span>
+        <button class="daybtn" type="button" id="dayfwd" aria-label="Forward a day, toward today" disabled>&#8250;</button>
+      </div>
+      <div class="hint">Tap a tile. The mark in its corner says what it does. The dots change how it behaves. Use the arrows above to look back on a past day.</div>
     </div>
     <div class="tools">
       <button class="tool add" type="button" data-w2add="1">+ Add to Wall</button>
@@ -715,7 +727,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.4</div>
+  <div class="stamp" id="stamp">v2.5</div>
 </div>
 
 <aside class="stx-col">
@@ -779,6 +791,7 @@ function today(){
 }
 
 var ITEMS=[], DAY=null, LAYOUT="rails", oneAt=0;
+var ALLROWS=[], DAYIDX=0, DAYLOAD=false;
 
 /* The running order is worked out from the date, so it holds still all day
    and comes out different tomorrow. Same pictures, never the same run. */
@@ -2063,28 +2076,69 @@ function loadSources(){
     (rows||[]).forEach(function(r){ SRCS[r.key]=r; });
   }).catch(function(){ SRCS={}; });
 }
+function daysAvail(){
+  var seen={}, out=[];
+  ALLROWS.forEach(function(r){ if(!seen[r.day]){ seen[r.day]=1; out.push(r.day); } });
+  out.sort(); out.reverse();
+  return out;
+}
+function renderDateLine(){
+  var d=new Date(DAY+"T12:00:00");
+  var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  var nice=months[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();
+  var nSrc=bySource().length;
+  document.getElementById("sub").textContent=
+    days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
+  document.getElementById("stamp").textContent=
+    "v2.5 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+  var lbl=document.getElementById("daylabel");
+  if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
+  var ds=document.getElementById("daystep");
+  if(ds){ ds.hidden=false; ds.classList.toggle("past", DAYIDX!==0); }
+  var fwd=document.getElementById("dayfwd");
+  if(fwd) fwd.disabled = (DAYIDX===0);
+  if(DAY!==today() && DAYIDX===0){
+    document.getElementById("err").innerHTML=
+      '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
+  } else {
+    document.getElementById("err").innerHTML="";
+  }
+}
+function showDay(idx){
+  var ds=daysAvail();
+  if(!ds.length) return;
+  if(idx<0) idx=0;
+  if(idx>ds.length-1) idx=ds.length-1;
+  DAYIDX=idx; DAY=ds[idx];
+  ITEMS=ALLROWS.filter(function(r){ return r.day===DAY; });
+  ITEMS=shuffled(ITEMS, seedFrom(DAY));
+  renderDateLine();
+  paint();
+}
+function stepDay(delta){
+  var target=DAYIDX+delta;
+  if(target<0) return;
+  var ds=daysAvail();
+  if(target<=ds.length-1){ showDay(target); return; }
+  if(DAYLOAD) return;
+  DAYLOAD=true;
+  var oldest=ds[ds.length-1];
+  api("v_wall_today?select=*&day=lt."+oldest+"&order=day.desc,slot.asc&limit=200").then(function(more){
+    DAYLOAD=false;
+    ALLROWS=ALLROWS.concat(more||[]);
+    var ds2=daysAvail();
+    if(target<=ds2.length-1) showDay(target);
+    else toast("That's as far back as the Wall goes.");
+  }).catch(function(){ DAYLOAD=false; toast("Could not load further back."); });
+}
 function boot(){
   Promise.all([api("v_wall_today?select=*&order=day.desc,slot.asc&limit=200"), loadSources(),
     api("v_wall_decks?select=*").then(function(r){ DECKS={}; (r||[]).forEach(function(d){ DECKS[d.key]=d; }); }).catch(function(){ DECKS={}; })])
   .then(function(res){ return res[0]; }).then(function(rows){
     if(!rows || !rows.length) throw new Error("nothing has been dealt yet");
-    DAY=rows[0].day;
-    ITEMS=rows.filter(function(r){ return r.day===DAY; });
-    var nSrc=bySource().length;
-    ITEMS=shuffled(ITEMS, seedFrom(DAY));
-    var d=new Date(DAY+"T12:00:00");
-    var days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
-    var months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-    var nice=months[d.getMonth()]+" "+d.getDate()+", "+d.getFullYear();
-    document.getElementById("sub").textContent=
-      days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources";
-    document.getElementById("stamp").textContent=
-      "v2.4 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
-    if(DAY!==today()){
-      document.getElementById("err").innerHTML=
-        '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
-    }
-    paint();
+    ALLROWS=rows;
+    showDay(0);
     setTimeout(mountPhotogs,1200);
     bootHabit();
   }).catch(function(e){
@@ -2093,6 +2147,8 @@ function boot(){
     setTimeout(mountPhotogs,1200);
   });
 }
+document.getElementById("dayback").onclick=function(){ stepDay(1); };
+document.getElementById("dayfwd").onclick=function(){ stepDay(-1); };
 document.addEventListener("click",function(e){
   var star=e.target.closest ? e.target.closest(".hirow .st") : null;
   if(star){ e.preventDefault(); hiToggleStar(+star.getAttribute("data-i")); }
