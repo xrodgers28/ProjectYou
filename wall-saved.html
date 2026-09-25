@@ -81,6 +81,9 @@
   .cathd h3{font-size:13.5px;margin:0;color:var(--onbg);text-transform:uppercase;letter-spacing:.4px}
   .cathd .n{font-size:11px;color:var(--muted)}
   .movesel{margin:0 11px 10px;font-size:10.5px;padding:5px 6px;border-radius:6px;border:1px solid var(--key);background:var(--sunk);color:var(--ink)}
+  .ksearch{width:100%;max-width:420px;margin:0 0 14px;font-family:inherit;font-size:13px;
+          padding:9px 12px;border-radius:10px;border:1px solid var(--key);background:var(--card);color:var(--ink)}
+  .ksearch::placeholder{color:var(--faint)}
 </style>
 
 <div class="wrap">
@@ -89,7 +92,7 @@
       <div class="kick">Kept off the wall</div>
       <h1>Saved</h1>
     <!-- The ONLY place this page's version is written. The publish guard reads class="ver" and navpatch reads #ver, so both see this one literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v1.2</span>
+    <span id="ver" class="ver">v1.3</span>
       <div class="sub" id="sub">Loading</div>
     </div>
     <a class="tool" href="wall.html">Back to the wall</a>
@@ -106,9 +109,10 @@
   </div>
 
   <div class="sechd" style="margin-top:26px"><h2>Everything you've kept</h2></div>
+  <input type="search" class="ksearch" id="ksearch" placeholder="Search what you've kept" autocomplete="off">
   <div id="body"></div>
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.2</div>
+  <div class="stamp" id="stamp">v1.3</div>
 </div>
 
 <script>
@@ -127,6 +131,7 @@ function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,
 var TICK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
 var ROWS=[];
 var WK=null, WKEND=null, WROWS=[], FAVS={};
+var Q="";
 
 /* Everything you've kept, sorted into sections. Each source maps to one section;
    an item can override that with category_override (set via the Move to control
@@ -191,6 +196,12 @@ function paintTally(){
   t.innerHTML=list.map(function(p){return '<span class="tchip"><b>'+p[1]+'</b> '+esc(p[0])+'</span>';}).join("");
 }
 
+function matches(r){
+  if(!Q) return true;
+  var it=r.wall_items||{};
+  var hay=((it.title||"")+" "+(it.source_key||"")+" "+catFor(r)).toLowerCase();
+  return hay.indexOf(Q)!==-1;
+}
 function paint(){
   var b=document.getElementById("body");
   if(!ROWS.length){
@@ -198,8 +209,14 @@ function paint(){
     document.getElementById("sub").textContent="Nothing kept yet";
     return;
   }
+  document.getElementById("sub").textContent=ROWS.length+(ROWS.length===1?" thing kept":" things kept");
+  var visible=ROWS.filter(matches);
+  if(!visible.length){
+    b.innerHTML='<div class="empty">Nothing matches &ldquo;'+esc(Q)+'&rdquo;.</div>';
+    return;
+  }
   var groups={};
-  ROWS.forEach(function(r){
+  visible.forEach(function(r){
     var c=catFor(r);
     (groups[c]=groups[c]||[]).push(r);
   });
@@ -224,7 +241,6 @@ function paint(){
     h+='</div></div>';
   });
   b.innerHTML=h;
-  document.getElementById("sub").textContent=ROWS.length+(ROWS.length===1?" thing kept":" things kept");
 }
 
 document.addEventListener("click",function(e){
@@ -283,10 +299,17 @@ document.addEventListener("change",function(e){
   });
 });
 
+document.addEventListener("input",function(e){
+  if(e.target && e.target.id==="ksearch"){
+    Q=e.target.value.trim().toLowerCase();
+    paint();
+  }
+});
+
 api("wall_saved?select=item_id,saved_at,category_override,wall_items(title,link,img,source_key)&order=saved_at.desc&limit=400")
   .then(function(rows){
     ROWS=rows||[];
-    document.getElementById("stamp").textContent="v1.2 · this week's picks, your top sources & everything you've kept, sorted into sections";
+    document.getElementById("stamp").textContent="v1.3 · this week's picks, your top sources, everything you've kept sorted into sections, and search";
     paint();
     WK=mondayOf(PY.today());
     WKEND=addDays(WK,7);
