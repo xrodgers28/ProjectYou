@@ -61,6 +61,20 @@
   .err{background:var(--badbg);border:1px solid var(--bad);color:var(--bad);
        border-radius:12px;padding:12px 14px;margin-top:14px;font-size:13px}
   .stamp{margin-top:18px;font-size:10.5px;letter-spacing:.6px;color:var(--muted);text-align:center}
+  .sec2{margin-top:26px}
+  .sechd{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .sechd h2{font-size:16px;margin:0;color:var(--onbg)}
+  .sechd .n{font-size:11px;color:var(--muted)}
+  .wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .wit{position:relative;border-radius:12px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:var(--card);box-shadow:var(--shadow)}
+  .wit img{width:100%;height:110px;object-fit:cover;display:block;background:var(--line)}
+  .wit.picked{border-color:var(--star)}
+  .wit .pk{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.35);color:#fff;display:grid;place-items:center;padding:0}
+  .wit.picked .pk{background:var(--star)}
+  .wit .pk svg{width:12px;height:12px;fill:currentColor;stroke:currentColor;stroke-width:1.9}
+  .tally{display:flex;flex-wrap:wrap;gap:8px}
+  .tchip{font-size:11px;font-weight:700;padding:6px 10px;border-radius:99px;background:var(--card);border:1px solid var(--key);color:var(--muted)}
+  .tchip b{color:var(--ink);font-weight:800}
 </style>
 
 <div class="wrap">
@@ -69,11 +83,23 @@
       <div class="kick">Kept off the wall</div>
       <h1>Saved</h1>
     <!-- The ONLY place this page's version is written. The publish guard reads class="ver" and navpatch reads #ver, so both see this one literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v1.0</span>
+    <span id="ver" class="ver">v1.1</span>
       <div class="sub" id="sub">Loading</div>
     </div>
     <a class="tool" href="wall.html">Back to the wall</a>
   </div>
+
+  <div class="sec2">
+    <div class="sechd"><h2>This week's picks</h2><span class="n" id="weekn"></span></div>
+    <div id="weekbody"></div>
+  </div>
+
+  <div class="sec2">
+    <div class="sechd"><h2>Where you keep going back</h2></div>
+    <div class="tally" id="tally"></div>
+  </div>
+
+  <div class="sechd" style="margin-top:26px"><h2>Everything you've kept</h2></div>
   <div id="body"></div>
   <div id="err"></div>
   <div class="stamp" id="stamp">v1.1</div>
@@ -94,6 +120,53 @@ function api(path,opts){
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 var TICK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
 var ROWS=[];
+var WK=null, WKEND=null, WROWS=[], FAVS={};
+
+function mondayOf(ymd){
+  var p=ymd.split("-").map(Number);
+  var d=new Date(Date.UTC(p[0],p[1]-1,p[2],12,0,0));
+  var dow=d.getUTCDay();
+  d.setUTCDate(d.getUTCDate()+(dow===0?-6:1-dow));
+  return d.toLocaleDateString("en-CA",{timeZone:"UTC"});
+}
+function addDays(ymd,n){
+  var p=ymd.split("-").map(Number);
+  var d=new Date(Date.UTC(p[0],p[1]-1,p[2],12,0,0));
+  d.setUTCDate(d.getUTCDate()+n);
+  return d.toLocaleDateString("en-CA",{timeZone:"UTC"});
+}
+
+function paintWeek(){
+  var b=document.getElementById("weekbody");
+  var picked=Object.keys(FAVS).length;
+  document.getElementById("weekn").textContent=picked+" of 3 picked · "+WK+" to "+WKEND;
+  if(!WROWS.length){
+    b.innerHTML='<div class="empty">Nothing starred this week yet.</div>';
+    return;
+  }
+  var h='<div class="wgrid">';
+  WROWS.forEach(function(r){
+    var it=r.wall_items||{};
+    var on=FAVS[r.item_id]!=null;
+    h+='<div class="wit'+(on?" picked":"")+'" data-pick="'+r.item_id+'">'+
+       '<img src="'+esc(it.img)+'" alt="" decoding="async">'+
+       '<span class="pk">'+TICK+'</span></div>';
+  });
+  b.innerHTML=h+"</div>";
+}
+
+function paintTally(){
+  var counts={};
+  ROWS.forEach(function(r){
+    var k=(r.wall_items&&r.wall_items.source_key)||"other";
+    counts[k]=(counts[k]||0)+1;
+  });
+  var list=Object.keys(counts).map(function(k){return [k,counts[k]];})
+    .sort(function(a,b){return b[1]-a[1];}).slice(0,6);
+  var t=document.getElementById("tally");
+  if(!list.length){ t.innerHTML='<span class="n">Nothing starred yet.</span>'; return; }
+  t.innerHTML=list.map(function(p){return '<span class="tchip"><b>'+p[1]+'</b> '+esc(p[0])+'</span>';}).join("");
+}
 
 function paint(){
   var b=document.getElementById("body");
@@ -128,11 +201,51 @@ document.addEventListener("click",function(e){
   });
 });
 
+document.addEventListener("click",function(e){
+  var w=e.target.closest("[data-pick]");
+  if(!w) return;
+  var id=+w.getAttribute("data-pick");
+  var on=FAVS[id]!=null;
+  if(!on && Object.keys(FAVS).length>=3) return;
+  if(on){
+    var rank=FAVS[id];
+    delete FAVS[id];
+    paintWeek();
+    api("wall_favorites?item_id=eq."+id+"&week_start=eq."+WK,{method:"DELETE"}).catch(function(err){
+      FAVS[id]=rank; paintWeek();
+      document.getElementById("err").innerHTML='<div class="err">Could not un-pick that one: '+esc(err.message)+'</div>';
+    });
+  }else{
+    var used=Object.keys(FAVS).map(function(k){return FAVS[k];});
+    var rank=1; while(used.indexOf(rank)!==-1) rank++;
+    FAVS[id]=rank;
+    paintWeek();
+    api("wall_favorites",{method:"POST",body:JSON.stringify({item_id:id,week_start:WK,rank:rank})}).catch(function(err){
+      delete FAVS[id]; paintWeek();
+      document.getElementById("err").innerHTML='<div class="err">Could not save that pick: '+esc(err.message)+'</div>';
+    });
+  }
+});
+
 api("wall_saved?select=item_id,saved_at,wall_items(title,link,img,source_key)&order=saved_at.desc&limit=400")
   .then(function(rows){
     ROWS=rows||[];
-    document.getElementById("stamp").textContent="v1.1 · everything you starred on the wall";
+    document.getElementById("stamp").textContent="v1.1 · this week's picks, your top sources & everything you've kept";
     paint();
+    WK=mondayOf(PY.today());
+    WKEND=addDays(WK,7);
+    WROWS=ROWS.filter(function(r){
+      var d=PY.day(r.saved_at);
+      return d>=WK && d<WKEND;
+    });
+    paintWeek();
+    paintTally();
+    api("wall_favorites?week_start=eq."+WK+"&select=item_id,rank")
+      .then(function(favs){
+        (favs||[]).forEach(function(f){ FAVS[f.item_id]=f.rank; });
+        paintWeek();
+      })
+      .catch(function(){});
   })
   .catch(function(e){
     document.getElementById("err").innerHTML='<div class="err">Could not load what you saved: '+esc(e.message)+'</div>';
