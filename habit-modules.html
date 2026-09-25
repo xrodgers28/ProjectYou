@@ -407,9 +407,13 @@
   .rhd{display:flex;align-items:baseline;gap:4px}
   .rv2{font-size:11px;font-weight:800;color:#1f2a44;margin-left:auto;white-space:nowrap}
   .rfoot{margin-top:auto;display:flex;align-items:center;gap:5px}
-  .rbar{flex:1;height:6px;border-radius:4px;background:#eef1f6;overflow:hidden}
-  .rbar i{display:block;height:100%;background:#e07b39;border-radius:4px}
-  .rcap{font-size:6.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:#b5bec9;white-space:nowrap}
+  /* Weekly exercise ticks, Sep 25 2026 — replaces the old miles progress bar.
+     Dim (unfilled) until earned, bright orange once earned; deliberately the
+     rail's normal way round, not the counter column's usual inversion. */
+  .rexweek{gap:3px}
+  .rextick{width:9px;height:9px;border-radius:50%;flex:none;background:#eef1f6;
+    border:1px solid #dbe1e9;box-sizing:border-box}
+  .rextick.on{background:#e07b39;border-color:#e07b39}
   .rex{display:block;width:18px;height:18px}
   .rex .f{fill:none;stroke:#e07b39;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
   .rex .s{fill:#e07b39}
@@ -657,13 +661,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.47</span>
+    <span class="pn-ver">v6.48</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.47</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.48</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -1418,6 +1422,19 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     mhTrackers.forEach(function(t){ if(trackers.indexOf(t)<0) trackers.push(t); });
     var pastTrackers=['Photo Booth','Medicine','Meditation','Stretching','Balance'];
     var pastReq = (d!==wd) ? PYBackfill.loggedSet(sb,pastTrackers,d) : Promise.resolve({});
+    /* EXERCISE WEEKLY TICKS, Sep 25 2026. The 7 Mon-Sun marks and the
+       same-day walk auto-dim both read the SAME rows the Strava bridge and
+       the Apple-workout ingest already write into todos (source_project=
+       'strava', one row per session, task starting with the walk emoji,
+       value = miles) — no new table, no new aggregation. The range is
+       padded a day either side of both the real current week and whatever
+       day the board is showing, then bucketed with PY.day() so the 2am
+       Eastern boundary is honoured exactly like everywhere else. */
+    var exWkS=monday(wd);
+    var exLoD=(d && d<exWkS)?d:exWkS, exHiD=(d && d>wd)?d:wd;
+    var exWalkReq=sb.from('todos').select('done_at,value')
+      .eq('source_project','strava').ilike('task','🚶 Walk%')
+      .gte('done_at',dadd(exLoD,-1)).lt('done_at',dadd(exHiD,2));
     var res=await Promise.all([
       sb.from('todos').select('*').in('tracker',trackers).eq('is_habit',true),
       sb.from('coffee_cups').select('strength').eq('day',d),
@@ -1440,11 +1457,28 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
         ? sb.from('qs_log').select('tracker,date,minutes,value,note')
             .in('tracker',mhTrackers).gte('date',monday(wd)).lte('date',dadd(monday(wd),6))
         : Promise.resolve({data:[]}),
-      sb.from('birthdays').select('person,bmonth,bday')
+      sb.from('birthdays').select('person,bmonth,bday'),
+      exWalkReq
     ]);
     R.pastDone = res[12] || {};
     R.mhWeek={}; ((res[13]||{}).data||[]).forEach(function(r){ R.mhWeek[r.tracker]=r; });
     R.bdays=((res[14]||{}).data||[]);
+    /* Bucket every walk/exercise session by its OWN day (PY.day on done_at,
+       never the query range) so a session that lands just after midnight
+       still counts for the day Scott started it. A day earns its tick at
+       3+ separate sessions OR 3+ miles that day, whichever comes first —
+       max one tick per day either way. */
+    R.exByDay={};
+    ((res[15]||{}).data||[]).forEach(function(r){
+      var k=PY.day(r.done_at);
+      (R.exByDay[k]=R.exByDay[k]||[]).push(+r.value||0);
+    });
+    R.exWeek=[0,1,2,3,4,5,6].map(function(i){
+      var arr=R.exByDay[dadd(exWkS,i)]||[];
+      var mi=arr.reduce(function(a,b){return a+b;},0);
+      return arr.length>=3 || mi>=3;
+    });
+    R.exWalkToday=!!(R.exByDay[d]||[]).length;
     (res[0].data||[]).forEach(function(r){ if(r.tracker) R.rows[r.tracker]=r; });
     R.cups=(res[1].data||[]).map(function(r){return r.strength;});
     R.cofOpen=false; R.cofJustOpened=false; R.cofLastId=null; R.cofType=null; R.cofMilk=null;
@@ -2815,9 +2849,20 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     h+='<div class="rt rex2" style="--ra:#e07b39"><div class="rhd"><span class="rn">Exercise</span>'+
        '<span class="rv2"></span></div><div class="rrow">'+
        ['dog','out_walk','back_walk','ruck'].map(function(k){
-         return '<button class="rmk'+(exd[k]?' on':'')+'" data-ex="'+k+'" title="'+k.replace('_walk','')+'">'+LEG[k]+'</button>';}).join('')+
-       '</div><div class="rfoot"><div class="rbar"><i style="width:'+Math.min(100,(exd.miles||0)/3*100)+'%"></i></div>'+
-       '<span class="rcap">'+(exd.miles?exd.miles.toFixed(1)+' mi':'')+'</span>'+
+         /* Auto-dim: a walk detected today from Strava/Apple Health dims BOTH
+            walking-man legs (out and back) the same as a manual tap — there is
+            no clean signal for which direction it was, so no guess is made
+            between them. Dog and ruck are untouched by auto-detection; they
+            stay manual, Scott's call. */
+         var auto=R.exWalkToday && (k==='out_walk'||k==='back_walk');
+         return '<button class="rmk'+((exd[k]||auto)?' on':'')+'" data-ex="'+k+'" title="'+k.replace('_walk','')+'">'+LEG[k]+'</button>';}).join('')+
+       /* Weekly ticks, Sep 25 2026: Mon-Sun, one per day, EARNED = bright.
+          This one strip runs the opposite way from the rail's usual dim-when-
+          done language, on purpose — Scott asked for it literally this way
+          round. See counter-column-deploy.md. */
+       '</div><div class="rfoot rexweek">'+
+       ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(lbl,i){
+         return '<span class="rextick'+((R.exWeek&&R.exWeek[i])?' on':'')+'" title="'+lbl+(R.exWeek&&R.exWeek[i]?' — earned':'')+'"></span>';}).join('')+
        '<button class="rmk'+(exd.ideas?' on':'')+'" data-ex="ideas" title="Ideas on the walk">'+BULB+'</button></div></div>';
 
     /* Mini Habits: the worksheet's Plan the week habits, one tap each.
