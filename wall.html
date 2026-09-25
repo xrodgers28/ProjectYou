@@ -277,6 +277,8 @@
        color:var(--ink);cursor:pointer}
   .tray{grid-column:1/-1;min-width:0;max-width:100%;overflow:hidden}
   .tray[hidden]{display:none}
+  @keyframes trayDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  .tray:not([hidden]){animation:trayDown .2s ease}
   .trayr{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;
          -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
          overscroll-behavior-x:contain}
@@ -622,7 +624,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v2.3</span></h1>
+      <h1>The Wall <span class="ver">v2.4</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="hint">Tap a tile. The mark in its corner says what it does. The dots change how it behaves.</div>
     </div>
@@ -713,7 +715,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.3</div>
+  <div class="stamp" id="stamp">v2.4</div>
 </div>
 
 <aside class="stx-col">
@@ -1073,15 +1075,15 @@ function fillTray(n){
   return head+h;
 }
 
-function toggleTray(n){
-  var tr=document.querySelector('[data-tray="'+n+'"]');
-  if(!tr) return;
-  var wasOpen = !tr.hidden;
+function closeAllTrays(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-tray]"), function(o){ o.hidden=true; });
   Array.prototype.forEach.call(document.querySelectorAll("[data-src]"), function(b){
     b.setAttribute("aria-expanded","false");
   });
-  if(wasOpen) return;
+}
+function openTrayFor(n){
+  var tr=document.querySelector('[data-tray="'+n+'"]');
+  if(!tr) return;
   if(!tr.getAttribute("data-filled")){ tr.innerHTML=fillTray(n); tr.setAttribute("data-filled","1"); }
   var btn=document.querySelector('[data-src="'+n+'"]');
   if(btn) btn.setAttribute("aria-expanded","true");
@@ -1097,6 +1099,56 @@ function toggleTray(n){
     }
   }
   tr.hidden=false;
+}
+function toggleTray(n){
+  var tr=document.querySelector('[data-tray="'+n+'"]');
+  if(!tr) return;
+  var wasOpen = !tr.hidden;
+  closeAllTrays();
+  if(wasOpen) return;
+  openTrayFor(n);
+}
+/* Desktop only: hovering a picture tile peeks its tray, like a shade coming
+   down, without needing a click. Leaving the tile (and its peeked tray)
+   brings the shade back up. Clicking always jumps straight to the big
+   picture (see the data-src click handler above), hover is just a look. */
+var HOVERABLE=false;
+try{ HOVERABLE=window.matchMedia("(hover:hover) and (pointer:fine)").matches; }catch(e){}
+var peekT=null, peekN=null;
+function w2behOf(n){ var g=GROUPS[n]; return g ? w2beh(g.items[0].behavior) : null; }
+if(HOVERABLE){
+  document.addEventListener("mouseover",function(e){
+    var b=e.target.closest("[data-src]");
+    if(b){
+      if(e.relatedTarget && b.contains(e.relatedTarget)) return;
+      var n=b.getAttribute("data-src"), beh=w2behOf(n);
+      if(beh!=="strip" && beh!=="mosaic") return;
+      clearTimeout(peekT); peekT=null;
+      var tr=document.querySelector('[data-tray="'+n+'"]');
+      if(tr && !tr.hidden){ peekN=n; return; }
+      closeAllTrays(); openTrayFor(n); peekN=n;
+      return;
+    }
+    var tw=e.target.closest("[data-tray]");
+    if(tw && tw.getAttribute("data-tray")===peekN){ clearTimeout(peekT); peekT=null; }
+  });
+  document.addEventListener("mouseout",function(e){
+    var b=e.target.closest("[data-src]");
+    var tw=e.target.closest("[data-tray]");
+    var zone=b||tw; if(!zone) return;
+    var n=b?b.getAttribute("data-src"):tw.getAttribute("data-tray");
+    if(n!==peekN) return;
+    var to=e.relatedTarget;
+    var btn=document.querySelector('[data-src="'+n+'"]');
+    var tr=document.querySelector('[data-tray="'+n+'"]');
+    if(to && ((btn&&btn.contains(to)) || (tr&&tr.contains(to)))) return;
+    clearTimeout(peekT);
+    peekT=setTimeout(function(){
+      if(tr) tr.hidden=true;
+      if(btn) btn.setAttribute("aria-expanded","false");
+      peekN=null;
+    },180);
+  });
 }
 
 /* ---- Story ------------------------------------------------------------------ */
@@ -1599,7 +1651,13 @@ document.addEventListener("click",function(e){
   var sx=e.target.closest("[data-src]");
   if(sx){
     e.preventDefault();
-    toggleTray(sx.getAttribute("data-src"));
+    var w2n=sx.getAttribute("data-src"), w2g=GROUPS[w2n];
+    var w2b=w2g ? w2beh(w2g.items[0].behavior) : null;
+    if(w2g && (w2b==="strip"||w2b==="mosaic") && w2g.items[0]){
+      vOpen(w2g.items[0].item_id);
+      return;
+    }
+    toggleTray(w2n);
     return;
   }
   var z=e.target.closest("[data-open]");
@@ -2021,7 +2079,7 @@ function boot(){
     document.getElementById("sub").textContent=
       days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources";
     document.getElementById("stamp").textContent=
-      "v2.3 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+      "v2.4 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
     if(DAY!==today()){
       document.getElementById("err").innerHTML=
         '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
