@@ -597,6 +597,24 @@
           animation:w2r .8s linear infinite;vertical-align:-2px;margin-right:6px}
   @keyframes w2r{to{transform:rotate(360deg)}}
   .w2danger{color:var(--bad);border-color:var(--bad)}
+
+  /* v2.1: Read card, and a board that can only be opened in its owner's deck */
+  .w2art.poster{background:#141922;color:#f3f4f6;display:flex;flex-direction:column;justify-content:center;gap:6px;
+     padding:14px 12px 46px;font:800 19px/1.08 Arial,sans-serif;letter-spacing:-.2px}
+  .w2art.poster small{font:800 9.5px/1 Arial,sans-serif;letter-spacing:1.3px;text-transform:uppercase;color:#e9a08f}
+  .w2read{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);background:#f6f3ec;color:#1b1b1b;border-radius:12px;overflow:hidden}
+  .w2read .hero{position:relative;min-height:240px;background:#ddd}
+  .w2read .hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .w2read .tx{padding:18px 20px;display:flex;flex-direction:column;gap:8px}
+  .w2read .k{font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:#a35a4e}
+  .w2read h3{font-family:Georgia,"Times New Roman",serif;font-size:23px;line-height:1.15;margin:0;text-wrap:balance}
+  .w2read p{margin:0;font-size:14px;line-height:1.55;color:#3a3a3a}
+  .w2read .w2btn{align-self:flex-start;margin-top:auto}
+  .w2board{max-width:620px;margin:0 auto;background:#141922;color:#f3f4f6;border-radius:12px;padding:22px}
+  .w2board .k{font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:#e9a08f}
+  .w2board h3{font-size:22px;margin:6px 0 8px}
+  .w2board p{margin:0 0 14px;font-size:13.5px;opacity:.8;line-height:1.5}
+  @media (max-width:640px){ .w2read{grid-template-columns:1fr} .w2read .hero{min-height:200px} }
 </style>
 
 <div class="pagegrid">
@@ -604,7 +622,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v2.1</span></h1>
+      <h1>The Wall <span class="ver">v2.2</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="hint">Tap a tile. The mark in its corner says what it does. The dots change how it behaves.</div>
     </div>
@@ -696,7 +714,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.1</div>
+  <div class="stamp" id="stamp">v2.2</div>
 </div>
 
 <aside class="stx-col">
@@ -875,6 +893,8 @@ var W2B = {
            i:'<svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="8" rx="1"/><rect x="9" y="1" width="6" height="5" rx="1"/><rect x="1" y="11" width="6" height="4" rx="1"/><rect x="9" y="8" width="6" height="7" rx="1"/></svg>'},
   talk:   {n:"Talk poster", d:"The idea in one line and how long it runs. One button: send it to your Watchlist.",
            i:'<svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 3l8 5-8 5z"/></svg>'},
+  read:   {n:"Read card", d:"The cover picture, the headline and the article's own opening lines. Star keeps it for later.",
+           i:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3h5v10H2zM9 3h5v10H9z"/></svg>'},
   deck:   {n:"One slide a day", d:"A deck dealt one slide a day. It counts down, then asks what next.",
            i:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="3" width="13" height="8" rx="1"/><path d="M8 11v3M5 14h6"/></svg>'}
 };
@@ -893,10 +913,13 @@ function coverImg(u,alt){ return '<img src="'+esc(thumbOf(u))+'" alt="'+esc(alt|
 
 function w2count(g){
   var b=w2beh(g.items[0].behavior), n=g.items.length;
-  if(b==="deck"){
-    var d=DECKS[g.key]; if(d && d.total) return "Slide "+Math.min(d.total,d.seen)+" of "+d.total;
-    return "Today's slide";
+  var pile=DECKS[g.key];
+  if(pile && pile.total){
+    var word=(b==="read")?"Article ":(g.items[0].img?"Slide ":"Board ");
+    return word+Math.min(pile.total,pile.seen)+" of "+pile.total;
   }
+  if(b==="deck") return "Today's slide";
+  if(b==="read") return n===1?"1 article":n+" articles";
   if(b==="story"){
     var pics=0; g.items.forEach(function(i){ pics+=(i.gallery&&i.gallery.length)||1; });
     return (n===1?"1 project":n+" projects")+", "+pics+" pictures";
@@ -911,6 +934,8 @@ function w2tile(g,n){
   if(b==="mosaic" && g.items.length>1){
     var four=g.items.slice(0,4);
     art='<span class="w2art mos n'+four.length+'">'+four.map(function(i){ return coverImg(i.img,""); }).join("")+'</span>';
+  } else if(b==="deck" && !top.img){
+    art='<span class="w2art poster"><small>'+esc(g.name)+'</small>'+esc(top.title)+'</span>';
   } else if(b==="deck"){
     art='<span class="w2art deck">'+coverImg(top.img,g.name)+'</span>';
   } else {
@@ -934,7 +959,7 @@ function w2doneTile(d){
     '<button class="w2hit" type="button" data-src="done:'+esc(d.key)+'" aria-expanded="false" aria-label="'+esc(d.name)+', finished">'+
       '<span class="w2art deck"></span>'+
       '<span class="w2mark" title="One slide a day">'+W2B.deck.i+'</span>'+
-      '<span class="w2cap" style="color:#1f2a44;background:none;text-shadow:none">'+esc(d.name)+'<small>Finished, all '+d.total+' slides. What next?</small></span>'+
+      '<span class="w2cap" style="color:#1f2a44;background:none;text-shadow:none">'+esc(d.name)+'<small>Finished, all '+d.total+'. What next?</small></span>'+
     '</button></div>'+
     '<div class="tray w2tr" data-tray="done:'+esc(d.key)+'" hidden></div>';
 }
@@ -981,7 +1006,7 @@ function fillTray(n){
   }
   if(String(n).indexOf("done:")===0){
     var dk=String(n).slice(5), dd=DECKS[dk]||{name:dk,total:0};
-    return '<div class="w2fin"><p><b>'+esc(dd.name)+'</b> has dealt all '+dd.total+' slides. What should happen now?</p>'+
+    return '<div class="w2fin"><p><b>'+esc(dd.name)+'</b> has dealt all '+dd.total+'. What should happen now?</p>'+
       '<div class="acts"><button class="w2btn pri" type="button" data-w2deck="repeat" data-k="'+esc(dk)+'">Start again from slide 1</button>'+
       '<button class="w2btn" type="button" data-w2deck="shuffle" data-k="'+esc(dk)+'">Shuffle it into rotation</button>'+
       '<button class="w2btn w2danger" type="button" data-w2deck="retire" data-k="'+esc(dk)+'">Retire it</button></div></div>';
@@ -1018,6 +1043,19 @@ function fillTray(n){
          '<div><h3>'+esc(it.title)+'</h3>'+(it.blurb?'<p>'+esc(it.blurb)+'</p>':'')+
          '<button class="w2btn pri" type="button" data-w2watch="'+it.item_id+'">Send to Watchlist</button></div></div>';
     });
+  } else if(b==="read"){
+    var rp=DECKS[g.key]||{}, rt=rp.total||0, rs=Math.min(rt,rp.seen||1);
+    g.items.forEach(function(it){
+      h+='<div class="w2read"><div class="hero">'+starBtn(it)+zo(it,'<img src="'+esc(it.img)+'" alt="" decoding="async">')+'</div>'+
+         '<div class="tx"><span class="k">'+esc(it.source)+(rt?' &middot; from the archive, '+rs+' of '+rt:'')+'</span>'+
+         '<h3>'+esc(it.title)+'</h3>'+(it.blurb?'<p>'+esc(it.blurb)+'</p>':'')+
+         '<a class="w2btn pri" href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">Read it on their site</a></div></div>';
+    });
+  } else if(b==="deck" && !g.items[0].img){
+    var it0=g.items[0], dk0=DECKS[g.key]||{}, t0=dk0.total||0, s0=Math.min(t0,dk0.seen||1);
+    h='<div class="w2board"><div class="k">'+esc(g.name)+'</div><h3>'+esc(it0.title)+'</h3>'+(it0.blurb?'<p>'+esc(it0.blurb)+'</p>':'')+
+      '<a class="w2btn pri" href="'+esc(it0.link)+'" target="_blank" rel="noopener noreferrer">Open this board in their deck</a></div>'+
+      '<div class="w2deckbar"><span>'+(t0?(t0-s0)+' to go':'')+'</span>'+(t0?'<span class="w2meter"><i style="width:'+Math.round(100*s0/t0)+'%"></i></span>':'')+'<span>Next one tomorrow</span></div>';
   } else if(b==="deck"){
     var it=g.items[0], dk2=DECKS[g.key]||{}, tot=dk2.total||0, seen=Math.min(tot,dk2.seen||1);
     h='<div class="w2slide">'+zo(it,'<img src="'+esc(it.img)+'" alt="'+esc(it.title)+'" decoding="async">')+'</div>'+
@@ -1984,7 +2022,7 @@ function boot(){
     document.getElementById("sub").textContent=
       days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources";
     document.getElementById("stamp").textContent=
-      "v2.1 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+      "v2.2 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
     if(DAY!==today()){
       document.getElementById("err").innerHTML=
         '<div class="err">This is the wall for '+esc(DAY)+', not today. The overnight job has not run yet.</div>';
