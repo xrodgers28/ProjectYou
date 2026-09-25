@@ -84,7 +84,7 @@
 
 <div class="wrap">
   <div class="kick">The Wall</div>
-  <h1>Fresh picks for the wall <span class="ver" style="font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;margin-left:8px;vertical-align:middle">v1.2</span></h1>
+  <h1>Fresh picks for the wall <span class="ver" style="font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;margin-left:8px;vertical-align:middle">v1.3</span></h1>
   <div class="sub">New sources, found and tested every morning: each card below has a working picture and a recent post.
   Tap <b>Add it</b> and it joins the wall the next morning. Tap <b>Not for me</b> and it never comes back.</div>
   <div class="sub" id="asof" style="margin-top:4px"></div>
@@ -96,13 +96,18 @@
     <div class="t copybox"><textarea id="tally" readonly>nothing yet</textarea></div>
   </div>
 
+  <div class="empty" id="refreshBox" style="display:none">
+    <b>Batch cleared.</b> <span id="refreshMsg">Ready for six more?</span>
+    <div style="margin-top:10px"><button class="pick" type="button" id="refreshBtn">Show me 6 more</button></div>
+  </div>
+
   <div class="foot">
-    <p><b>How this works.</b> Every morning a background job looks for new comic and visual sources, checks each one
-    actually sends a picture and has posted recently, and puts up to six here. Your taps save straight away.</p>
+    <p><b>How this works.</b> Tap <b>Add it</b> to bring a card into the wall, or <b>Not for me</b> to rule it out for good, your taps save straight away.
+    Once every card here is decided, a <b>Show me 6 more</b> button appears below, tap it and a fresh batch gets found and loaded here.</p>
     <p><b>Ruled out for good:</b> <span id="ruled">loading&hellip;</span></p>
   </div>
 
-  <div class="stamp">v1.2</div>
+  <div class="stamp">v1.3</div>
 </div>
 
 <script>
@@ -150,6 +155,32 @@ function decide(k,s){
   api("wall_candidates?key=eq."+encodeURIComponent(k),{method:"PATCH",body:JSON.stringify({status:next,decided_at:new Date().toISOString()})})
     .catch(function(e){ r.status=prev; render(); alert("Could not save that tap: "+e.message); });
 }
+function reqKey(){ return "wall_humor_requested_"+(ROWS.length?ROWS[0].offered_on:""); }
+function checkRefresh(){
+  var box=document.getElementById("refreshBox"); if(!box) return;
+  var cleared = ROWS.length>0 && ROWS.every(function(r){ return r.status!=="offered"; });
+  if(!cleared){ box.style.display="none"; return; }
+  box.style.display="";
+  var btn=document.getElementById("refreshBtn"), msg=document.getElementById("refreshMsg");
+  if(localStorage.getItem(reqKey())){
+    btn.disabled=true; btn.textContent="Request sent";
+    msg.textContent="New picks are on the way, check back soon.";
+  } else {
+    btn.disabled=false; btn.textContent="Show me 6 more";
+    msg.textContent="Ready for six more?";
+  }
+}
+document.getElementById("refreshBtn").onclick=function(){
+  var btn=this;
+  btn.disabled=true; btn.textContent="Sending\u2026";
+  api("wall_candidate_requests",{method:"POST",body:JSON.stringify({})})
+    .then(function(){
+      try{ localStorage.setItem(reqKey(),"1"); }catch(e){}
+      btn.textContent="Request sent";
+      document.getElementById("refreshMsg").textContent="New picks are on the way, check back soon.";
+    })
+    .catch(function(e){ btn.disabled=false; btn.textContent="Show me 6 more"; alert("Could not send that: "+e.message); });
+};
 api("wall_candidates?select=*&status=in.(offered,picked,ruled_out)&order=offered_on.desc,name.asc").then(function(all){
   var latest=null;
   (all||[]).forEach(function(r){ if(r.feed_url!=="-" && (!latest || r.offered_on>latest)) latest=r.offered_on; });
