@@ -396,6 +396,12 @@
          color:var(--ink);border-radius:999px;padding:5px 10px;cursor:pointer}
   .wlbtn:hover{border-color:var(--accent);color:var(--accent)}
   .wlempty{font-size:13px;color:var(--muted);padding:2px 0 6px}
+  .wladd{display:flex;gap:8px;padding:0 16px 4px}
+  .wladdi{flex:1;min-width:0;font-family:inherit;font-size:13px;padding:8px 11px;
+         border-radius:9px;border:1px solid var(--key);background:var(--sunk);color:var(--ink)}
+  .wladdi::placeholder{color:var(--muted)}
+  .wladdbtn{flex:0 0 auto;padding:8px 16px}
+  .wladdbtn:disabled{opacity:.5;cursor:default}
   @media (max-width:640px){
     .wlt{flex:0 0 82%}
     .wlr{scroll-snap-type:x mandatory}
@@ -704,7 +710,11 @@
   <div class="card" id="wlcard" hidden>
     <div class="sec"><h2>Watchlist</h2><span class="n" id="wln"></span></div>
     <div class="wl"><div class="wlr" id="wlr"></div></div>
-    <div class="note">Things you sent yourself to watch when you have the time. Say &ldquo;add this to my watchlist&rdquo; with a link in any chat and it turns up here the next time you load the page. The badge on the picture is how long it runs, so you can pick one that fits the gap you have. Tap Watched and it moves out of the way.</div>
+    <form class="wladd" id="wladd">
+      <input type="url" class="wladdi" id="wladdurl" placeholder="Paste a link to watch later" autocomplete="off" required>
+      <button type="submit" class="wlbtn wladdbtn" id="wladdbtn">Add</button>
+    </form>
+    <div class="note">Paste a link above, or say &ldquo;add this to my watchlist&rdquo; with a link in any chat, and it turns up here the next time you load the page. The badge on the picture is how long it runs, so you can pick one that fits the gap you have. Tap Watched and it moves out of the way.</div>
   </div>
 
   <div class="hiview" id="hiview" hidden role="dialog" aria-label="Harper's Index">
@@ -1959,6 +1969,55 @@ document.addEventListener("click",function(e){
        body:JSON.stringify(day?{watched:true,watched_on:day}:{watched:true})})
     .then(function(){ loadWatch(); })
     .catch(function(){ b.disabled=false; b.textContent="Watched"; });
+});
+function ytId(u){
+  try{
+    var url=new URL(u);
+    var h=url.hostname.replace(/^www\./,"");
+    if(h==="youtu.be") return url.pathname.slice(1).split("/")[0]||null;
+    if(h==="youtube.com"||h==="m.youtube.com"||h==="music.youtube.com"){
+      if(url.pathname==="/watch") return url.searchParams.get("v");
+      var m=url.pathname.match(/^\/(shorts|embed|live)\/([^/]+)/);
+      if(m) return m[2];
+    }
+  }catch(e){}
+  return null;
+}
+function wlAdd(raw){
+  var url=(raw||"").trim();
+  if(!url) return Promise.reject(new Error("paste a link first"));
+  if(!/^https?:\/\//i.test(url)) url="https://"+url;
+  var vid=ytId(url);
+  var host=(function(){ try{ return new URL(url).hostname.replace(/^www\./,""); }catch(e){ return null; } })();
+  var base={url:url,kind:vid?"video":"link",source:vid?"youtube":host};
+  var pull=vid
+    ? fetch("https://www.youtube.com/oembed?format=json&url="+encodeURIComponent("https://www.youtube.com/watch?v="+vid))
+        .then(function(r){ return r.ok?r.json():null; })
+        .then(function(o){ return o?{title:o.title||null,channel:o.author_name||null,thumb:o.thumbnail_url||null}:{}; })
+        .catch(function(){ return {}; })
+    : Promise.resolve({});
+  return pull.then(function(extra){
+    var body={}; for(var k in base) body[k]=base[k]; for(var k2 in extra) if(extra[k2]!=null) body[k2]=extra[k2];
+    return api("watchlist?on_conflict=url",{method:"POST",prefer:"resolution=ignore-duplicates",body:JSON.stringify(body)});
+  });
+}
+document.addEventListener("submit",function(e){
+  var f=e.target.closest ? e.target.closest("#wladd") : null;
+  if(!f) return;
+  e.preventDefault();
+  var inp=document.getElementById("wladdurl");
+  var btn=document.getElementById("wladdbtn");
+  if(!inp || !inp.value || !inp.value.trim()) return;
+  btn.disabled=true; btn.textContent="Adding\u2026";
+  wlAdd(inp.value).then(function(){
+    inp.value="";
+    toast("Added to your Watchlist.");
+    if(window.loadWatch) loadWatch();
+  }).catch(function(err){
+    toast("Could not add it: "+err.message);
+  }).then(function(){
+    btn.disabled=false; btn.textContent="Add";
+  });
 });
 
 var MON=["January","February","March","April","May","June","July","August","September","October","November","December"];
