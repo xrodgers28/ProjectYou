@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Rundown</title>
+<style>
+:root{
+  --bg:#f7f6f3; --panel:#ffffff; --ink:#22201c; --soft:#5f5c55; --faint:#8d8a82;
+  --line:#e3e1da; --line2:#eeece6; --chip:#eef0f2; --chipink:#3f4550;
+  --key:#f1efe9;
+  --do:#3f6f8f; --more:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+  --amber-dot:#c07f10; --green-dot:#2f8f5b; --red-dot:#b4472f; --grey-dot:#b4b3a8;
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#17191c; --panel:#1f2226; --ink:#e9e7e1; --soft:#b6b3ab; --faint:#8b8880;
+    --line:#31353a; --line2:#282c31; --chip:#2a2e33; --chipink:#c4c8cf;
+    --key:#22262b;
+    --do:#5f93b3; --more:#e0a63a; --did:#4bb37e; --read:#95a1af; --kill:#c9926b;
+    --amber-dot:#e0a63a; --green-dot:#4bb37e; --red-dot:#d76a50; --grey-dot:#6f7580;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17191c; --panel:#1f2226; --ink:#e9e7e1; --soft:#b6b3ab; --faint:#8b8880;
+  --line:#31353a; --line2:#282c31; --chip:#2a2e33; --chipink:#c4c8cf;
+  --key:#22262b;
+  --do:#5f93b3; --more:#e0a63a; --did:#4bb37e; --read:#95a1af; --kill:#c9926b;
+  --amber-dot:#e0a63a; --green-dot:#4bb37e; --red-dot:#d76a50; --grey-dot:#6f7580;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-text-size-adjust:100%}
+.wrap{max-width:820px;margin:0 auto;padding:20px 16px 64px}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+h1{font-size:26px;margin:0;letter-spacing:-.2px}
+.vchip{font-size:12px;font-weight:bold;color:var(--chipink);background:var(--chip);border-radius:6px;padding:2px 8px}
+.date{color:var(--soft);font-size:14px;margin:2px 0 16px}
+.lead{font-size:15px;color:var(--soft);margin:0 0 18px}
+.lead b{color:var(--ink)}
+
+.key{background:var(--key);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:16px}
+.key h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin:0 0 8px}
+.key ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr;gap:4px}
+.key li{font-size:13px;color:var(--soft)}
+.key b{display:inline-block;min-width:104px;color:var(--ink)}
+
+.transport{position:sticky;top:0;z-index:5;background:var(--bg);padding:10px 0 12px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.transport label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin-bottom:6px}
+#answers{width:100%;min-height:74px;resize:vertical;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px}
+.tbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px}
+.hint{font-size:11px;color:var(--faint)}
+.copy{border:1px solid var(--line);background:var(--panel);color:var(--soft);font-size:12px;border-radius:6px;padding:6px 12px;cursor:pointer}
+
+.sec-h{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);margin:26px 0 10px;font-weight:bold}
+
+.row{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;padding:14px 15px;margin-bottom:12px}
+.row.settled{opacity:.62}
+.row .top{display:flex;gap:9px;align-items:flex-start}
+.dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto;margin-top:5px}
+.dot.amber{background:var(--amber-dot)} .dot.green{background:var(--green-dot)} .dot.red{background:var(--red-dot)}
+.rt{font-size:16px;font-weight:bold;margin:0}
+.rb{font-size:14px;color:var(--soft);margin:7px 0 0}
+.rn{font-size:14px;color:var(--ink);margin:9px 0 0}
+.rn b{color:var(--ink)}
+.btns{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.btn{border:1px solid transparent;color:#fff;font-size:13px;font-weight:bold;border-radius:8px;padding:9px 14px;cursor:pointer;font-family:Arial,Helvetica,sans-serif}
+.btn.do{background:var(--do)} .btn.more{background:var(--more)} .btn.did{background:var(--did)} .btn.read{background:var(--read)} .btn.kill{background:var(--kill)}
+.btn[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:1px}
+.cmt{margin-top:10px}
+.cmt input{width:100%;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:8px 10px}
+.state{font-size:12px;color:var(--faint);margin-top:8px;min-height:1em}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 15px;margin-bottom:12px}
+.card p{margin:0 0 8px;font-size:14px;color:var(--soft)}
+.card p:last-child{margin-bottom:0}
+.card b{color:var(--ink)}
+.proj{border-bottom:1px solid var(--line2);padding:10px 0}
+.proj:last-child{border-bottom:none;padding-bottom:0}
+.proj .pn{font-size:14px;font-weight:bold;color:var(--ink)}
+.proj .pd{font-size:13px;color:var(--soft);margin-top:3px}
+.proj .pnext{font-size:13px;color:var(--ink);margin-top:3px}
+.proj .pnext span{color:var(--faint)}
+
+.habit{border:1px dashed var(--line);border-radius:10px;padding:13px 15px;margin:22px 0 10px;background:transparent}
+.habit .lab{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--more);font-weight:bold;margin-bottom:5px}
+.habit p{margin:0;font-size:14px;color:var(--soft)}
+.habit p b{color:var(--ink)}
+
+.proof{margin-top:24px;border-top:1px solid var(--line);padding-top:12px}
+.proof .lab{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);font-weight:bold;margin-bottom:5px}
+.proof p{font-size:12px;color:var(--faint);margin:0;font-family:Arial,Helvetica,sans-serif;word-break:break-word}
+@media (max-width:640px){
+  h1{font-size:22px}
+  .key b{min-width:92px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>Morning Rundown</h1>
+    <span class="vchip">v1.0</span>
+  </div>
+  <div class="date">Sunday, September 27, 2026 &middot; ready at 5:15am ET</div>
+
+  <p class="lead">Good morning, Scott. Today is <b>wide open</b>, nothing on the calendar until the weekday routine picks back up tomorrow. The 4am run finished clean, the system maps drifted and the fixes are ready, and a handful of decisions are waiting on you below.</p>
+
+  <div class="key">
+    <h2>What the five buttons mean</h2>
+    <ul>
+      <li><b>Do this</b> go build it, run it, ship it. An instruction. The row stays open until it is done.</li>
+      <li><b>Tell me more</b> you lean yes but want the cost or reasoning first. Your question goes in the note. Stays open.</li>
+      <li><b>I did it</b> you handled it yourself. Settles.</li>
+      <li><b>I read this</b> noted, nothing owed by anyone. Settles.</li>
+      <li><b>Kill this task</b> dead, and it never comes back. Settles.</li>
+    </ul>
+  </div>
+
+  <div class="transport">
+    <label for="answers">Your answers, ready to copy back into the chat</label>
+    <textarea id="answers" readonly>No taps yet. Tap a button on any row and your answers gather here.</textarea>
+    <div class="tbar">
+      <span class="hint">Select all and copy this box, then paste it into the chat. The copy button is a shortcut, not the only way.</span>
+      <button class="copy" id="copyBtn" type="button">Copy</button>
+    </div>
+  </div>
+
+  <div class="sec-h">Needs you</div>
+  <div id="rows"></div>
+
+  <div class="sec-h">Your projects</div>
+  <div class="card">
+    <div class="proj">
+      <div class="pn">TreadWell</div>
+      <div class="pd">The give-back travel platform is still at concept and prototype. Name and the TreadPoints idea are locked, with 45 percent of a trip going to the local community. Quiet for about seven weeks.</div>
+      <div class="pnext"><span>Next:</span> Decide whether it is still active before more time goes in.</div>
+    </div>
+    <div class="proj">
+      <div class="pn">CrushingIt</div>
+      <div class="pd">Your live to-do and habit app runs end to end, with login, your real board, drag to reorder, undo, stars, habit confetti, a 3am rollover, and the two-ring Time Wheel. A few small builds are still queued.</div>
+      <div class="pnext"><span>Next:</span> Clear up what you meant by the little confirmation on completing an item.</div>
+    </div>
+    <div class="proj">
+      <div class="pn">Project YOU / Quantified Self</div>
+      <div class="pd">The flagship is deep and live, a full site with the Mission Control hub, daily cue cards, the Apple Health feed, and the tracking dashboards. Focus has moved to the Play Book so the system stops going quiet after two weeks.</div>
+      <div class="pnext"><span>Next:</span> Answer the seven Play Book decisions, then wire the night close into the next morning.</div>
+    </div>
+    <div class="proj">
+      <div class="pn">Clever Phrases</div>
+      <div class="pd">Renamed Things Worth Knowing, holding 60 phrases in 12 groups, now also dealing two Fun Facts a day. The old-name bug is fixed.</div>
+      <div class="pnext"><span>Next:</span> Say whether to collapse the Little Known Facts alias, then sweep the last old-name links.</div>
+    </div>
+    <div class="proj">
+      <div class="pn">AI Intelligence</div>
+      <div class="pd">The daily AI micro-learning deck is defined and running as a four-card tap-through. Quiet for about six weeks.</div>
+      <div class="pnext"><span>Next:</span> Confirm the Favorites list and the Send to Clever Phrases action actually shipped.</div>
+    </div>
+    <div class="proj">
+      <div class="pn">2026 Calendar</div>
+      <div class="pd">Live inside Project YOU with month and week views, two-way Google sync, and a new Sports Teams layer with crests. Two scheduled checks are set, Red Sox playoffs around Sep 29 and the USC bowl around Dec 7.</div>
+      <div class="pnext"><span>Next:</span> Tell me if the February 21 birthday is one person or two.</div>
+    </div>
+  </div>
+
+  <div class="sec-h">The rest of the picture</div>
+  <div class="card">
+    <p><b>Email.</b> Nothing in the inbox needs a reply. The last three days are newsletters, receipts, travel alerts, and a few security notices. The one real human note was a warm reply from Euge M on HomeExchange saying to write anytime, no action owed.</p>
+    <p><b>Community and AI scan.</b> Nothing new is sitting for your keep or discard this morning. The card pool has no items flagged for review.</p>
+    <p><b>Weekly Claude usage.</b> I cannot read your usage meter from an unattended run, so no number today. Nothing about this week suggests you are near a limit. Tap Tell me more on the usage row if you want the quick way to check it yourself.</p>
+    <p><b>Reference and document check.</b> The system maps are the only drift found. The Data Flow Map still advertises 131 tables and 40 views while the live system now has 173 tables and 47 views. That is the fix waiting in the top row.</p>
+  </div>
+
+  <div class="habit">
+    <div class="lab">One from Atomic Habits</div>
+    <p>James Clear puts it plainly: <b>you do not rise to the level of your goals, you fall to the level of your systems.</b> That is exactly what the nightly map check is for. It does not wait for you to notice the numbers went stale, it catches the drift on its own and hands you a one-tap fix. Publishing those corrections today keeps the system honest so it can carry you when your attention is elsewhere.</p>
+  </div>
+
+  <div class="proof">
+    <div class="lab">Technical proof</div>
+    <p id="proofline"></p>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  var rows = [
+    {
+      id:"maps",
+      dot:"amber",
+      title:"Your system maps drifted, and the corrections are built",
+      body:"Three of the maps that show how your whole setup fits together fell behind the live system. Last night's run rebuilt the Architecture Map with today's real numbers and saved it, but stopped short of publishing. The Data Flow Map still says 131 tables when you actually have 173, and the numbers to fix it and the Automated Tracking page are already prepared.",
+      next:"One tap and Claude publishes all three corrected pages, then verifies each against the real repository."
+    },
+    {
+      id:"parked",
+      dot:"amber",
+      title:"Seven automation ideas are parked, waiting on your yes or no",
+      body:"Over the last few weeks the overnight runs wrote build plans for seven small automations, then held off building. Each needs a call only you can make or a step on your phone. Among them: count real work hours beyond meetings, log a connection the moment a calendar event matches someone you know, and keep your travel history importing on its own. They have been sitting since early September.",
+      next:"Say the word and Claude builds the ones that do not need your phone, or walks through them with you first."
+    },
+    {
+      id:"queue",
+      dot:"amber",
+      title:"Nothing was queued for last night's run",
+      body:"The overnight work list was empty when the 4am run started, so it did its standing map cleanup and nothing else. That is fine, but a quiet night is also a night not spent on your bigger projects. If you line up a task or two before bed, the run has something real to build while you sleep.",
+      next:"Drop tonight's jobs into the queue, or leave it and Claude keeps the maps tidy."
+    },
+    {
+      id:"ranclean",
+      dot:"green",
+      title:"Last night's 4am run finished clean",
+      body:"It started at 4:10am and wrapped at 4:59am with no errors. It corrected the Architecture Map, ran the nightly data check across your whole database and found everything sound, and confirmed every run and ride in the last two weeks has a matching calendar block. The only thing it could not do was crawl your live website, which needs an approval an unattended run cannot give itself.",
+      next:"Nothing. This is just so you know it ran and what it touched."
+    },
+    {
+      id:"usage",
+      dot:"amber",
+      title:"I cannot see your Claude usage meter from here",
+      body:"Your weekly usage limit lives in your Claude account, not in any file this run can read, so there is no number to give you this morning. Nothing about this week suggests you are close. If you want, I can point you to the quick way to check it, or start tracking your heavy-use days a different way.",
+      next:"Tap Tell me more if you want the fast way to check your usage."
+    },
+    {
+      id:"projcalls",
+      dot:"amber",
+      title:"A few project calls keep coming back",
+      body:"Three small decisions are still open across your projects. Is TreadWell still active, or should Claude stop spending time on it. On the 2026 calendar, is the February 21 birthday one person, Dad who is also called Grandpa John, or two. And the Play Book has seven gamification decisions waiting so your system stops going quiet after two weeks.",
+      next:"Answer any of them right here and Claude moves on it."
+    }
+  ];
+
+  var LABELS = {
+    do:"Do this", more:"Tell me more", did:"I did it", read:"I read this", kill:"Kill this task"
+  };
+  var OPEN = {do:true, more:true, did:false, read:false, kill:false};
+  var state = {};
+
+  var host = document.getElementById("rows");
+  rows.forEach(function(r){
+    var row = document.createElement("div");
+    row.className = "row";
+    row.id = "row-"+r.id;
+
+    var top = document.createElement("div");
+    top.className = "top";
+    var dot = document.createElement("span");
+    dot.className = "dot "+r.dot;
+    var tt = document.createElement("div");
+    var h = document.createElement("p"); h.className="rt"; h.textContent = r.title;
+    tt.appendChild(h);
+    top.appendChild(dot); top.appendChild(tt);
+    row.appendChild(top);
+
+    var b = document.createElement("p"); b.className="rb"; b.textContent = r.body; row.appendChild(b);
+    var n = document.createElement("p"); n.className="rn";
+    var nb = document.createElement("b"); nb.textContent = "Next: ";
+    n.appendChild(nb); n.appendChild(document.createTextNode(r.next)); row.appendChild(n);
+
+    var btns = document.createElement("div"); btns.className="btns";
+    ["do","more","did","read","kill"].forEach(function(k){
+      var btn = document.createElement("button");
+      btn.type="button"; btn.className="btn "+k; btn.textContent = LABELS[k];
+      btn.setAttribute("aria-pressed","false");
+      btn.addEventListener("click", function(){ pick(r, k, row, btns); });
+      btns.appendChild(btn);
+    });
+    row.appendChild(btns);
+
+    var cmt = document.createElement("div"); cmt.className="cmt";
+    var inp = document.createElement("input");
+    inp.type="text"; inp.placeholder="Add a comment (optional)";
+    inp.addEventListener("input", function(){
+      if(!state[r.id]) state[r.id] = {choice:null, label:null, comment:""};
+      state[r.id].comment = inp.value; render();
+    });
+    cmt.appendChild(inp); row.appendChild(cmt);
+
+    var st = document.createElement("div"); st.className="state"; st.id="st-"+r.id; row.appendChild(st);
+
+    host.appendChild(row);
+  });
+
+  function pick(r, k, row, btns){
+    if(!state[r.id]) state[r.id] = {choice:null, label:null, comment:""};
+    state[r.id].choice = k;
+    state[r.id].label = LABELS[k];
+    var cols = {do:"var(--do)", more:"var(--more)", did:"var(--did)", read:"var(--read)", kill:"var(--kill)"};
+    row.style.borderLeftColor = cols[k];
+    if(OPEN[k]) row.classList.remove("settled"); else row.classList.add("settled");
+    Array.prototype.forEach.call(btns.children, function(c){
+      c.setAttribute("aria-pressed", c.classList.contains(k) ? "true":"false");
+    });
+    var st = document.getElementById("st-"+r.id);
+    st.textContent = OPEN[k] ? (LABELS[k]+" — stays open, work is owed.") : (LABELS[k]+" — settled.");
+    render();
+  }
+
+  function render(){
+    var out = [];
+    rows.forEach(function(r){
+      var s = state[r.id];
+      if(!s || (!s.choice && !(s.comment && s.comment.trim()))) return;
+      var line = "• " + r.title + " → " + (s.label || "(comment only)");
+      if(s.comment && s.comment.trim()) line += " — note: " + s.comment.trim();
+      out.push(line);
+    });
+    var ta = document.getElementById("answers");
+    ta.value = out.length ? ("Morning Rundown, Sep 27 2026 — my answers:\n\n" + out.join("\n")) : "No taps yet. Tap a button on any row and your answers gather here.";
+  }
+
+  document.getElementById("copyBtn").addEventListener("click", function(){
+    var ta = document.getElementById("answers");
+    ta.removeAttribute("readonly"); ta.focus(); ta.select();
+    var ok=false;
+    try{ ok = document.execCommand("copy"); }catch(e){ ok=false; }
+    ta.setAttribute("readonly","readonly");
+    this.textContent = ok ? "Copied" : "Select the box, then copy";
+    var self=this; setTimeout(function(){ self.textContent="Copy"; }, 2200);
+  });
+
+  document.getElementById("proofline").textContent =
+    "Sources checked live at 09:12 UTC Sep 27 2026: board_meta midnight_run heartbeat 08:10:44 UTC to wrap 08:59:10 UTC, run_date 2026-09-27, data sanity all clean. Schema counted directly: 173 base tables, 47 views, versus the Data Flow Map's stated 131 and 40. Architecture Map v1.5 draft saved (23,479 chars), not published. Overnight queue rows with run_status overnight: 0. run_log newest row id 24, Sep 25 (content ingest subsystem, separate from the queue runner). Google Calendar and Gmail read live. Published via pages plus gzpage, verified against origin/main.";
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
