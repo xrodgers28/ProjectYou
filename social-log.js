@@ -80,7 +80,19 @@
 
    LONG and FELT are fixed scales, not vocabulary: no + and no pencil, and they
    are not in people_vocab. A plan (a future date) still writes only a to-do, so
-   both rows hide themselves when the date is ahead. */
+   both rows hide themselves when the date is ahead.
+
+   v2.5, Sep 27 2026, Scott's ask: Social Circle, Log It and breathing room.
+   - SOCIAL CIRCLE is now a permanent row under Group, not one that only shows
+     for a new or untagged person. Its four pills always wear the wall-chart
+     colours (gold Inner, olive Middle, green Affinity, blue Outer), whatever a
+     database row's meta does or doesn't say about colour.
+   - Pill rows wrap onto a new line instead of scrolling sideways out of view,
+     so nothing is hidden off the edge of the card any more.
+   - Log It is 60% width and centred; the card, the rows and the pills all got
+     more padding so the form breathes.
+   - A Social Interactions link sits under Log It, opening connections.html in
+     a new tab. */
 window.PYSocial = (function () {
   'use strict';
 
@@ -99,13 +111,17 @@ window.PYSocial = (function () {
              ['personal friend','Personal Friend',{color:'#c5ebff'}],['old greenwich','Old Greenwich',{color:'#f5e992'}],
              ['creative social','Creative Social',{color:'#eed7f0'}],['work related','Work Related',{color:'#fed8b4'}],
              ['ex work','Ex Work',{color:'#c4dfc6'}],['tribe','Tribe',{color:'#44c1ff'}],['mom','Mom',{color:'#c9d0da'}]],
-    circle: [['inner','Inner 5',{}],['middle','Middle 15',{}],['affinity','Affinity',{}],['outer','Outer',{}]]
+    circle: [['inner','Inner 5',{color:'#e0a326'}],['middle','Middle 15',{color:'#8d9f4e'}],['affinity','Affinity',{color:'#63a46c'}],['outer','Outer',{color:'#5b95bd'}]]
   };
   /* v2.4. Fixed scales, not vocabulary: the same four lengths and the same 1 to 7
      every time, so they are not in people_vocab and neither row has a + or pencil. */
   var LONGS = [[30,'30 min'],[60,'1 hour'],[120,'2 hours'],[240,'Longer']];
   var FELTS = [1,2,3,4,5,6,7];
   var FIELDS = ['is','source','what','where','group','circle'];
+  /* Sep 27 2026, Scott's ask: the four Social Circle pills always wear the same
+     colours as the wall-chart circles, whatever a database row's meta says (or
+     doesn't say) about colour. */
+  var CIRCLE_COLORS = { inner:'#e0a326', middle:'#8d9f4e', affinity:'#63a46c', outer:'#5b95bd' };
   /* how this form's rows map onto the one shared list */
   var DIM = { is:'label', source:'source', what:'occasion', where:'where', group:'social_group', circle:'circle' };
   var PILLS = null;
@@ -252,14 +268,14 @@ window.PYSocial = (function () {
       ' color:var(--sl-ink);font:13px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;text-align:left}',
       '@media (prefers-color-scheme:dark){html:not([data-theme="light"]) .pysl.pysl-auto{--sl-bg:#1e2328;--sl-soft:#242a30;--sl-line:#333a41;--sl-ink:#e8eaec;--sl-ink2:#bcc3c9;--sl-mut:#8b949b;--sl-blue:#6f9fc6;--sl-tag:#8b97a1;--sl-good:#5fae7e;--sl-warm:#e29a63}}',
       '.pysl *{box-sizing:border-box}',
-      '.pysl h3{font-size:16px;font-weight:700;margin:0 0 8px;letter-spacing:-.01em}',
+      '.pysl h3{font-size:16px;font-weight:700;margin:0 0 12px;letter-spacing:-.01em}',
       '.pysl .sl-at{font-size:11px;font-weight:600;color:var(--sl-mut);margin-left:6px}',
-      '.pysl .fld{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:6px;row-gap:3px;align-items:start;margin:0 0 5px}',
+      '.pysl .fld{display:grid;grid-template-columns:40px minmax(0,1fr);column-gap:8px;row-gap:5px;align-items:start;margin:0 0 10px}',
       '.pysl .fld>.lab{grid-column:1;padding-top:2px;font-size:9px;font-weight:700;letter-spacing:.06em;line-height:12px;text-transform:uppercase;color:var(--sl-mut)}',
       '.pysl .fld>*:not(.lab){grid-column:2;min-width:0}',
-      '.pysl .picks{display:flex;gap:3px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}',
+      '.pysl .picks{display:flex;gap:6px;flex-wrap:wrap;overflow-x:visible}',
       '.pysl .picks::-webkit-scrollbar{display:none}',
-      '.pysl .p{flex:none;white-space:nowrap;font:inherit;font-size:10px;line-height:12px;padding:0 6px;cursor:pointer;border:1px solid var(--sl-line);border-radius:99px;background:var(--sl-bg);color:var(--sl-ink2)}',
+      '.pysl .p{flex:none;white-space:nowrap;font:inherit;font-size:10px;line-height:12px;padding:4px 9px;cursor:pointer;border:1px solid var(--sl-line);border-radius:99px;background:var(--sl-bg);color:var(--sl-ink2)}',
       '.pysl .p:hover{border-color:var(--sl-blue)}',
       '.pysl .p.on{background:var(--sl-blue);border-color:var(--sl-blue);color:#fff;font-weight:700}',
       '.pysl .tags .p.on{background:var(--sl-tag);border-color:var(--sl-tag)}',
@@ -305,8 +321,10 @@ window.PYSocial = (function () {
       '.pysl .pnote b{color:var(--sl-ink)}',
       '.pysl .keep{display:flex;gap:5px;align-items:center;font-size:11px;color:var(--sl-ink2);cursor:pointer}',
       '.pysl .keep input{margin:0}',
-      '.pysl .go{width:100%;margin-top:3px;padding:7px;border:0;border-radius:8px;background:var(--sl-good);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}',
+      '.pysl .go{display:block;width:60%;margin:10px auto 0;padding:9px;border:0;border-radius:8px;background:var(--sl-good);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}',
       '.pysl .go.plan{background:var(--sl-blue)}.pysl .go:disabled{opacity:.6}',
+      '.pysl .sl-social-link{display:block;text-align:center;margin-top:10px;font-size:12px;font-weight:700;color:var(--sl-blue);text-decoration:none}',
+      '.pysl .sl-social-link:hover{text-decoration:underline}',
       '.pysl .msg{margin:5px 0 0;font-size:12px;color:var(--sl-mut)}.pysl .msg:empty{display:none}',
       '.pysl .msg.warn{color:var(--sl-warm)}.pysl .msg.ok{color:var(--sl-good);font-weight:600}',
       '.pysl .list{margin:10px 0 0;padding-top:8px;border-top:1px solid var(--sl-line)}',
@@ -338,8 +356,8 @@ window.PYSocial = (function () {
       '.pysl .keepq button{font:inherit;font-size:10px;line-height:12px;padding:1px 7px;margin-left:5px;cursor:pointer;border:1px solid var(--sl-line);border-radius:99px;background:var(--sl-bg);color:var(--sl-ink2)}',
       '.pysl .keepq button.yes{background:var(--sl-good);border-color:var(--sl-good);color:#fff;font-weight:700}',
       '.pysl .addn textarea{height:44px}.pysl .addn .sp{margin-top:4px}',
-      '.pysl-ov{position:fixed;inset:0;z-index:10000;background:rgba(20,24,30,.38);display:flex;align-items:flex-start;justify-content:center;padding:6vh 12px 12px;overflow:auto}',
-      '.pysl-ov .pysl-card{position:relative;width:100%;max-width:440px;background:var(--sl-bg);border:1px solid var(--sl-line);border-radius:14px;padding:12px 14px;box-shadow:0 18px 50px rgba(0,0,0,.28)}',
+      '.pysl-ov{position:fixed;inset:0;z-index:10000;background:rgba(20,24,30,.38);display:flex;align-items:flex-start;justify-content:center;padding:6vh 16px 16px;overflow:auto}',
+      '.pysl-ov .pysl-card{position:relative;width:100%;max-width:440px;background:var(--sl-bg);border:1px solid var(--sl-line);border-radius:14px;padding:20px 22px;box-shadow:0 18px 50px rgba(0,0,0,.28)}',
       '.pysl-ov .pysl-x{position:absolute;top:8px;right:10px;border:0;background:none;font-size:20px;line-height:1;color:var(--sl-mut);cursor:pointer;padding:2px 4px}'
     ].join('\n');
     (document.head || document.documentElement).appendChild(s);
@@ -406,7 +424,7 @@ window.PYSocial = (function () {
         return '<button type="button" class="p rm" data-rmf="' + att(field) + '" data-rmv="' + att(x[0]) + '">' +
           esc(x[1]) + '<span class="xx">&times;</span></button>';
       }
-      var m = x[2] || {}, col = (field === 'group' && m.color) ? m.color : '';
+      var m = x[2] || {}, col = (field === 'group' && m.color) ? m.color : (field === 'circle' ? (CIRCLE_COLORS[x[0]] || m.color || '') : '');
       return '<button type="button" class="p' + (col ? ' gp' : '') + (isOn(x[0]) ? ' on' : '') + '" ' + attr + '="' + att(x[0]) + '"' +
         (col ? ' style="background:' + att(col) + '"' : '') + (m.hint || m.quip ? ' title="' + att(m.hint || m.quip) + '"' : '') + '>' + esc(x[1]) + '</button>';
     }).join('');
@@ -499,8 +517,8 @@ window.PYSocial = (function () {
         '</div>' + this.addHtml('is') + '<p class="why sl-whonote"></p><div class="pnote" hidden></div></div>' +
       '<div class="fld"><span class="lab">Group</span><div class="picks" data-picks="group">' + this.picksHtml('group') +
         '</div>' + this.addHtml('group') + '</div>' +
-      /* Circle only shows for a new or untagged person; a regular already has one. */
-      '<div class="fld sl-circle"' + (this.needsCircle() ? '' : ' hidden') + '><span class="lab">Circle</span><div class="picks circ" data-picks="circle">' + this.picksHtml('circle') +
+      /* v2.5, Sep 27 2026: Social Circle is now always shown, right after Group. */
+      '<div class="fld sl-circle"><span class="lab">Social Circle</span><div class="picks circ" data-picks="circle">' + this.picksHtml('circle') +
         '</div></div>' +
       /* v2.4. The same field, the same column, honest words. */
       '<div class="fld"><span class="lab">First move</span><div class="picks" data-picks="source">' + this.picksHtml('source') +
@@ -525,6 +543,7 @@ window.PYSocial = (function () {
       '<div class="fld"><span class="lab">Note</span><textarea class="sl-note" rows="1" placeholder="How it went"></textarea>' +
         '<label class="keep"><input type="checkbox" class="sl-keep"> Keep on their card</label></div>' +
       '<button type="button" class="go' + (fut ? ' plan' : '') + '">' + (fut ? 'Add to what is coming up' : 'Log it') + '</button>' +
+      '<a class="sl-social-link" href="https://xrodgers28.github.io/ProjectYou/connections.html" target="_blank" rel="noopener">Social Interactions &#8599;</a>' +
       '<p class="msg' + (cls ? ' ' + cls : '') + '">' + esc(msg || '') + '</p>';
 
     if (o.showSoon && soon.length) {
@@ -564,7 +583,9 @@ window.PYSocial = (function () {
   };
   Form.prototype.showCircle = function(){
     var row = this.$('.sl-circle'); if (!row) return;
-    row.hidden = !this.needsCircle();
+    /* Sep 27 2026, Scott's ask: Social Circle is now a permanent row, always
+       showing, not just for a new or untagged person. */
+    row.hidden = false;
   };
   Form.prototype.refreshGo = function(){
     var g = this.$('.go'); if (!g) return;
