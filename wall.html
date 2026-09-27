@@ -6,6 +6,7 @@
 <title>The Wall &middot; ProjectYou</title>
 <script src="py-day.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="learning-log.js"></script>
 </head>
 <body>
 <div class="pynav"></div>
@@ -387,8 +388,21 @@
   .wldur{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.82);color:#fff;
          font-size:10.5px;font-weight:700;letter-spacing:.4px;padding:2px 6px;border-radius:5px}
   .wlb{padding:9px 11px 11px;display:flex;flex-direction:column;gap:5px;flex:1}
-  .wlti{font-size:13px;font-weight:700;line-height:1.32;color:var(--ink);text-decoration:none}
+  .wlti{display:block;width:100%;font-family:inherit;font-size:13px;font-weight:700;line-height:1.32;
+        color:var(--ink);text-decoration:none;background:none;border:0;padding:0;margin:0;
+        text-align:left;cursor:pointer}
   .wlti:hover{color:var(--accent)}
+  .wlrenamein{width:100%;font-family:inherit;font-size:13px;font-weight:700;line-height:1.32;
+        color:var(--ink);background:var(--card);border:1px solid var(--accent);border-radius:6px;padding:3px 6px}
+  .wlord{display:flex;align-items:center;gap:4px;margin-bottom:1px}
+  .wlgrip{cursor:grab;color:var(--faint);font-size:13px;line-height:1;padding:2px 5px;user-select:none}
+  .wlgrip:active{cursor:grabbing}
+  .wlmv{font-family:inherit;font-size:11px;font-weight:700;line-height:1;border:1px solid var(--key);
+        background:var(--card);color:var(--ink);border-radius:6px;padding:3px 7px;cursor:pointer}
+  .wlmv:hover{border-color:var(--accent);color:var(--accent)}
+  .wlmv:disabled{opacity:.3;cursor:default}
+  .wlt.wldragging{opacity:.4}
+  .wlt.wldragover{box-shadow:0 0 0 2px var(--accent) inset}
   .wlch{font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}
   .wlact{margin-top:auto;padding-top:4px}
   .wlbtn{font-family:inherit;font-size:10.5px;font-weight:700;letter-spacing:.4px;
@@ -640,7 +654,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v2.5</span></h1>
+      <h1>The Wall <span class="ver">v2.6</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -714,7 +728,7 @@
       <input type="url" class="wladdi" id="wladdurl" placeholder="Paste a link to watch later" autocomplete="off" required>
       <button type="submit" class="wlbtn wladdbtn" id="wladdbtn">Add</button>
     </form>
-    <div class="note">Paste a link above, or say &ldquo;add this to my watchlist&rdquo; with a link in any chat, and it turns up here the next time you load the page. The badge on the picture is how long it runs, so you can pick one that fits the gap you have. Tap Watched and it moves out of the way.</div>
+    <div class="note">Paste a link above, or say &ldquo;add this to my watchlist&rdquo; with a link in any chat, and it turns up here the next time you load the page. The badge on the picture is how long it runs, so you can pick one that fits the gap you have. Drag a card to reorder it, or use the &lsaquo; &rsaquo; buttons. Tap the title to rename it. Tap Watched, say how long you watched, and it logs to Learning and moves out of the way.</div>
   </div>
 
   <div class="hiview" id="hiview" hidden role="dialog" aria-label="Harper's Index">
@@ -741,7 +755,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.5</div>
+  <div class="stamp" id="stamp">v2.6</div>
 </div>
 
 <aside class="stx-col">
@@ -1909,6 +1923,11 @@ function signIn(){
     document.getElementById("gate").classList.add("hidden");
     finMsg("Signed in. Tick it whenever you are finished.");
     loadHabit();
+    if(WL_PENDING){
+      var pid=WL_PENDING, row=null, k; WL_PENDING=null;
+      for(k=0;k<WL_ROWS.length;k++){ if(WL_ROWS[k].id===pid){ row=WL_ROWS[k]; break; } }
+      if(row) wlOpenLog(row);
+    }
   });
 }
 
@@ -1929,46 +1948,206 @@ function wlDur(s){
   if(m>=60) return Math.floor(m/60)+"h "+(m%60)+"m";
   return m+":"+(ss<10?"0":"")+ss;
 }
-function wlTile(r){
+function wlTile(r,i,n){
   var d=wlDur(r.seconds);
-  return '<div class="wlt">'+
-    '<a class="wlimg" href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer">'+
-      (r.thumb?'<img src="'+esc(r.thumb)+'" alt="">':'<div class="wlno"></div>')+
+  return '<div class="wlt" draggable="true" data-wlid="'+esc(r.id)+'">'+
+    '<a class="wlimg" href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer" draggable="false">'+
+      (r.thumb?'<img src="'+esc(r.thumb)+'" alt="" draggable="false">':'<div class="wlno"></div>')+
       (d?'<span class="wldur">'+esc(d)+'</span>':'')+
     '</a>'+
     '<div class="wlb">'+
-      '<a class="wlti" href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer">'+esc(r.title||r.url)+'</a>'+
+      '<div class="wlord">'+
+        '<span class="wlgrip" title="Drag to reorder" aria-hidden="true">\u22ee\u22ee</span>'+
+        '<button type="button" class="wlmv" data-wlmove="'+esc(r.id)+':-1" aria-label="Move earlier"'+(i===0?' disabled':'')+'>&lsaquo;</button>'+
+        '<button type="button" class="wlmv" data-wlmove="'+esc(r.id)+':1" aria-label="Move later"'+(i===n-1?' disabled':'')+'>&rsaquo;</button>'+
+      '</div>'+
+      '<button type="button" class="wlti" data-wlrename="'+esc(r.id)+'" title="Tap to rename">'+esc(r.title||r.url)+'</button>'+
       '<div class="wlch">'+esc(r.channel||r.source||"")+'</div>'+
       '<div class="wlact"><button type="button" class="wlbtn" data-wldone="'+esc(r.id)+'">Watched</button></div>'+
     '</div></div>';
 }
-function loadWatch(){
+var WL_ROWS=[], WL_PENDING=null, WL_DRAG=null;
+
+function wlPaint(){
   var card=document.getElementById("wlcard");
   var row=document.getElementById("wlr");
   var n=document.getElementById("wln");
   if(!card||!row) return;
-  api("watchlist?select=id,url,title,channel,source,thumb,seconds&watched=is.false&order=position.asc,created_at.asc&limit=60")
+  n.textContent = WL_ROWS.length ? (WL_ROWS.length===1 ? "1 to watch" : WL_ROWS.length+" to watch") : "nothing queued";
+  row.innerHTML = WL_ROWS.length ? WL_ROWS.map(function(r,i,arr){ return wlTile(r,i,arr.length); }).join("")
+    : '<div class="wlempty">Nothing queued. Send yourself a link in any chat and say &ldquo;add this to my watchlist&rdquo;.</div>';
+  card.hidden=false;
+}
+function loadWatch(){
+  var card=document.getElementById("wlcard");
+  if(!card) return;
+  api("watchlist?select=id,url,title,channel,source,thumb,seconds,position&watched=is.false&order=position.asc,created_at.asc&limit=60")
     .then(function(rows){
-      rows=rows||[];
-      n.textContent = rows.length ? (rows.length===1 ? "1 to watch" : rows.length+" to watch") : "nothing queued";
-      row.innerHTML = rows.length ? rows.map(wlTile).join("")
-        : '<div class="wlempty">Nothing queued. Send yourself a link in any chat and say &ldquo;add this to my watchlist&rdquo;.</div>';
-      card.hidden=false;
+      WL_ROWS=rows||[];
+      wlPaint();
     })
     .catch(function(){ card.hidden=true; });
 }
-document.addEventListener("click",function(e){
-  var b=e.target.closest ? e.target.closest("[data-wldone]") : null;
-  if(!b) return;
-  e.preventDefault();
-  var id=b.getAttribute("data-wldone");
+
+/* Reordering: WL_ROWS' order is the truth. A move renumbers everyone by
+   tens and only sends the rows whose number actually changed. */
+function wlSaveOrder(){
+  var jobs=[];
+  WL_ROWS.forEach(function(r,i){
+    var p=i*10;
+    if(r.position!==p){
+      r.position=p;
+      jobs.push(api("watchlist?id=eq."+encodeURIComponent(r.id),
+        {method:"PATCH",prefer:"return=minimal",body:JSON.stringify({position:p})}));
+    }
+  });
+  return Promise.all(jobs).catch(function(e){
+    document.getElementById("err").innerHTML='<div class="err">Could not save the new order: '+esc(e.message)+'</div>';
+  });
+}
+function wlMove(id,dir){
+  var i=-1,k;
+  for(k=0;k<WL_ROWS.length;k++){ if(WL_ROWS[k].id===id){ i=k; break; } }
+  var j=i+dir;
+  if(i<0||j<0||j>=WL_ROWS.length) return;
+  var tmp=WL_ROWS[i]; WL_ROWS[i]=WL_ROWS[j]; WL_ROWS[j]=tmp;
+  wlPaint();
+  wlSaveOrder();
+}
+function wlReorderTo(draggedId,targetId,before){
+  var from=-1,to=-1,k;
+  for(k=0;k<WL_ROWS.length;k++){
+    if(WL_ROWS[k].id===draggedId) from=k;
+    if(WL_ROWS[k].id===targetId) to=k;
+  }
+  if(from<0||to<0||from===to) return;
+  var item=WL_ROWS.splice(from,1)[0];
+  to=-1;
+  for(k=0;k<WL_ROWS.length;k++){ if(WL_ROWS[k].id===targetId){ to=k; break; } }
+  WL_ROWS.splice(before?to:to+1,0,item);
+  wlPaint();
+  wlSaveOrder();
+}
+
+/* Renaming: tap the title, edit it in place, Enter or tap-away saves,
+   Escape cancels. */
+function wlStartRename(id){
+  var btn=document.querySelector('[data-wlrename="'+id+'"]');
+  if(!btn) return;
+  var row=null,k;
+  for(k=0;k<WL_ROWS.length;k++){ if(WL_ROWS[k].id===id){ row=WL_ROWS[k]; break; } }
+  if(!row) return;
+  var input=document.createElement("input");
+  input.type="text"; input.className="wlrenamein"; input.maxLength=140;
+  input.value=row.title||row.url;
+  btn.replaceWith(input);
+  input.focus(); input.select();
+  var done=false;
+  function commit(){
+    if(done) return; done=true;
+    var val=input.value.trim();
+    if(!val || val===(row.title||row.url)){ wlPaint(); return; }
+    row.title=val;
+    wlPaint();
+    api("watchlist?id=eq."+encodeURIComponent(id),{method:"PATCH",prefer:"return=minimal",body:JSON.stringify({title:val})})
+      .catch(function(e){
+        document.getElementById("err").innerHTML='<div class="err">Could not rename that one: '+esc(e.message)+'</div>';
+      });
+  }
+  function cancel(){ if(done) return; done=true; wlPaint(); }
+  input.addEventListener("blur",commit);
+  input.addEventListener("keydown",function(e){
+    if(e.key==="Enter"){ e.preventDefault(); commit(); }
+    else if(e.key==="Escape"){ e.preventDefault(); cancel(); }
+  });
+}
+
+/* Watched: signs you in if needed, then opens the shared Learning-log
+   popup (the same one Todays Tasks uses) so the minutes land on the
+   Learning habit. Marking watched and logging the time happen together. */
+function wlWatched(id){
+  var row=null,k;
+  for(k=0;k<WL_ROWS.length;k++){ if(WL_ROWS[k].id===id){ row=WL_ROWS[k]; break; } }
+  if(!row) return;
+  if(!sb){ document.getElementById("err").innerHTML='<div class="err">The sign-in did not load, so this cannot be logged. Reload the page.</div>'; return; }
+  if(!signedIn){
+    WL_PENDING=id;
+    document.getElementById("gate").classList.remove("hidden");
+    finMsg("Sign in first so the watch gets logged to Learning.");
+    return;
+  }
+  wlOpenLog(row);
+}
+function wlOpenLog(row){
+  PYLearn.open({
+    sb:sb,
+    what:row.title||row.url,
+    mins:row.seconds ? Math.max(1,Math.round(row.seconds/60)) : 15,
+    source:"wall-watchlist",
+    onSaved:function(){ wlMarkWatched(row.id); }
+  });
+}
+function wlMarkWatched(id){
   var day=(window.PY && PY.today) ? PY.today() : null;
-  b.disabled=true; b.textContent="Filed";
-  api("watchlist?id=eq."+encodeURIComponent(id),
+  return api("watchlist?id=eq."+encodeURIComponent(id),
       {method:"PATCH",prefer:"return=minimal",
        body:JSON.stringify(day?{watched:true,watched_on:day}:{watched:true})})
-    .then(function(){ loadWatch(); })
-    .catch(function(){ b.disabled=false; b.textContent="Watched"; });
+    .then(function(){ WL_ROWS=WL_ROWS.filter(function(r){ return r.id!==id; }); wlPaint(); })
+    .catch(function(e){
+      document.getElementById("err").innerHTML='<div class="err">Logged, but could not take it off the list: '+esc(e.message)+'</div>';
+    });
+}
+
+document.addEventListener("click",function(e){
+  var ren=e.target.closest ? e.target.closest("[data-wlrename]") : null;
+  if(ren){ e.preventDefault(); wlStartRename(ren.getAttribute("data-wlrename")); return; }
+  var mv=e.target.closest ? e.target.closest("[data-wlmove]") : null;
+  if(mv){
+    e.preventDefault();
+    var parts=mv.getAttribute("data-wlmove").split(":");
+    wlMove(parts[0],+parts[1]);
+    return;
+  }
+  var b=e.target.closest ? e.target.closest("[data-wldone]") : null;
+  if(b){ e.preventDefault(); wlWatched(b.getAttribute("data-wldone")); return; }
+});
+
+/* Desktop drag-and-drop: pick a card up anywhere on it (the thumbnail
+   opts out, see draggable="false" above) and drop it on another card.
+   Touch never fires these events, so the phone always uses the Move
+   buttons instead. */
+document.addEventListener("dragstart",function(e){
+  var t=e.target.closest ? e.target.closest(".wlt") : null;
+  if(!t) return;
+  WL_DRAG=t.getAttribute("data-wlid");
+  t.classList.add("wldragging");
+  try{ e.dataTransfer.setData("text/plain",WL_DRAG); e.dataTransfer.effectAllowed="move"; }catch(err){}
+});
+document.addEventListener("dragend",function(e){
+  var t=e.target.closest ? e.target.closest(".wlt") : null;
+  if(t) t.classList.remove("wldragging");
+  Array.prototype.forEach.call(document.querySelectorAll(".wlt.wldragover"),function(o){ o.classList.remove("wldragover"); });
+  WL_DRAG=null;
+});
+document.addEventListener("dragover",function(e){
+  var t=e.target.closest ? e.target.closest(".wlt") : null;
+  if(!t || !WL_DRAG) return;
+  e.preventDefault();
+  Array.prototype.forEach.call(document.querySelectorAll(".wlt.wldragover"),function(o){ if(o!==t) o.classList.remove("wldragover"); });
+  t.classList.add("wldragover");
+});
+document.addEventListener("drop",function(e){
+  var t=e.target.closest ? e.target.closest(".wlt") : null;
+  if(!t || !WL_DRAG) return;
+  e.preventDefault();
+  t.classList.remove("wldragover");
+  var targetId=t.getAttribute("data-wlid");
+  if(targetId && targetId!==WL_DRAG){
+    var r=t.getBoundingClientRect();
+    var before=(e.clientX-r.left) < r.width/2;
+    wlReorderTo(WL_DRAG,targetId,before);
+  }
+  WL_DRAG=null;
 });
 function ytId(u){
   try{
@@ -2156,7 +2335,7 @@ function renderDateLine(){
   document.getElementById("sub").textContent=
     days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
   document.getElementById("stamp").textContent=
-    "v2.5 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+    "v2.6 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
   var lbl=document.getElementById("daylabel");
   if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
   var ds=document.getElementById("daystep");
