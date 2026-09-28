@@ -369,6 +369,10 @@
         display:flex;align-items:center;gap:7px}
   .minl input{width:62px;padding:7px 9px;border:1px solid var(--key);border-radius:8px;
         background:var(--card);color:var(--ink);font-family:inherit;font-size:13px}
+  .minl .cuetimer{width:20px;height:20px;border-radius:50%;background:var(--sunk);display:flex;align-items:center;justify-content:center;flex:none}
+  .minl .cuetimer svg{width:100%;height:100%;display:block}
+  .minl .cuehand{transform-origin:12px 12px}
+  .mintotal{font-size:12px;color:var(--muted);font-weight:700;margin:0 0 8px}
   .gate{margin-top:13px;max-width:320px}
   .gate p{font-size:12px;color:var(--muted);margin:0 0 8px}
   .gate input{width:100%;padding:8px 10px;border:1px solid var(--key);border-radius:8px;
@@ -707,8 +711,9 @@
     <div class="sec"><h2>Done for today</h2><span class="n">ticks it off your list</span></div>
     <div class="fin">
       <div class="fintx" id="finmsg">Tick it once you have had your look. It crosses The Wall off today&rsquo;s list, adds the minutes to the wheel, and marks your worksheet.</div>
+      <div class="mintotal" id="wallMinTotal">Timer total: 1 min</div>
       <div class="finrow">
-        <label class="minl">Minutes <input id="mins" type="number" min="1" max="180" value="10"></label>
+        <label class="minl"><span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(31,42,68,.25)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#3f6f8f"/></svg></span>Minutes <input id="mins" type="number" min="1" max="180" value="10"></label>
         <button class="tool on" type="button" id="finbtn">Done for today</button>
       </div>
       <div class="gate hidden" id="gate">
@@ -1815,6 +1820,17 @@ function mountPhotogs(){
    to-do list is behind a sign-in, so this half of the page needs the account
    even though the pictures do not. */
 var HABIT="The Wall", sb=null, signedIn=false, ticked=false, habitRow=null;
+var __cueStart=Date.now();
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge');
+  var totMin=Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(h){ var line=h.querySelector('.cuehand'); if(line){ var deg=((Date.now()-__cueStart)%60000)/60000*360; line.style.transform='rotate('+deg+'deg)'; } }
+  var tot=document.getElementById('wallMinTotal'); if(tot) tot.textContent='Timer total: '+totMin+' min';
+  var mi=document.getElementById('mins'); if(mi && document.activeElement!==mi) mi.value=totMin;
+}
+setInterval(__cueHandTick,250);
+__cueHandTick();
+
 try{ if(window.supabase && window.supabase.createClient) sb=window.supabase.createClient(SB,KEY); }catch(e){ sb=null; }
 
 /* ---- sports scoreboard, right-hand column -------------------------------
