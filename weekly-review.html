@@ -344,23 +344,36 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .sww.next .who{color:#c3cad3;font-size:20px;font-weight:800}.sww.next .n{color:#c3cad3}
 .swwcap{font-size:10.5px;color:var(--faint);text-align:center;font-style:italic}
 .swpenhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 6px}
-.swpens{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:760px){.swpens{grid-template-columns:1fr}}
+.swpenswrap{}
+/* v6.0: three time cards in a row (This Week, Next week, Next month). In the
+   Dugout sits below as its own full-width strip, so it is not a grid child
+   here any more. */
+.swpens{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:900px){.swpens{grid-template-columns:1fr}}
 .swpen{border:1px dashed #cdd5de;border-radius:9px;padding:7px 9px;background:#fbfcfd}
 .swpen h4{margin:0;font-size:12px;font-weight:800;color:var(--ink)}
+.swdugout{margin-top:10px;border-style:solid;border-color:#d8cdb3;background:#fdfbf5}
 /* v3.8: the add control sits in the heading, so the lanes are the only thing
    below it and the card is shorter by a row. */
 .swpenhd{display:flex;align-items:center;gap:8px;margin-bottom:5px;min-height:24px}
 .swpenhd .sp{flex:1}
-/* v3.8: three lanes, not two. Confirmed, waiting on a reply, still an idea. */
-.swhalves{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0}
+/* v6.0: two lanes now, Confirmed and Waiting on a reply. Still an idea moved
+   out into its own In the Dugout section, shared across all three cards. */
+.swhalves{display:grid;grid-template-columns:1fr 1fr;gap:0}
 .swhalf{padding:1px 0}
 .swhalf.l{padding-right:7px;border-right:1px dotted #c8cfd8}
-.swhalf.m{padding:1px 7px;border-right:1px dotted #c8cfd8}
-.swhalf.r{padding-left:7px}
+.swhalf.m{padding-left:7px}
 @media(max-width:560px){.swhalves{grid-template-columns:1fr}
-  .swhalf.l,.swhalf.m{padding:1px 0 5px;border-right:0;border-bottom:1px dotted #c8cfd8}
-  .swhalf.m{padding-top:5px}.swhalf.r{padding:5px 0 1px}}
+  .swhalf.l{padding:1px 0 5px;border-right:0;border-bottom:1px dotted #c8cfd8}
+  .swhalf.m{padding-top:5px}}
+/* v6.0: In the Dugout is one flat lane, not two, so its grid goes back to a
+   single block regardless of width. */
+.swduglist{display:block}
+.swduglist .swhalf{padding:1px 0}
+/* v6.0: click-to-rename. Any section title or lane label carries this class. */
+.swlbl{cursor:text;border-bottom:1px dashed transparent;outline:none;border-radius:2px}
+.swlbl:hover{border-color:#b3bcc7}
+.swlbl:focus{border-color:var(--accent);background:#fff}
 .swhl{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
 .swhrow{display:flex;gap:4px;flex-wrap:wrap;min-height:26px}
 .swp{font-family:inherit;font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);
@@ -646,8 +659,8 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
       <div class="swsub" id="swStripTitle"><span>Social Well-Being progress</span></div>
       <div id="swStrip"></div>
       <div id="swPenWrap">
-        <div class="swpenhead"><span class="lab">Who's coming up</span></div>
-        <div class="swpens" id="swPens"></div>
+        <div class="swpenhead"><span class="lab" id="swComingUpTitle"></span></div>
+        <div class="swpenswrap" id="swPens"></div>
         <div id="swSweep"></div>
         <div id="swBeam"></div>
       </div>
@@ -796,7 +809,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.3';
+const VERSION='v5.4';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -895,7 +908,7 @@ async function load(){
   const from28=addDays(ws,-27), from14=addDays(we,-13);
   try{
     const q=(t,sel,f)=>{let r=sb.from(t).select(sel);if(f)r=f(r);return r;};
-    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq]=await Promise.all([
+    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq]=await Promise.all([
       q('qs_log','date,"group",tracker,minutes,logged_at',r=>r.gte('date',from28).lte('date',we).limit(5000)),
       q('worksheet_rows','habit,area,icon,identity,qs_tracker,count_on,is_active,retired',r=>r.eq('is_active',true)),
       q('todos','for_date,actual_minutes,task',r=>r.eq('category','Strava').gte('for_date',ws).lte('for_date',we)),
@@ -937,7 +950,8 @@ async function load(){
         r=>r.gte('happened_on','2026-01-01').order('happened_on',{ascending:false})),
       /* v3.5: names Scott has said never to suggest again */
       q('social_bullpen','week_start,kind,person,state',r=>r.eq('kind','never')),
-      q('checkins','ts,day,venue,raw',r=>r.gte('day',ws).lte('day',we))
+      q('checkins','ts,day,venue,raw',r=>r.gte('day',ws).lte('day',we)),
+      q('sw_labels','key,label')
     ]);
     const bad=[qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,quotes,areas].filter(x=>x.error);
     if(bad.length){throw new Error(bad.map(x=>x.error.message).join('; '));}
@@ -947,7 +961,8 @@ async function load(){
       pphotos:(photoq&&photoq.data)||[],
       slots:swDedupeSlots((slotsq&&slotsq.data)||[]),cks:(ckq&&ckq.data)||[],
       year:((yearq&&yearq.data)||[]).filter(c=>!c.superseded),
-      never:((neverq&&neverq.data)||[]).map(r=>r.person)};
+      never:((neverq&&neverq.data)||[]).map(r=>r.person),
+      labels:swLabelsMap((labelsq&&labelsq.data)||[])};
     S={quiz:{},goals:[],own:'',lastGoals:{}};
     if(D.row){S.quiz=D.row.quiz||{};const g=D.row.goals||{};S.goals=g.picked||[];S.own=g.own||'';S.lastGoals=D.row.prior_goals_result||{};}
     W={hi:[],go:[]};
@@ -1784,6 +1799,7 @@ function swWs(r){ return (r&&(r.ws||r.week_start))||null; }
 function swEffKind(r){
   if(!r)return null;
   const w=swWs(r);
+  if(r.kind==='now'&&w&&w<D.ws&&r.state!=='confirmed')return 'week';
   return (r.kind==='week'&&w&&w<D.ws&&r.state!=='confirmed')?'month':r.kind;
 }
 /* Q5: the last time he logged seeing this person, on or after the day he put
@@ -1910,15 +1926,51 @@ function swKnownNames(){
   swLive().forEach(c=>{if(c.person&&!seen[c.person]){seen[c.person]=1;out.push(c.person);}});
   return out.sort((a,b)=>a.localeCompare(b));
 }
-function swPenBox(title,kind,list){
+function swLabelsMap(rows){
+  const m={}; (rows||[]).forEach(r=>{if(r.key)m[r.key]=r.label;}); return m;
+}
+function swLbl(key,fallback){
+  const v=D.labels&&D.labels[key];
+  return (v&&v.trim())?v:fallback;
+}
+async function swSaveLabel(key,val,fallback){
+  const v=(val||'').trim();
+  D.labels=D.labels||{};
+  const stored=(v&&v!==fallback)?v:'';
+  if(stored)D.labels[key]=stored;else delete D.labels[key];
+  swSay('Saving...');
+  const {error}=await sb.from('sw_labels')
+    .upsert({key:key,label:stored,updated_at:new Date().toISOString()},{onConflict:'key'});
+  swSay(error?('Could not save: '+error.message):'Saved');
+}
+function swEditableHtml(key,fallback,cls){
+  return '<span class="swlbl'+(cls?' '+cls:'')+'" contenteditable="true" spellcheck="false" '+
+    'data-swlblkey="'+esc(key)+'" data-swlblfallback="'+esc(fallback)+'">'+esc(swLbl(key,fallback))+'</span>';
+}
+function swWireLabels(box){
+  box.querySelectorAll('[data-swlblkey]').forEach(sp=>{
+    sp.addEventListener('pointerdown',ev=>ev.stopPropagation());
+    sp.addEventListener('click',ev=>ev.stopPropagation());
+    sp.addEventListener('keydown',ev=>{
+      if(ev.key==='Enter'){ev.preventDefault();sp.blur();}
+      if(ev.key==='Escape'){ev.preventDefault();sp.textContent=swLbl(sp.dataset.swlblkey,sp.dataset.swlblfallback);sp.blur();}
+    });
+    sp.addEventListener('blur',()=>{
+      const fb=sp.dataset.swlblfallback;
+      const val=(sp.textContent||'').trim()||fb;
+      sp.textContent=val;
+      swSaveLabel(sp.dataset.swlblkey,val,fb);
+    });
+  });
+}
+function swPenBox(titleKey,fallbackTitle,kind,list){
   const L=list.filter(p=>swSlotState(kind,p.person)==='confirmed');
   const M=list.filter(p=>swSlotState(kind,p.person)==='asked');
-  const R=list.filter(p=>['confirmed','asked'].indexOf(swSlotState(kind,p.person))<0);
-  const lane=(cls,state,label,rows,empty)=>
-    '<div class="swhalf '+cls+'" data-k="'+kind+'" data-state="'+state+'"><div class="swhl">'+label+'</div>'+
+  const lane=(cls,state,labelKey,labelFallback,rows,empty)=>
+    '<div class="swhalf '+cls+'" data-k="'+kind+'" data-state="'+state+'"><div class="swhl">'+swEditableHtml(labelKey,labelFallback)+'</div>'+
     '<div class="swhrow">'+(rows.length?rows.map(p=>swChipHtml(p,kind)).join(''):'<span class="swnone">'+empty+'</span>')+'</div></div>';
-  return '<div class="swpen">'+
-    '<div class="swpenhd"><h4>'+title+'</h4><span class="sp"></span>'+
+  return '<div class="swpen" data-swkind="'+kind+'">'+
+    '<div class="swpenhd"><h4>'+swEditableHtml(titleKey,fallbackTitle)+'</h4><span class="sp"></span>'+
       '<button class="swadd" type="button" data-swaddbtn="'+kind+'">+ Add a name</button>'+
       '<span class="swaddbox" data-swaddbox="'+kind+'">'+
         '<input type="text" list="swNames" placeholder="Who are you seeing?" data-swaddin="'+kind+'">'+
@@ -1926,9 +1978,23 @@ function swPenBox(title,kind,list){
       '</span>'+
     '</div>'+
     '<div class="swhalves">'+
-      lane('l','confirmed','Confirmed',L,'drop a name here')+
-      lane('m','asked','Waiting on a reply',M,'nobody asked yet')+
-      lane('r','idea','Still an idea',R,'nobody')+
+      lane('l','confirmed','lbl_confirmed','Confirmed',L,'drop a name here')+
+      lane('m','asked','lbl_asked','Waiting on a reply',M,'nobody asked yet')+
+    '</div></div>';
+}
+function swDugoutBox(list){
+  const rows=list.map(p=>swChipHtml(p,'dugout'));
+  return '<div class="swpen swdugout" data-swkind="dugout">'+
+    '<div class="swpenhd"><h4>'+swEditableHtml('dugout_title','In the Dugout')+'</h4><span class="sp"></span>'+
+      '<button class="swadd" type="button" data-swaddbtn="dugout">+ Add a name</button>'+
+      '<span class="swaddbox" data-swaddbox="dugout">'+
+        '<input type="text" list="swNames" placeholder="Who are you thinking about?" data-swaddin="dugout">'+
+        '<button class="swaddgo" type="button" data-swaddgo="dugout">Add</button>'+
+      '</span>'+
+    '</div>'+
+    '<div class="swhalves swduglist">'+
+      '<div class="swhalf full" data-k="dugout" data-state="idea"><div class="swhl">'+swEditableHtml('lbl_dugout_sub','Not tied to a week yet')+'</div>'+
+      '<div class="swhrow">'+(rows.length?rows.join(''):'<span class="swnone">nobody parked here</span>')+'</div></div>'+
     '</div></div>';
 }
 function swRenderPens(){
@@ -1947,25 +2013,27 @@ function swRenderPens(){
     x.seen=seen||null;
     placed[x.person]=x;
   });
-  const week=[],month=[];
+  const now=[],week=[],month=[],dugout=[];
+  const bucket=k=>k==='now'?now:k==='week'?week:k==='month'?month:dugout;
   /* the suggestions first, in order of how long it has been */
   const q=(D.quiet||[]).slice().sort((a,b)=>a.days_since-b.days_since)
            .filter(p=>p.days_since>=7&&hidden.indexOf(p.person)<0);
   const used={};
   q.forEach((p,idx)=>{
     const pl=placed[p.person];
-    const kind=pl?swEffKind(pl):(idx<3?'week':(idx<6?'month':null));
-    if(!kind)return;
+    const kind=pl?swEffKind(pl):null;
     used[p.person]=1;
     if(pl){p=Object.assign({},p,{seen:pl.seen,stale:swStale(pl),ws:swWs(pl)});}
-    (kind==='week'?week:month).push(p);
+    /* v6.0: an untouched suggestion goes to the Dugout, never guessed into a
+       week by its position in the list. */
+    bucket(kind||'dugout').push(p);
   });
   /* then anyone he typed in himself, who is in no suggestion list */
   Object.keys(placed).forEach(n=>{
     if(used[n])return;
     const pl=placed[n];
     const row={person:n,days_since:swDaysSince(n),seen:pl.seen,stale:swStale(pl),ws:swWs(pl)};
-    (swEffKind(pl)==='week'?week:month).push(row);
+    bucket(swEffKind(pl)).push(row);
   });
   /* Q4: one line per confirmed date that came and went with nothing logged. */
   const stale=Object.keys(placed).map(n=>placed[n]).filter(swStale);
@@ -1976,15 +2044,23 @@ function swRenderPens(){
     '<button class="swaskb" type="button" data-swnot="'+esc(r.person)+'">Not yet</button></div>').join('')+
     '</div>':'';
   box.innerHTML='<datalist id="swNames">'+swKnownNames().map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist>'+
-    swPenBox("Who's next week",'week',week)+
-    swPenBox('Who in the next month','month',month)+
+    '<div class="swpens">'+
+      swPenBox('now_title','This Week','now',now)+
+      swPenBox('week_title',"Who's next week",'week',week)+
+      swPenBox('month_title','Who in the next month','month',month)+
+    '</div>'+
+    swDugoutBox(dugout)+
     staleHtml+
     (hidden.length?'<div class="swpfoot" style="border:0;padding:0;margin-top:2px;grid-column:1/-1">'+
       '<span class="swnone">'+hidden.length+' name'+(hidden.length>1?'s':'')+' not being suggested'+
         ((D.never||[]).length?', '+(D.never||[]).length+' for good':'')+'</span>'+
       '<button class="swundo" type="button" id="swUndo">bring them back</button></div>':'');
+  const titleEl=el('swComingUpTitle');
+  if(titleEl)titleEl.innerHTML=swEditableHtml('coming_up_title',"Who's coming up");
   swWirePens(box);
   swWireDrag(box);
+  swWireLabels(box);
+  if(titleEl)swWireLabels(titleEl.parentElement);
 }
 /* the x, the add field, and the undo. Kept apart from the drag handler so a
    tap on the x never reads as the start of a drag. */
@@ -2015,7 +2091,7 @@ function swWirePens(box){
     const n=(inp.value||'').trim();
     if(!n)return;
     D.slots=(D.slots||[]).filter(x=>x.person!==n);
-    swPlace(n,k,'idea');
+    swPlace(n,k,k==='dugout'?'idea':'asked');
   };
   box.querySelectorAll('[data-swaddgo]').forEach(b=>b.onclick=()=>go(b.dataset.swaddgo));
   box.querySelectorAll('[data-swaddin]').forEach(inp=>inp.addEventListener('keydown',ev=>{
@@ -2168,6 +2244,7 @@ function swWireDrag(box){
     chip.onclick=ev=>{
       if(ev.target&&ev.target.closest&&ev.target.closest('.swx'))return;
       if(chip._swSkip){chip._swSkip=false;return;}
+      if(chip.dataset.k==='dugout')return;
       swToggle(chip.dataset.n,chip.dataset.k);
     };
   });
