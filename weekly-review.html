@@ -628,7 +628,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>The PY Week in Review</h1><span class="ver">v4.9</span><span class="date" id="builtOn"></span>
+  <div class="secbar"><h1>The PY Week in Review</h1><span class="ver">v5.7</span><span class="date" id="builtOn"></span>
     <span class="weeknav"><a class="btn" id="prevWeek">&#9664; Previous</a><span id="weekLabel" class="weeklabel"></span><a class="btn" id="nextWeek">Next &#9654;</a><a class="btn" id="signout">sign out</a></span>
   </div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading your week...</span></div>
@@ -834,7 +834,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.6';
+const VERSION='v5.7';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -2575,7 +2575,15 @@ async function wrTick(td){
     const on=C.tick[t]&&C.tick[t][d];
     if(isCtr||!on){
       const stamp=etISO(d,12,0);
-      const {error}=await sb.from('qs_log').insert({date:d,group:area,tracker:t,minutes:0,source:'weekly-review',logged_at:stamp});
+      /* v5.7: qs_log only accepts a fixed list of source names (a database rule
+         that predates this page), and 'weekly-review' was not on it, so every
+         tap was silently rejected. 'weekly-review:tick' is allowed (the list
+         permits anything starting with a few known prefixes) and unique per
+         day so untapping can find it again. A counter habit gets a fresh
+         'weekly-review:<time>' each tap, since it is allowed to log more than
+         once a day and each tap needs its own row. */
+      const src=isCtr?('weekly-review:'+Date.now()):'weekly-review:tick';
+      const {error}=await sb.from('qs_log').insert({date:d,group:area,tracker:t,minutes:0,source:src,logged_at:stamp});
       if(error)throw error;
       D.qs.push({date:d,group:area,tracker:t,minutes:0,logged_at:stamp});
     }else{
