@@ -654,7 +654,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v2.6</span></h1>
+      <h1>The Wall <span class="ver">v2.7</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -755,7 +755,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.6</div>
+  <div class="stamp" id="stamp">v2.7</div>
 </div>
 
 <aside class="stx-col">
@@ -848,6 +848,22 @@ function bySource(){
   var m={}, order=[];
   ITEMS.forEach(function(i){ if(!m[i.source]){m[i.source]=[];order.push(i.source);} m[i.source].push(i); });
   return order.map(function(s){ return {name:s, key:m[s][0].source_key, items:m[s]}; });
+}
+
+/* v2.7: what the big picture view's next/previous cycles through. Thumbnails
+   mode shows one tile per source in the shuffled SOURCE order (GROUPS);
+   Bigger Pictures mode shows every picture in one flat row, in ITEMS order.
+   The viewer used to always step through ITEMS, which has its own separate
+   per-picture shuffle - so tapping a thumbnail and paging through landed on
+   pictures in a different order than the tiles on screen, and looked random.
+   Now it walks whichever order is actually on screen. */
+function wallOrder(){
+  if(SIZE==="lg") return ITEMS;
+  var out=[];
+  (GROUPS.length?GROUPS:bySource()).forEach(function(g){
+    g.items.forEach(function(it){ out.push(it); });
+  });
+  return out;
 }
 
 var IGLIVE={h:"wrold_scope", n:"world_scope", key:"ig_wrold_scope"};
@@ -1559,7 +1575,7 @@ function setStar(it){
   var k=document.getElementById("oaKeep");
   if(k){ k.setAttribute("aria-pressed", it.saved?"true":"false"); k.textContent=it.saved?"Kept":"Keep"; }
   /* the viewer star carries an icon, so only its pressed state changes */
-  if(VIEW>=0 && ITEMS[VIEW] && ITEMS[VIEW].item_id===it.item_id){
+  if(VIEW>=0 && VORDER[VIEW] && VORDER[VIEW].item_id===it.item_id){
     var v=document.getElementById("vkeep");
     if(v) v.setAttribute("aria-pressed", it.saved?"true":"false");
   }
@@ -1584,10 +1600,10 @@ function byId(id){
   return -1;
 }
 
-var VIEW=-1, TAPLOCK=0;
+var VIEW=-1, TAPLOCK=0, VORDER=[];
 
 function vPaint(){
-  var it=ITEMS[VIEW];
+  var it=VORDER[VIEW];
   if(!it) return;
   var fig=document.getElementById("vfig");
   var old=fig.querySelector("img");
@@ -1603,11 +1619,11 @@ function vPaint(){
     hi.decoding="sync";
     hi.alt=it.title||"";
     hi.onload=function(){
-      if(ITEMS[VIEW] && ITEMS[VIEW].item_id===it.item_id && im.parentNode===fig) fig.replaceChild(hi,im);
+      if(VORDER[VIEW] && VORDER[VIEW].item_id===it.item_id && im.parentNode===fig) fig.replaceChild(hi,im);
     };
     hi.src=big;
   }
-  document.getElementById("vcount").textContent=(VIEW+1)+" of "+ITEMS.length;
+  document.getElementById("vcount").textContent=(VIEW+1)+" of "+VORDER.length;
   document.getElementById("vsrc").textContent=it.source||"";
   var c=document.getElementById("vcap");
   c.textContent=it.title||"";
@@ -1618,7 +1634,7 @@ function vPaint(){
   var k=document.getElementById("vkeep");
   k.setAttribute("aria-pressed", it.saved?"true":"false");
   [1,-1,2].forEach(function(s){
-    var m=ITEMS[(VIEW+s+ITEMS.length)%ITEMS.length];
+    var m=VORDER[(VIEW+s+VORDER.length)%VORDER.length];
     if(m && m.img){ var p=new Image(); p.src=m.img; }
   });
 }
@@ -1627,7 +1643,9 @@ function vPaint(){
    the edge to edge picture and nothing breaks. */
 var FSMINE=false;
 function vOpen(id){
-  var n=byId(id);
+  VORDER=wallOrder();
+  var n=-1;
+  for(var i=0;i<VORDER.length;i++){ if(VORDER[i].item_id===id){ n=i; break; } }
   if(n<0) return;
   VIEW=n;
   var vw=document.getElementById("viewer");
@@ -1656,8 +1674,8 @@ document.addEventListener("fullscreenchange",function(){
   if(!document.fullscreenElement && VIEW>=0){ FSMINE=false; vClose(); }
 });
 function vGo(step){
-  if(VIEW<0 || !ITEMS.length) return;
-  VIEW=(VIEW+step+ITEMS.length)%ITEMS.length;
+  if(VIEW<0 || !VORDER.length) return;
+  VIEW=(VIEW+step+VORDER.length)%VORDER.length;
   vPaint();
 }
 
@@ -1727,14 +1745,14 @@ document.getElementById("vclose").onclick=vClose;
 document.getElementById("vcap").onclick=function(){ this.classList.toggle("open"); };
 document.getElementById("vprev").onclick=function(){ vGo(-1); };
 document.getElementById("vnext").onclick=function(){ vGo(1); };
-document.getElementById("vkeep").onclick=function(){ if(ITEMS[VIEW]) toggle(ITEMS[VIEW]); };
+document.getElementById("vkeep").onclick=function(){ if(VORDER[VIEW]) toggle(VORDER[VIEW]); };
 
 document.addEventListener("keydown",function(e){
   if(VIEW<0) return;
   if(e.key==="ArrowRight"){ e.preventDefault(); vGo(1); }
   else if(e.key==="ArrowLeft"){ e.preventDefault(); vGo(-1); }
   else if(e.key==="Escape"){ e.preventDefault(); vClose(); }
-  else if(e.key==="s"||e.key==="S"){ e.preventDefault(); if(ITEMS[VIEW]) toggle(ITEMS[VIEW]); }
+  else if(e.key==="s"||e.key==="S"){ e.preventDefault(); if(VORDER[VIEW]) toggle(VORDER[VIEW]); }
 });
 
 (function(){
@@ -1963,7 +1981,7 @@ function wlTile(r,i,n){
       '</div>'+
       '<button type="button" class="wlti" data-wlrename="'+esc(r.id)+'" title="Tap to rename">'+esc(r.title||r.url)+'</button>'+
       '<div class="wlch">'+esc(r.channel||r.source||"")+'</div>'+
-      '<div class="wlact"><button type="button" class="wlbtn" data-wldone="'+esc(r.id)+'">Watched</button></div>'+
+      '<div class="wlact"><button type="button" class="wlbtn" data-wldone="'+esc(r.id)+'">Mark Watched</button></div>'+
     '</div></div>';
 }
 var WL_ROWS=[], WL_PENDING=null, WL_DRAG=null;
@@ -2335,7 +2353,7 @@ function renderDateLine(){
   document.getElementById("sub").textContent=
     days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
   document.getElementById("stamp").textContent=
-    "v2.6 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+    "v2.7 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
   var lbl=document.getElementById("daylabel");
   if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
   var ds=document.getElementById("daystep");
