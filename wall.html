@@ -372,7 +372,8 @@
   .minl .cuetimer{width:20px;height:20px;border-radius:50%;background:var(--sunk);display:flex;align-items:center;justify-content:center;flex:none}
   .minl .cuetimer svg{width:100%;height:100%;display:block}
   .minl .cuehand{transform-origin:12px 12px}
-  .mintotal{font-size:12px;color:var(--muted);font-weight:700;margin:0 0 8px}
+  .mintotal{font-size:12px;color:var(--muted);font-weight:700;margin:0 0 8px;display:none}
+.mintotal.show{display:block}
   .gate{margin-top:13px;max-width:320px}
   .gate p{font-size:12px;color:var(--muted);margin:0 0 8px}
   .gate input{width:100%;padding:8px 10px;border:1px solid var(--key);border-radius:8px;
@@ -658,7 +659,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v2.7</span></h1>
+      <h1>The Wall <span class="ver">v2.8</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -711,9 +712,9 @@
     <div class="sec"><h2>Done for today</h2><span class="n">ticks it off your list</span></div>
     <div class="fin">
       <div class="fintx" id="finmsg">Tick it once you have had your look. It crosses The Wall off today&rsquo;s list, adds the minutes to the wheel, and marks your worksheet.</div>
-      <div class="mintotal" id="wallMinTotal">Timer total: 1 min</div>
+      <div class="mintotal" id="wallMinTotal"></div>
       <div class="finrow">
-        <label class="minl"><span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(31,42,68,.25)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#3f6f8f"/></svg></span>Minutes <input id="mins" type="number" min="1" max="180" value="10"></label>
+        <label class="minl"><span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(31,42,68,.25)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#3f6f8f"/></svg></span>Minutes <input id="mins" type="number" min="1" max="180" placeholder="min"></label>
         <button class="tool on" type="button" id="finbtn">Done for today</button>
       </div>
       <div class="gate hidden" id="gate">
@@ -760,7 +761,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.7</div>
+  <div class="stamp" id="stamp">v2.8</div>
 </div>
 
 <aside class="stx-col">
@@ -1823,12 +1824,9 @@ var HABIT="The Wall", sb=null, signedIn=false, ticked=false, habitRow=null;
 var __cueStart=Date.now();
 function __cueHandTick(){
   var h=document.getElementById('cueTimerBadge');
-  var totMin=Math.max(1,Math.round((Date.now()-__cueStart)/60000));
   if(h){ var line=h.querySelector('.cuehand'); if(line){ var deg=((Date.now()-__cueStart)%60000)/60000*360; line.style.transform='rotate('+deg+'deg)'; } }
-  var tot=document.getElementById('wallMinTotal'); if(tot) tot.textContent='Timer total: '+totMin+' min';
-  var mi=document.getElementById('mins'); if(mi && document.activeElement!==mi) mi.value=totMin;
 }
-setInterval(__cueHandTick,250);
+var __cueTickId=setInterval(__cueHandTick,250);
 __cueHandTick();
 
 try{ if(window.supabase && window.supabase.createClient) sb=window.supabase.createClient(SB,KEY); }catch(e){ sb=null; }
@@ -1935,8 +1933,14 @@ function finish(){
   if(!signedIn){ document.getElementById("gate").classList.remove("hidden"); finMsg("Sign in first so the tick reaches the wheel."); return; }
   if(ticked){ toBoard(); return; }
   if(!habitRow){ finMsg("Could not find The Wall on today's list."); return; }
-  var el=document.getElementById("mins"), v=parseInt(el&&el.value,10);
-  var mins=(v>0&&v<=180)?v:(habitRow.actual_minutes||10);
+  clearInterval(__cueTickId);
+  var el=document.getElementById("mins");
+  var typed=(el&&el.value.trim()!=="")?parseInt(el.value,10):NaN;
+  var mins=(typed>0&&typed<=180)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(el){ el.value=mins; el.disabled=true; }
+  var totLine=document.getElementById("wallMinTotal");
+  if(totLine){ totLine.textContent="Timer total: "+mins+" min"; totLine.classList.add("show"); }
+  var fb=document.getElementById("finbtn"); if(fb){ fb.disabled=true; fb.style.opacity=".55"; fb.style.pointerEvents="none"; }
   var now=new Date().toISOString(), t=today();
   sb.from("todos").update({done:true,status:"done",done_at:now,actual_minutes:mins,for_date:t,updated_at:now})
     .eq("id",habitRow.id)
@@ -1945,7 +1949,7 @@ function finish(){
       ticked=true; habitRow.done=true; habitRow.for_date=t;
       paintFinish();
       finMsg("The Wall to the wheel, "+mins+" min.");
-      toBoard();
+      setTimeout(function(){ location.href="habit-modules.html?done=wall"; },3000);
     });
 }
 
@@ -2369,7 +2373,7 @@ function renderDateLine(){
   document.getElementById("sub").textContent=
     days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
   document.getElementById("stamp").textContent=
-    "v2.7 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+    "v2.8 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
   var lbl=document.getElementById("daylabel");
   if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
   var ds=document.getElementById("daystep");
