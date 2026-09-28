@@ -654,7 +654,9 @@
      6 fixed slots he names and captions himself. Same card grammar as the
      .pj cards above (border-top accent, radius, shadow) but nothing here is
      generated: no hero pulled automatically, no figures, no status line. */
-  .pjt2{margin:18px 0 0;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7c8695}
+  .pjt2{margin:18px 0 0;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#7c8695;display:inline-block;border:1px solid transparent;border-radius:6px;padding:2px 4px;cursor:text}
+  .pjt2:hover,.pjt2:focus{border-color:var(--line);background:#f7f8fa;outline:none}
+  .pjt2:empty:before{content:attr(data-ph);color:#9aa4b2}
   .pjtgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px}
   @media(max-width:640px){.pjtgrid{grid-template-columns:repeat(3,1fr)}}
   .pjt{background:#fff;border:1px solid var(--key);border-top:2px solid #3f6f8f;border-radius:10px;overflow:hidden;box-shadow:0 4px 12px rgba(31,42,68,.07);display:flex;flex-direction:column}
@@ -700,13 +702,14 @@
   .pjlrow{position:relative;padding-left:12px;border-radius:8px}
   .pjlrow>.rgrip{width:12px;left:-3px}
   .pjlmain{display:flex;align-items:center;gap:5px}
-  .pjlmain input[type=text]{flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:13.5px;font-family:inherit;min-width:0}
+  .pjlmain input[type=text]{flex:1;border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px;font-weight:800;color:var(--ink);font-family:inherit;min-width:0}
   .pjlmore{flex:none;width:26px;height:26px;border:0;background:transparent;color:#b7bfca;font-size:13px;cursor:pointer;border-radius:6px}
   .pjlmore.on{color:#3f6f8f}
   .pjldel{flex:none;width:24px;height:24px;border:0;background:transparent;color:#b7bfca;font-size:16px;line-height:1;cursor:pointer;border-radius:6px}
   .pjlextra{display:none;gap:6px;margin:5px 0 0 0}
   .pjlextra.open{display:flex;flex-wrap:wrap}
   .pjlextra input{flex:1;min-width:100px;border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:12px;font-family:inherit}
+  .pjlnote{color:#9aa4b2}
   .pjladd{margin-top:8px;border:1px dashed var(--line);background:transparent;color:#4d5769;border-radius:8px;padding:7px 10px;font-size:13px;cursor:pointer;text-align:left;font-family:inherit}
   @media(max-width:760px){.pjlgrid{grid-template-columns:1fr}}
   /* ---- MasterClass theatre (v6.46) ------------------------------------
@@ -770,13 +773,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.52</span>
+    <span class="pn-ver">v6.53</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.52</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.53</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -3483,6 +3486,15 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
   var tilesLoaded = false, listsLoaded = false;
   var TILES = [], LISTS = [];
   var tSaveT = {}, lSaveT = {};
+  var HEAD = {tiles:'Your Own Projects', lists:'Your Lists'};
+  var hSaveT = {};
+  function hSave(key, value){
+    clearTimeout(hSaveT[key]);
+    hSaveT[key] = setTimeout(async function(){
+      if(!sb) return;
+      await sb.from('app_meta').upsert({key:'pj_heading_' + key, value:value, updated_at:new Date().toISOString()});
+    }, 700);
+  }
 
   function esc(t){ return String(t == null ? '' : t)
     .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -3581,7 +3593,7 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
   }
 
   function paintTiles(){
-    tilesBox.innerHTML = '<div class="pjt2">Your Own Projects</div>' +
+    tilesBox.innerHTML = '<div class="pjt2" contenteditable="true" data-hk="tiles" data-ph="Your Own Projects">' + esc(HEAD.tiles) + '</div>' +
       '<div class="pjtgrid">' + TILES.map(tileCard).join('') + '</div>';
   }
 
@@ -3589,9 +3601,14 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
     if(tilesLoaded || !tilesBox) return;
     tilesLoaded = true;
     if(!sb){ return; }
-    sb.from('board_tiles').select('*').order('slot').then(function(r){
+    Promise.all([
+      sb.from('board_tiles').select('*').order('slot'),
+      sb.from('app_meta').select('value').eq('key','pj_heading_tiles').maybeSingle()
+    ]).then(function(res){
+      var r = res[0], h = res[1];
       if(r.error){ tilesLoaded = false; tilesBox.innerHTML = '<div class="pjnote">Could not read your tiles: ' + esc(r.error.message) + '</div>'; return; }
       TILES = r.data || [];
+      if(h && !h.error && h.data && h.data.value) HEAD.tiles = h.data.value;
       paintTiles();
     });
   }
@@ -3616,7 +3633,9 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
 
   if(tilesBox){
     tilesBox.addEventListener('input', function(e){
-      var t = e.target, card = t.closest ? t.closest('.pjt') : null;
+      var t = e.target;
+      if(t.matches('[data-hk]')){ HEAD[t.getAttribute('data-hk')] = t.textContent.trim(); hSave(t.getAttribute('data-hk'), t.textContent.trim()); return; }
+      var card = t.closest ? t.closest('.pjt') : null;
       if(!card) return;
       var slot = +card.getAttribute('data-slot');
       if(t.matches('[contenteditable][data-f]')) tSave(slot, t.getAttribute('data-f'), t.textContent.trim());
@@ -3681,7 +3700,7 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
   }
 
   function paintLists(){
-    listsBox.innerHTML = '<div class="pjlwrap"><div class="pjt2">Your Lists</div>' +
+    listsBox.innerHTML = '<div class="pjlwrap"><div class="pjt2" contenteditable="true" data-hk="lists" data-ph="Your Lists">' + esc(HEAD.lists) + '</div>' +
       '<div class="pjlgrid" id="pjlgrid">' +
         LISTS.slice().sort(function(a,b){ return a.position - b.position; }).map(listCol).join('') +
       '</div></div>';
@@ -3692,9 +3711,14 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
     if(listsLoaded || !listsBox) return;
     listsLoaded = true;
     if(!sb){ return; }
-    sb.from('board_lists').select('*').order('position').then(function(r){
+    Promise.all([
+      sb.from('board_lists').select('*').order('position'),
+      sb.from('app_meta').select('value').eq('key','pj_heading_lists').maybeSingle()
+    ]).then(function(res){
+      var r = res[0], h = res[1];
       if(r.error){ listsLoaded = false; listsBox.innerHTML = '<div class="pjnote">Could not read your lists: ' + esc(r.error.message) + '</div>'; return; }
       LISTS = r.data || [];
+      if(h && !h.error && h.data && h.data.value) HEAD.lists = h.data.value;
       paintLists();
     });
   }
@@ -3761,6 +3785,7 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
   if(listsBox){
     listsBox.addEventListener('input', function(e){
       var t = e.target;
+      if(t.matches('[data-hk]')){ HEAD[t.getAttribute('data-hk')] = t.textContent.trim(); hSave(t.getAttribute('data-hk'), t.textContent.trim()); return; }
       var col = t.closest ? t.closest('.pjlcol') : null;
       if(!col) return;
       var id = +col.getAttribute('data-listid');
