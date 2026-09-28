@@ -127,6 +127,10 @@
   .toast.on{opacity:1}
   .hidden{display:none!important}
   .stamp{text-align:center;font-size:11px;color:#9aa6b4;margin-top:26px}
+  .tile .cuetimer{position:absolute;top:12px;left:12px;width:22px;height:22px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;z-index:2}
+  .tile .cuetimer svg{width:100%;height:100%;display:block}
+  .tile .cuehand{transform-origin:12px 12px}
+  .mintotal{margin:10px 20px 0;font-size:12px;color:var(--muted);font-weight:700}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -467,6 +471,14 @@ function renderExplore(){
 
 /* ---------- shell ---------- */
 function noEcho(t,b){b=b||'';if(!t)return b;var n=function(s){return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();};var nt=n(t);if(!nt)return b;var parts=b.match(/[^.!?]+[.!?]*\s*/g)||[b];var out=[],cut=false;for(var i=0;i<parts.length;i++){if(!cut&&n(parts[i])===nt){cut=true;continue;}out.push(parts[i]);}var r=out.join('').trim();return cut?r:b;}
+let __cueStart=Date.now();
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge'); if(!h) return;
+  var line=h.querySelector('.cuehand'); if(!line) return;
+  var deg=((Date.now()-__cueStart)%60000)/60000*360;
+  line.style.transform='rotate('+deg+'deg)';
+}
+setInterval(__cueHandTick,250);
 function render(){
   if(!VIEW.length)VIEW=[TILES[0]];
   var c=VIEW[idx]||VIEW[0];
@@ -480,7 +492,7 @@ function render(){
   document.getElementById('stage').innerHTML=
    '<div class="deck">'+
     '<div class="dots">'+d+'</div>'+lock+
-    '<div class="tile">'+
+    '<div class="tile">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+
       '<div class="top">'+
         '<div class="chiprow"><span class="chip area">'+esc(AREA)+'</span><span class="chip">'+esc(c.tenet)+'</span></div>'+
         '<div class="step">'+esc(c.kick)+' · '+(idx+1)+' of '+n+'</div>'+
@@ -490,10 +502,12 @@ function render(){
       (c.practice?'<div class="prac"><div class="lab">Try this</div><div class="txt">'+esc(c.practice)+'</div></div>':'')+
       (c.src?'<div class="src">'+esc(c.src)+'</div>':'')+
     '</div>'+
+    (idx===n-1&&!ticked&&!c.done?'<div class="mintotal">Timer total: '+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+' min</div>':'')+
     '<div class="nav2"><button class="bk" id="bk"'+(idx===0?' disabled':'')+'>&larr; Back</button>'+
-      (idx===n-1&&!ticked&&!c.done?'<input class="minin" id="mins" type="number" min="1" max="180" placeholder="min" title="How long did that take?">':'')+
+      (idx===n-1&&!ticked&&!c.done?'<input class="minin" id="mins" type="number" min="1" max="180" value="'+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+'" title="How long did that take? (timed automatically, tap to fix)">':'')+
       '<button class="nx" id="nx">'+(idx===n-1?'Finish':'Next')+'</button></div>'+
    '</div>';
+  __cueHandTick();
 
   document.querySelectorAll('.dot[data-i]').forEach(function(b){b.onclick=function(){idx=+b.dataset.i;showForm=false;render();};});
   document.getElementById('bk').onclick=function(){if(idx>0){idx--;showForm=false;render();}};
