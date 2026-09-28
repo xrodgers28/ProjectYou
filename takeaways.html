@@ -72,6 +72,12 @@
   .rback{width:100%;margin-top:14px;padding:10px;border:none;border-radius:999px;background:var(--acc);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
   /* the AI Insights foot: Back on the left, a Next pill on the right */
   .foot{display:flex;align-items:center;justify-content:space-between;padding:12px 2px 0}
+  .now{position:relative}
+  .now .cuetimer{position:absolute;left:4px;top:2px;width:22px;height:22px;border-radius:50%;background:#eef2f8;display:flex;align-items:center;justify-content:center}
+  .now .cuetimer svg{width:100%;height:100%;display:block}
+  .now .cuehand{transform-origin:12px 12px}
+  .mintotal{font-size:11.5px;color:#8a93a0;font-weight:700;margin-top:4px}
+  .mintotal.hidden{display:none}
   .back{font-size:13px;font-weight:700;color:#a6adba;cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 2px}
   .back.off{color:#d3d8e0;cursor:default}
   .next{font-size:13px;font-weight:800;color:#fff;background:var(--accent);border-radius:10px;padding:9px 18px;cursor:pointer;border:none;font-family:inherit}
@@ -118,7 +124,7 @@
 
   <div class="stage" id="stage">
     <div class="picker" id="picker"></div>
-    <div class="now"><div class="nm" id="nowNm"></div><div class="kd" id="nowKd"></div></div>
+    <div class="now"><span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(63,111,143,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#3f6f8f"/></svg></span><div class="nm" id="nowNm"></div><div class="kd" id="nowKd"></div></div>
     <div class="lockline" id="lockline"></div>
     <div class="dots" id="dots"></div>
     <div class="deck">
@@ -126,6 +132,7 @@
       <div class="foot">
         <button class="back" id="btnBack">Back</button>
         <input class="minin hidden" id="mins" type="number" min="1" max="180" placeholder="min" title="How long did that take?">
+        <div class="mintotal hidden" id="minTotal"></div>
         <button class="next" id="btnNext">Next</button>
       </div>
     </div>
@@ -181,6 +188,14 @@ try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.create
    card is one idea told across 4 or 5 tiles, so cutting it at two left an idea
    half-finished. One card a day, all of its tiles, 12 days to read the library. */
 const HABIT="Takeaways", QS="Takeaways", DECK="takeaways";
+let __cueStart=Date.now();
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge'); if(!h) return;
+  var line=h.querySelector('.cuehand'); if(!line) return;
+  var deg=((Date.now()-__cueStart)%60000)/60000*360;
+  line.style.transform='rotate('+deg+'deg)';
+}
+setInterval(__cueHandTick,250);
 
 const CARDS=[
  {slug:"stability",           name:"Stability",             cat:"Physical Health",      tiles:5},
@@ -374,7 +389,17 @@ function render(){
 
   /* the minute box only exists on the last tile of a live deck — Finish reads it,
      logs it and bounces to the board, so there is no separate credit card. */
-  document.getElementById('mins').classList.toggle('hidden', FREE||ticked||!!c.end||idx!==n-1);
+  var __showMins=!(FREE||ticked||!!c.end||idx!==n-1);
+  var __minsEl=document.getElementById('mins'), __totEl=document.getElementById('minTotal');
+  __minsEl.classList.toggle('hidden', !__showMins);
+  if(__showMins){
+    var __totMin=Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+    __minsEl.value=__totMin;
+    __totEl.textContent='Timer total: '+__totMin+' min';
+    __totEl.classList.remove('hidden');
+  }else{
+    __totEl.classList.add('hidden');
+  }
 
 }
 
