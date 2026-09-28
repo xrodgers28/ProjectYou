@@ -86,7 +86,9 @@
   .tile .cuetimer{position:absolute;top:12px;left:12px;width:22px;height:22px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;z-index:2}
   .tile .cuetimer svg{width:100%;height:100%;display:block}
   .tile .cuehand{transform-origin:12px 12px}
-  .mintotal{margin:10px 20px 0;font-size:12px;color:var(--muted);font-weight:700}
+  .mintotal{margin:10px 20px 0;font-size:12px;color:var(--muted);font-weight:700;display:none}
+  .mintotal.show{display:block}
+  .nx:disabled{opacity:.55;pointer-events:none}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -225,7 +227,7 @@ function __cueHandTick(){
   var deg=((Date.now()-__cueStart)%60000)/60000*360;
   line.style.transform='rotate('+deg+'deg)';
 }
-setInterval(__cueHandTick,250);
+var __cueTickId=setInterval(__cueHandTick,250);
 function render(){
   if(!TILES.length){
     document.getElementById('stage').innerHTML='<div class="done"><h3>No cards yet</h3><p>Nothing is filed against source '+SOURCE_CODE+' in Compass Sources. Add the notes there and they appear here.</p></div>';
@@ -262,9 +264,9 @@ function render(){
       (c.done?'<div style="margin-top:12px"><button class="nx" id="rotBack" style="width:100%">Add back to rotation</button></div>':'')+
       (c.done?'':'<div class="src">'+SRCLINE+'</div>')+
     '</div>'+
-    (idx===n-1&&!ticked&&!c.done?'<div class="mintotal">Timer total: '+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+' min</div>':'')+
+    (idx===n-1&&!ticked&&!c.done?'<div class="mintotal" id="mintotalLine"></div>':'')+
     '<div class="nav2"><button class="bk" id="bk"'+(idx===0?' disabled':'')+'>&larr; Back</button>'+
-      (idx===n-1&&!ticked&&!c.done?'<input class="minin" id="mins" type="number" min="1" max="180" value="'+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+'" title="How long did that take? (timed automatically, tap to fix)">':'')+
+      (idx===n-1&&!ticked&&!c.done?'<input class="minin" id="mins" type="number" min="1" max="180" placeholder="min" title="How long did that take? (keeps time until you tap Finish, or type your own)">':'')+
       '<button class="nx" id="nx">'+(idx===n-1?'Finish':'Next')+'</button></div>'+
    '</div>';
   __cueHandTick();
@@ -316,15 +318,21 @@ async function ensureRow(){
 async function finish(){
   if(!sb||!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
   if(ticked){toBoard();return;}
+  clearInterval(__cueTickId);
+  var el=document.getElementById('mins');
+  var typed=(el&&el.value.trim()!=='')?parseInt(el.value,10):NaN;
+  var totMin=(typed>0&&typed<=180)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(el){ el.value=totMin; el.disabled=true; }
+  var totLine=document.getElementById('mintotalLine');
+  if(totLine){ totLine.textContent='Timer total: '+totMin+' min'; totLine.classList.add('show'); }
+  var nx=document.getElementById('nx'); if(nx) nx.disabled=true;
   var row=await ensureRow(); if(!row)return;
-  var el=document.getElementById('mins'), v=parseInt(el&&el.value,10);
-  var mins=(v>0&&v<=180)?v:(row.actual_minutes||10);
   var now=new Date().toISOString(), today=todayKey();
-  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:mins,for_date:today,updated_at:now}).eq('id',row.id);
+  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:totMin,for_date:today,updated_at:now}).eq('id',row.id);
   if(res.error){toast('Did not save: '+res.error.message);return;}
   ticked=true; habitRow.done=true; habitRow.for_date=today;
-  toast('Open Mode \u2192 wheel \u2713'+((v>0&&v<=180)?(', '+mins+' min'):''));
-  toBoard();
+  toast('Open Mode \u2192 wheel \u2713, '+totMin+' min');
+  setTimeout(function(){location.href='habit-modules.html?done=openmode';},3000);
 }
 
 /* The last tile closes the card and goes back to the Cue Cards board — the same
