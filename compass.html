@@ -98,7 +98,8 @@
 .mc-head .cuetimer{width:22px;height:22px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 1px 3px rgba(31,42,68,.12)}
 .mc-head .cuetimer svg{width:100%;height:100%;display:block}
 .mc-head .cuehand{transform-origin:12px 12px}
-.mc-timetotal{font-size:12px;color:#a6acb8;font-weight:700;text-align:center;margin-bottom:8px}
+.mc-timetotal{font-size:12px;color:#a6acb8;font-weight:700;text-align:center;margin-bottom:8px;display:none}
+.mc-timetotal.show{display:block}
 .mc-body{padding:16px 24px 22px;flex:1;display:flex;flex-direction:column;position:relative}
 .mc-date{font-size:13px;color:#9aa1b0;font-weight:400;letter-spacing:.01em;font-family:Georgia,'Times New Roman',serif}
 .mc-kick{margin-top:16px;font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--mc);display:flex;align-items:center;gap:8px}
@@ -156,7 +157,7 @@
     <div class="bar"><span id="barfill"></span></div>
     <div id="deck"></div>
   </div>
-  <div class="badge">Annual Reflections v1.9</div>
+  <div class="badge">Annual Reflections v2.0</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -173,7 +174,7 @@ function __cueHandTick(){
   var deg=((Date.now()-__cueStart)%60000)/60000*360;
   line.style.transform='rotate('+deg+'deg)';
 }
-setInterval(__cueHandTick,250);
+var __cueTickId=setInterval(__cueHandTick,250);
 
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -219,14 +220,21 @@ const CMP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strok
 const MCAP='<div class="mc-head"><div class="mc-ic">'+CMP_ICON+'</div><div><div class="mc-t">Annual Reflections</div><div class="mc-sub">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(31,42,68,.25)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#3f6f8f"/></svg></span>'+'<div class="mc-ver">v1.2</div></div>';
 function mcWrap(inner){return '<div class="mc">'+MCAP+'<div class="mc-body">'+inner+'<div class="date bottom">'+dstamp()+'</div></div></div>';}
 function markFoot(showMore){
-  var totMin=Math.max(1,Math.round((Date.now()-__cueStart)/60000));
-  return '<div class="mc-foot"><div class="mc-timetotal">Timer total: '+totMin+' min</div><div class="mc-time"><span>How long did that take?</span><input id="tmin" type="number" min="1" value="'+totMin+'" placeholder="min"></div>'+
+  return '<div class="mc-foot"><div class="mc-timetotal" id="mcTimeTotal"></div><div class="mc-time"><span>How long did that take?</span><input id="tmin" type="number" min="1" placeholder="min"></div>'+
     '<div class="mc-bot">'+(showMore?'<button class="mc-btn" onclick="oneMore()">One more</button>':'<span></span>')+
-    '<button class="mc-cta" onclick="finishCompass()">I&rsquo;m done, mark complete</button></div></div>';
+    '<button class="mc-cta" id="ccFin" onclick="finishCompass()">I&rsquo;m done, mark complete</button></div></div>';
 }
 async function finishCompass(){
+  clearInterval(__cueTickId);
+  var el=document.getElementById('tmin');
+  var typed=(el&&el.value.trim()!=='')?parseInt(el.value,10):NaN;
+  var totMin=(typed>0)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(el){ el.value=totMin; el.disabled=true; }
+  var totLine=document.getElementById('mcTimeTotal');
+  if(totLine){ totLine.textContent='Timer total: '+totMin+' min'; totLine.classList.add('show'); }
+  var fin=document.getElementById('ccFin'); if(fin){ fin.disabled=true; fin.style.opacity='.55'; fin.style.pointerEvents='none'; }
   try{await markDoneCompass();}catch(e){}
-  setTimeout(function(){location.href='habit-modules.html?done=compass';},550);
+  setTimeout(function(){location.href='habit-modules.html?done=compass';},3000);
 }
 function render(){
   progress();
