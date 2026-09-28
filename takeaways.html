@@ -195,7 +195,7 @@ function __cueHandTick(){
   var deg=((Date.now()-__cueStart)%60000)/60000*360;
   line.style.transform='rotate('+deg+'deg)';
 }
-setInterval(__cueHandTick,250);
+var __cueTickId=setInterval(__cueHandTick,250);
 
 const CARDS=[
  {slug:"stability",           name:"Stability",             cat:"Physical Health",      tiles:5},
@@ -392,14 +392,7 @@ function render(){
   var __showMins=!(FREE||ticked||!!c.end||idx!==n-1);
   var __minsEl=document.getElementById('mins'), __totEl=document.getElementById('minTotal');
   __minsEl.classList.toggle('hidden', !__showMins);
-  if(__showMins){
-    var __totMin=Math.max(1,Math.round((Date.now()-__cueStart)/60000));
-    __minsEl.value=__totMin;
-    __totEl.textContent='Timer total: '+__totMin+' min';
-    __totEl.classList.remove('hidden');
-  }else{
-    __totEl.classList.add('hidden');
-  }
+  __totEl.classList.add('hidden'); /* only finish() reveals the measured total, once tapped */
 
 }
 
@@ -429,15 +422,21 @@ async function ensureRow(){
 async function finish(){
   if(!sb||!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
   if(ticked){toBoard();return;}
+  clearInterval(__cueTickId);
+  var el=document.getElementById('mins');
+  var typed=(el&&el.value.trim()!=='')?parseInt(el.value,10):NaN;
+  var totMin=(typed>0&&typed<=180)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(el){ el.value=totMin; el.disabled=true; }
+  var totEl=document.getElementById('minTotal');
+  if(totEl){ totEl.textContent='Timer total: '+totMin+' min'; totEl.classList.remove('hidden'); }
+  var nx=document.getElementById('btnNext'); if(nx) nx.disabled=true;
   var row=await ensureRow(); if(!row)return;
-  var el=document.getElementById('mins'), v=parseInt(el&&el.value,10);
-  var mins=(v>0&&v<=180)?v:(row.actual_minutes||10);
   var now=new Date().toISOString(), today=todayKey();
-  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:mins,for_date:today,updated_at:now}).eq('id',row.id);
+  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:totMin,for_date:today,updated_at:now}).eq('id',row.id);
   if(res.error){toast('Did not save: '+res.error.message);return;}
   ticked=true; habitRow.done=true; habitRow.for_date=today;
-  toast('Takeaways \u2192 wheel \u2713'+((v>0&&v<=180)?(', '+mins+' min'):''));
-  toBoard();
+  toast('Takeaways \u2192 wheel \u2713, '+totMin+' min');
+  setTimeout(function(){location.href='habit-modules.html?done=takeaways';},3000);
 }
 
 /* The last tile closes the card and goes back to the Cue Cards board — the same
