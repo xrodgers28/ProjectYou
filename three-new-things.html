@@ -526,7 +526,8 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 .minrow .cuetimer{width:20px;height:20px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;flex:none}
 .minrow .cuetimer svg{width:100%;height:100%;display:block}
 .minrow .cuehand{transform-origin:12px 12px}
-.mintotal{font-size:12px;color:var(--ink-2);font-weight:600;margin:-4px 0 8px}
+.mintotal{font-size:12px;color:var(--ink-2);font-weight:600;margin:-4px 0 8px;display:none}
+.mintotal.show{display:block}
 .minrow span{white-space:nowrap}
 .minrow .mu{color:var(--ink-3);font-size:13.5px}
 .mins{
@@ -663,7 +664,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.21</span>
+    <span id="ver" class="ver">v2.22</span>
   </div>
 </div>
 
@@ -1470,6 +1471,7 @@ async function doSignIn(){
 }
 
 var N=null;      /* tonight */
+var __revealedMins=null;  /* captured only when the final button is tapped */
 var view='start';
 var stage=document.getElementById('stage');
 var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2098,10 +2100,9 @@ function render(){
     h+='<div class="ownrow" style="margin-top:8px"><input class="own" id="prown" placeholder="Add a project to the list" autocomplete="off">';
     h+='<button class="chip" data-praddb>Add</button></div>';
     h+='<div class="foot">';
-    var mt=measuredTonight();
-    if(mt) h+='<div class="mintotal">Timer total: '+mt+' min</div>';
-    h+='<label class="minrow">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(20,17,15,.35)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#14110f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#14110f"/></svg></span>'+'<span>How long did tonight take?'+(mt?' <span class="tiny">measured from when you opened the card; change it if that is wrong</span>':'')+'</span>';
-    h+='<input class="mins" id="mins" inputmode="numeric" placeholder="'+(mt||10)+'" value="'+esc(N.mins)+'"><span class="mu">min</span></label>';
+    h+='<div class="mintotal" id="mintotalLine"></div>';
+    h+='<label class="minrow">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(20,17,15,.35)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#14110f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#14110f"/></svg></span>'+'<span>How long did tonight take?</span>';
+    h+='<input class="mins" id="mins" inputmode="numeric" placeholder="min" value="'+esc(N.mins)+'"><span class="mu">min</span></label>';
     h+='<button class="btn" data-go="finish">'+(n<WRAPCATS.length?'Done'+(n?', '+n+' of '+WRAPCATS.length:', skip them tonight'):'Done')+'</button>';
     h+='<button class="skiplink" data-go="finish">Skip this one tonight</button></div>';
   }
@@ -2123,6 +2124,7 @@ function render(){
     });
     h+='</div>';
     if(!N.items.length) h+='<p class="tiny">No three things tonight. The day still counts.</p>';
+    if(__revealedMins) h+='<div class="item"><span class="c">Timer total</span><span class="t">'+__revealedMins+' min</span></div>';
     if(N.words.length) h+='<div class="item"><span class="c">Tonight you were</span><span class="t">'+N.words.join(' &middot; ')+'</span></div>';
     if(energyText()) h+='<div class="item"><span class="c">What put something back</span><span class="t">'+esc(energyText())+'</span></div>';
     if(eightDone()) h+='<div class="item"><span class="c">How today measured</span><span class="t">'+WRAPCATS.filter(function(c){return N.a8[c.k]!==undefined;}).map(function(c){return c.n+' '+N.a8[c.k];}).join(' &middot; ')+'</span></div>';
@@ -2805,6 +2807,7 @@ function act(a){
   }
 
   if(a==='finish'){
+    __revealedMins=minutesTonight();
     S.checks.push({
       d:Date.now(), p:presVal(), band:(presPrimaryBand()?presPrimaryBand().k:null),
       w:N.words.slice(), a:Object.assign({},N.a),
