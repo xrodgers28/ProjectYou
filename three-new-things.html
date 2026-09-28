@@ -523,6 +523,10 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 
 /* ---------- minutes ---------- */
 .minrow{display:flex;align-items:center;gap:9px;font-size:15px;color:var(--ink-2);margin-bottom:2px}
+.minrow .cuetimer{width:20px;height:20px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;flex:none}
+.minrow .cuetimer svg{width:100%;height:100%;display:block}
+.minrow .cuehand{transform-origin:12px 12px}
+.mintotal{font-size:12px;color:var(--ink-2);font-weight:600;margin:-4px 0 8px}
 .minrow span{white-space:nowrap}
 .minrow .mu{color:var(--ink-3);font-size:13.5px}
 .mins{
@@ -1082,6 +1086,16 @@ function measuredTonight(){
     return Math.max(1, Math.min(180, m));
   }catch(e){ return 0; }
 }
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge'); if(!h) return;
+  var line=h.querySelector('.cuehand'); if(!line) return;
+  try{
+    var ns=nightState(); if(!ns.startedAt) return;
+    var deg=((Date.now()-ns.startedAt)%60000)/60000*360;
+    line.style.transform='rotate('+deg+'deg)';
+  }catch(e){}
+}
+setInterval(__cueHandTick,250);
 function minutesTonight(){
   var v=parseInt(N.mins,10);
   if(v>0&&v<=180) return v;
@@ -2085,7 +2099,8 @@ function render(){
     h+='<button class="chip" data-praddb>Add</button></div>';
     h+='<div class="foot">';
     var mt=measuredTonight();
-    h+='<label class="minrow"><span>How long did tonight take?'+(mt?' <span class="tiny">measured from when you opened the card; change it if that is wrong</span>':'')+'</span>';
+    if(mt) h+='<div class="mintotal">Timer total: '+mt+' min</div>';
+    h+='<label class="minrow">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(20,17,15,.35)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#14110f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#14110f"/></svg></span>'+'<span>How long did tonight take?'+(mt?' <span class="tiny">measured from when you opened the card; change it if that is wrong</span>':'')+'</span>';
     h+='<input class="mins" id="mins" inputmode="numeric" placeholder="'+(mt||10)+'" value="'+esc(N.mins)+'"><span class="mu">min</span></label>';
     h+='<button class="btn" data-go="finish">'+(n<WRAPCATS.length?'Done'+(n?', '+n+' of '+WRAPCATS.length:', skip them tonight'):'Done')+'</button>';
     h+='<button class="skiplink" data-go="finish">Skip this one tonight</button></div>';
@@ -2162,6 +2177,7 @@ function render(){
   stopWords();
   /* v2.15: dots on top, the running list underneath, on every step. */
   stage.innerHTML=stepDots()+h+soFar();
+  __cueHandTick();
   wireExtras();
   paintProg();
   paintBackLink();
