@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f7f6f3; --panel:#ffffff; --ink:#232323; --soft:#5c5c5c; --faint:#8a8a86;
+  --line:#e3e1da; --shade:#f0efe9;
+  --green:#2f8f5b; --amber:#c07f10; --red:#b0442e;
+  --do:#3f6f8f; --more:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+}
+:root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1a1b1d; --panel:#232527; --ink:#eceae4; --soft:#b7b5ad; --faint:#8b8a83;
+    --line:#33363a; --shade:#2a2c2f;
+    --green:#57b988; --amber:#e0a53a; --red:#e0795e;
+    --do:#6fa0c0; --more:#e0a53a; --did:#57b988; --read:#9aa6b4; --kill:#cf9166;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1a1b1d; --panel:#232527; --ink:#eceae4; --soft:#b7b5ad; --faint:#8b8a83;
+  --line:#33363a; --shade:#2a2c2f;
+  --green:#57b988; --amber:#e0a53a; --red:#e0795e;
+  --do:#6fa0c0; --more:#e0a53a; --did:#57b988; --read:#9aa6b4; --kill:#cf9166;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif;
+  line-height:1.5; font-size:16px;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:820px;margin:0 auto;padding:22px 16px 70px}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:2px}
+.head h1{font-size:26px;margin:0;letter-spacing:.2px}
+.chip{font-size:12px;font-weight:700;color:var(--soft);border:1px solid var(--line);border-radius:6px;padding:2px 7px}
+.date{color:var(--soft);font-size:14px;margin:2px 0 18px}
+
+/* pinned answer box */
+.answers{position:sticky;top:0;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 12px 10px;margin-bottom:16px;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.answers .lbl{font-size:12px;font-weight:700;color:var(--soft);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.answers textarea{width:100%;min-height:78px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45;padding:8px}
+.answers .row2{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+.answers .hint{font-size:12px;color:var(--faint)}
+.copybtn{border:1px solid var(--line);background:var(--shade);color:var(--ink);border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer}
+
+/* key */
+.key{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:20px}
+.key h2{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--soft);margin:0 0 8px}
+.key ul{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.key li{font-size:13px;color:var(--soft)}
+.key b{color:var(--ink)}
+.kdot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:7px;vertical-align:middle}
+
+h2.sec{font-size:14px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin:26px 0 12px;border-bottom:1px solid var(--line);padding-bottom:6px}
+
+/* decision rows */
+.rowcard{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:14px 15px;margin-bottom:14px;transition:border-color .15s}
+.rowcard.settled{opacity:.72}
+.rtop{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.light{width:12px;height:12px;border-radius:50%;flex:0 0 auto}
+.light.green{background:var(--green)} .light.amber{background:var(--amber)} .light.red{background:var(--red)}
+.rtitle{font-size:17px;font-weight:700;margin:0}
+.rbody{color:var(--soft);font-size:14.5px;margin:6px 0 9px}
+.rnext{font-size:14px;margin:0 0 11px}
+.rnext b{color:var(--ink)}
+.status{font-size:12px;font-weight:700;margin-left:auto;padding:2px 8px;border-radius:6px;background:var(--shade);color:var(--soft);display:none}
+.status.show{display:inline-block}
+
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{border:1px solid transparent;color:#fff;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:Arial,Helvetica,sans-serif}
+.btn:focus{outline:2px solid var(--ink);outline-offset:2px}
+.b-do{background:var(--do)} .b-more{background:var(--more)} .b-did{background:var(--did)} .b-read{background:var(--read)} .b-kill{background:var(--kill)}
+.btn[aria-pressed="true"]{box-shadow:inset 0 0 0 2px rgba(255,255,255,.85), 0 0 0 2px var(--ink)}
+.cbox{margin-top:10px}
+.cbox input{width:100%;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:13px;padding:7px 9px}
+
+/* info blocks */
+.info{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.info h3{margin:0 0 7px;font-size:15px}
+.info p{margin:0 0 8px;color:var(--soft);font-size:14.5px}
+.info p:last-child{margin-bottom:0}
+.info .lead{color:var(--ink);font-weight:600}
+.plist{display:grid;gap:9px}
+.pitem{font-size:14px;color:var(--soft)}
+.pitem b{color:var(--ink)}
+.tip{background:var(--shade);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:22px 0 14px}
+.tip h3{margin:0 0 6px;font-size:14px;text-transform:uppercase;letter-spacing:.5px;color:var(--amber)}
+.tip p{margin:0;color:var(--ink);font-size:14.5px}
+.proof{margin-top:24px;border-top:1px dashed var(--line);padding-top:12px}
+.proof h3{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--faint);margin:0 0 6px}
+.proof p{font-size:12px;color:var(--faint);font-family:ui-monospace,Menlo,Consolas,monospace;line-height:1.6;margin:0;word-break:break-word}
+.foot{margin-top:16px;color:var(--faint);font-size:12px}
+@media (max-width:640px){
+  .head h1{font-size:22px}
+  .rtitle{font-size:16px}
+  .btn{flex:1 1 auto;text-align:center}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>Morning Report</h1>
+    <span class="chip">v1.0</span>
+  </div>
+  <div class="date">Monday, September 28, 2026 &middot; ready before you were up</div>
+
+  <!-- pinned answers -->
+  <div class="answers">
+    <div class="lbl">Your answers (select all and copy back into the chat)</div>
+    <textarea id="ans" readonly aria-label="Your compiled answers">Tap a button on any card below. Your choices show up here as plain text you can select and copy.</textarea>
+    <div class="row2">
+      <button class="copybtn" id="copy" type="button">Copy</button>
+      <span class="hint">If copy does nothing, select the text by hand. That always works.</span>
+    </div>
+  </div>
+
+  <!-- key -->
+  <div class="key">
+    <h2>What each button means</h2>
+    <ul>
+      <li><span class="kdot" style="background:var(--do)"></span><b>Do this</b> &mdash; go and build it, run it, ship it. An instruction, not an answer. The card stays open until the work is finished.</li>
+      <li><span class="kdot" style="background:var(--more)"></span><b>Tell me more</b> &mdash; you want to say yes but need the cost, the risk or the reasoning first. The card stays open and the next move is mine.</li>
+      <li><span class="kdot" style="background:var(--did)"></span><b>I did it</b> &mdash; you handled it yourself. The card settles.</li>
+      <li><span class="kdot" style="background:var(--read)"></span><b>I read this</b> &mdash; not a task, just noting you saw it. Nothing is owed. The card settles.</li>
+      <li><span class="kdot" style="background:var(--kill)"></span><b>Kill this task</b> &mdash; dead, and it never comes back as a question. The card settles.</li>
+    </ul>
+  </div>
+
+  <h2 class="sec">What needs you</h2>
+
+  <!-- ROW 1 -->
+  <div class="rowcard" id="r1">
+    <div class="rtop"><span class="light red"></span><p class="rtitle">The step that copies your pages to the live site failed overnight</p><span class="status" id="s1"></span></div>
+    <p class="rbody">Your pages still save into the system fine. But the step that copies them out to your live web address errored three times last night, the last try just before 4am. That means the version people see can be running behind what your system actually holds. This step has been shaky for several days, not just last night.</p>
+    <p class="rnext"><b>Next:</b> Let me open the failed step, find why it errors, and fix it so your pages reach the live site again.</p>
+    <div class="btns" data-row="1" data-label="Publish-to-site fix"></div>
+    <div class="cbox"><input type="text" data-crow="1" placeholder="Add a note (optional)"></div>
+  </div>
+
+  <!-- ROW 2 -->
+  <div class="rowcard" id="r2">
+    <div class="rtop"><span class="light red"></span><p class="rtitle">Your overnight run works, but its logbook is blank</p><span class="status" id="s2"></span></div>
+    <p class="rbody">The run clocked in at 4:11am and wrapped clean at 4:18am with all its nightly checks done. But it wrote nothing into its own logbook, which has now sat empty since September 25. If you ever glance at the logbook to check the run is alive, it would look dead when it is not.</p>
+    <p class="rnext"><b>Next:</b> Let me fix the run so it records one line every night, the way it used to.</p>
+    <div class="btns" data-row="2" data-label="Overnight logbook fix"></div>
+    <div class="cbox"><input type="text" data-crow="2" placeholder="Add a note (optional)"></div>
+  </div>
+
+  <!-- ROW 3 -->
+  <div class="rowcard" id="r3">
+    <div class="rtop"><span class="light amber"></span><p class="rtitle">Your system maps are out of date, and the freeze is holding the fix</p><span class="status" id="s3"></span></div>
+    <p class="rbody">Your reference maps still say you have about 131 building blocks and 156 pages. This morning it is 177 and 206. One map also flashes a false alarm that your health data stopped, when it is flowing fine. A corrected map is already drafted and ready to go, but your build freeze from September 27 to October 4 is holding every fix back on purpose.</p>
+    <p class="rnext"><b>Next:</b> Tell me to publish the one corrected map now, or leave it parked until the freeze ends October 4.</p>
+    <div class="btns" data-row="3" data-label="Corrected map: publish or wait"></div>
+    <div class="cbox"><input type="text" data-crow="3" placeholder="Add a note (optional)"></div>
+  </div>
+
+  <!-- ROW 4 -->
+  <div class="rowcard" id="r4">
+    <div class="rtop"><span class="light amber"></span><p class="rtitle">New finds are waiting for your keep or discard</p><span class="status" id="s4"></span></div>
+    <p class="rbody">Your recurring AI scan pulled 15 new cards in the last two days, on top of 235 sitting unsorted. Your reading feed has 33 unread. None of them sort themselves. Each one waits on a keep or a discard from you.</p>
+    <p class="rnext"><b>Next:</b> Let me lay them out so you can keep or bin each one in a single pass, or tell me to auto-clear anything past a date you name.</p>
+    <div class="btns" data-row="4" data-label="Sort the AI and feed finds"></div>
+    <div class="cbox"><input type="text" data-crow="4" placeholder="Add a note (optional)"></div>
+  </div>
+
+  <!-- ROW 5 -->
+  <div class="rowcard" id="r5">
+    <div class="rtop"><span class="light green"></span><p class="rtitle">Last night ran clean, and your health data is flowing</p><span class="status" id="s5"></span></div>
+    <p class="rbody">The overnight checks came back clean, your exercise-to-calendar match was clean, and the map freshness check ran. Nothing was built, which is expected while your freeze is on. Your health data is flowing too: your phone sent 25 fresh readings at 11:13pm last night, so the health alarms still showing on the old maps are false.</p>
+    <p class="rnext"><b>Next:</b> Nothing. This card is here so you know the night went fine.</p>
+    <div class="btns" data-row="5" data-label="Night ran clean"></div>
+    <div class="cbox"><input type="text" data-crow="5" placeholder="Add a note (optional)"></div>
+  </div>
+
+  <!-- ROW 6 -->
+  <div class="rowcard" id="r6">
+    <div class="rtop"><span class="light amber"></span><p class="rtitle">Two projects could not be reached this morning</p><span class="status" id="s6"></span></div>
+    <p class="rbody">This run happens in the cloud while you are away, so it cannot open the project folders on your computer. Project YOU, its 2026 Calendar, your Quantified Self data and the AI scan all live in the shared system and are covered above. TreadWell shows one open item, but its detail sits in the folder. CrushingIt and Clever Phrases live only in the folder, so their next steps are pending.</p>
+    <p class="rnext"><b>Next:</b> Open the desktop app when you are back and I can pull their real status, or tell me to skip them for now.</p>
+    <div class="btns" data-row="6" data-label="Unreachable projects"></div>
+    <div class="cbox"><input type="text" data-crow="6" placeholder="Add a note (optional)"></div>
+  </div>
+
+  <h2 class="sec">Your day</h2>
+  <div class="info">
+    <p class="lead">The day is open.</p>
+    <p>Only your morning routine is on the calendar: the walk, breakfast, the ride to the train, the walk in to the office. After that, nothing is booked on your main calendar. No personal email needs a reply either. What is sitting unread is all receipts, shipping notes and newsletters, nothing that wants you. One clear stretch to spend on the thing that has been waiting.</p>
+  </div>
+
+  <h2 class="sec">Across your projects</h2>
+  <div class="info">
+    <div class="plist">
+      <div class="pitem"><b>Project YOU / Quantified Self.</b> The busy one, with about 190 open items and 75 more queued for the overnight run. The single next step it is waiting on is your call on the corrected system map above. All the tracking data, health, check-ins, calendar, is flowing.</div>
+      <div class="pitem"><b>2026 Calendar.</b> Part of Project YOU, syncing normally. Newest data landed yesterday. Nothing pending.</div>
+      <div class="pitem"><b>AI Intelligence.</b> The scan is alive and finding things. Next step: keep or discard the 15 new cards and 33 feed items above.</div>
+      <div class="pitem"><b>TreadWell.</b> One open item, quiet since early September. The working files are on your computer, so the detailed next step is pending until the folder connects.</div>
+      <div class="pitem"><b>CrushingIt.</b> Not reachable from this cloud run. Next step pending until you open the desktop app.</div>
+      <div class="pitem"><b>Clever Phrases.</b> Not reachable from this cloud run. Next step pending until you open the desktop app.</div>
+    </div>
+  </div>
+
+  <h2 class="sec">Claude usage this week</h2>
+  <div class="info">
+    <p>I cannot read your true weekly usage meter from here. The only signal in your own system is your logged work chats: 6 in the last seven days, about one hour of active time. That is light, which fits a quiet week. For the real number and how close you are to the weekly limit, open the Claude app and check Settings. If you want, I can start logging a running estimate so this line means something next time.</p>
+  </div>
+
+  <div class="tip">
+    <h3>One Atomic Habits idea</h3>
+    <p>James Clear: you do not rise to the level of your goals, you fall to the level of your systems. Your maps prove it this morning. The one map that reads its numbers live is honest; the ones typed in by hand drifted within a day. The fix is not to re-check the number, it is to let the page read it itself.</p>
+  </div>
+
+  <div class="proof">
+    <h3>Technical proof (for the record)</h3>
+    <p>Live counts read this run: 177 base tables, 47 views, 206 rows in public.pages. run_log newest row id=24 (atomic-20260925-1125, status=failed); zero rows for Sep 27 or Sep 28. board_meta.midnight_run_wrap finished_utc 2026-09-28T08:18:18Z, build_freeze active Sep 27 to Oct 4, items_to_build 0, data_sanity all clean, pages_nav_live_crawl not run (needs approval). Health verify: health_ingest_log id=173 received_at 2026-09-28 03:13:09Z, rows_written 25 (confirms the 11:13pm ET push and the note on session_todos id=174). GitHub "Publish pages from Supabase" workflow: runs failed at 22:18Z, 02:39Z, 03:54Z; publish_hook_log dispatches ok=true through 08:51Z, so the hook fires but the action job errors. board_meta.morning_report_parked last set 2026-09-25 (that day's report failed to publish twice). Security note: 27 tables have row-level security disabled; remediation SQL is available on request, do not auto-apply.</p>
+  </div>
+
+  <div class="foot">Published as morning-report-2026-09-28.html. Nothing on this page is saved between visits, so copy your answers before you close it.</div>
+
+</div>
+
+<script>
+(function(){
+  var BTNS=[
+    {c:"do",  cls:"b-do",  txt:"Do this",        open:true},
+    {c:"more",cls:"b-more",txt:"Tell me more",   open:true},
+    {c:"did", cls:"b-did", txt:"I did it",        open:false},
+    {c:"read",cls:"b-read",txt:"I read this",     open:false},
+    {c:"kill",cls:"b-kill",txt:"Kill this task",  open:false}
+  ];
+  var COLORS={do:"var(--do)",more:"var(--more)",did:"var(--did)",read:"var(--read)",kill:"var(--kill)"};
+  var STATUSTXT={do:"working on it",more:"needs your reasoning",did:"you handled it",read:"noted",kill:"killed"};
+  var state={}; // row -> {choice, label, comment}
+
+  // build buttons
+  document.querySelectorAll('.btns').forEach(function(box){
+    var row=box.getAttribute('data-row');
+    var label=box.getAttribute('data-label');
+    state[row]={choice:null,label:label,comment:""};
+    BTNS.forEach(function(b){
+      var btn=document.createElement('button');
+      btn.className='btn '+b.cls;
+      btn.type='button';
+      btn.textContent=b.txt;
+      btn.setAttribute('aria-pressed','false');
+      btn.addEventListener('click',function(){ choose(row,b,box,btn); });
+      box.appendChild(btn);
+    });
+  });
+
+  document.querySelectorAll('input[data-crow]').forEach(function(inp){
+    inp.addEventListener('input',function(){
+      var row=inp.getAttribute('data-crow');
+      state[row].comment=inp.value;
+      compile();
+    });
+  });
+
+  function choose(row,b,box,btn){
+    state[row].choice=b;
+    // toggle pressed state on buttons in this row
+    box.querySelectorAll('.btn').forEach(function(x){x.setAttribute('aria-pressed','false');});
+    btn.setAttribute('aria-pressed','true');
+    var card=document.getElementById('r'+row);
+    card.style.borderLeftColor=COLORS[b.c];
+    if(b.open){ card.classList.remove('settled'); } else { card.classList.add('settled'); }
+    var st=document.getElementById('s'+row);
+    st.textContent=STATUSTXT[b.c];
+    st.classList.add('show');
+    compile();
+  }
+
+  function compile(){
+    var out="Morning Report - Mon Sep 28 2026 - my answers:\n";
+    var any=false;
+    Object.keys(state).forEach(function(row){
+      var s=state[row];
+      if(s.choice||s.comment){
+        any=true;
+        out+="\n"+row+". "+s.label;
+        if(s.choice){ out+=" -> "+s.choice.txt; }
+        if(s.comment){ out+="  | note: "+s.comment; }
+      }
+    });
+    if(!any){ out+="\n(nothing selected yet)"; }
+    document.getElementById('ans').value=out;
+  }
+
+  document.getElementById('copy').addEventListener('click',function(){
+    var ta=document.getElementById('ans');
+    ta.removeAttribute('readonly');
+    ta.select(); ta.setSelectionRange(0,ta.value.length);
+    try{ document.execCommand('copy'); }catch(e){}
+    if(navigator.clipboard){ navigator.clipboard.writeText(ta.value).catch(function(){}); }
+    ta.setAttribute('readonly','readonly');
+    var btn=this; var old=btn.textContent; btn.textContent='Copied (check it pasted)';
+    setTimeout(function(){btn.textContent=old;},1800);
+  });
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
