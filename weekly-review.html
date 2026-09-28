@@ -400,6 +400,16 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .swlbl:hover{border-color:#b3bcc7}
 .swlbl:focus{border-color:var(--accent);background:#fff}
 .swhl{font-size:8.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:4px}
+/* v5.9: the day-of-week tag on a Confirmed chip, This Week and Next week only. */
+.swday{position:relative;display:inline-flex}
+.swdaybtn{font-family:ui-monospace,Menlo,monospace;font-size:9px;font-weight:700;letter-spacing:.02em;color:var(--faint);background:transparent;border:1px dashed #c8cfd8;border-radius:999px;padding:1px 6px;cursor:pointer}
+.swday.set .swdaybtn{color:var(--accent);border-style:solid;border-color:var(--accent)}
+.swdaymenu{display:none;position:absolute;top:100%;left:0;z-index:5;margin-top:3px;background:#fff;border:1px solid var(--line);border-radius:7px;box-shadow:0 2px 8px rgba(0,0,0,.14);padding:4px;gap:2px;flex-wrap:wrap;width:126px}
+.swday.open .swdaymenu{display:flex}
+.swdayopt{font-family:inherit;font-size:10.5px;border:0;background:#f3f5f8;border-radius:5px;padding:3px 6px;cursor:pointer;color:var(--ink)}
+.swdayopt:hover{background:var(--accent-soft,#e2ecf3)}
+.swdayopt.on{background:var(--accent);color:#fff}
+.swdayopt.swdayclear{width:100%;color:var(--faint);background:transparent;text-align:left}
 .swhrow{display:flex;gap:4px;flex-wrap:wrap;min-height:26px}
 .swp{font-family:inherit;font-size:11.5px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);
   background:#fff;color:var(--ink);cursor:pointer;min-height:26px;display:inline-flex;align-items:center;gap:5px}
@@ -834,7 +844,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.8';
+const VERSION='v5.9';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -969,7 +979,7 @@ async function load(){
          names in one week and found empty lanes the next, because a row was
          filed under the week it was made in. A plan to see someone ends when he
          sees them or waves them away, never because the calendar turned over. */
-      q('social_bullpen','week_start,kind,person,state,updated_at',r=>r.neq('kind','never')),
+      q('social_bullpen','week_start,kind,person,state,day_tag,updated_at',r=>r.neq('kind','never')),
       /* v3.5: this year in full, for the sweep and the beam. Small, about 50 rows. */
       q('connections','id,person,kind,place,happened_on,social_group,direction,superseded',
         r=>r.gte('happened_on','2026-01-01').order('happened_on',{ascending:false})),
@@ -1891,6 +1901,33 @@ function swGroupOf(person){
   const rows=swLive().filter(c=>c.person===person&&c.social_group);
   return rows.length?rows[rows.length-1].social_group:null;
 }
+/* v5.9: a day-of-week tag for a Confirmed name, so a date isn't just
+   "sometime this week". Only makes sense where the week is close enough to
+   plan by day, so it only appears in This Week and Next week, not Next
+   month. Tap the small tag to open a short Mon-Sun picker. */
+const SWDAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function swDayTagHtml(person,day){
+  const label=day||'+ day';
+  const opts=SWDAYS.map(d=>
+    '<button type="button" class="swdayopt'+(d===day?' on':'')+'" data-swdaypick="'+esc(person)+'" data-swday="'+d+'">'+d+'</button>'
+  ).join('');
+  const clearBtn=day?'<button type="button" class="swdayopt swdayclear" data-swdaypick="'+esc(person)+'" data-swday="">Clear day</button>':'';
+  return '<span class="swday'+(day?' set':'')+'" data-swdaytag="'+esc(person)+'">'+
+    '<button type="button" class="swdaybtn" data-swdaytoggle="'+esc(person)+'">'+esc(label)+'</button>'+
+    '<span class="swdaymenu" data-swdaymenu="'+esc(person)+'">'+opts+clearBtn+'</span>'+
+    '</span>';
+}
+async function swSetDay(person,day){
+  const r=(D.slots||[]).filter(x=>x.person===person)[0];
+  if(!r)return;
+  r.day_tag=day||null;
+  swRenderPens();
+  swSay('Saving...');
+  const {error}=await sb.from('social_bullpen')
+    .update({day_tag:day||null,updated_at:new Date().toISOString()})
+    .eq('week_start',r.week_start).eq('kind',r.kind).eq('person',person);
+  swSay(error?('Could not save: '+error.message):'Saved');
+}
 function swChipHtml(p,kind){
   const g=swGroupOf(p.person), st=swSlotState(kind,p.person);
   /* v5.0: a chip can now carry two extra marks. A tick means he logged the
@@ -1900,12 +1937,14 @@ function swChipHtml(p,kind){
     return '<span class="swp seen" data-n="'+esc(p.person)+'" title="You logged this on '+esc(fmt(p.seen))+'">'+
       '<span class="dot" style="background:'+(g?SWGC[g]:SWGC['no group yet'])+'"></span>'+esc(p.person)+
       ' <span class="tk">\u2713</span></span>';
+  const showDay=(kind==='now'||kind==='week')&&st==='confirmed';
   return '<span class="swp'+(st==='confirmed'?' conf':'')+(p.stale?' stale':'')+
     '" data-k="'+kind+'" data-n="'+esc(p.person)+'"'+
     (p.stale?' title="Confirmed for the week of '+esc(fmt(p.ws))+', nothing logged yet"':'')+'>'+
     '<span class="dot" style="background:'+(g?SWGC[g]:SWGC['no group yet'])+'"></span>'+esc(p.person)+
     (p.stale?' <span class="qm">?</span>':'')+
     (p.days_since||p.days_since===0?' <span class="gp">'+p.days_since+'d</span>':'')+
+    (showDay?swDayTagHtml(p.person,p.day_tag):'')+
     '<button class="swx" type="button" title="Not this week" data-swx="'+esc(p.person)+'">&times;</button>'+
     '<button class="swx swnever" type="button" title="Never suggest again" data-swnever="'+esc(p.person)+'">\u2298</button>'+
     '</span>';
@@ -2063,7 +2102,7 @@ function swRenderPens(){
     const pl=placed[p.person];
     const kind=pl?swEffKind(pl):null;
     used[p.person]=1;
-    if(pl){p=Object.assign({},p,{seen:pl.seen,stale:swStale(pl),ws:swWs(pl)});}
+    if(pl){p=Object.assign({},p,{seen:pl.seen,stale:swStale(pl),ws:swWs(pl),day_tag:pl.day_tag||null});}
     /* v6.0: an untouched suggestion goes to the Dugout, never guessed into a
        week by its position in the list. */
     bucket(kind||'dugout').push(p);
@@ -2072,7 +2111,7 @@ function swRenderPens(){
   Object.keys(placed).forEach(n=>{
     if(used[n])return;
     const pl=placed[n];
-    const row={person:n,days_since:swDaysSince(n),seen:pl.seen,stale:swStale(pl),ws:swWs(pl)};
+    const row={person:n,days_since:swDaysSince(n),seen:pl.seen,stale:swStale(pl),ws:swWs(pl),day_tag:pl.day_tag||null};
     bucket(swEffKind(pl)).push(row);
   });
   /* Q4: one line per confirmed date that came and went with nothing logged. */
@@ -2245,7 +2284,7 @@ function swWireDrag(box){
     /* v3.3: the chip is a span now, with its own x inside it. */
     chip.addEventListener('pointerdown',ev=>{
       if(ev.button&&ev.button!==0)return;
-      if(ev.target&&ev.target.closest&&ev.target.closest('.swx'))return;
+      if(ev.target&&ev.target.closest&&(ev.target.closest('.swx')||ev.target.closest('.swday')))return;
       swDrag={chip:chip,person:chip.dataset.n,kind:chip.dataset.k,
               x0:ev.clientX,y0:ev.clientY,moved:false,ghost:null,over:null};
       try{chip.setPointerCapture(ev.pointerId);}catch(e){}
@@ -2282,12 +2321,42 @@ function swWireDrag(box){
     chip.addEventListener('pointerup',finish);
     chip.addEventListener('pointercancel',finish);
     chip.onclick=ev=>{
-      if(ev.target&&ev.target.closest&&ev.target.closest('.swx'))return;
+      if(ev.target&&ev.target.closest&&(ev.target.closest('.swx')||ev.target.closest('.swday')))return;
       if(chip._swSkip){chip._swSkip=false;return;}
       if(chip.dataset.k==='dugout')return;
       swToggle(chip.dataset.n,chip.dataset.k);
     };
   });
+  swWireDayTags(box);
+}
+/* v5.9: the tap-open Mon-Sun picker on a Confirmed chip. Kept separate from
+   the drag wiring so a tap on the day tag never reads as a drag or a toggle. */
+function swWireDayTags(box){
+  box.querySelectorAll('[data-swdaytoggle]').forEach(btn=>{
+    btn.addEventListener('pointerdown',ev=>ev.stopPropagation());
+    btn.onclick=ev=>{
+      ev.stopPropagation();
+      const wrap=btn.closest('.swday');
+      const open=wrap.classList.contains('open');
+      box.querySelectorAll('.swday.open').forEach(w=>w.classList.remove('open'));
+      if(!open)wrap.classList.add('open');
+    };
+  });
+  box.querySelectorAll('[data-swdaypick]').forEach(btn=>{
+    btn.addEventListener('pointerdown',ev=>ev.stopPropagation());
+    btn.onclick=ev=>{
+      ev.stopPropagation();
+      swSetDay(btn.dataset.swdaypick,btn.dataset.swday);
+      const wrap=btn.closest('.swday'); if(wrap)wrap.classList.remove('open');
+    };
+  });
+  if(!window._swDayGlobalBound){
+    window._swDayGlobalBound=true;
+    document.addEventListener('click',ev=>{
+      if(ev.target&&ev.target.closest&&ev.target.closest('.swday'))return;
+      document.querySelectorAll('.swday.open').forEach(w=>w.classList.remove('open'));
+    });
+  }
 }
 function swRenderKey(){
   const box=el('swKey'); if(!box)return;
