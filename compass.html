@@ -95,6 +95,10 @@
 .mc-t{font-size:16px;font-weight:800;color:var(--mc)}
 .mc-sub{font-size:11px;font-weight:700;color:#7fae93;text-transform:uppercase;letter-spacing:.08em;margin-top:1px}
 .mc-ver{margin-left:auto;font-size:11px;font-weight:800;color:#93c1a6;background:#fff;border-radius:999px;padding:3px 9px}
+.mc-head .cuetimer{width:22px;height:22px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 1px 3px rgba(31,42,68,.12)}
+.mc-head .cuetimer svg{width:100%;height:100%;display:block}
+.mc-head .cuehand{transform-origin:12px 12px}
+.mc-timetotal{font-size:12px;color:#a6acb8;font-weight:700;text-align:center;margin-bottom:8px}
 .mc-body{padding:16px 24px 22px;flex:1;display:flex;flex-direction:column;position:relative}
 .mc-date{font-size:13px;color:#9aa1b0;font-weight:400;letter-spacing:.01em;font-family:Georgia,'Times New Roman',serif}
 .mc-kick{margin-top:16px;font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase;color:var(--mc);display:flex;align-items:center;gap:8px}
@@ -152,7 +156,7 @@
     <div class="bar"><span id="barfill"></span></div>
     <div id="deck"></div>
   </div>
-  <div class="badge">Annual Reflections v1.8</div>
+  <div class="badge">Annual Reflections v1.9</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -162,6 +166,15 @@ const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');_a.style.display='none';}if(_l){_l.classList.remove('hidden');_l.style.display='';var _e=document.getElementById('loginErr')||document.getElementById('loginmsg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 let QS=[], LOG={}, cur=null, more=false;
+let __cueStart=Date.now();
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge'); if(!h) return;
+  var line=h.querySelector('.cuehand'); if(!line) return;
+  var deg=((Date.now()-__cueStart)%60000)/60000*360;
+  line.style.transform='rotate('+deg+'deg)';
+}
+setInterval(__cueHandTick,250);
+
 function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 // Eastern always, never the viewer's clock. The habit trigger files every tick
@@ -203,10 +216,11 @@ function progress(){
 function answeredToday(){return QS.filter(q=>{const r=LOG[q.id];return r&&r.status==='answered'&&r.answered_on===today();}).length;}
 function setChrome(show){const t=document.querySelector('.top'),b=document.querySelector('.bar');if(t)t.style.display=show?'':'none';if(b)b.style.display=show?'':'none';}
 const CMP_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polygon points="16 8 10.5 10.5 8 16 13.5 13.5" fill="currentColor" stroke="none"/></svg>';
-const MCAP='<div class="mc-head"><div class="mc-ic">'+CMP_ICON+'</div><div><div class="mc-t">Annual Reflections</div><div class="mc-sub">Habit Module</div></div><div class="mc-ver">v1.1</div></div>';
+const MCAP='<div class="mc-head"><div class="mc-ic">'+CMP_ICON+'</div><div><div class="mc-t">Annual Reflections</div><div class="mc-sub">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(31,42,68,.25)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#3f6f8f"/></svg></span>'+'<div class="mc-ver">v1.2</div></div>';
 function mcWrap(inner){return '<div class="mc">'+MCAP+'<div class="mc-body">'+inner+'<div class="date bottom">'+dstamp()+'</div></div></div>';}
 function markFoot(showMore){
-  return '<div class="mc-foot"><div class="mc-time"><span>How long did that take?</span><input id="tmin" type="number" min="1" placeholder="min"></div>'+
+  var totMin=Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  return '<div class="mc-foot"><div class="mc-timetotal">Timer total: '+totMin+' min</div><div class="mc-time"><span>How long did that take?</span><input id="tmin" type="number" min="1" value="'+totMin+'" placeholder="min"></div>'+
     '<div class="mc-bot">'+(showMore?'<button class="mc-btn" onclick="oneMore()">One more</button>':'<span></span>')+
     '<button class="mc-cta" onclick="finishCompass()">I&rsquo;m done, mark complete</button></div></div>';
 }
@@ -222,6 +236,7 @@ function render(){
   if(!cur){
     setChrome(false);
     document.getElementById('deck').innerHTML=mcWrap('<div class="mc-date">'+dstamp()+'</div><div class="mc-kick">All caught up</div><div class="mc-emoji">🌙</div><h2 class="mc-h2">Nothing waiting today.</h2><div class="mc-mean">A parked question will resurface here in a few days. Come back tomorrow.</div>'+markFoot(false));
+    __cueHandTick();
     return;
   }
   setChrome(false);
@@ -243,6 +258,7 @@ function render(){
   inner+='<button class="skip" onclick="skip()">Only have 5 minutes? Skip this, get it back later</button>';
   document.getElementById('deck').innerHTML=mcWrap(inner);
   const r=LOG[q.id]; if(r&&r.answer)document.getElementById('ans').value=r.answer;
+  __cueHandTick();
 }
 async function markDoneCompass(){
   const el=document.getElementById('tmin');const v=parseInt(el&&el.value,10);
@@ -278,6 +294,7 @@ function renderToday(){
   inner+='<div class="mc-mean">Nicely done. One small reflection a day is the whole idea, come back tomorrow for the next.</div>';
   inner+=markFoot(remaining>0);
   document.getElementById('deck').innerHTML=mcWrap(inner);
+  __cueHandTick();
 }
 function oneMore(){more=true;render();}
 function timeField(){
@@ -327,6 +344,7 @@ function renderDone(){
     '<div class="mc-mean">That is the whole reflection captured. Nothing gets added to Project YOU automatically, Claude will read your answers and hand you a summary of how to fold the learnings in, for you to review and decide.</div>'+
     '<div class="mc-mean" style="margin-top:10px;font-size:13px;color:#9aa1b0">Tell Claude "the Annual Reflections are done" for your summary.</div>'+
     PY.needMore('Every question has been answered. Add more to keep it going.'));
+  __cueHandTick();
   confetti();
 }
 function confetti(){
