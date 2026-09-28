@@ -834,7 +834,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.7';
+const VERSION='v5.8';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1877,7 +1877,15 @@ async function swPlace(person,kind,state){
 function swToggle(person,kind){
   const r=swSlot(person);
   const k=(r&&swEffKind(r))||kind;
-  swPlace(person,k,(r&&r.state==='confirmed')?'idea':'confirmed');
+  /* v5.8: a tap off Confirmed used to drop to 'idea' in the SAME card, which
+     the two-lane redesign (This Week/Next week/Next month only show Confirmed
+     and Waiting) has no lane for, so the chip just vanished. It now goes to
+     In the Dugout instead, where it stays visible. */
+  if(r&&r.state==='confirmed'){
+    swPlace(person,'dugout','idea');
+  }else{
+    swPlace(person,k,'confirmed');
+  }
 }
 function swGroupOf(person){
   const rows=swLive().filter(c=>c.person===person&&c.social_group);
