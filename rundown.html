@@ -43,6 +43,10 @@
   .tile ol li{margin-bottom:8px}
   .tile .more{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:var(--accent);text-decoration:none;border-bottom:1px solid currentColor}
   .st{position:absolute;top:12px;left:12px;width:32px;height:32px;border-radius:50%;border:0;cursor:pointer;background:rgba(255,255,255,.92);color:#1f2a44;display:grid;place-items:center;box-shadow:0 1px 4px rgba(0,0,0,.25)}
+  .tile .cuetimer{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;z-index:2}
+  .tile .cuetimer svg{width:100%;height:100%;display:block}
+  .tile .cuehand{transform-origin:12px 12px}
+  .mintotal{font-size:11.5px;color:var(--muted);font-weight:700;margin-top:4px}
   .st svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9}
   .st[aria-pressed="true"]{background:var(--star);color:#fff}
   .st[aria-pressed="true"] svg{fill:currentColor}
@@ -72,6 +76,14 @@
 var SB="https://arnjntspmrhigodlssbn.supabase.co";
 var KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
 var HABIT="AI Workout", BOARD_ID="rundown";
+var __cueStart=Date.now();
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge'); if(!h) return;
+  var line=h.querySelector('.cuehand'); if(!line) return;
+  var deg=((Date.now()-__cueStart)%60000)/60000*360;
+  line.style.transform='rotate('+deg+'deg)';
+}
+setInterval(__cueHandTick,250);
 var ORDER={"AI Training":0,"Workflow of the Day":1,"Roundtable":2};
 var STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
 var TILES=[], idx=0, sb=null, habitRow=null, ticked=false;
@@ -129,15 +141,18 @@ function tileHTML(r,i,n){
   });
   if(inList) h+='</ol>';
   var last=(i===n-1);
-  return '<div class="tile">'+
+  var __totMin=Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  return '<div class="tile">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+
     '<button class="st" type="button" data-save="'+r.id+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
     (r.img?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
     '<div class="top"><div class="k">'+esc(r.section)+'</div><h2>'+esc(r.title)+'</h2>'+h+
     (r.link?'<a class="more" href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">Open the full '+(r.section==="AI Training"?"guide":"story")+'</a>':'')+
-    '</div><div class="prac">'+
+    '</div>'+
+    (last?'<div class="mintotal">Timer total: '+__totMin+' min</div>':'')+
+    '<div class="prac">'+
       '<button class="btn" type="button" id="back"'+(i===0?' disabled':'')+'>Back</button>'+
       (last
-        ? '<label class="minl">Minutes <input id="mins" type="number" min="1" max="180" value="10"></label><button class="btn pri" type="button" id="fin">'+(ticked?"Done today":"I&rsquo;m done")+'</button>'
+        ? '<label class="minl">Minutes <input id="mins" type="number" min="1" max="180" value="'+__totMin+'"></label><button class="btn pri" type="button" id="fin">'+(ticked?"Done today":"I&rsquo;m done")+'</button>'
         : '<span style="font-size:12px;color:var(--muted)">'+(i+1)+' of '+n+'</span><button class="btn pri" type="button" id="next">Next</button>')+
     '</div></div>';
 }
@@ -147,6 +162,7 @@ function render(){
   document.getElementById("dots").innerHTML=d;
   if(!n){ document.getElementById("deck").innerHTML='<div class="tile"><div class="empty">Nothing new from The Rundown yet. It lands around 6am on weekdays.</div></div>'; return; }
   document.getElementById("deck").innerHTML=tileHTML(TILES[idx],idx,n);
+  __cueHandTick();
   var b=document.getElementById("back"); if(b) b.onclick=function(){ if(idx>0){ idx--; render(); window.scrollTo(0,0);} };
   var x=document.getElementById("next"); if(x) x.onclick=function(){ if(idx<n-1){ idx++; render(); window.scrollTo(0,0);} };
   var f=document.getElementById("fin"); if(f) f.onclick=finish;
