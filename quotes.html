@@ -149,7 +149,9 @@
 #deck .hd .cuetimer svg{width:100%;height:100%;display:block}
 #deck .hd .cuehand{transform-origin:12px 12px}
 #deck .howlong .autonote{font-weight:400;font-style:italic;color:#a7afba;font-size:11px}
-#deck .howlongtotal{margin-top:6px;font-size:11.5px;color:#a7afba;font-weight:700}
+#deck .howlongtotal{margin-top:6px;font-size:11.5px;color:#a7afba;font-weight:700;display:none}
+#deck .howlongtotal.show{display:block}
+#deck .foot .next.spent{opacity:.55;pointer-events:none}
 #deck .howlong .in{margin-left:auto;width:62px;border:1px solid #e3e7ee;border-radius:8px;padding:6px 8px;font-size:13px;text-align:center;font-family:inherit}
 </style>
 </head>
@@ -187,7 +189,7 @@
 
   <div id="browse" class="hidden">
     <div class="wrap">
-    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v2.2</span><span class="date"></span></div>
+    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v2.3</span><span class="date"></span></div>
       <div class="add">
         <b>Add a phrase</b>
         <div class="r">
@@ -207,7 +209,7 @@
       <div class="grid" id="grid"></div>
     </div>
   </div>
-  <div class="badge">Things Worth Knowing v2.2</div>
+  <div class="badge">Things Worth Knowing v2.3</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -409,8 +411,8 @@ function __cueHandTick(){
   var deg=((Date.now()-__cueStart)%60000)/60000*360;
   line.style.transform='rotate('+deg+'deg)';
 }
-setInterval(__cueHandTick,250);
-function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+'<span class="ver">v2.2</span></div>';}
+var __cueTickId=setInterval(__cueHandTick,250);
+function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+'<span class="ver">v2.3</span></div>';}
 function renderDaily(){
   const total=DAILY.length;
   const ds=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -433,8 +435,8 @@ function renderDaily(){
     }).join('');
     deck.innerHTML='<div class="card" style="--acc:#7a4f9c;--tint:#efeaf4">'+twkHd()+
       '<div class="bd"><div class="step">End of set</div><div class="big">Keep what mattered.</div><div class="cklist">'+rows+'</div>'+
-      '<div class="howlong">Time on this: <input id="tmin" type="number" min="1" value="'+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+'" class="in"> min <span class="autonote">(timed automatically, tap to fix)</span></div>'+
-      '<div class="howlongtotal">Timer total: '+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+' min</div>'+
+      '<div class="howlong">Time on this: <input id="tmin" type="number" min="1" placeholder="min" class="in"> min <span class="autonote">(keeps time until you tap Done, or type your own)</span></div>'+
+      '<div class="howlongtotal" id="howlongTotal"></div>'+
       '<div class="date bottom">'+ds+'</div></div>'+
       '<div class="foot"><span class="back" onclick="dgo(-1)">Back</span><span class="next" onclick="finishDeck()">I&rsquo;m done, mark complete</span></div></div>';
     __cueHandTick();
@@ -477,9 +479,18 @@ async function saveDaily(){
   }
 }
 async function finishDeck(){
+  clearInterval(__cueTickId);
+  const el=document.getElementById('tmin');
+  const typed=(el&&el.value.trim()!=='')?parseInt(el.value,10):NaN;
+  const totMin=(typed>0)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(el){ el.value=totMin; el.disabled=true; }
+  const totLine=document.getElementById('howlongTotal');
+  if(totLine){ totLine.textContent='Timer total: '+totMin+' min'; totLine.classList.add('show'); }
+  const nextBtn=document.querySelector('#deck .foot .next');
+  if(nextBtn){ nextBtn.removeAttribute('onclick'); nextBtn.classList.add('spent'); }
   try{await saveDaily();}catch(e){}
   try{await markDoneCP();}catch(e){}
-  setTimeout(function(){location.href='habit-modules.html?done=twk';},550);
+  setTimeout(function(){location.href='habit-modules.html?done=twk';},3000);
 }
 function dgo(n){dIdx=Math.max(0,Math.min(DAILY.length,dIdx+n));renderDaily();}
 async function mirrorFav(q,val){
