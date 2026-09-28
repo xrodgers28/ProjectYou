@@ -67,6 +67,10 @@ body{margin:0;background:var(--ground);color:var(--ink);
 .body{padding:24px 24px 20px}
 .body .src{font-size:11px;color:#8a93a0;margin-top:16px;font-style:italic}
 .chips{display:flex;gap:8px;align-items:center;margin:0 0 14px;flex-wrap:wrap}
+.chips .cuetimer{width:22px;height:22px;border-radius:50%;background:#f7e9dc;display:flex;align-items:center;justify-content:center}
+.chips .cuetimer svg{width:100%;height:100%;display:block}
+.chips .cuehand{transform-origin:12px 12px}
+.mintotal{font-size:12px;color:var(--muted,#8a93a0);font-weight:700;margin:-6px 0 10px}
 .chip{font-family:"Bricolage Grotesque",sans-serif;font-weight:700;font-size:11px;letter-spacing:.11em;
   text-transform:uppercase;padding:4px 11px;border-radius:99px}
 .chip.dare{background:var(--warm-soft);color:var(--warm)}
@@ -295,6 +299,14 @@ var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im
 var DECK='social-fitness';
 var HABIT="Do today's Social Fitness dare";
 var WS_ID=95;
+var __cueStart=Date.now();
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge'); if(!h) return;
+  var line=h.querySelector('.cuehand'); if(!line) return;
+  var deg=((Date.now()-__cueStart)%60000)/60000*360;
+  line.style.transform='rotate('+deg+'deg)';
+}
+setInterval(__cueHandTick,250);
 
 if(!window.supabase||!window.supabase.createClient){
   document.getElementById('mount').innerHTML='<div class="err">The page could not load its library. Refresh, and if it keeps happening the CDN is blocked.</div>';
@@ -397,12 +409,13 @@ function render(c){
     el('mount').innerHTML='<div class="err">Every card has been retired. Ask Claude for a fresh batch.</div>';
     return;
   }
+  var __totMin=Math.max(1,Math.round((Date.now()-__cueStart)/60000));
   el('mount').innerHTML=
     '<div class="card">'+
       '<div class="art">'+art(c.art)+'</div>'+
       '<div class="body">'+
         '<div class="chips"><span class="chip '+c.kind+'">'+(c.kind==='dare'?'Today&rsquo;s dare':'Something to sit with')+'</span>'+
-          '<span class="mins">about '+c.minutes+' min</span>'+
+          '<span class="mins">about '+c.minutes+' min</span>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(192,106,53,.4)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#c06a35" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#c06a35"/></svg></span>'+
           '<button class="starbtn'+(c.starred?' on':'')+'" id="star" aria-pressed="'+(c.starred?'true':'false')+'">'+
             STAR_SVG+'<span>'+(c.starred?'Kept':'Keep')+'</span></button></div>'+
         '<h2>'+esc(c.title)+'</h2>'+
@@ -411,8 +424,9 @@ function render(c){
            for this system, and saying so is more honest than borrowing a name. */
         '<div class="src">Source &middot; Written for Project YOU</div>'+
       '</div>'+
+      '<div class="mintotal">Timer total: '+__totMin+' min</div>'+
       '<div class="took"><label for="mins">Took me</label>'+
-        '<input type="number" id="mins" min="1" max="180" step="1" value="'+c.minutes+'" inputmode="numeric">'+
+        '<input type="number" id="mins" min="1" max="180" step="1" value="'+__totMin+'" inputmode="numeric">'+
         '<span>minutes</span></div>'+
       '<div class="acts">'+
         '<button class="b did" id="did">'+(c.kind==='dare'?'I did it':'Read and taken in')+'</button>'+
@@ -421,6 +435,7 @@ function render(c){
       '</div>'+
       '<div class="state muted" id="state"></div>'+
     '</div>';
+  __cueHandTick();
   if(el('star')) el('star').addEventListener('click',toggleStar);
   el('did').addEventListener('click',finish);
   el('another').addEventListener('click',tryAnother);
