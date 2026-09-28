@@ -155,6 +155,25 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .gtip{position:fixed;z-index:50;background:var(--ink);color:#fff;font-size:12px;line-height:1.3;padding:6px 9px;border-radius:7px;pointer-events:none;max-width:260px;box-shadow:0 4px 14px rgba(31,42,68,.25)}
 #habitGrid td.c{cursor:default}
 
+/* v5.4: tick a day box to mark it done or undo it, editable Insight/Outcome/
+   Identify carried over from the Habit Worksheets, and Habit making impact? */
+#habitGrid td.c{position:relative}
+#habitGrid td.c.tick{cursor:pointer}
+#habitGrid td.c.tick:hover{outline:2px solid rgba(31,42,68,.18);outline-offset:-2px}
+#habitGrid td.c.future{cursor:default;opacity:.45}
+#habitGrid td.c .cnt{position:absolute;bottom:1px;right:2px;font-size:7px;font-weight:800;color:#5b6472}
+#habitGrid th.ed{text-align:left}
+#habitGrid td.ed{text-align:left;padding:0 7px;min-width:100px;background:#fbfcfd}
+#habitGrid td.ed.none{color:#c3cad3;font-size:11px}
+.wsedit{width:100%;border:0;background:transparent;font-family:inherit;font-size:11px;padding:6px 0;color:var(--ink)}
+.wsedit::placeholder{color:#c3cad3}
+#habitGrid td.imp{text-align:center;width:1%;background:#fbfcfd}
+.impchk{width:16px;height:16px;cursor:pointer;vertical-align:middle}
+#habitGrid tr.subtotal td{background:#eef1f6;font-weight:800;font-size:10px;border-top:2px solid var(--line);letter-spacing:.3px}
+#habitGrid tr.subtotal td.stlbl{text-align:right;color:#5b6472;text-transform:uppercase;font-size:9px}
+#habitGrid tr.grandtotal td{background:#1f2a44;color:#fff;font-weight:800;border-top:2px solid #1f2a44}
+#habitGrid tr.grandtotal td.gtlbl{text-align:right;letter-spacing:.5px;font-size:10px}
+
 
 /* Hacks of the Week, v1.0 */
 .hk-ledger{display:flex;flex-direction:column}
@@ -809,7 +828,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.4';
+const VERSION='v5.5';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -908,9 +927,9 @@ async function load(){
   const from28=addDays(ws,-27), from14=addDays(we,-13);
   try{
     const q=(t,sel,f)=>{let r=sb.from(t).select(sel);if(f)r=f(r);return r;};
-    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq]=await Promise.all([
+    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq,impactq]=await Promise.all([
       q('qs_log','date,"group",tracker,minutes,logged_at',r=>r.gte('date',from28).lte('date',we).limit(5000)),
-      q('worksheet_rows','habit,area,icon,identity,qs_tracker,count_on,is_active,retired',r=>r.eq('is_active',true)),
+      q('worksheet_rows','id,habit,area,icon,identity,insight,outcome,qs_tracker,count_on,is_active,retired',r=>r.eq('is_active',true)),
       q('todos','for_date,actual_minutes,task',r=>r.eq('category','Strava').gte('for_date',ws).lte('for_date',we)),
       q('session_trackers','day,created_at,updated_at,project,title',r=>r.gte('day',from14).lte('day',we)),
       q('calendar_events','date,start_time,end_time,is_work,hidden,dismissed,title',r=>r.gte('date',from14).lte('date',we).eq('is_work',true)),
@@ -951,7 +970,11 @@ async function load(){
       /* v3.5: names Scott has said never to suggest again */
       q('social_bullpen','week_start,kind,person,state',r=>r.eq('kind','never')),
       q('checkins','ts,day,venue,raw',r=>r.gte('day',ws).lte('day',we)),
-      q('sw_labels','key,label')
+      q('sw_labels','key,label'),
+      /* v5.4: "Habit making impact?" - one flag per habit per week, kept in its
+         own small table (like Stack Builder/Weekly Items) so history survives
+         across weeks instead of one week's answers overwriting the last. */
+      q('weekly_habit_impact','tracker,impact',r=>r.eq('week_start',ws))
     ]);
     const bad=[qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,quotes,areas].filter(x=>x.error);
     if(bad.length){throw new Error(bad.map(x=>x.error.message).join('; '));}
@@ -962,7 +985,8 @@ async function load(){
       slots:swDedupeSlots((slotsq&&slotsq.data)||[]),cks:(ckq&&ckq.data)||[],
       year:((yearq&&yearq.data)||[]).filter(c=>!c.superseded),
       never:((neverq&&neverq.data)||[]).map(r=>r.person),
-      labels:swLabelsMap((labelsq&&labelsq.data)||[])};
+      labels:swLabelsMap((labelsq&&labelsq.data)||[]),
+      impact:(impactq&&impactq.data)||[]};
     S={quiz:{},goals:[],own:'',lastGoals:{}};
     if(D.row){S.quiz=D.row.quiz||{};const g=D.row.goals||{};S.goals=g.picked||[];S.own=g.own||'';S.lastGoals=D.row.prior_goals_result||{};}
     W={hi:[],go:[]};
@@ -1065,7 +1089,7 @@ function compute(){
   /* days present */
   const present=days.filter(d=>wk.some(r=>r.date===d));
   /* ticks per tracker per day */
-  const tick={},mins={};wk.forEach(r=>{tick[r.tracker]=tick[r.tracker]||{};tick[r.tracker][r.date]=true;mins[r.tracker]=mins[r.tracker]||{};mins[r.tracker][r.date]=(mins[r.tracker][r.date]||0)+(r.minutes||0);});
+  const tick={},mins={},cnt={};wk.forEach(r=>{tick[r.tracker]=tick[r.tracker]||{};tick[r.tracker][r.date]=true;mins[r.tracker]=mins[r.tracker]||{};mins[r.tracker][r.date]=(mins[r.tracker][r.date]||0)+(r.minutes||0);cnt[r.tracker]=cnt[r.tracker]||{};cnt[r.tracker][r.date]=(cnt[r.tracker][r.date]||0)+1;});
   /* daily set */
   const days28={};inWin.forEach(r=>{if(excl(r.tracker))return;days28[r.tracker]=days28[r.tracker]||new Set();days28[r.tracker].add(r.date);});
   const daily=new Set();
@@ -1116,7 +1140,9 @@ function compute(){
   /* winners and losers, 14 days */
   const d14=[];for(let i=13;i>=0;i--)d14.push(addDays(we,-i));
   const missRun={};const wl=d14.map(d=>{const up=inWin.filter(r=>r.date===d&&!isCounter(r.tracker)).map(r=>AREACOL[r.group]||AREACOL['Not sure yet']);const dn=[];const isPresent=inWin.some(r=>r.date===d);daily.forEach(t=>{const start=firstTick[t]||ws;if(d<start)return;const hit=inWin.some(r=>r.date===d&&r.tracker===t);if(hit){missRun[t]=0;}else if(isPresent){missRun[t]=(missRun[t]||0)+1;dn.push(missRun[t]===1?'#f2cf5b':(missRun[t]===2?'#e0975a':'#c0453b'));}});dn.sort((a,b)=>['#f2cf5b','#e0975a','#c0453b'].indexOf(a)-['#f2cf5b','#e0975a','#c0453b'].indexOf(b));return {d,up,dn};});
-  C={present,tick,mins,daily,perHabit,done,possible,coverage,pcov,lit,ticksBy,never,votes,voteN,noLine:[...noLine],workMin,habitMin,pyMin,sessN:sessWk.length,order,rightDays,streak,stacks,rowsBy,wsOf,areaOf,wl,isCounter,isPhoto,firstTick};
+  /* v5.4: this week's "Habit making impact?" flags, keyed by tracker. */
+  const impact={};(D.impact||[]).forEach(r=>{impact[r.tracker]=!!r.impact;});
+  C={present,tick,mins,cnt,daily,perHabit,done,possible,coverage,pcov,lit,ticksBy,never,votes,voteN,noLine:[...noLine],workMin,habitMin,pyMin,sessN:sessWk.length,order,rightDays,streak,stacks,rowsBy,wsOf,areaOf,wl,isCounter,isPhoto,firstTick,impact};
 }
 
 /* ---------- render ---------- */
@@ -2380,11 +2406,38 @@ function render(){
   /* v4.6: AVG / DAY is the week's minutes spread across every day of the week
      you were present, not across the days you ticked. That is the number that
      answers "how much am I doing a day". TOTAL / WEEK is the raw sum. */
-  let h='<thead><tr><th style="width:84px"></th><th class="l">HABIT</th>'+days.map(d=>'<th>'+dname(d)+'</th>').join('')+'<th class="n" title="Average minutes a day across the whole week">AVG / DAY</th>'+
-        '<th class="n" title="Total minutes logged against this habit across the week">TOTAL / WEEK</th></tr></thead><tbody>';
+  /* v5.4: four more columns after Total/Week. Insight, Outcome and Identify are
+     carried straight from the Habit Worksheets (worksheet_rows) — editable here,
+     and an edit writes straight back to that same row, so habit-worksheets.html
+     shows the same change. Habit making impact? is new: a per-habit-per-week
+     tick, kept in its own table so past weeks' answers are never overwritten.
+     Day boxes are now tappable: an ordinary habit's day toggles done/not done
+     (tap again undoes it, removing that day's log entry). A counter habit
+     (Water, Coffee) has no undo, each tap just logs one more, same as tapping
+     it anywhere else on the site. Nothing later than today can be ticked. */
+  const today=PY.today();
+  let h='<thead><tr><th style="width:84px"></th><th class="l">HABIT</th>'+days.map(d=>'<th>'+dname(d)+'</th>').join('')+
+        '<th class="n" title="Average minutes a day across the whole week">AVG / DAY</th>'+
+        '<th class="n" title="Total minutes logged against this habit across the week">TOTAL / WEEK</th>'+
+        '<th class="ed" title="From your Habit Worksheets. Edit here and it updates there too.">INSIGHT</th>'+
+        '<th class="ed" title="From your Habit Worksheets. Edit here and it updates there too.">OUTCOME</th>'+
+        '<th class="ed" title="From your Habit Worksheets. Edit here and it updates there too.">IDENTIFY</th>'+
+        '<th class="n" title="Tick if this habit felt like it made a difference this week">IMPACT?</th>'+
+        '</tr></thead><tbody>';
   const sections=[...COMPASS,...OFF];
-  sections.forEach(area=>{const rows=C.rowsBy[area]||[];if(!rows.length&&OFF.includes(area))return;const c=AREACOL[area],py=area==='Project YOU';const bg=py?PYPINK:tint(c,.3),bl=py?PYLINE:c;const nrows=Math.max(1,rows.length);const lbl=(nrows>=3?SECNAME[area]:SECABBR[area])||area;const first='<td class="sec" rowspan="'+nrows+'" style="background:'+bg+';border-left-color:'+bl+'"><div style="color:'+(py?'#7a3a52':'#1f2a44')+';height:'+Math.max(20,nrows*30-6)+'px">'+(py&&nrows>=3?PINWHEEL:'')+esc(lbl)+'</div></td>';if(!rows.length){h+='<tr>'+first+'<td class="empty" colspan="10">Nothing ticked all week.'+(D.wr.some(w=>w.area===area)?' Card and habit are both on, it just did not get ticked.':'')+'</td></tr>';return;}rows.forEach((t,i)=>{const done=days.filter(d=>C.tick[t]&&C.tick[t][d]).length,poss=C.perHabit[t]?C.perHabit[t].possible:C.present.length,wkMin=days.reduce((a,d)=>a+((C.mins[t]&&C.mins[t][d])||0),0);
-      h+='<tr>'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'">'+esc(t)+'</td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;const al=!on?0:(m<=2?.16:m<=5?.3:m<=10?.46:m<=30?.62:.78);const tip=on?(dname(d)+' '+fmt(d)+' · '+esc(t)+(m?' · '+m+' min':' · ticked, no minutes')+' · '+done+' of '+poss+' days this week'+(wkMin?' · '+wkMin+' min this week':'')):(dname(d)+' '+fmt(d)+' · '+esc(t)+' · not ticked');return '<td class="c" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t):'')+'</td>';}).join('')+
+  let grandTotal=0;
+  sections.forEach(area=>{const rows=C.rowsBy[area]||[];if(!rows.length&&OFF.includes(area))return;const c=AREACOL[area],py=area==='Project YOU';const bg=py?PYPINK:tint(c,.3),bl=py?PYLINE:c;const nrows=Math.max(1,rows.length);const lbl=(nrows>=3?SECNAME[area]:SECABBR[area])||area;const first='<td class="sec" rowspan="'+nrows+'" style="background:'+bg+';border-left-color:'+bl+'"><div style="color:'+(py?'#7a3a52':'#1f2a44')+';height:'+Math.max(20,nrows*30-6)+'px">'+(py&&nrows>=3?PINWHEEL:'')+esc(lbl)+'</div></td>';if(!rows.length){h+='<tr>'+first+'<td class="empty" colspan="14">Nothing ticked all week.'+(D.wr.some(w=>w.area===area)?' Card and habit are both on, it just did not get ticked.':'')+'</td></tr>';return;}
+    let sectionTotal=0;
+    rows.forEach((t,i)=>{const done=days.filter(d=>C.tick[t]&&C.tick[t][d]).length,poss=C.perHabit[t]?C.perHabit[t].possible:C.present.length,wkMin=days.reduce((a,d)=>a+((C.mins[t]&&C.mins[t][d])||0),0);
+      sectionTotal+=wkMin;
+      const isCtr=C.isCounter(t);
+      h+='<tr>'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'">'+esc(t)+'</td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;const al=!on?0:(m<=2?.16:m<=5?.3:m<=10?.46:m<=30?.62:.78);const future=d>today;const n=on?((C.cnt[t]&&C.cnt[t][d])||1):0;
+          let tip;
+          if(future)tip=dname(d)+' '+fmt(d)+' · in the future, nothing to tick yet';
+          else if(on)tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(m?' · '+m+' min':' · ticked, no minutes')+(isCtr&&n>1?' · logged '+n+' times':'')+' · '+done+' of '+poss+' days this week'+(wkMin?' · '+wkMin+' min this week':'')+(isCtr?' · tap to log one more':' · tap to undo');
+          else tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(isCtr?' · tap to log one':' · not ticked · tap to mark done');
+          const cls='c'+(future?' future':' tick');
+          return '<td class="'+cls+'" data-t="'+esc(t)+'" data-d="'+d+'" data-area="'+esc(area)+'" data-counter="'+(isCtr?'1':'0')+'" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t):'')+(isCtr&&n>1?'<span class="cnt">&times;'+n+'</span>':'')+'</td>';}).join('')+
         (function(){
           const span=Math.max(1,C.present.length);
           const withMin=days.filter(d=>((C.mins[t]&&C.mins[t][d])||0)>0).length;
@@ -2397,7 +2450,22 @@ function render(){
             : 'No minutes recorded this week.';
           return '<td class="n'+(wkMin?'':' none')+'" title="'+esc(avgTip)+'">'+(wkMin?esc(mdur(perDay)):'&ndash;')+'</td>'+
                  '<td class="n tot'+(wkMin?'':' none')+'" title="'+esc(totTip)+'">'+(wkMin?esc(mdur(wkMin)):'&ndash;')+'</td>';
-        })()+'</tr>';});});
+        })()+
+        (function(){
+          const w=C.wsOf[t];
+          if(!w||!w.id)return '<td class="ed none">&ndash;</td><td class="ed none">&ndash;</td><td class="ed none">&ndash;</td>';
+          return '<td class="ed"><input class="wsedit" data-id="'+w.id+'" data-f="insight" placeholder="&mdash;" value="'+esc(w.insight||'')+'"></td>'+
+                 '<td class="ed"><input class="wsedit" data-id="'+w.id+'" data-f="outcome" placeholder="&mdash;" value="'+esc(w.outcome||'')+'"></td>'+
+                 '<td class="ed"><input class="wsedit" data-id="'+w.id+'" data-f="identity" placeholder="&mdash;" value="'+esc(w.identity||'')+'"></td>';
+        })()+
+        '<td class="imp"><input type="checkbox" class="impchk" data-t="'+esc(t)+'"'+(C.impact[t]?' checked':'')+'></td>'+
+        '</tr>';});
+    grandTotal+=sectionTotal;
+    if(COMPASS.includes(area)){
+      h+='<tr class="subtotal"><td></td><td class="stlbl" colspan="9">Total, '+esc(SECNAME[area]||area)+'</td><td class="n tot">'+(sectionTotal?esc(mdur(sectionTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
+    }
+  });
+  h+='<tr class="grandtotal"><td></td><td class="gtlbl" colspan="9">GRAND TOTAL, THE WEEK</td><td class="n tot">'+(grandTotal?esc(mdur(grandTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
   el('habitGrid').innerHTML=h+'</tbody>';
   /* stars */
   const stars=[];
@@ -2468,6 +2536,81 @@ function render(){
   el('foot').innerHTML='<a href="https://claude.ai/code/artifact/d3c2baf8-a8e4-42c1-9725-30dd24f90832">Other layouts for the habit grid</a> (Numbers sheet, Paper, Ledger, Stamps) are on the Weekly Review Directions canvas; this page uses Heat: a square darkens with the minutes logged. Hover or tap any square for the numbers. · '+'Project YOU · The PY Week in Review '+VERSION+' · week of '+fmt(ws)+' to '+fmt(we,true)+' · read live from your habit log, worksheets, cue card decks, work calendar, Strava and session trackers · days run 2am to 2am Eastern · missed days are not counted as zeros · Project YOU build hours show a question mark until sessions log their time.';
 }
 function mm(m){if(m==null)return '';const h=Math.floor(m/60),mi=m%60,ap=h>=12?'pm':'am';return ((h%12)||12)+(mi?':'+String(mi).padStart(2,'0'):'')+ap;}
+
+/* ---------- v5.4: day ticks, worksheet edits, impact ---------- */
+/* An ISO timestamp for a given clock time in America/New_York on a given day,
+   correct across the DST change (so a tick in February and one in July both
+   land on the right UTC instant). Noon is used for a manual tick so it never
+   falls in the small early-morning window some other calculations treat as
+   an auto-import, not a real logged time. */
+function etISO(dateStr,hh,mn){
+  const guess=new Date(dateStr+'T'+String(hh).padStart(2,'0')+':'+String(mn).padStart(2,'0')+':00Z');
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}).formatToParts(guess);
+  const get=k=>+parts.find(p=>p.type===k).value;
+  const asIfUTC=Date.UTC(get('year'),get('month')-1,get('day'),get('hour'),get('minute'),get('second'));
+  return new Date(guess.getTime()+(guess.getTime()-asIfUTC)).toISOString();
+}
+
+/* Tap a day box: an ordinary habit toggles done/undone for that day (undo
+   deletes that day's log row outright, Scott's call Sep 27 2026). A counter
+   habit (Water, Coffee) has no undo here, each tap just logs one more, same
+   as tapping it anywhere else on the site. Never lets you tick a day that
+   has not happened yet. */
+let tickBusy=false;
+async function wrTick(td){
+  if(tickBusy)return;
+  const t=td.dataset.t,d=td.dataset.d,area=td.dataset.area,isCtr=td.dataset.counter==='1';
+  if(d>PY.today())return;
+  tickBusy=true;td.style.opacity='.5';
+  try{
+    const on=C.tick[t]&&C.tick[t][d];
+    if(isCtr||!on){
+      const stamp=etISO(d,12,0);
+      const {error}=await sb.from('qs_log').insert({date:d,group:area,tracker:t,minutes:0,source:'weekly-review',logged_at:stamp});
+      if(error)throw error;
+      D.qs.push({date:d,group:area,tracker:t,minutes:0,logged_at:stamp});
+    }else{
+      const {error}=await sb.from('qs_log').delete().eq('tracker',t).eq('date',d);
+      if(error)throw error;
+      D.qs=D.qs.filter(r=>!(r.tracker===t&&r.date===d));
+    }
+    compute();render();saveScores();
+  }catch(e){status('Could not save that tick: '+e.message,true);}
+  finally{tickBusy=false;}
+}
+
+/* Insight / Outcome / Identify: writes straight to worksheet_rows, the same
+   row habit-worksheets.html reads, so an edit made here shows up there too. */
+const wsSaveT={};
+function wsEdited(input){
+  const id=input.dataset.id,f=input.dataset.f,val=input.value;
+  const w=D.wr.find(r=>String(r.id)===String(id));
+  if(w)w[f]=val; /* keeps local state in sync so a re-render triggered by a tick elsewhere does not lose what was just typed */
+  const key=id+':'+f;
+  clearTimeout(wsSaveT[key]);
+  wsSaveT[key]=setTimeout(async()=>{
+    const patch={updated_at:new Date().toISOString()};patch[f]=val;
+    const {error}=await sb.from('worksheet_rows').update(patch).eq('id',id);
+    if(error)status('Could not save that: '+error.message,true);
+  },700);
+}
+
+/* Habit making impact?: one flag per habit per week, kept in its own small
+   table so past weeks' answers are never overwritten by the next week's. */
+async function wrImpact(chk){
+  const t=chk.dataset.t,next=chk.checked;
+  C.impact[t]=next;
+  const {error}=await sb.from('weekly_habit_impact').upsert({week_start:D.ws,tracker:t,impact:next,updated_at:new Date().toISOString()},{onConflict:'week_start,tracker'});
+  if(error){chk.checked=!next;C.impact[t]=!next;status('Could not save that: '+error.message,true);}
+}
+
+(function(){
+  const grid=el('habitGrid');
+  if(!grid)return;
+  grid.addEventListener('click',e=>{const td=e.target.closest('td.c.tick');if(td)wrTick(td);});
+  grid.addEventListener('change',e=>{if(e.target.classList.contains('impchk'))wrImpact(e.target);});
+  grid.addEventListener('input',e=>{if(e.target.classList.contains('wsedit'))wsEdited(e.target);});
+})();
 function arc(cx,cy,r,a0,a1,col){if(a1<=a0)return '';const p0=[cx+r*Math.cos((a0-90)*Math.PI/180),cy+r*Math.sin((a0-90)*Math.PI/180)],p1=[cx+r*Math.cos((a1-90)*Math.PI/180),cy+r*Math.sin((a1-90)*Math.PI/180)];return '<path d="M'+p0[0].toFixed(1)+','+p0[1].toFixed(1)+' A'+r+','+r+' 0 '+(a1-a0>180?1:0)+' 1 '+p1[0].toFixed(1)+','+p1[1].toFixed(1)+'" fill="none" stroke="'+col+'" stroke-width="24"/>';}
 function renderWL(){const R=6,STEP=15,W=38;const maxup=Math.max(1,...C.wl.map(x=>x.up.length)),maxdn=Math.max(1,...C.wl.map(x=>x.dn.length));const Hup=maxup*STEP+10,Hdn=maxdn*STEP+10,zero=Hup+20,width=60+C.wl.length*W+10;let s='<svg width="'+width+'" height="'+(zero+Hdn+30)+'" viewBox="0 0 '+width+' '+(zero+Hdn+30)+'"><line x1="50" y1="'+zero+'" x2="'+(width-10)+'" y2="'+zero+'" stroke="#1f2a44" stroke-width="1.5"/>';C.wl.forEach((x,i)=>{const cx=60+i*W+W/2;x.up.forEach((c,j)=>{s+='<circle cx="'+cx+'" cy="'+(zero-8-j*STEP)+'" r="'+R+'" fill="'+c+'"/>';});x.dn.forEach((c,j)=>{s+='<circle cx="'+cx+'" cy="'+(zero+8+j*STEP)+'" r="'+R+'" fill="'+c+'"/>';});s+='<text x="'+cx+'" y="'+(zero+Hdn+22)+'" text-anchor="middle" font-family="Arial" font-size="9" fill="#5b6472">'+fmt(x.d)+'</text>';if(x.d===D.ws)s+='<line x1="'+(60+i*W)+'" y1="20" x2="'+(60+i*W)+'" y2="'+(zero+Hdn)+'" stroke="#e3e7ee" stroke-dasharray="3 3"/><text x="'+(60+i*W+4)+'" y="14" font-family="Arial" font-size="8" letter-spacing="1" fill="#5b6472">THIS WEEK</text>';});s+='<text x="12" y="'+(zero-Hup/2)+'" transform="rotate(-90 12 '+(zero-Hup/2)+')" text-anchor="middle" font-family="Arial" font-size="8" letter-spacing="1" fill="#5b6472">HABITS DONE</text><text x="12" y="'+(zero+Hdn/2)+'" transform="rotate(-90 12 '+(zero+Hdn/2)+')" text-anchor="middle" font-family="Arial" font-size="8" letter-spacing="1" fill="#5b6472">HABITS MISSED</text></svg>';el('wl').innerHTML=s;el('wlLegend').innerHTML=COMPASS.map(p=>'<span><i style="background:'+AREACOL[p]+'"></i>'+esc(p)+'</span>').join('')+'<span><i style="background:'+AREACOL['Project YOU']+'"></i>Project YOU</span><span><i style="background:#f2cf5b"></i>missed once</span><span><i style="background:#e0975a"></i>missed twice</span><span><i style="background:#c0453b"></i>missed 3+ days</span>';}
 
