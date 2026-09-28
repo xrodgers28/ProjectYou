@@ -46,7 +46,9 @@
   .tile .cuetimer{position:absolute;top:12px;right:12px;width:26px;height:26px;border-radius:50%;background:var(--acc);display:flex;align-items:center;justify-content:center;z-index:2}
   .tile .cuetimer svg{width:100%;height:100%;display:block}
   .tile .cuehand{transform-origin:12px 12px}
-  .mintotal{font-size:11.5px;color:var(--muted);font-weight:700;margin-top:4px}
+  .mintotal{font-size:11.5px;color:var(--muted);font-weight:700;margin-top:4px;display:none}
+  .mintotal.show{display:block}
+  #fin:disabled{opacity:.55;pointer-events:none}
   .st svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9}
   .st[aria-pressed="true"]{background:var(--star);color:#fff}
   .st[aria-pressed="true"] svg{fill:currentColor}
@@ -64,12 +66,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; from The Rundown AI</div>
-  <h1>AI Workout <span class="ver">v1.1</span></h1>
+  <h1>AI Workout <span class="ver">v1.2</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
   <div class="note">Only three parts of the newsletter make it here: AI Training, Workflow of the Day, and the Roundtable when there is one. Everything else stays in your inbox.</div>
-  <div class="stamp" id="stamp">v1.1</div>
+  <div class="stamp" id="stamp">v1.2</div>
 </div>
 
 <script>
@@ -83,7 +85,7 @@ function __cueHandTick(){
   var deg=((Date.now()-__cueStart)%60000)/60000*360;
   line.style.transform='rotate('+deg+'deg)';
 }
-setInterval(__cueHandTick,250);
+var __cueTickId=setInterval(__cueHandTick,250);
 var ORDER={"AI Training":0,"Workflow of the Day":1,"Roundtable":2};
 var STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
 var TILES=[], idx=0, sb=null, habitRow=null, ticked=false;
@@ -142,18 +144,17 @@ function tileHTML(r,i,n){
   });
   if(inList) h+='</ol>';
   var last=(i===n-1);
-  var __totMin=Math.max(1,Math.round((Date.now()-__cueStart)/60000));
   return '<div class="tile">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+
     '<button class="st" type="button" data-save="'+r.id+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
     (r.img?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
     '<div class="top"><div class="k">'+esc(r.section)+'</div><h2>'+esc(r.title)+'</h2>'+h+
     (r.link?'<a class="more" href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">Open the full '+(r.section==="AI Training"?"guide":"story")+'</a>':'')+
     '</div>'+
-    (last?'<div class="mintotal">Timer total: '+__totMin+' min</div>':'')+
+    (last?'<div class="mintotal" id="mintotalLine"></div>':'')+
     '<div class="prac">'+
       '<button class="btn" type="button" id="back"'+(i===0?' disabled':'')+'>Back</button>'+
       (last
-        ? '<label class="minl">Minutes <input id="mins" type="number" min="1" max="180" value="'+__totMin+'"></label><button class="btn pri" type="button" id="fin">'+(ticked?"Done today":"I&rsquo;m done")+'</button>'
+        ? '<label class="minl">Minutes <input id="mins" type="number" min="1" max="180" placeholder="min"></label><button class="btn pri" type="button" id="fin">'+(ticked?"Done today":"I&rsquo;m done")+'</button>'
         : '<span style="font-size:12px;color:var(--muted)">'+(i+1)+' of '+n+'</span><button class="btn pri" type="button" id="next">Next</button>')+
     '</div></div>';
 }
@@ -187,12 +188,20 @@ function finish(){
   if(ticked){ toBoard(); return; }
   if(!sb){ toast("The sign-in did not load. Reload the page."); return; }
   if(!habitRow){ toast("AI Workout is not on your cue cards yet, so there is nothing to tick."); return; }
-  var el=document.getElementById("mins"), v=parseInt(el&&el.value,10);
-  var mins=(v>0&&v<=180)?v:(habitRow.actual_minutes||10), now=new Date().toISOString(), t=today();
-  sb.from("todos").update({done:true,status:"done",done_at:now,actual_minutes:mins,for_date:t,updated_at:now}).eq("id",habitRow.id)
+  clearInterval(__cueTickId);
+  var el=document.getElementById("mins");
+  var typed=(el&&el.value.trim()!=="")?parseInt(el.value,10):NaN;
+  var totMin=(typed>0&&typed<=180)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(el){ el.value=totMin; el.disabled=true; }
+  var totLine=document.getElementById("mintotalLine");
+  if(totLine){ totLine.textContent="Timer total: "+totMin+" min"; totLine.classList.add("show"); }
+  var fin=document.getElementById("fin"); if(fin) fin.disabled=true;
+  var now=new Date().toISOString(), t=today();
+  sb.from("todos").update({done:true,status:"done",done_at:now,actual_minutes:totMin,for_date:t,updated_at:now}).eq("id",habitRow.id)
     .then(function(res){
       if(res.error){ toast("Did not save: "+res.error.message); return; }
-      ticked=true; toast("AI Workout to the wheel, "+mins+" min"); toBoard();
+      ticked=true; toast("AI Workout to the wheel, "+totMin+" min");
+      setTimeout(function(){ location.href="habit-modules.html?done="+BOARD_ID; },3000);
     });
 }
 
@@ -210,7 +219,7 @@ Promise.all([deal(), loadHabit()]).then(function(res){
   TILES=rows;
   if(rows.length){
     document.getElementById("sub").textContent=nice(rows[0].issue_date)+" issue · "+rows.length+(rows.length===1?" card":" cards")+" · about 10 minutes";
-    document.getElementById("stamp").textContent="v1.1 · from The Rundown AI, "+nice(rows[0].issue_date);
+    document.getElementById("stamp").textContent="v1.2 · from The Rundown AI, "+nice(rows[0].issue_date);
   } else document.getElementById("sub").textContent="";
   render();
 }).catch(function(e){
