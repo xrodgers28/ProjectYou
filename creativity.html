@@ -192,7 +192,8 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
 .chips .cuetimer{width:22px;height:22px;border-radius:50%;background:#e9f0df;display:flex;align-items:center;justify-content:center}
 .chips .cuetimer svg{width:100%;height:100%;display:block}
 .chips .cuehand{transform-origin:12px 12px}
-.mintotal{font-size:12px;color:var(--muted,#8a93a0);font-weight:700;margin:-6px 0 10px}
+.mintotal{font-size:12px;color:var(--muted,#8a93a0);font-weight:700;margin:-6px 0 10px;display:none}
+.mintotal.show{display:block}
 </style>
 </head>
 <body>
@@ -201,7 +202,7 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
   <div class="head">
     <h1>Creativity</h1>
     <!-- The ONLY place this page's version is written. The publish guard reads class="ver" and navpatch reads #ver, so both see this one literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v1.1</span>
+    <span id="ver" class="ver">v1.2</span>
     <span class="date" id="date"></span>
   </div>
 
@@ -236,7 +237,7 @@ function __cueHandTick(){
   var deg=((Date.now()-__cueStart)%60000)/60000*360;
   line.style.transform='rotate('+deg+'deg)';
 }
-setInterval(__cueHandTick,250);
+var __cueTickId=setInterval(__cueHandTick,250);
 
 /* The CDN guard. If supabase-js never arrives the exercise still works;
    only the tick and the saved copy are lost, and the page says so. */
@@ -457,9 +458,9 @@ function renderCircles(){
         '<span class="count" id="cnt"></span>'+
       '</div>'+
       '<div class="nudge" id="nudge"></div>'+
-      '<div class="mintotal">Timer total: '+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+' min</div>'+
+      '<div class="mintotal" id="mintotalLine"></div>'+
       '<div class="took"><label for="mins">Took me</label>'+
-        '<input type="number" id="mins" min="1" max="180" step="1" value="'+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+'" inputmode="numeric">'+
+        '<input type="number" id="mins" min="1" max="180" step="1" placeholder="min" inputmode="numeric">'+
         '<span>minutes</span></div>'+
       '<div class="acts"><button class="b did" id="did">I&rsquo;m done</button></div>'+
       '<div class="state muted" id="state"></div>'+
@@ -545,9 +546,9 @@ function renderUses(){
       '<ul class="ideas" id="ideas"></ul>'+
       '<div class="tools"><button class="t" id="tapped" disabled>That&rsquo;s all I&rsquo;ve got</button><span class="count" id="cnt"></span></div>'+
       '<div id="pushSlot"></div>'+
-      '<div class="mintotal">Timer total: '+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+' min</div>'+
+      '<div class="mintotal" id="mintotalLine"></div>'+
       '<div class="took"><label for="mins">Took me</label>'+
-        '<input type="number" id="mins" min="1" max="180" step="1" value="'+Math.max(1,Math.round((Date.now()-__cueStart)/60000))+'" inputmode="numeric">'+
+        '<input type="number" id="mins" min="1" max="180" step="1" placeholder="min" inputmode="numeric">'+
         '<span>minutes</span></div>'+
       '<div class="acts"><button class="b did" id="did">I&rsquo;m done</button></div>'+
       '<div class="state muted" id="state"></div>'+
@@ -690,11 +691,16 @@ async function finish(){
   if(ticked) return;
   var why=notYet();
   if(why){ say(why,'warn'); return; }
+  clearInterval(__cueTickId);
+  var mEl=el('mins');
+  var typed=(mEl&&mEl.value.trim()!=='')?parseInt(mEl.value,10):NaN;
+  var mins=(typed>0&&typed<=180)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(mEl){ mEl.value=mins; mEl.disabled=true; }
+  var totLine=el('mintotalLine');
+  if(totLine){ totLine.textContent='Timer total: '+mins+' min'; totLine.classList.add('show'); }
   el('did').disabled=true;
   say('Saving…','muted');
   try{
-    var v=parseInt((el('mins')||{}).value,10);
-    var mins=(v>0&&v<=180)?v:10;
     await saveWork(mins);
     var row=await ensureRow();
     var now=new Date().toISOString();
@@ -708,7 +714,7 @@ async function finish(){
     el('did').textContent='Done today';
     say('Creativity → wheel ✓, '+mins+' min','');
     drawHist();
-    setTimeout(function(){ location.href='habit-modules.html?done=creativity'; },800);
+    setTimeout(function(){ location.href='habit-modules.html?done=creativity'; },3000);
   }catch(e){
     el('did').disabled=false;
     say('That did not save. Try again in a moment.','warn');
