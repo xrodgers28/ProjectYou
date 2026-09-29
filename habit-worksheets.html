@@ -476,14 +476,20 @@ footer{margin-top:20px; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monosp
 .ulbtn{border:1px solid var(--line-2);background:var(--sheet);color:var(--ink-2);border-radius:6px;
   padding:4px 9px;font-size:.74rem;font-weight:700;font-family:inherit;cursor:pointer}
 .ulbtn:hover{background:var(--soft);border-color:var(--ink-2)}
+.undoBar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:12px;background:#1f2a44;color:#fff;border-radius:999px;padding:9px 10px 9px 18px;box-shadow:0 10px 30px rgba(31,42,68,.35);font-size:13.5px;max-width:calc(100vw - 32px)}
+.undoBar.hidden{display:none}
+.undoTxt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.undoBtn{font:inherit;font-weight:700;background:#fff;color:#1f2a44;border:0;border-radius:999px;padding:6px 16px;cursor:pointer}
+.undoBtn:disabled{opacity:.5}
+.undoX{font:inherit;font-size:18px;line-height:1;background:none;border:0;color:#aab4c8;cursor:pointer;padding:0 6px}
 </style>
 
-<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v3.1</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-worksheets.html" class="pn-link on">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v3.2</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
 
 <div class="shell">
   <div class="pillrow">
     <span class="pill">Project YOU</span>
-    <span class="pill">Habit Worksheets v3.1</span>
+    <span class="pill">Habit Worksheets v3.2</span>
     <span class="pill">Aug 25, 2026</span>
     <span class="pill" id="savedPill">Saves to your database</span>
   </div>
@@ -657,7 +663,7 @@ footer{margin-top:20px; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monosp
     </div>
   </details>
 
-  <footer>Project YOU · Habit Worksheets v3.1 · Sep 2, 2026 · live, saves to your Supabase database. This page decides which habits exist and whether they are on. Order, minutes and what goes live are set on <a href="daily-template.html">Daily Habits</a>.</footer>
+  <footer>Project YOU · Habit Worksheets v3.2 · Sep 29, 2026 · live, saves to your Supabase database. This page decides which habits exist and whether they are on. Order, minutes and what goes live are set on <a href="daily-template.html">Daily Habits</a>.</footer>
 </div>
 
 <script src="py-icons.js"></script>
@@ -1265,11 +1271,14 @@ function deleteRow(i){
   var name = (r.proc||'this habit').trim();
   if(!window.confirm('Delete "'+name+'" for good?\n\nIt comes off this worksheet and off Daily Habits. Anything you have already logged against it is kept.')) return;
   closeRowMenu();
+  hwSnap('Deleted "'+name+'"'); if(r._id) UNDO[UNDO.length-1].pendingDel = r._id;
   DATA[cur] = DATA[cur].filter(function(x){ return x!==r; });
   render();
   if(!r._id){ say('ok','deleted'); return; }
   say('busy','deleting');
-  sbFetch('worksheet_rows?id=eq.'+r._id, {method:'DELETE', headers:{'Prefer':'return=minimal'}})
+  sbFetch('worksheet_rows?select=*&id=eq.'+r._id)
+    .then(function(full){ if(UNDO.length && UNDO[UNDO.length-1].pendingDel===r._id){ UNDO[UNDO.length-1].rows = full||[]; delete UNDO[UNDO.length-1].pendingDel; } })
+    .then(function(){ return sbFetch('worksheet_rows?id=eq.'+r._id, {method:'DELETE', headers:{'Prefer':'return=minimal'}}); })
     .then(function(){ delete snapshot[r._id]; return syncDaily(); })
     .then(function(){ say('ok','deleted'); })
     .catch(function(e){ say('err','could not delete'); console.error(e); });
@@ -1436,10 +1445,18 @@ function wireEdits(){
       var el = ev.target.closest && ev.target.closest('[contenteditable][data-f]');
       if(el && commitEdit(el)) queueSave();
     });
+    box.addEventListener('focusin', function(ev){
+      var el = ev.target.closest && ev.target.closest('[contenteditable][data-f]');
+      if(el){ EDIT_BEFORE = {data:JSON.stringify(DATA), cur:cur}; }
+    });
     box.addEventListener('focusout', function(ev){
       var el = ev.target.closest && ev.target.closest('[contenteditable][data-f]');
       if(!el) return;
       if(commitEdit(el)) queueSave();
+      if(EDIT_BEFORE && EDIT_BEFORE.data !== JSON.stringify(DATA)){
+        UNDO.push({label:'Edited text', kind:'data', data:EDIT_BEFORE.data, cur:EDIT_BEFORE.cur}); if(UNDO.length>20) UNDO.shift(); undoPaint();
+      }
+      EDIT_BEFORE = null;
       /* redraw once the caret is gone, so totals, chips and the dial catch up */
       if(el.dataset.f === 'proc' || el.dataset.f === 'label') render();
     });
@@ -1644,6 +1661,7 @@ function wireTodayDrag(){
         clearMarks();
         host.classList.remove('dragging');
         if(target === null || target === from) return;
+        hwSnap('Changed the summary order');
         var arr = CHOSEN.slice(), item = arr.splice(from, 1)[0];
         var t2 = target > from ? target - 1 : target;
         arr.splice(where === 'after' ? t2 + 1 : t2, 0, item);
@@ -1940,6 +1958,7 @@ function wireSectionDrag(){
         document.querySelectorAll('.dropafter,.dropbefore').forEach(function(x){ x.classList.remove('dropafter','dropbefore'); });
         host.classList.remove('dragging');
         if(target===null||target===from) return;
+        hwSnap('Moved a section');
         var arr=DATA[cur];
         var end=sectionBlock(arr, from);
         var block=arr.splice(from, end-from);
@@ -1999,6 +2018,7 @@ function wireDrag(){
         document.querySelectorAll('.dropafter,.dropbefore').forEach(function(x){ x.classList.remove('dropafter','dropbefore'); });
         host.classList.remove('dragging');
         if(target===null||target===from) return;
+        hwSnap('Moved a habit');
         var arr=DATA[cur], item=arr.splice(from,1)[0];
         var t2=target>from?target-1:target;
         arr.splice(where==='after'?t2+1:t2,0,item);
@@ -2435,6 +2455,92 @@ function adopt(i){
     .then(function(){ say('ok','adopted'); })
     .catch(function(e){ say('err','could not adopt'); console.error(e); });
 }
+
+/* ---------- undo, v3.2, Sep 29 2026 ----------
+   Scott: "an undo so I don't delete things by accident and can go back", matched to the
+   weekly review's Undo bar. Before any change on this sheet, the whole sheet is copied;
+   Undo puts that copy back and the normal save writes the difference, so a row keeps its
+   own identity. A deleted habit is re-created from a full copy taken just before the
+   delete, same id, so its history still points at it. Ticks for today are reversed by
+   ticking or unticking again with the minutes they had. Up to 20 steps; Cmd+Z / Ctrl+Z
+   works when you are not typing. Forgotten on reload, like the weekly review. */
+var UNDO = [], EDIT_BEFORE = null;
+function hwSnap(label){ UNDO.push({label:label, kind:'data', data:JSON.stringify(DATA), cur:cur}); if(UNDO.length>20) UNDO.shift(); undoPaint(); }
+function hwPushFn(label, fn){ UNDO.push({label:label, kind:'fn', fn:fn}); if(UNDO.length>20) UNDO.shift(); undoPaint(); }
+function undoPaint(){
+  var bar=document.getElementById('undoBar');
+  if(!bar){
+    bar=document.createElement('div'); bar.id='undoBar'; bar.className='undoBar hidden';
+    bar.innerHTML='<span class="undoTxt" id="undoTxt"></span><button type="button" class="undoBtn" id="undoBtn">Undo</button><button type="button" class="undoX" id="undoX" aria-label="Hide">&times;</button>';
+    document.body.appendChild(bar);
+    document.getElementById('undoBtn').onclick=undoLast;
+    document.getElementById('undoX').onclick=function(){ bar.classList.add('hidden'); };
+  }
+  var last=UNDO[UNDO.length-1];
+  if(!last){ bar.classList.add('hidden'); return; }
+  document.getElementById('undoTxt').textContent = last.label + (UNDO.length>1 ? '  \u00b7  '+UNDO.length+' changes you can step back' : '');
+  bar.classList.remove('hidden');
+}
+var undoBusy=false;
+function undoLast(){
+  if(undoBusy || !UNDO.length) return;
+  var item=UNDO.pop(); undoBusy=true;
+  var btn=document.getElementById('undoBtn'); if(btn) btn.disabled=true;
+  var done=function(ok, e){
+    undoBusy=false; if(btn) btn.disabled=false;
+    if(ok) say('ok','undone: '+item.label); else { UNDO.push(item); say('err','could not undo that'); if(e) console.error(e); }
+    undoPaint();
+  };
+  if(item.kind==='fn'){ Promise.resolve().then(item.fn).then(function(){ done(true); }, function(e){ done(false,e); }); return; }
+  var back = (item.rows && item.rows.length)
+    ? sbFetch('worksheet_rows', {method:'POST', headers:{'Prefer':'return=minimal'}, body:JSON.stringify(item.rows)})
+    : Promise.resolve();
+  if(item.pendingDel){ done(false, new Error('the delete is still in progress, try again in a second')); return; }
+  back.then(function(){
+    DATA = JSON.parse(item.data);
+    if(item.cur !== cur && typeof pick==='function') pick(item.cur); else render();
+    saveSectionOrder();
+    if(item.rows && item.rows.length) return syncDaily();
+  }).then(function(){ done(true); }, function(e){ done(false,e); });
+}
+document.addEventListener('keydown', function(e){
+  if((e.metaKey||e.ctrlKey) && !e.shiftKey && (e.key==='z'||e.key==='Z')){
+    var a=document.activeElement;
+    if(a && (a.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) return;
+    if(UNDO.length){ e.preventDefault(); undoLast(); }
+  }
+});
+/* every button that changes the sheet takes a copy first */
+[['markDone','Marked done'],['setReturnSpan','Changed when it comes back'],['setReturnDate','Changed when it comes back'],
+ ['markFinished','Filed as finished'],['undoDone','Put back on the list'],['parkRow','Parked a habit'],['unparkRow','Unparked a habit'],
+ ['moveRow','Moved a habit to another section'],['toggleMust','Changed Required'],['toggleActive','Switched a habit on or off'],
+ ['setCell','Changed a cadence or time'],['addRow','Added a habit'],['addGroup','Added a heading']].forEach(function(p){
+  var orig = window[p[0]]; if(typeof orig!=='function') return;
+  window[p[0]] = function(){
+    var r = (typeof arguments[0]==='number' && DATA[cur]) ? DATA[cur][arguments[0]] : null;
+    hwSnap(p[1] + (r && r.proc ? ': '+String(r.proc).trim() : ''));
+    return orig.apply(this, arguments);
+  };
+});
+/* today's ticks live on Todays Tasks, so they are undone by reversing the tick itself */
+(function(){
+  var _log = logRowDone, _untick = untickRow, _undoToday = undoToday;
+  logRowDone = function(id, mins){
+    var it = itemById(id);
+    hwPushFn('Ticked '+(it&&it.proc?it.proc:'a habit')+' for today', function(){ return _untick(id); });
+    return _log.apply(this, arguments);
+  };
+  untickRow = function(id){
+    var it = itemById(id), m = it ? minsToday(it) : null;
+    hwPushFn('Unticked '+(it&&it.proc?it.proc:'a habit'), function(){ return _log(id, m); });
+    return _untick.apply(this, arguments);
+  };
+  undoToday = function(n){
+    var it = CHOSEN[n], m = it ? minsToday(it) : null;
+    if(it) hwPushFn('Took back '+it.proc, function(){ return _log(it._id, m); });
+    return _undoToday.apply(this, arguments);
+  };
+})();
 
 /* ---------- hook every mutation ---------- */
 var _render = render;
