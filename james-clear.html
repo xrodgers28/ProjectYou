@@ -239,7 +239,35 @@ function noEcho(t,b){b=b||'';if(!t)return b;var n=function(s){return (s||'').toL
    its place by being the LINK: it opens the exact 3-2-1 issue the card came out
    of. Every row has an issue_url, so this never falls back to nothing. */
 const CUEDIAL='<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>';
-let __cueStart=Date.now();
+/* Cue card clock v2 (Sep 29, 2026). The start time is saved in this browser, so a reload or coming back from another page no longer restarts the clock. After 2+ hours with no touch, Done asks how many minutes instead of guessing. */
+var __CUE_IDLE=2*3600*1000, __CUE_STALE=12*3600*1000, __cueAway=false, __cueSt=null, __cueKey='', __cueLastW=0;
+function __cueSave(force){ var n=Date.now(); if(!force&&n-__cueLastW<8000) return; __cueLastW=n; try{ localStorage.setItem(__cueKey,JSON.stringify(__cueSt)); }catch(e){} }
+function __cueClockInit(){
+  var now=Date.now(), st=null;
+  __cueKey='cueclock:'+(location.pathname.split('/').pop()||'card');
+  try{ st=JSON.parse(localStorage.getItem(__cueKey)||'null'); }catch(e){ st=null; }
+  if(!st||st.fin||!(st.s>0)||st.s>now||(now-(st.l||st.s))>__CUE_STALE) st={s:now,l:now};
+  if(!(st.l>0)) st.l=now;
+  if(now-st.l>__CUE_IDLE) __cueAway=true;
+  __cueSt=st; __cueSave(true);
+  function touch(){ var n=Date.now(); if(n-__cueSt.l>__CUE_IDLE) __cueAway=true; __cueSt.l=n; __cueSave(false); }
+  ['pointerdown','touchstart','keydown','click','scroll'].forEach(function(ev){ try{ window.addEventListener(ev,touch,{capture:true,passive:true}); }catch(e){} });
+  return st.s;
+}
+function __cueAskIfIdle(){
+  var el=document.getElementById('tmin')||document.getElementById('mins');
+  var typed=(el&&String(el.value).trim()!=='')?parseInt(el.value,10):NaN;
+  if(!(typed>0&&typed<=180)&&__cueAway&&el){
+    var m=document.getElementById('cueAskMsg');
+    if(!m){ m=document.createElement('div'); m.id='cueAskMsg'; m.setAttribute('role','status'); m.style.cssText='flex-basis:100%;width:100%;margin:8px 0 0;font-size:13.5px;font-weight:600;color:#b45309;line-height:1.4'; var host=el.closest('label')||el.parentNode; host.insertAdjacentElement('afterend',m); }
+    m.textContent='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+    try{ el.focus(); }catch(e){}
+    return true;
+  }
+  if(__cueSt){ __cueSt.fin=Date.now(); __cueSave(true); }
+  return false;
+}
+var __cueStart=__cueClockInit();
 function __cueHandTick(){
   var h=document.getElementById('cueTimerBadge'); if(!h) return;
   var line=h.querySelector('.cuehand'); if(!line) return;
@@ -299,6 +327,7 @@ function renderSave(){
   __cueHandTick();
 }
 async function finishDeck(){
+  if(__cueAskIfIdle()) return;
   clearInterval(__cueTickId);
   const el=document.getElementById('tmin');
   const typed=(el&&el.value.trim()!=='')?parseInt(el.value,10):NaN;
