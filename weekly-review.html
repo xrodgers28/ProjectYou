@@ -901,7 +901,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.26';
+const VERSION='v5.27';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -2764,17 +2764,25 @@ function render(){
         '</tr></thead><tbody>';
   const sections=[...COMPASS,...OFF];
   let grandTotal=0;
+  /* v5.27, Sep 29 2026, Scott: "separate exercise time (walking, biking etc) from
+     Habit time", across Project YOU. Exercise is walking, biking, and anything else
+     Strava logs. Those rows stay on the grid in their section, but their minutes go
+     to their own Exercise row at the bottom, never into a section subtotal or the
+     habit grand total. Twin of EXERCISE_HABITS / cxExerciseKind on Todays Tasks. */
+  const EXERCISE_T=new Set(['Walk','Ride','Run','Hike','Swim','Workout','Yoga','Weight Training','Rowing']);
+  let exTotal=0;
   sections.forEach(area=>{const rows=C.rowsBy[area]||[];if(!rows.length&&OFF.includes(area))return;const c=AREACOL[area],py=area==='Project YOU';const bg=py?PYPINK:tint(c,.3),bl=py?PYLINE:c;const nrows=Math.max(1,rows.length);const lbl=(nrows>=3?SECNAME[area]:SECABBR[area])||area;const first='<td class="sec" rowspan="'+nrows+'" style="background:'+bg+';border-left-color:'+bl+'"><div style="color:'+(py?'#7a3a52':'#1f2a44')+';height:'+Math.max(20,nrows*30-6)+'px">'+(py&&nrows>=3?PINWHEEL:'')+esc(lbl)+'</div></td>';if(!rows.length){h+='<tr>'+first+'<td class="empty" colspan="14">Nothing ticked all week.'+(D.wr.some(w=>w.area===area)?' Card and habit are both on, it just did not get ticked.':'')+'</td></tr>';return;}
     let sectionTotal=0;
     rows.forEach((t,i)=>{const done=days.filter(d=>C.tick[t]&&C.tick[t][d]).length,poss=C.perHabit[t]?C.perHabit[t].possible:C.present.length,wkMin=days.reduce((a,d)=>a+((C.mins[t]&&C.mins[t][d])||0),0);
-      sectionTotal+=wkMin;
+      const isEx=EXERCISE_T.has(t);
+      if(isEx)exTotal+=wkMin;else sectionTotal+=wkMin;
       const isCtr=C.isCounter(t);const isLc=C.isLoc(t);
       /* v5.10: the row is now draggable (grip on the left, reorderRow below
          persists it to worksheet_rows.position) and removable (× on the
          right opens the Keep/Remove popup, parkTracker below). data-t/
          data-area on the <tr> and data-i (this row's index within its own
          section) on the grip are what the drag wiring reads. */
-      h+='<tr class="hrow" data-t="'+esc(t)+'" data-area="'+esc(area)+'">'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'"><div class="namewrap"><span class="grip" data-i="'+i+'" title="Drag to reorder">⠿</span><span class="hname">'+esc(t)+'</span><button type="button" class="rowx" data-t="'+esc(t)+'" data-area="'+esc(area)+'" title="Remove '+esc(t)+'">&times;</button></div></td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;
+      h+='<tr class="hrow" data-t="'+esc(t)+'" data-area="'+esc(area)+'">'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'"><div class="namewrap"><span class="grip" data-i="'+i+'" title="Drag to reorder">⠿</span><span class="hname">'+esc(t)+(isEx?' <span style="font-size:9px;font-weight:700;color:#c05f7a;letter-spacing:.3px" title="Counted as Exercise, not habit time">EXERCISE</span>':'')+'</span><button type="button" class="rowx" data-t="'+esc(t)+'" data-area="'+esc(area)+'" title="Remove '+esc(t)+'">&times;</button></div></td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;
         /* v5.17: this used to vary by minutes logged (a heat map). Scott
            asked for one consistent color for every ticked square instead;
            see TICKAL above. */
@@ -2835,7 +2843,9 @@ function render(){
      the same two numeric columns every other row uses and reads as a real,
      finished row rather than a rendering glitch. */
   const grandAvg=grandTotal/Math.max(1,C.present.length);
-  h+='<tr class="grandtotal"><td></td><td class="gtlbl" colspan="8">GRAND TOTAL, THE WEEK</td><td class="n" title="The whole week&#39;s total spread across '+Math.max(1,C.present.length)+' day'+(C.present.length===1?'':'s')+' present.">'+(grandTotal?esc(mdur(grandAvg)):'&ndash;')+'</td><td class="n tot">'+(grandTotal?esc(mdur(grandTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
+  h+='<tr class="grandtotal"><td></td><td class="gtlbl" colspan="8">GRAND TOTAL, HABITS, THE WEEK</td><td class="n" title="The whole week&#39;s total spread across '+Math.max(1,C.present.length)+' day'+(C.present.length===1?'':'s')+' present.">'+(grandTotal?esc(mdur(grandAvg)):'&ndash;')+'</td><td class="n tot">'+(grandTotal?esc(mdur(grandTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
+  const exAvg=exTotal/Math.max(1,C.present.length);
+  h+='<tr class="grandtotal extotal"><td></td><td class="gtlbl" colspan="8" style="background:#c05f7a">EXERCISE, THE WEEK (WALKING, BIKING AND MORE, NOT IN THE HABIT TOTAL)</td><td class="n" style="background:#c05f7a" title="Exercise spread across '+Math.max(1,C.present.length)+' day'+(C.present.length===1?'':'s')+' present.">'+(exTotal?esc(mdur(exAvg)):'&ndash;')+'</td><td class="n tot" style="background:#c05f7a;color:#fff">'+(exTotal?esc(mdur(exTotal)):'&ndash;')+'</td><td colspan="4" style="background:#c05f7a"></td></tr>';
   el('habitGrid').innerHTML=h+'</tbody>';
   /* stars */
   const stars=[];
