@@ -376,6 +376,12 @@ window.PYSocial = (function () {
     this.tidy = { is:false, source:false, what:false, where:false, group:false }; this.lastRm = null;
     this.group = ''; this.circle = ''; this.groupTouched = false; this.circleTouched = false;
     this.known = []; this.loaded = false; this.timer = null;
+    /* v2.5, Sep 29 2026, Scott's ask: a Done pill alongside Today, for the
+       moment a visit just wrapped up and he wants it logged without thinking
+       about which day -- same date (today), same save, just says what he
+       means. Tracked separately from Today only so the two pills never both
+       light up at once. */
+    this.whenDone = false;
   }
   Form.prototype.isFuture = function(){
     var DAY = today();
@@ -526,10 +532,11 @@ window.PYSocial = (function () {
       '<div class="fld"><span class="lab">What</span><div class="picks sl-kinds" data-picks="what">' + this.picksHtml('what') +
       '</div>' + this.addHtml('what') + '</div>' +
       '<div class="fld"><span class="lab">When</span><div class="picks sl-when">' +
-        '<button type="button" class="p' + (this.when === DAY ? ' on' : '') + '" data-w="0">Today</button>' +
+        '<button type="button" class="p' + (this.when === DAY && !this.whenDone ? ' on' : '') + '" data-w="0">Today</button>' +
         '<button type="button" class="p' + (this.when === shift(DAY,-1) ? ' on' : '') + '" data-w="-1">Yesterday</button>' +
         '<button type="button" class="p' + (this.when === shift(DAY,1) ? ' on' : '') + '" data-w="1">Tomorrow</button>' +
         '<button type="button" class="p' + (quick.indexOf(this.when) < 0 ? ' on' : '') + '" data-w="pick">' + (quick.indexOf(this.when) < 0 ? esc(shortD(this.when)) : 'Pick date') + '</button>' +
+        '<button type="button" class="p' + (this.when === DAY && this.whenDone ? ' on' : '') + '" data-w="done">Done</button>' +
         '</div><input type="date" class="sl-date" value="' + att(this.when) + '"' + (quick.indexOf(this.when) > -1 ? ' style="display:none"' : '') + '></div>' +
       /* v2.4. Length sits with the date because it is a time question. Hidden for
          something still to come: a plan writes a to-do, and this would not save. */
@@ -646,7 +653,7 @@ window.PYSocial = (function () {
     var who = this.$('.sl-who'), date = this.$('.sl-date');
     date.addEventListener('change', function(){
       if (!date.value) return;
-      self.when = date.value;
+      self.when = date.value; self.whenDone = false;
       var ws = self.$('.sl-when'); ws.querySelectorAll('.p').forEach(function(x){ x.classList.remove('on'); });
       var pk = ws.querySelector('[data-w="pick"]'); pk.classList.add('on'); pk.textContent = shortD(self.when);
       self.refreshGo();
@@ -721,7 +728,12 @@ window.PYSocial = (function () {
       if (b.hasAttribute('data-w')) {
         var w = b.getAttribute('data-w');
         if (w === 'pick') { date.style.display = ''; date.focus(); if (date.showPicker) { try { date.showPicker(); } catch (x) {} } return; }
-        self.when = shift(DAY, +w); date.value = self.when; date.style.display = 'none';
+        if (w === 'done') {
+          self.when = DAY; self.whenDone = true; date.value = self.when; date.style.display = 'none';
+          grp.querySelectorAll('.p').forEach(function(x){ x.classList.toggle('on', x === b); });
+          self.refreshGo(); return;
+        }
+        self.when = shift(DAY, +w); self.whenDone = false; date.value = self.when; date.style.display = 'none';
         grp.querySelectorAll('.p').forEach(function(x){ x.classList.toggle('on', x === b); });
         self.refreshGo(); return;
       }
@@ -974,5 +986,5 @@ window.PYSocial = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.4' };
+  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.5' };
 })();
