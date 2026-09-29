@@ -670,6 +670,12 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .slpkrow b{color:var(--ink);font-weight:700}
 .slpalt{margin-top:14px;font-size:11.5px}
 .slpalt a{color:var(--accent);font-weight:700}
+.undoBar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:12px;background:#1f2a44;color:#fff;border-radius:999px;padding:9px 10px 9px 18px;box-shadow:0 10px 30px rgba(31,42,68,.35);font-size:13.5px;max-width:calc(100vw - 32px)}
+.undoBar.hidden{display:none}
+.undoTxt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.undoBtn{font:inherit;font-weight:700;background:#fff;color:#1f2a44;border:0;border-radius:999px;padding:6px 16px;cursor:pointer}
+.undoBtn:disabled{opacity:.5}
+.undoX{font:inherit;font-size:18px;line-height:1;background:none;border:0;color:#aab4c8;cursor:pointer;padding:0 6px}
 </style>
 </head>
 <body>
@@ -890,7 +896,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.21';
+const VERSION='v5.22';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -2886,6 +2892,46 @@ function estimateLoggedAt(d){
    habit (Water, Coffee) has no undo here, each tap just logs one more, same
    as tapping it anywhere else on the site. Never lets you tick a day that
    has not happened yet. */
+/* v5.22, Sep 29 2026, Scott: "an undo so I don't delete things by accident and can go back".
+   Every change made on this page (tick, untick, counter, safari place, removing a row) is
+   pushed onto a stack with the exact steps to reverse it. The bar at the bottom shows the
+   last change with an Undo button; tapping it again keeps stepping back (up to 20 changes).
+   Cmd+Z / Ctrl+Z does the same when you are not typing in a box. The stack lasts while the
+   page is open: a reload starts it fresh, because a stored "undo" could clash with changes
+   made elsewhere on the site since. */
+const UNDO=[];
+function undoPush(label,fn){UNDO.push({label,fn});if(UNDO.length>20)UNDO.shift();undoPaint();}
+function undoPaint(){
+  let bar=el('undoBar');
+  if(!bar){
+    bar=document.createElement('div');bar.id='undoBar';bar.className='undoBar hidden';
+    bar.innerHTML='<span class="undoTxt" id="undoTxt"></span><button type="button" class="undoBtn" id="undoBtn">Undo</button><button type="button" class="undoX" id="undoX" aria-label="Hide">&times;</button>';
+    document.body.appendChild(bar);
+    el('undoBtn').onclick=undoLast;
+    el('undoX').onclick=()=>bar.classList.add('hidden');
+  }
+  const last=UNDO[UNDO.length-1];
+  if(!last){bar.classList.add('hidden');return;}
+  el('undoTxt').textContent=last.label+(UNDO.length>1?'  \u00b7  '+UNDO.length+' changes you can step back':'');
+  bar.classList.remove('hidden');
+}
+let undoBusy=false;
+async function undoLast(){
+  if(undoBusy||!UNDO.length)return;
+  undoBusy=true;const item=UNDO.pop();
+  el('undoBtn').disabled=true;el('undoTxt').textContent='Undoing: '+item.label+'...';
+  try{await item.fn();status('Undone: '+item.label);await load();}
+  catch(e){UNDO.push(item);status('Could not undo that: '+e.message,true);}
+  finally{undoBusy=false;el('undoBtn').disabled=false;undoPaint();}
+}
+document.addEventListener('keydown',e=>{
+  if((e.metaKey||e.ctrlKey)&&!e.shiftKey&&(e.key==='z'||e.key==='Z')){
+    const a=document.activeElement;
+    if(a&&(a.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)))return;
+    if(UNDO.length){e.preventDefault();undoLast();}
+  }
+});
+
 let tickBusy=false;
 async function wrTick(td){
   if(tickBusy)return;
@@ -2905,13 +2951,24 @@ async function wrTick(td){
          once a day and each tap needs its own row. */
       const src=isCtr?('weekly-review:'+Date.now()):'weekly-review:tick';
       const m=tickMins(t);
-      const {error}=await sb.from('qs_log').insert({date:d,group:area,tracker:t,minutes:m,source:src,logged_at:stamp});
+      const {data:ins,error}=await sb.from('qs_log').insert({date:d,group:area,tracker:t,minutes:m,source:src,logged_at:stamp}).select('id');
       if(error)throw error;
       D.qs.push({date:d,group:area,tracker:t,minutes:m,logged_at:stamp});
+      undoPush('Ticked '+t+' on '+fmt(d),async()=>{const ids=(ins||[]).map(r=>r.id);if(ids.length){const {error:e2}=await sb.from('qs_log').delete().in('id',ids);if(e2)throw e2;}});
     }else{
-      const {error}=await sb.from('qs_log').delete().eq('tracker',t).eq('date',d);
+      /* v5.22, Sep 29 2026, Scott: unticking removes only HIS OWN taps. What the watch
+         (apple-health) or Strava measured is a record, never deleted from here. Every
+         row removed is copied first so the Undo bar can put it back exactly. */
+      const {data:gone,error:e0}=await sb.from('qs_log').select('*').eq('tracker',t).eq('date',d).not('source','in','("strava","apple-health")');
+      if(e0)throw e0;
+      if(!gone||!gone.length){td.style.opacity='';status(t+' on '+fmt(d)+' was measured by your watch or Strava, so it stays. Nothing of yours to untick.');return;}
+      const {error}=await sb.from('qs_log').delete().in('id',gone.map(r=>r.id));
       if(error)throw error;
-      D.qs=D.qs.filter(r=>!(r.tracker===t&&r.date===d));
+      const goneIds=new Set(gone.map(r=>r.id));
+      const {data:left}=await sb.from('qs_log').select('id').eq('tracker',t).eq('date',d);
+      if(!left||!left.length)D.qs=D.qs.filter(r=>!(r.tracker===t&&r.date===d));
+      else status('Your tap is gone. '+t+' stays ticked because your watch or Strava recorded it.');
+      undoPush('Unticked '+t+' on '+fmt(d),async()=>{const {error:e3}=await sb.from('qs_log').insert(gone);if(e3)throw e3;});
     }
     compute();render();saveScores();
   }catch(e){status('Could not save that tick: '+e.message,true);}
@@ -2967,6 +3024,7 @@ async function wrTickCounter(t,d,area,n){
     const {error}=await sb.from('qs_log').insert({date:d,group:area,tracker:t,minutes:m,value:n,source:src,logged_at:stamp});
     if(error)throw error;
     D.qs.push({date:d,group:area,tracker:t,minutes:m,value:n,logged_at:stamp});
+    undoPush('Logged '+n+' '+t+' on '+fmt(d),async()=>{const {error:e2}=await sb.from('qs_log').delete().eq('source',src).eq('tracker',t).eq('date',d);if(e2)throw e2;});
     compute();render();saveScores();
   }catch(e){status('Could not save that: '+e.message,true);}
   finally{tickBusy=false;}
@@ -3002,6 +3060,7 @@ async function wrTickLocation(t,d,area,place){
     const {error}=await sb.from('qs_log').insert({date:d,group:area,tracker:t,minutes:0,note:place,source:src,logged_at:stamp});
     if(error)throw error;
     D.qs.push({date:d,group:area,tracker:t,minutes:0,note:place,logged_at:stamp});
+    undoPush('Logged '+t+' ('+place+') on '+fmt(d),async()=>{const {error:e2}=await sb.from('qs_log').delete().eq('source',src).eq('tracker',t).eq('date',d);if(e2)throw e2;});
     compute();render();saveScores();
   }catch(e){status('Could not save that: '+e.message,true);}
   finally{tickBusy=false;}
@@ -3037,6 +3096,10 @@ async function parkTracker(t,area){
   REMOVED.add(t);
   const arr=C.rowsBy[area];if(arr){const idx=arr.indexOf(t);if(idx>-1)arr.splice(idx,1);}
   render();
+  undoPush('Removed the '+t+' row',async()=>{
+    REMOVED.delete(t);
+    if(w&&w.id){const {error:e2}=await sb.from('worksheet_rows').update({is_active:true,parked:false,updated_at:new Date().toISOString()}).eq('id',w.id);if(e2)throw e2;}
+  });
   if(!w||!w.id){
     status('Removed for this visit. "'+t+'" has no Habit Worksheets row, so there is nothing to park permanently, and it may come back if something logs it again.',true);
     return;
