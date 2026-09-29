@@ -215,6 +215,10 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .pyStepper{display:flex;align-items:center;justify-content:center;gap:16px;margin:6px 0 16px}
 .pyStepBtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#f6f7f9;font-size:18px;font-weight:800;cursor:pointer;font-family:inherit}
 .pyStepVal{font-size:24px;font-weight:800;min-width:36px;text-align:center}
+/* v5.18: the Where? text box in openLocationModal, styled to match the rest
+   of this small modal shell rather than a bare unstyled input. */
+.pyModalInput{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:13px;font-family:inherit;color:var(--ink);margin:0 0 16px;background:#fff}
+.pyModalInput:focus{outline:none;border-color:var(--accent)}
 
 
 /* Hacks of the Week, v1.0 */
@@ -886,10 +890,13 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.17';
+const VERSION='v5.18';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
+/* v5.18: a location habit (Local Safari, National Safari) prompts for where,
+   instead of a number, on tap; see openLocationModal/wrTickLocation below. */
+const LOCTRACK=['Local Safari','National Safari'];
 const PHOTO=['Train platform','Bell','What I Woke Up To','Photo Booth'];
 /* v5.17: PHOTO (above) picks which trackers use the camera-style icon and skip
    the "daily habit" 28-day heuristic; a second, narrower list is which of
@@ -1010,7 +1017,11 @@ async function load(){
   try{
     const q=(t,sel,f)=>{let r=sb.from(t).select(sel);if(f)r=f(r);return r;};
     const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq,impactq]=await Promise.all([
-      q('qs_log','date,"group",tracker,minutes,logged_at',r=>r.gte('date',from28).lte('date',we).limit(5000)),
+      /* v5.18: added value and note to this list. value already had reader code
+         (the counter "x n" badge) that only worked for a tap logged earlier in
+         the same visit, since a fresh page load never actually fetched it;
+         note is new, holding the typed location for Local/National Safari. */
+      q('qs_log','date,"group",tracker,minutes,logged_at,value,note',r=>r.gte('date',from28).lte('date',we).limit(5000)),
       q('worksheet_rows','id,habit,area,icon,identity,insight,outcome,qs_tracker,count_on,is_active,retired,position',r=>r.eq('is_active',true)),
       q('todos','for_date,actual_minutes,task',r=>r.eq('category','Strava').gte('for_date',ws).lte('for_date',we)),
       q('session_trackers','day,created_at,updated_at,project,title',r=>r.gte('day',from14).lte('day',we)),
@@ -1160,6 +1171,7 @@ function compute(){
   const wk=D.qs.filter(r=>r.date>=ws&&r.date<=we);
   const inWin=D.qs;
   const isCounter=t=>COUNTERS.includes(t)||D.wr.some(w=>w.qs_tracker===t&&w.count_on);
+  const isLoc=t=>LOCTRACK.includes(t);
   const isPhoto=t=>PHOTO.includes(t);
   const isQuick=t=>QUICK.includes(t);
   const excl=t=>isCounter(t)||isPhoto(t)||isQuick(t);
@@ -1183,7 +1195,12 @@ function compute(){
      with a value, rather than one bare row per unit, so the "×n" badge sums
      value (falling back to 1 for every tap logged before this existed, or
      logged any other way) instead of counting rows. */
-  const tick={},mins={},cnt={};wk.forEach(r=>{tick[r.tracker]=tick[r.tracker]||{};tick[r.tracker][r.date]=true;mins[r.tracker]=mins[r.tracker]||{};mins[r.tracker][r.date]=(mins[r.tracker][r.date]||0)+(r.minutes||0);cnt[r.tracker]=cnt[r.tracker]||{};cnt[r.tracker][r.date]=(cnt[r.tracker][r.date]||0)+(r.value||1);});
+  const tick={},mins={},cnt={},locs={};wk.forEach(r=>{tick[r.tracker]=tick[r.tracker]||{};tick[r.tracker][r.date]=true;mins[r.tracker]=mins[r.tracker]||{};mins[r.tracker][r.date]=(mins[r.tracker][r.date]||0)+(r.minutes||0);cnt[r.tracker]=cnt[r.tracker]||{};cnt[r.tracker][r.date]=(cnt[r.tracker][r.date]||0)+(r.value||1);
+    /* v5.18: every place logged for a location habit (Local/National Safari)
+       that day, kept as a list rather than overwritten, so a day with more
+       than one safari on it can show all of them on rollover. */
+    if(r.note){locs[r.tracker]=locs[r.tracker]||{};(locs[r.tracker][r.date]=locs[r.tracker][r.date]||[]).push(r.note);}
+  });
   /* daily set */
   const days28={};inWin.forEach(r=>{if(excl(r.tracker))return;days28[r.tracker]=days28[r.tracker]||new Set();days28[r.tracker].add(r.date);});
   const daily=new Set();
@@ -1245,7 +1262,7 @@ function compute(){
   const missRun={};const wl=d14.map(d=>{const up=inWin.filter(r=>r.date===d&&!isCounter(r.tracker)).map(r=>AREACOL[r.group]||AREACOL['Not sure yet']);const dn=[];const isPresent=inWin.some(r=>r.date===d);daily.forEach(t=>{const start=firstTick[t]||ws;if(d<start)return;const hit=inWin.some(r=>r.date===d&&r.tracker===t);if(hit){missRun[t]=0;}else if(isPresent){missRun[t]=(missRun[t]||0)+1;dn.push(missRun[t]===1?'#f2cf5b':(missRun[t]===2?'#e0975a':'#c0453b'));}});dn.sort((a,b)=>['#f2cf5b','#e0975a','#c0453b'].indexOf(a)-['#f2cf5b','#e0975a','#c0453b'].indexOf(b));return {d,up,dn};});
   /* v5.4: this week's "Habit making impact?" flags, keyed by tracker. */
   const impact={};(D.impact||[]).forEach(r=>{impact[r.tracker]=!!r.impact;});
-  C={present,tick,mins,cnt,daily,perHabit,done,possible,coverage,pcov,lit,ticksBy,never,votes,voteN,noLine:[...noLine],workMin,habitMin,pyMin,sessN:sessWk.length,order,rightDays,streak,stacks,rowsBy,wsOf,areaOf,wl,isCounter,isPhoto,firstTick,impact};
+  C={present,tick,mins,cnt,locs,daily,perHabit,done,possible,coverage,pcov,lit,ticksBy,never,votes,voteN,noLine:[...noLine],workMin,habitMin,pyMin,sessN:sessWk.length,order,rightDays,streak,stacks,rowsBy,wsOf,areaOf,wl,isCounter,isLoc,isPhoto,firstTick,impact};
 }
 
 /* ---------- render ---------- */
@@ -2675,7 +2692,7 @@ function render(){
     let sectionTotal=0;
     rows.forEach((t,i)=>{const done=days.filter(d=>C.tick[t]&&C.tick[t][d]).length,poss=C.perHabit[t]?C.perHabit[t].possible:C.present.length,wkMin=days.reduce((a,d)=>a+((C.mins[t]&&C.mins[t][d])||0),0);
       sectionTotal+=wkMin;
-      const isCtr=C.isCounter(t);
+      const isCtr=C.isCounter(t);const isLc=C.isLoc(t);
       /* v5.10: the row is now draggable (grip on the left, reorderRow below
          persists it to worksheet_rows.position) and removable (× on the
          right opens the Keep/Remove popup, parkTracker below). data-t/
@@ -2687,11 +2704,16 @@ function render(){
            see TICKAL above. */
         const al=on?TICKAL:0;const future=d>today;const n=on?((C.cnt[t]&&C.cnt[t][d])||1):0;
           let tip;
+          /* v5.18: rollover for a location habit (Local/National Safari) lists
+             the place(s) logged that day, one per line, instead of a minutes
+             readout that would not mean anything for this kind of habit. */
+          const locList=isLc?((C.locs[t]&&C.locs[t][d])||[]):null;
           if(future)tip=dname(d)+' '+fmt(d)+' · in the future, nothing to tick yet';
+          else if(on&&isLc)tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(locList.length?'\n'+locList.map(esc).join('\n'):'\n(no location saved)')+'\n· tap to log another';
           else if(on)tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(m?' · '+m+' min':' · ticked, no minutes')+(isCtr&&n>1?' · logged '+n+' times':'')+' · '+done+' of '+poss+' days this week'+(wkMin?' · '+wkMin+' min this week':'')+(isCtr?' · tap to log one more':' · tap to undo');
-          else tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(isCtr?' · tap to log one':' · not ticked · tap to mark done');
+          else tip=dname(d)+' '+fmt(d)+' · '+esc(t)+((isCtr||isLc)?' · tap to log one':' · not ticked · tap to mark done');
           const cls='c'+(future?' future':' tick');
-          return '<td class="'+cls+'" data-t="'+esc(t)+'" data-d="'+d+'" data-area="'+esc(area)+'" data-counter="'+(isCtr?'1':'0')+'" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t,ICONCOL):'')+(isCtr&&n>1?'<span class="cnt">&times;'+n+'</span>':'')+'</td>';}).join('')+
+          return '<td class="'+cls+'" data-t="'+esc(t)+'" data-d="'+d+'" data-area="'+esc(area)+'" data-counter="'+(isCtr?'1':'0')+'" data-loc="'+(isLc?'1':'0')+'" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t,ICONCOL):'')+((isCtr||isLc)&&n>1?'<span class="cnt">&times;'+n+'</span>':'')+'</td>';}).join('')+
         (function(){
           const span=Math.max(1,C.present.length);
           const withMin=days.filter(d=>((C.mins[t]&&C.mins[t][d])||0)>0).length;
@@ -2930,6 +2952,41 @@ async function wrTickCounter(t,d,area,n){
   finally{tickBusy=false;}
 }
 
+/* v5.18: a location habit (Local Safari, National Safari) prompts for where
+   instead of a bare tick, same shell as the counter modal above. No undo,
+   same as a counter, since more than one safari can happen in a day and
+   each one gets its own row so rollover can list them all. */
+function openLocationModal(td){
+  const t=td.dataset.t,d=td.dataset.d,area=td.dataset.area;
+  pyModalOpen(
+    '<div class="pyModalTitle">Log '+esc(t)+'</div>'+
+    '<div class="pyModalBody">'+esc(dname(d))+' '+esc(fmt(d))+'. Where?</div>'+
+    '<input type="text" class="pyModalInput" id="pyLocInput" placeholder="Place or neighborhood" maxlength="80">'+
+    '<div class="pyModalRow"><button class="pyModalBtn" id="pyModalCancel" type="button">Cancel</button>'+
+    '<button class="pyModalBtn primary" id="pyModalSave" type="button">Log it</button></div>'
+  );
+  const input=el('pyLocInput');
+  setTimeout(()=>input.focus(),0);
+  const save=()=>{const v=input.value.trim();if(!v)return;pyModalClose();wrTickLocation(t,d,area,v);};
+  input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();save();}});
+  el('pyModalCancel').onclick=()=>pyModalClose();
+  el('pyModalSave').onclick=save;
+}
+async function wrTickLocation(t,d,area,place){
+  if(tickBusy)return;
+  if(d>PY.today())return;
+  tickBusy=true;
+  try{
+    const stamp=estimateLoggedAt(d);
+    const src='weekly-review:'+Date.now();
+    const {error}=await sb.from('qs_log').insert({date:d,group:area,tracker:t,minutes:0,note:place,source:src,logged_at:stamp});
+    if(error)throw error;
+    D.qs.push({date:d,group:area,tracker:t,minutes:0,note:place,logged_at:stamp});
+    compute();render();saveScores();
+  }catch(e){status('Could not save that: '+e.message,true);}
+  finally{tickBusy=false;}
+}
+
 /* The × on a row: explains what the row tracks, then Keep (does nothing) or
    Remove. Remove parks it — the same reversible park Habit Worksheets' own
    × already does (is_active:false, parked:true) — not a hard delete, so
@@ -3043,7 +3100,7 @@ async function wrImpact(td){
   if(!grid)return;
   grid.addEventListener('click',e=>{
     const td=e.target.closest('td.c.tick');
-    if(td){if(td.dataset.counter==='1')openCounterModal(td);else wrTick(td);return;}
+    if(td){if(td.dataset.loc==='1')openLocationModal(td);else if(td.dataset.counter==='1')openCounterModal(td);else wrTick(td);return;}
     const impTd=e.target.closest('td.imp');
     if(impTd){wrImpact(impTd);return;}
     const rowx=e.target.closest('.rowx');
