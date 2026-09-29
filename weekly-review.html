@@ -886,6 +886,9 @@ const COUNTERS=['Coffee','Water'];
 const PHOTO=['Train platform','Bell','What I Woke Up To','Photo Booth'];
 const QUICK=['Social'];
 const PYPINK='#fbeaf1', PYLINE='#e8a0b8';
+/* v5.13: ticked-icon outline color. Was each section's own bold accent color;
+   Scott asked for a plain dark grey on every row instead, no matter the section. */
+const ICONCOL='#4b5563';
 const SECNAME={'Physical Health':'Physical','Environmental Health':'Environ.','Social Well-Being':'Social','Recreational Health':'Recreation','Sense of Purpose':'Purpose','Mental Fitness':'Mental','Emotional Health':'Emotional','Project YOU':'Project YOU','Not sure yet':'Other'};
 const SECABBR={'Physical Health':'Phys','Environmental Health':'Env','Social Well-Being':'Soc','Recreational Health':'Rec','Sense of Purpose':'Purp','Mental Fitness':'Ment','Emotional Health':'Emo','Project YOU':'PY','Not sure yet':'Other'};
 let AREACOL={'Physical Health':'#c05f7a','Environmental Health':'#4fa08a','Social Well-Being':'#5b8fce','Recreational Health':'#e0975a','Sense of Purpose':'#cf9088','Mental Fitness':'#c6a63f','Emotional Health':'#7d81c2','Project YOU':'#3f6f8f','Not sure yet':'#8a93a1'};
@@ -1141,6 +1144,14 @@ function compute(){
   /* tracker -> area (most common group in the window), tracker -> worksheet row */
   const areaOf={}, wsOf={};
   D.wr.forEach(w=>{if(w.qs_tracker)wsOf[w.qs_tracker]=w;});
+  /* v5.13: a worksheet row with no qs_tracker link (Cardio was one -- fed
+     straight by Strava, never wired up to a tracker name) used to be
+     invisible to wsOf, so its Insight/Outcome/Identify showed dashes and its
+     × could not park it (nothing to write the park to, so the row just sat
+     there looking like Remove had done nothing). This second pass matches
+     any leftover worksheet row to a tracker of the exact same name, without
+     overwriting a row that was already matched properly by qs_tracker. */
+  D.wr.forEach(w=>{if(!w.qs_tracker&&w.habit&&!wsOf[w.habit])wsOf[w.habit]=w;});
   const gc={};inWin.forEach(r=>{gc[r.tracker]=gc[r.tracker]||{};gc[r.tracker][r.group]=(gc[r.tracker][r.group]||0)+1;});
   Object.keys(gc).forEach(t=>{let best=null,n=-1;Object.keys(gc[t]).forEach(g=>{if(g==='Not sure yet')return;if(gc[t][g]>n){n=gc[t][g];best=g;}});areaOf[t]=best||Object.keys(gc[t])[0];});
   /* days present */
@@ -1195,7 +1206,7 @@ function compute(){
   const clusters={};strong.forEach(k=>{const [a,b]=k.split('|');const r=find(a);clusters[r]=clusters[r]||{members:new Set(),days:new Set()};clusters[r].members.add(a);clusters[r].members.add(b);pairDays[k].forEach(d=>clusters[r].days.add(d));});
   const stacks=Object.values(clusters).map(c=>({members:[...c.members],days:[...c.days].sort()})).sort((a,b)=>b.days.length-a.days.length).slice(0,3);
   /* grid rows grouped by area */
-  const rowsBy={};const allTr=new Set([...Object.keys(tick),...daily]);
+  const rowsBy={};const allTr=new Set([...Object.keys(tick),...daily].filter(t=>!REMOVED.has(t)));
   allTr.forEach(t=>{let area=areaOf[t]||(wsOf[t]&&wsOf[t].area)||'Not sure yet';if(isPhoto(t))area='Project YOU';if(!COMPASS.includes(area)&&!OFF.includes(area))area='Not sure yet';rowsBy[area]=rowsBy[area]||[];rowsBy[area].push(t);});
   /* v5.10: rows used to sort by this week's tick count, recomputed on every
      render, so tapping a habit could jump it past its neighbors mid-week —
@@ -1624,13 +1635,7 @@ function swBuild(){
    Remove on an auto photo (Swarm or default) he didn't want for THIS one
    week; it is never shown, and it is the only way to silence a Swarm match
    that has nothing stored to delete. */
-/* v5.13 fix: happened_on is a real `date` column, so a text sentinel
-   like '__default__' fails to save (Postgres rejects it as an invalid
-   date). PDEFAULT is now a fixed, impossibly-old real date instead —
-   nothing genuine will ever happen_on 1900-01-01, so it can never
-   collide with a real week. PBLANK is unaffected: it lives in the
-   data_url column, which is plain text. */
-const PDEFAULT='1900-01-01', PBLANK='__blank__';
+const PDEFAULT='__default__', PBLANK='__blank__';
 function swMine(c){
   const r=(D.pphotos||[]).filter(x=>x.person_key===c.key&&x.happened_on===(c.on||D.we))[0];
   return r||null;
@@ -2648,13 +2653,20 @@ function render(){
          right opens the Keep/Remove popup, parkTracker below). data-t/
          data-area on the <tr> and data-i (this row's index within its own
          section) on the grip are what the drag wiring reads. */
-      h+='<tr class="hrow" data-t="'+esc(t)+'" data-area="'+esc(area)+'">'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'"><div class="namewrap"><span class="grip" data-i="'+i+'" title="Drag to reorder">⠿</span><span class="hname">'+esc(t)+'</span><button type="button" class="rowx" data-t="'+esc(t)+'" data-area="'+esc(area)+'" title="Remove '+esc(t)+'">&times;</button></div></td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;const al=!on?0:(m<=2?.16:m<=5?.3:m<=10?.46:m<=30?.62:.78);const future=d>today;const n=on?((C.cnt[t]&&C.cnt[t][d])||1):0;
+      h+='<tr class="hrow" data-t="'+esc(t)+'" data-area="'+esc(area)+'">'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'"><div class="namewrap"><span class="grip" data-i="'+i+'" title="Drag to reorder">⠿</span><span class="hname">'+esc(t)+'</span><button type="button" class="rowx" data-t="'+esc(t)+'" data-area="'+esc(area)+'" title="Remove '+esc(t)+'">&times;</button></div></td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;
+        /* v5.13: a tick with no minutes recorded (a manual tap here, or a
+           source like Strava that didn't send a duration) was landing in the
+           very palest heat tier, .16, making it look barely-done next to
+           other ticked squares in the same row that have real minutes
+           logged. No-minutes-recorded isn't the same thing as barely-done,
+           so it now gets a solid mid tier instead of the palest one. */
+        const al=!on?0:(m===0?.55:(m<=2?.16:m<=5?.3:m<=10?.46:m<=30?.62:.78));const future=d>today;const n=on?((C.cnt[t]&&C.cnt[t][d])||1):0;
           let tip;
           if(future)tip=dname(d)+' '+fmt(d)+' · in the future, nothing to tick yet';
           else if(on)tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(m?' · '+m+' min':' · ticked, no minutes')+(isCtr&&n>1?' · logged '+n+' times':'')+' · '+done+' of '+poss+' days this week'+(wkMin?' · '+wkMin+' min this week':'')+(isCtr?' · tap to log one more':' · tap to undo');
           else tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(isCtr?' · tap to log one':' · not ticked · tap to mark done');
           const cls='c'+(future?' future':' tick');
-          return '<td class="'+cls+'" data-t="'+esc(t)+'" data-d="'+d+'" data-area="'+esc(area)+'" data-counter="'+(isCtr?'1':'0')+'" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t,py?PYLINE:c):'')+(isCtr&&n>1?'<span class="cnt">&times;'+n+'</span>':'')+'</td>';}).join('')+
+          return '<td class="'+cls+'" data-t="'+esc(t)+'" data-d="'+d+'" data-area="'+esc(area)+'" data-counter="'+(isCtr?'1':'0')+'" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t,ICONCOL):'')+(isCtr&&n>1?'<span class="cnt">&times;'+n+'</span>':'')+'</td>';}).join('')+
         (function(){
           const span=Math.max(1,C.present.length);
           const withMin=days.filter(d=>((C.mins[t]&&C.mins[t][d])||0)>0).length;
@@ -2906,12 +2918,23 @@ function openRemoveModal(t,area){
 async function parkTracker(t,area){
   pyModalClose();
   const w=C.wsOf[t];
-  if(!w||!w.id){status('"'+t+'" is not on your Habit Worksheets, so there is nothing to park here.',true);return;}
+  /* v5.13: removing a row now always removes it, even one with no Habit
+     Worksheets row to park (Cardio was exactly this case, fed straight by
+     Strava with no worksheet link, so the old code found nothing to write
+     to and quietly did nothing while the row stayed put). REMOVED is what
+     actually keeps it off the grid; the worksheet park underneath is a
+     bonus when there is a row to park, not a requirement for Remove to work. */
+  REMOVED.add(t);
   const arr=C.rowsBy[area];if(arr){const idx=arr.indexOf(t);if(idx>-1)arr.splice(idx,1);}
   render();
+  if(!w||!w.id){
+    status('Removed for this visit. "'+t+'" has no Habit Worksheets row, so there is nothing to park permanently, and it may come back if something logs it again.',true);
+    return;
+  }
+  const idx2=D.wr.indexOf(w);if(idx2>-1)D.wr.splice(idx2,1);
   const {error}=await sb.from('worksheet_rows').update({is_active:false,parked:true,updated_at:new Date().toISOString()}).eq('id',w.id);
   if(error)status('Could not park that: '+error.message,true);
-  else status('Parked — find it again in Habit Worksheets.');
+  else status('Parked. Find it again in Habit Worksheets.');
 }
 
 /* Drag the grip to reorder a row within its own section. Rather than
@@ -2950,6 +2973,12 @@ async function reorderRow(area,from,target,where){
    v5.6: these are now the same "window shade" contenteditable boxes as Habit
    Worksheets — wsOpen remembers which ones you've tapped open so a re-render
    (from ticking a day, say) doesn't quietly close a box you're reading. */
+/* v5.13: trackers removed via a row's × this session. compute() rebuilds the
+   whole grid from qs_log every time (any tick anywhere retriggers it), so
+   without this a tracker that already had ticks logged this week would keep
+   reappearing right after being removed, whether or not it had a Habit
+   Worksheets row to park. See parkTracker below. */
+const REMOVED=new Set();
 const wsOpen=new Set();
 const wsSaveT={};
 function wsEdited(box){
