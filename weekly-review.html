@@ -901,7 +901,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.27';
+const VERSION='v5.28';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -923,6 +923,7 @@ const tickMins=t=>(t in FIXEDMINS)?FIXEDMINS[t]:(NOTIME.includes(t)?null:0);
 /* v5.18: a location habit (Local Safari, National Safari) prompts for where,
    instead of a number, on tap; see openLocationModal/wrTickLocation below. */
 const LOCTRACK=['Local Safari','National Safari'];
+const PINNED=['Local Safari'];
 const PHOTO=['Train platform','Bell','What I Woke Up To','Photo Booth'];
 /* v5.17: PHOTO (above) picks which trackers use the camera-style icon and skip
    the "daily habit" 28-day heuristic; a second, narrower list is which of
@@ -1275,7 +1276,9 @@ function compute(){
   const stacks=Object.values(clusters).map(c=>({members:[...c.members],days:[...c.days].sort()})).sort((a,b)=>b.days.length-a.days.length).slice(0,3);
   /* grid rows grouped by area */
   const rowsBy={};const allTr=new Set([...Object.keys(tick),...daily].filter(t=>!REMOVED.has(t)));
-  allTr.forEach(t=>{let area=areaOf[t]||(wsOf[t]&&wsOf[t].area)||'Not sure yet';if(PYPHOTO.includes(t))area='Project YOU';if(!COMPASS.includes(area)&&!OFF.includes(area))area='Not sure yet';rowsBy[area]=rowsBy[area]||[];rowsBy[area].push(t);});
+  /* v5.28: Local Safari is an always-on row (Scott, Sep 29 2026): it shows on a quiet week too, filed under Environmental Health, and sits directly above National Safari. */
+  PINNED.forEach(t=>allTr.add(t));
+  allTr.forEach(t=>{let area=areaOf[t]||(wsOf[t]&&wsOf[t].area)||'Not sure yet';if(PYPHOTO.includes(t))area='Project YOU';if(PINNED.includes(t))area='Environmental Health';if(!COMPASS.includes(area)&&!OFF.includes(area))area='Not sure yet';rowsBy[area]=rowsBy[area]||[];rowsBy[area].push(t);});
   /* v5.10: rows used to sort by this week's tick count, recomputed on every
      render, so tapping a habit could jump it past its neighbors mid-week —
      Scott's "the row hopped down" report. They now sort by the same
@@ -1286,6 +1289,8 @@ function compute(){
      that has one, alphabetically among itself. */
   const posOf=t=>{const w=wsOf[t];return (w&&typeof w.position==='number')?w.position:Number.MAX_SAFE_INTEGER;};
   Object.keys(rowsBy).forEach(a=>rowsBy[a].sort((x,y)=>posOf(x)-posOf(y)||x.localeCompare(y)));
+  /* v5.28: Local Safari always sits immediately above National Safari, whatever their saved positions say. */
+  {const a=rowsBy['Environmental Health'];if(a){const l=a.indexOf('Local Safari'),n=a.indexOf('National Safari');if(l>-1&&n>-1&&l!==n-1){a.splice(l,1);a.splice(a.indexOf('National Safari'),0,'Local Safari');}}}
   /* winners and losers, 14 days */
   const d14=[];for(let i=13;i>=0;i--)d14.push(addDays(we,-i));
   const missRun={};const wl=d14.map(d=>{const up=inWin.filter(r=>r.date===d&&!isCounter(r.tracker)).map(r=>AREACOL[r.group]||AREACOL['Not sure yet']);const dn=[];const isPresent=inWin.some(r=>r.date===d);daily.forEach(t=>{const start=firstTick[t]||ws;if(d<start)return;const hit=inWin.some(r=>r.date===d&&r.tracker===t);if(hit){missRun[t]=0;}else if(isPresent){missRun[t]=(missRun[t]||0)+1;dn.push(missRun[t]===1?'#f2cf5b':(missRun[t]===2?'#e0975a':'#c0453b'));}});dn.sort((a,b)=>['#f2cf5b','#e0975a','#c0453b'].indexOf(a)-['#f2cf5b','#e0975a','#c0453b'].indexOf(b));return {d,up,dn};});
