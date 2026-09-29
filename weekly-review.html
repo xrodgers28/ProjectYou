@@ -885,7 +885,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.15';
+const VERSION='v5.16';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -2706,7 +2706,15 @@ function render(){
         '</tr>';});
     grandTotal+=sectionTotal;
     if(COMPASS.includes(area)){
-      h+='<tr class="subtotal"><td></td><td class="stlbl" colspan="9">Total, '+esc(SECNAME[area]||area)+'</td><td class="n tot">'+(sectionTotal?esc(mdur(sectionTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
+      /* v5.16: a section's own subtotal row used to show only one number,
+         its total minutes for the week, with the AVG/DAY column left blank
+         (swallowed into the label's colspan). Scott asked every section to
+         show BOTH figures, same as the grand total row below already does:
+         its total for the week, and that total spread across the days
+         present this week. Narrowed the label's colspan by one to free up
+         the AVG/DAY column, same layout the grand total row already uses. */
+      const sectionAvg=sectionTotal/Math.max(1,C.present.length);
+      h+='<tr class="subtotal"><td></td><td class="stlbl" colspan="8">Total, '+esc(SECNAME[area]||area)+'</td><td class="n" title="'+esc(SECNAME[area]||area)+'’s total spread across '+Math.max(1,C.present.length)+' day'+(C.present.length===1?'':'s')+' present.">'+(sectionTotal?esc(mdur(sectionAvg)):'&ndash;')+'</td><td class="n tot">'+(sectionTotal?esc(mdur(sectionTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
     }
   });
   /* v5.10: this used to be one lonely number after a long label, with four
