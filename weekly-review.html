@@ -177,8 +177,37 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .impchk{width:16px;height:16px;cursor:pointer;vertical-align:middle}
 #habitGrid tr.subtotal td{background:#eef1f6;font-weight:800;font-size:10px;border-top:2px solid var(--line);letter-spacing:.3px}
 #habitGrid tr.subtotal td.stlbl{text-align:right;color:#5b6472;text-transform:uppercase;font-size:9px}
-#habitGrid tr.grandtotal td{background:#1f2a44;color:#fff;font-weight:800;border-top:2px solid #1f2a44}
-#habitGrid tr.grandtotal td.gtlbl{text-align:right;letter-spacing:.5px;font-size:10px}
+#habitGrid tr.grandtotal td{background:#1f2a44;color:#fff;font-weight:800;border-top:2px solid #1f2a44;height:34px;font-size:12px}
+#habitGrid tr.grandtotal td.gtlbl{text-align:right;letter-spacing:.5px;font-size:10.5px}
+#habitGrid tr.grandtotal td.n{color:#fff}
+
+/* v5.10: icon recolor (see icon() in the script), the grip handle and the ×
+   remove control on each habit row, and the tap-to-log popup used for a
+   counter habit and for the remove confirmation. */
+#habitGrid td.c .tickicon{display:inline-block;width:20px;height:20px;vertical-align:middle;-webkit-mask-size:contain;mask-size:contain;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;-webkit-mask-position:center;mask-position:center}
+#habitGrid td.name{padding:0 8px}
+#habitGrid .namewrap{display:flex;align-items:center;gap:6px}
+#habitGrid .namewrap .hname{flex:1;overflow:hidden;text-overflow:ellipsis}
+#habitGrid .grip{cursor:grab;color:var(--faint);font-size:12px;line-height:1;touch-action:none;user-select:none;-webkit-user-select:none;flex:none}
+#habitGrid .grip:active{cursor:grabbing;color:var(--accent)}
+#habitGrid .rowx{flex:none;border:none;background:transparent;color:var(--faint);font-size:14px;line-height:1;cursor:pointer;padding:2px 4px;border-radius:4px;opacity:.45;font-family:inherit}
+#habitGrid tr.hrow:hover .rowx{opacity:.8}
+#habitGrid .rowx:hover{opacity:1;color:var(--bad);background:rgba(192,69,59,.1)}
+#habitGrid tr.hrow.dragging{opacity:.4}
+#habitGrid tr.hrow.dropbefore td{box-shadow:inset 0 2px 0 var(--accent)}
+#habitGrid tr.hrow.dropafter td{box-shadow:inset 0 -2px 0 var(--accent)}
+.pyModalWrap{position:fixed;inset:0;background:rgba(15,20,32,.5);display:flex;align-items:center;justify-content:center;z-index:80;padding:16px}
+.pyModalWrap.hidden{display:none}
+.pyModalCard{background:var(--card);border-radius:14px;max-width:340px;width:100%;padding:18px;box-shadow:0 10px 40px rgba(0,0,0,.28)}
+.pyModalTitle{font-weight:800;font-size:15px;margin:0 0 8px;color:var(--ink)}
+.pyModalBody{font-size:12.5px;color:var(--muted);line-height:1.5;margin-bottom:14px}
+.pyModalRow{display:flex;gap:10px;justify-content:flex-end}
+.pyModalBtn{border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit}
+.pyModalBtn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.pyModalBtn.danger{background:var(--bad);color:#fff;border-color:var(--bad)}
+.pyStepper{display:flex;align-items:center;justify-content:center;gap:16px;margin:6px 0 16px}
+.pyStepBtn{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:#f6f7f9;font-size:18px;font-weight:800;cursor:pointer;font-family:inherit}
+.pyStepVal{font-size:24px;font-weight:800;min-width:36px;text-align:center}
 
 
 /* Hacks of the Week, v1.0 */
@@ -638,7 +667,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>The PY Week in Review</h1><span class="ver">v5.7</span><span class="date" id="builtOn"></span>
+  <div class="secbar"><h1>The PY Week in Review</h1><span class="ver" id="verBadge"></span><span class="date" id="builtOn"></span>
     <span class="weeknav"><a class="btn" id="prevWeek">&#9664; Previous</a><span id="weekLabel" class="weeklabel"></span><a class="btn" id="nextWeek">Next &#9654;</a><a class="btn" id="signout">sign out</a></span>
   </div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading your week...</span></div>
@@ -844,7 +873,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.10';
+const VERSION='v5.11';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -932,7 +961,13 @@ el('prevWeek').onclick=()=>{WEEK_END=addDays(WEEK_END,-7);load();};
 el('nextWeek').onclick=()=>{if(WEEK_END<defaultWeekEnd()){WEEK_END=addDays(WEEK_END,7);load();}};
 function msg(t,c){const m=el('msg');m.textContent=t;m.className=c||'';}
 function status(t,bad){el('statustext').textContent=t;el('statusdot').className='dot'+(bad?' bad':'');}
-function showApp(){el('login').classList.add('hidden');el('app').classList.remove('hidden');WEEK_END=initialWeekEnd();el('builtOn').textContent=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})+' EST';load();loadBirthdays();}
+function showApp(){el('login').classList.add('hidden');el('app').classList.remove('hidden');WEEK_END=initialWeekEnd();
+  /* v5.10: the version badge used to be a hardcoded string in the HTML,
+     separate from the VERSION const below, and kept drifting out of sync
+     every time this page shipped without someone remembering to bump both.
+     It now reads VERSION directly, so there is only one number to update. */
+  el('verBadge').textContent=VERSION;
+  el('builtOn').textContent=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})+' EST';load();loadBirthdays();}
 
 /* ---------- load ---------- */
 async function load(){
@@ -945,7 +980,7 @@ async function load(){
     const q=(t,sel,f)=>{let r=sb.from(t).select(sel);if(f)r=f(r);return r;};
     const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq,impactq]=await Promise.all([
       q('qs_log','date,"group",tracker,minutes,logged_at',r=>r.gte('date',from28).lte('date',we).limit(5000)),
-      q('worksheet_rows','id,habit,area,icon,identity,insight,outcome,qs_tracker,count_on,is_active,retired',r=>r.eq('is_active',true)),
+      q('worksheet_rows','id,habit,area,icon,identity,insight,outcome,qs_tracker,count_on,is_active,retired,position',r=>r.eq('is_active',true)),
       q('todos','for_date,actual_minutes,task',r=>r.eq('category','Strava').gte('for_date',ws).lte('for_date',we)),
       q('session_trackers','day,created_at,updated_at,project,title',r=>r.gte('day',from14).lte('day',we)),
       q('calendar_events','date,start_time,end_time,is_work,hidden,dismissed,title',r=>r.gte('date',from14).lte('date',we).eq('is_work',true)),
@@ -1105,7 +1140,11 @@ function compute(){
   /* days present */
   const present=days.filter(d=>wk.some(r=>r.date===d));
   /* ticks per tracker per day */
-  const tick={},mins={},cnt={};wk.forEach(r=>{tick[r.tracker]=tick[r.tracker]||{};tick[r.tracker][r.date]=true;mins[r.tracker]=mins[r.tracker]||{};mins[r.tracker][r.date]=(mins[r.tracker][r.date]||0)+(r.minutes||0);cnt[r.tracker]=cnt[r.tracker]||{};cnt[r.tracker][r.date]=(cnt[r.tracker][r.date]||0)+1;});
+  /* v5.10: a counter tap logged through the "how many?" popup writes one row
+     with a value, rather than one bare row per unit, so the "×n" badge sums
+     value (falling back to 1 for every tap logged before this existed, or
+     logged any other way) instead of counting rows. */
+  const tick={},mins={},cnt={};wk.forEach(r=>{tick[r.tracker]=tick[r.tracker]||{};tick[r.tracker][r.date]=true;mins[r.tracker]=mins[r.tracker]||{};mins[r.tracker][r.date]=(mins[r.tracker][r.date]||0)+(r.minutes||0);cnt[r.tracker]=cnt[r.tracker]||{};cnt[r.tracker][r.date]=(cnt[r.tracker][r.date]||0)+(r.value||1);});
   /* daily set */
   const days28={};inWin.forEach(r=>{if(excl(r.tracker))return;days28[r.tracker]=days28[r.tracker]||new Set();days28[r.tracker].add(r.date);});
   const daily=new Set();
@@ -1152,7 +1191,16 @@ function compute(){
   /* grid rows grouped by area */
   const rowsBy={};const allTr=new Set([...Object.keys(tick),...daily]);
   allTr.forEach(t=>{let area=areaOf[t]||(wsOf[t]&&wsOf[t].area)||'Not sure yet';if(isPhoto(t))area='Project YOU';if(!COMPASS.includes(area)&&!OFF.includes(area))area='Not sure yet';rowsBy[area]=rowsBy[area]||[];rowsBy[area].push(t);});
-  Object.keys(rowsBy).forEach(a=>rowsBy[a].sort((x,y)=>{const dx=days.filter(d=>tick[x]&&tick[x][d]).length,dy=days.filter(d=>tick[y]&&tick[y][d]).length;return dy-dx||x.localeCompare(y);}));
+  /* v5.10: rows used to sort by this week's tick count, recomputed on every
+     render, so tapping a habit could jump it past its neighbors mid-week —
+     Scott's "the row hopped down" report. They now sort by the same
+     worksheet_rows.position field Habit Worksheets' Adjust Habits table
+     already drags, so the two pages agree and a row only moves when you
+     actually drag it (see reorderRow, wired on the grip handle below). A
+     tracker with no worksheet row (nothing to drag) sorts after everything
+     that has one, alphabetically among itself. */
+  const posOf=t=>{const w=wsOf[t];return (w&&typeof w.position==='number')?w.position:Number.MAX_SAFE_INTEGER;};
+  Object.keys(rowsBy).forEach(a=>rowsBy[a].sort((x,y)=>posOf(x)-posOf(y)||x.localeCompare(y)));
   /* winners and losers, 14 days */
   const d14=[];for(let i=13;i>=0;i--)d14.push(addDays(we,-i));
   const missRun={};const wl=d14.map(d=>{const up=inWin.filter(r=>r.date===d&&!isCounter(r.tracker)).map(r=>AREACOL[r.group]||AREACOL['Not sure yet']);const dn=[];const isPresent=inWin.some(r=>r.date===d);daily.forEach(t=>{const start=firstTick[t]||ws;if(d<start)return;const hit=inWin.some(r=>r.date===d&&r.tracker===t);if(hit){missRun[t]=0;}else if(isPresent){missRun[t]=(missRun[t]||0)+1;dn.push(missRun[t]===1?'#f2cf5b':(missRun[t]===2?'#e0975a':'#c0453b'));}});dn.sort((a,b)=>['#f2cf5b','#e0975a','#c0453b'].indexOf(a)-['#f2cf5b','#e0975a','#c0453b'].indexOf(b));return {d,up,dn};});
@@ -1167,7 +1215,14 @@ function compute(){
 grid.addEventListener('mouseover',e=>{const td=e.target.closest('td[title]');if(td)show(e,td.getAttribute('title'));});grid.addEventListener('mousemove',e=>{const td=e.target.closest('td[title]');if(td)show(e,td.getAttribute('title'));});grid.addEventListener('mouseleave',()=>tip.classList.add('hidden'));
 grid.addEventListener('touchstart',e=>{const td=e.target.closest('td[title]');if(td){show(e,td.getAttribute('title'));e.stopPropagation();}},{passive:true});document.addEventListener('touchstart',()=>tip.classList.add('hidden'),{passive:true});})();
 
-function icon(t){const w=C.wsOf[t];if(w&&w.icon)return '<img src="wsicons/'+esc(w.icon)+'.webp" alt="">';if(C.isPhoto(t))return PH._photo;return PH[t]||PH._default;}
+/* v5.10: col recolors the icon to match the section's own accent (the same
+   hex the row's background tint and sec-label stripe already use), so a
+   ticked square reads as part of its row instead of the flat grayscale it
+   used to render in. A worksheet's own .webp icon is recolored with a CSS
+   mask (its shape kept, filled with the accent); the built-in PH icons are
+   inline SVGs stroked in one fixed color, so col is swapped straight in.
+   Called with no col, icon() renders exactly as before. */
+function icon(t,col){const w=C.wsOf[t];if(w&&w.icon){const src='wsicons/'+esc(w.icon)+'.webp';if(col)return '<span class="tickicon" style="-webkit-mask-image:url('+src+');mask-image:url('+src+');background:'+col+'"></span>';return '<img src="'+src+'" alt="">';}const key=C.isPhoto(t)?'_photo':(PH[t]?t:'_default');const svg=PH[key];return col?svg.replace('#7d8794',col):svg;}
 function dial(size){const segs=COMPASS.map((p,i)=>({p,i,n:C.lit[p].size}));const max=Math.max(1,...segs.map(s=>s.n));const litN=segs.filter(s=>s.n).length;const ri=25,ro=64;const pt=(cx,cy,r,a)=>{const t=(a-90)*Math.PI/180;return {x:+(cx+r*Math.cos(t)).toFixed(2),y:+(cy+r*Math.sin(t)).toFixed(2)};};const seg=(cx,cy,ro2,ri2,a0,a1)=>{const p0=pt(cx,cy,ro2,a0),p1=pt(cx,cy,ro2,a1),q1=pt(cx,cy,ri2,a1),q0=pt(cx,cy,ri2,a0);return 'M'+p0.x+','+p0.y+' A'+ro2+','+ro2+' 0 0 1 '+p1.x+','+p1.y+' L'+q1.x+','+q1.y+' A'+ri2+','+ri2+' 0 0 0 '+q0.x+','+q0.y+' Z';};let out='';segs.forEach(s=>{const a0=s.i*(360/7)+2,a1=(s.i+1)*(360/7)-2,am=(a0+a1)/2,c=AREACOL[s.p];out+='<path d="'+seg(75,75,ro,ri,a0,a1)+'" fill="'+c+'" opacity="'+(s.n?'.15':'.09')+'"></path>';if(s.n){const f=max>1?(0.40+0.60*Math.sqrt(s.n/max)):1;const r=ri+(ro-ri)*f;out+='<path d="'+seg(75,75,r,ri,a0,a1)+'" fill="'+c+'"><title>'+esc(s.p)+': '+s.n+' habits ticked</title></path>';const lp=pt(75,75,ri+(r-ri)/2,am);out+='<text x="'+lp.x+'" y="'+(lp.y+3.3)+'" text-anchor="middle" font-family="Arial" font-size="10" font-weight="700" fill="#fff">'+s.n+'</text>';}});out+='<text x="75" y="72" text-anchor="middle" font-family="Arial" font-size="15" font-weight="700" fill="#1f2a44">'+litN+'/7</text><text x="75" y="84" text-anchor="middle" font-family="Arial" font-size="7" letter-spacing="0.5" fill="#5b6472">LIT</text>';return '<svg viewBox="0 0 150 150" width="'+size+'" height="'+size+'">'+out+'</svg>';}
 function ring(pct,col,size,label,sub){const dash=Math.round(628*pct/100);return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 240 240"><circle cx="120" cy="120" r="100" fill="none" stroke="#ffffff" stroke-width="24"></circle><circle cx="120" cy="120" r="100" fill="none" stroke="'+col+'" stroke-width="24" stroke-linecap="round" stroke-dasharray="'+dash+' 628" transform="rotate(-90 120 120)"></circle><text x="120" y="136" text-anchor="middle" font-family="Arial" font-weight="800" font-size="70" fill="#1f2a44">'+label+'</text></svg>';}
 function badge(name){const m=MODBY[name];if(!m)return '<span class="badge" title="'+esc(name)+'" style="background:#8a93a1"><span>'+PH._default+'</span></span>';return '<span class="badge" title="'+esc(m.name)+'" style="background:'+m.acc+'"><span>'+(CARDICONS[m.icon]||'')+'</span></span>';}
@@ -2285,11 +2340,12 @@ function swWireDrag(box){
     chip.addEventListener('pointerdown',ev=>{
       if(ev.button&&ev.button!==0)return;
       if(ev.target&&ev.target.closest&&(ev.target.closest('.swx')||ev.target.closest('.swdaymenu')))return;
-      /* v5.10: don't grab pointer capture yet -- capture retargets the native click
-         that follows a tap, which broke tapping the "+ day" toggle button (its own
-         click handler stopped seeing the tap). Capture is deferred to pointermove,
-         once a real drag is confirmed, so a plain tap on the button still targets
-         the button itself and opens the day picker as before. */
+      /* v5.10 (merged from a concurrent session's fix, see below): don't grab pointer
+         capture yet -- capture retargets the native click that follows a tap, which
+         broke tapping the "+ day" toggle button (its own click handler stopped seeing
+         the tap). Capture is deferred to pointermove, once a real drag is confirmed,
+         so a plain tap on the button still targets the button itself and opens the
+         day picker as before. */
       swDrag={chip:chip,person:chip.dataset.n,kind:chip.dataset.k,
               x0:ev.clientX,y0:ev.clientY,moved:false,ghost:null,over:null,pid:ev.pointerId};
     });
@@ -2519,13 +2575,18 @@ function render(){
     rows.forEach((t,i)=>{const done=days.filter(d=>C.tick[t]&&C.tick[t][d]).length,poss=C.perHabit[t]?C.perHabit[t].possible:C.present.length,wkMin=days.reduce((a,d)=>a+((C.mins[t]&&C.mins[t][d])||0),0);
       sectionTotal+=wkMin;
       const isCtr=C.isCounter(t);
-      h+='<tr>'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'">'+esc(t)+'</td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;const al=!on?0:(m<=2?.16:m<=5?.3:m<=10?.46:m<=30?.62:.78);const future=d>today;const n=on?((C.cnt[t]&&C.cnt[t][d])||1):0;
+      /* v5.10: the row is now draggable (grip on the left, reorderRow below
+         persists it to worksheet_rows.position) and removable (× on the
+         right opens the Keep/Remove popup, parkTracker below). data-t/
+         data-area on the <tr> and data-i (this row's index within its own
+         section) on the grip are what the drag wiring reads. */
+      h+='<tr class="hrow" data-t="'+esc(t)+'" data-area="'+esc(area)+'">'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'"><div class="namewrap"><span class="grip" data-i="'+i+'" title="Drag to reorder">⠿</span><span class="hname">'+esc(t)+'</span><button type="button" class="rowx" data-t="'+esc(t)+'" data-area="'+esc(area)+'" title="Remove '+esc(t)+'">&times;</button></div></td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;const al=!on?0:(m<=2?.16:m<=5?.3:m<=10?.46:m<=30?.62:.78);const future=d>today;const n=on?((C.cnt[t]&&C.cnt[t][d])||1):0;
           let tip;
           if(future)tip=dname(d)+' '+fmt(d)+' · in the future, nothing to tick yet';
           else if(on)tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(m?' · '+m+' min':' · ticked, no minutes')+(isCtr&&n>1?' · logged '+n+' times':'')+' · '+done+' of '+poss+' days this week'+(wkMin?' · '+wkMin+' min this week':'')+(isCtr?' · tap to log one more':' · tap to undo');
           else tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(isCtr?' · tap to log one':' · not ticked · tap to mark done');
           const cls='c'+(future?' future':' tick');
-          return '<td class="'+cls+'" data-t="'+esc(t)+'" data-d="'+d+'" data-area="'+esc(area)+'" data-counter="'+(isCtr?'1':'0')+'" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t):'')+(isCtr&&n>1?'<span class="cnt">&times;'+n+'</span>':'')+'</td>';}).join('')+
+          return '<td class="'+cls+'" data-t="'+esc(t)+'" data-d="'+d+'" data-area="'+esc(area)+'" data-counter="'+(isCtr?'1':'0')+'" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t,py?PYLINE:c):'')+(isCtr&&n>1?'<span class="cnt">&times;'+n+'</span>':'')+'</td>';}).join('')+
         (function(){
           const span=Math.max(1,C.present.length);
           const withMin=days.filter(d=>((C.mins[t]&&C.mins[t][d])||0)>0).length;
@@ -2556,7 +2617,14 @@ function render(){
       h+='<tr class="subtotal"><td></td><td class="stlbl" colspan="9">Total, '+esc(SECNAME[area]||area)+'</td><td class="n tot">'+(sectionTotal?esc(mdur(sectionTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
     }
   });
-  h+='<tr class="grandtotal"><td></td><td class="gtlbl" colspan="9">GRAND TOTAL, THE WEEK</td><td class="n tot">'+(grandTotal?esc(mdur(grandTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
+  /* v5.10: this used to be one lonely number after a long label, with four
+     empty dark cells trailing it — Scott read that as the row not really
+     being there. It now carries a per-day estimate too (same AVG/DAY math
+     as every habit row, applied to the week's grand total), so it fills in
+     the same two numeric columns every other row uses and reads as a real,
+     finished row rather than a rendering glitch. */
+  const grandAvg=grandTotal/Math.max(1,C.present.length);
+  h+='<tr class="grandtotal"><td></td><td class="gtlbl" colspan="8">GRAND TOTAL, THE WEEK</td><td class="n" title="The whole week&#39;s total spread across '+Math.max(1,C.present.length)+' day'+(C.present.length===1?'':'s')+' present.">'+(grandTotal?esc(mdur(grandAvg)):'&ndash;')+'</td><td class="n tot">'+(grandTotal?esc(mdur(grandTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
   el('habitGrid').innerHTML=h+'</tbody>';
   /* stars */
   const stars=[];
@@ -2641,6 +2709,24 @@ function etISO(dateStr,hh,mn){
   const asIfUTC=Date.UTC(get('year'),get('month')-1,get('day'),get('hour'),get('minute'),get('second'));
   return new Date(guess.getTime()+(guess.getTime()-asIfUTC)).toISOString();
 }
+/* v5.10: a new tick's timestamp used to be a fixed noon-Eastern stamp no
+   matter what. Tapping today now stamps the actual moment you tapped;
+   tapping a past day estimates from whatever else is already logged that
+   day, taking the median time of day of the other entries (median rather
+   than average so one very early or very late entry does not drag the
+   estimate off to one side) and placing the new tick right at that time.
+   240 (4:00am ET) is excluded the same way the "order of the day" figure
+   above excludes it: that is the stamp an auto-import uses when it has no
+   real time, not a real activity time to anchor an estimate on. A day with
+   nothing else logged falls back to the old noon default. */
+function estimateLoggedAt(d){
+  if(d===PY.today())return new Date().toISOString();
+  const times=D.qs.filter(r=>r.date===d&&r.logged_at).map(r=>etMinutes(r.logged_at)).filter(m=>m!=null&&m!==240);
+  if(!times.length)return etISO(d,12,0);
+  times.sort((a,b)=>a-b);
+  const mid=times[Math.floor(times.length/2)];
+  return etISO(d,Math.floor(mid/60),mid%60);
+}
 
 /* Tap a day box: an ordinary habit toggles done/undone for that day (undo
    deletes that day's log row outright, Scott's call Sep 27 2026). A counter
@@ -2656,7 +2742,7 @@ async function wrTick(td){
   try{
     const on=C.tick[t]&&C.tick[t][d];
     if(isCtr||!on){
-      const stamp=etISO(d,12,0);
+      const stamp=estimateLoggedAt(d);
       /* v5.7: qs_log only accepts a fixed list of source names (a database rule
          that predates this page), and 'weekly-review' was not on it, so every
          tap was silently rejected. 'weekly-review:tick' is allowed (the list
@@ -2676,6 +2762,119 @@ async function wrTick(td){
     compute();render();saveScores();
   }catch(e){status('Could not save that tick: '+e.message,true);}
   finally{tickBusy=false;}
+}
+
+/* v5.10: a small popup used for two things — a counter habit's "how many?"
+   stepper, and the Keep/Remove confirmation on a row's ×. One tiny modal
+   shell, built once and reused, rather than two near-identical ones. */
+function pyModalOpen(html){
+  let wrap=el('pyModal');
+  if(!wrap){
+    wrap=document.createElement('div');wrap.id='pyModal';wrap.className='pyModalWrap hidden';
+    wrap.innerHTML='<div class="pyModalCard" id="pyModalCard"></div>';
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click',e=>{if(e.target===wrap)pyModalClose();});
+  }
+  el('pyModalCard').innerHTML=html;
+  wrap.classList.remove('hidden');
+}
+function pyModalClose(){const wrap=el('pyModal');if(wrap)wrap.classList.add('hidden');}
+
+/* A habit with "parameters" — today that means a counter habit (Water,
+   Coffee, or anything else flagged count_on in Habit Worksheets) — pops up
+   a quick stepper instead of silently logging a bare tick, so a tap can say
+   how many. Everything else keeps tapping straight through to wrTick. */
+function openCounterModal(td){
+  const t=td.dataset.t,d=td.dataset.d,area=td.dataset.area;
+  let n=1;
+  pyModalOpen(
+    '<div class="pyModalTitle">Log '+esc(t)+'</div>'+
+    '<div class="pyModalBody">'+esc(dname(d))+' '+esc(fmt(d))+'. How many?</div>'+
+    '<div class="pyStepper"><button class="pyStepBtn" id="pyStepMinus" type="button">&minus;</button>'+
+    '<span class="pyStepVal" id="pyStepVal">1</span>'+
+    '<button class="pyStepBtn" id="pyStepPlus" type="button">+</button></div>'+
+    '<div class="pyModalRow"><button class="pyModalBtn" id="pyModalCancel" type="button">Cancel</button>'+
+    '<button class="pyModalBtn primary" id="pyModalSave" type="button">Log it</button></div>'
+  );
+  const upd=()=>{el('pyStepVal').textContent=n;};
+  el('pyStepMinus').onclick=()=>{n=Math.max(1,n-1);upd();};
+  el('pyStepPlus').onclick=()=>{n=Math.min(20,n+1);upd();};
+  el('pyModalCancel').onclick=()=>pyModalClose();
+  el('pyModalSave').onclick=()=>{pyModalClose();wrTickCounter(t,d,area,n);};
+}
+async function wrTickCounter(t,d,area,n){
+  if(tickBusy)return;
+  if(d>PY.today())return;
+  tickBusy=true;
+  try{
+    const stamp=estimateLoggedAt(d);
+    const src='weekly-review:'+Date.now();
+    const {error}=await sb.from('qs_log').insert({date:d,group:area,tracker:t,minutes:0,value:n,source:src,logged_at:stamp});
+    if(error)throw error;
+    D.qs.push({date:d,group:area,tracker:t,minutes:0,value:n,logged_at:stamp});
+    compute();render();saveScores();
+  }catch(e){status('Could not save that: '+e.message,true);}
+  finally{tickBusy=false;}
+}
+
+/* The × on a row: explains what the row tracks, then Keep (does nothing) or
+   Remove. Remove parks it — the same reversible park Habit Worksheets' own
+   × already does (is_active:false, parked:true) — not a hard delete, so
+   nothing logged against it is ever lost and it can come back from Habit
+   Worksheets any time. */
+function openRemoveModal(t,area){
+  const w=C.wsOf[t];
+  const secname=SECNAME[area]||area;
+  const idline=(w&&w.identity)?(' It is tied to becoming someone who '+esc(w.identity)+'.'):'';
+  pyModalOpen(
+    '<div class="pyModalTitle">Remove '+esc(t)+'?</div>'+
+    '<div class="pyModalBody">This row tracks <b>'+esc(t)+'</b> in '+esc(secname)+'.'+idline+' Removing it takes it off your active habits everywhere on the site — it is parked, not deleted, so nothing you have already logged against it is lost, and you can bring it back from Habit Worksheets any time.</div>'+
+    '<div class="pyModalRow"><button class="pyModalBtn" id="pyModalKeep" type="button">Keep</button>'+
+    '<button class="pyModalBtn danger" id="pyModalRemove" type="button">Remove</button></div>'
+  );
+  el('pyModalKeep').onclick=()=>pyModalClose();
+  el('pyModalRemove').onclick=()=>parkTracker(t,area);
+}
+async function parkTracker(t,area){
+  pyModalClose();
+  const w=C.wsOf[t];
+  if(!w||!w.id){status('"'+t+'" is not on your Habit Worksheets, so there is nothing to park here.',true);return;}
+  const arr=C.rowsBy[area];if(arr){const idx=arr.indexOf(t);if(idx>-1)arr.splice(idx,1);}
+  render();
+  const {error}=await sb.from('worksheet_rows').update({is_active:false,parked:true,updated_at:new Date().toISOString()}).eq('id',w.id);
+  if(error)status('Could not park that: '+error.message,true);
+  else status('Parked — find it again in Habit Worksheets.');
+}
+
+/* Drag the grip to reorder a row within its own section. Rather than
+   splicing table rows live (the section label cell is a rowspan sitting
+   only on the first row, so moving rows around under it is how the "row
+   hopped" bug happened in the first place), this reorders C.rowsBy in
+   memory and re-renders the whole grid, then saves the moved row's new
+   position as the midpoint between its new neighbors' positions — a small,
+   one-row write, and it slots in correctly even among sibling habits this
+   page is not currently showing. */
+async function reorderRow(area,from,target,where){
+  const arr=C.rowsBy[area];if(!arr)return;
+  const item=arr.splice(from,1)[0];
+  const t2=target>from?target-1:target;
+  const insertAt=where==='after'?t2+1:t2;
+  arr.splice(insertAt,0,item);
+  render();
+  const w=C.wsOf[item];
+  if(!w||!w.id){status('Reordered here, but "'+item+'" has no Habit Worksheets row yet, so this will not stick after a refresh.',true);return;}
+  const prevW=arr[insertAt-1]?C.wsOf[arr[insertAt-1]]:null;
+  const nextW=arr[insertAt+1]?C.wsOf[arr[insertAt+1]]:null;
+  const prevPos=(prevW&&typeof prevW.position==='number')?prevW.position:null;
+  const nextPos=(nextW&&typeof nextW.position==='number')?nextW.position:null;
+  let newPos;
+  if(prevPos!=null&&nextPos!=null)newPos=(prevPos+nextPos)/2;
+  else if(prevPos!=null)newPos=prevPos+1;
+  else if(nextPos!=null)newPos=nextPos-1;
+  else newPos=0;
+  w.position=newPos;
+  const {error}=await sb.from('worksheet_rows').update({position:newPos,updated_at:new Date().toISOString()}).eq('id',w.id);
+  if(error)status('Could not save that order: '+error.message,true);
 }
 
 /* Insight / Outcome / Identify: writes straight to worksheet_rows, the same
@@ -2711,7 +2910,10 @@ async function wrImpact(chk){
   const grid=el('habitGrid');
   if(!grid)return;
   grid.addEventListener('click',e=>{
-    const td=e.target.closest('td.c.tick');if(td){wrTick(td);return;}
+    const td=e.target.closest('td.c.tick');
+    if(td){if(td.dataset.counter==='1')openCounterModal(td);else wrTick(td);return;}
+    const rowx=e.target.closest('.rowx');
+    if(rowx){openRemoveModal(rowx.dataset.t,rowx.dataset.area);return;}
     const btn=e.target.closest('.wsshadebtn');
     if(btn){
       const cell=btn.closest('td.ed'),div=cell.querySelector('.wsshade');
@@ -2729,6 +2931,39 @@ async function wrImpact(chk){
     const box=e.target.closest&&e.target.closest('.wsshade');
     if(!box)return;
     e.preventDefault();box.blur();
+  });
+  /* Drag a row by its grip to reorder it within its own section. Pointer
+     events (not HTML5 drag-and-drop) so this works the same with a mouse
+     and with a finger on a phone, the same technique Habit Worksheets'
+     own grip already uses. */
+  grid.addEventListener('pointerdown',e=>{
+    const g=e.target.closest('.grip');if(!g)return;
+    e.preventDefault();
+    const host=g.closest('tr.hrow');if(!host)return;
+    const area=host.dataset.area,from=+g.dataset.i;
+    host.classList.add('dragging');
+    let target=null,where='after';
+    function move(ev){
+      const elx=document.elementFromPoint(ev.clientX,ev.clientY);
+      const t=elx&&elx.closest?elx.closest('tr.hrow'):null;
+      grid.querySelectorAll('.dropafter,.dropbefore').forEach(x=>x.classList.remove('dropafter','dropbefore'));
+      if(t&&t!==host&&t.dataset.area===area){
+        const r=t.getBoundingClientRect();
+        where=(ev.clientY>r.top+r.height/2)?'after':'before';
+        t.classList.add(where==='after'?'dropafter':'dropbefore');
+        target=+t.dataset.i;
+      }else target=null;
+    }
+    function up(){
+      document.removeEventListener('pointermove',move);
+      document.removeEventListener('pointerup',up);
+      grid.querySelectorAll('.dropafter,.dropbefore').forEach(x=>x.classList.remove('dropafter','dropbefore'));
+      host.classList.remove('dragging');
+      if(target===null||target===from)return;
+      reorderRow(area,from,target,where);
+    }
+    document.addEventListener('pointermove',move);
+    document.addEventListener('pointerup',up);
   });
 })();
 (function(){
