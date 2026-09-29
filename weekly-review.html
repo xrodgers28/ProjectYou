@@ -9,6 +9,7 @@
 <script src="py-day.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="py-icons.js"></script>
+<script src="social-log.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
@@ -896,7 +897,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.24';
+const VERSION='v5.25';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -2374,6 +2375,20 @@ function swWirePens(box){
     if(!n)return;
     D.slots=(D.slots||[]).filter(x=>x.person!==n);
     swPlace(n,k,k==='dugout'?'idea':'asked');
+    /* v5.25: Scott's ask, Sep 29 2026 -- typing a name and tapping Add now
+       opens the real social log (social-log.js, the same form Calendar and
+       Todays Tasks use) right after, so the details -- when, what, where --
+       get captured while he's already thinking about it, instead of the
+       name just sitting there bare. "with "+n is the documented way to
+       hand this form a name through its title guesser (see nameIn in
+       social-log.js); a bare name alone does not parse there. This never
+       changes the Waiting/Confirmed state set above -- logging details
+       here is separate from confirming them, Scott's call. */
+    if(window.PYSocial){
+      PYSocial.open({sb:sb,auto:false,title:'with '+n});
+    }else{
+      swSay('Added. (The social log form did not load, so no popup this time.)');
+    }
   };
   box.querySelectorAll('[data-swaddgo]').forEach(b=>b.onclick=()=>go(b.dataset.swaddgo));
   box.querySelectorAll('[data-swaddin]').forEach(inp=>inp.addEventListener('keydown',ev=>{
