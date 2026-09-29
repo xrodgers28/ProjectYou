@@ -844,7 +844,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.9';
+const VERSION='v5.10';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -2284,16 +2284,21 @@ function swWireDrag(box){
     /* v3.3: the chip is a span now, with its own x inside it. */
     chip.addEventListener('pointerdown',ev=>{
       if(ev.button&&ev.button!==0)return;
-      if(ev.target&&ev.target.closest&&(ev.target.closest('.swx')||ev.target.closest('.swday')))return;
+      if(ev.target&&ev.target.closest&&(ev.target.closest('.swx')||ev.target.closest('.swdaymenu')))return;
+      /* v5.10: don't grab pointer capture yet -- capture retargets the native click
+         that follows a tap, which broke tapping the "+ day" toggle button (its own
+         click handler stopped seeing the tap). Capture is deferred to pointermove,
+         once a real drag is confirmed, so a plain tap on the button still targets
+         the button itself and opens the day picker as before. */
       swDrag={chip:chip,person:chip.dataset.n,kind:chip.dataset.k,
-              x0:ev.clientX,y0:ev.clientY,moved:false,ghost:null,over:null};
-      try{chip.setPointerCapture(ev.pointerId);}catch(e){}
+              x0:ev.clientX,y0:ev.clientY,moved:false,ghost:null,over:null,pid:ev.pointerId};
     });
     chip.addEventListener('pointermove',ev=>{
       if(!swDrag||swDrag.chip!==chip)return;
       if(!swDrag.moved){
         if(Math.abs(ev.clientX-swDrag.x0)+Math.abs(ev.clientY-swDrag.y0)<7)return;
         swDrag.moved=true;
+        try{chip.setPointerCapture(swDrag.pid);}catch(e){}
         const g=chip.cloneNode(true);
         g.className='swp swghost'+(chip.classList.contains('conf')?' conf':'');
         document.body.appendChild(g);
