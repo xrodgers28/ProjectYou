@@ -355,6 +355,12 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
   padding:3px 10px;cursor:pointer;min-height:24px;display:inline-flex;align-items:center;gap:4px}
 .swchg:hover{border-color:var(--accent);color:var(--ink);background:#fff}
 .swchg.busy{color:var(--muted);cursor:default}
+/* v5.12: Remove sits opposite Change so the two can never overlap. */
+.swrm{position:absolute;top:6px;left:6px;z-index:2;font-family:inherit;font-size:10px;font-weight:700;
+  border:1px solid #cdd5de;background:rgba(255,255,255,.92);color:var(--muted);border-radius:999px;
+  padding:3px 10px;cursor:pointer;min-height:24px;display:inline-flex;align-items:center;gap:4px}
+.swrm:hover{border-color:#c0453b;color:#c0453b;background:#fff}
+.swrm.busy{color:var(--muted);cursor:default}
 .swpick{display:none}
 /* v4.1: the two ways that actually work on a Mac, said in the empty state. */
 .swdrop{position:absolute;left:0;right:0;bottom:5px;z-index:2;text-align:center;
@@ -880,9 +886,6 @@ const COUNTERS=['Coffee','Water'];
 const PHOTO=['Train platform','Bell','What I Woke Up To','Photo Booth'];
 const QUICK=['Social'];
 const PYPINK='#fbeaf1', PYLINE='#e8a0b8';
-/* v5.12: ticked-icon outline color. Was each section's own bold accent color;
-   Scott asked for a plain dark grey on every row instead, no matter the section. */
-const ICONCOL='#4b5563';
 const SECNAME={'Physical Health':'Physical','Environmental Health':'Environ.','Social Well-Being':'Social','Recreational Health':'Recreation','Sense of Purpose':'Purpose','Mental Fitness':'Mental','Emotional Health':'Emotional','Project YOU':'Project YOU','Not sure yet':'Other'};
 const SECABBR={'Physical Health':'Phys','Environmental Health':'Env','Social Well-Being':'Soc','Recreational Health':'Rec','Sense of Purpose':'Purp','Mental Fitness':'Ment','Emotional Health':'Emo','Project YOU':'PY','Not sure yet':'Other'};
 let AREACOL={'Physical Health':'#c05f7a','Environmental Health':'#4fa08a','Social Well-Being':'#5b8fce','Recreational Health':'#e0975a','Sense of Purpose':'#cf9088','Mental Fitness':'#c6a63f','Emotional Health':'#7d81c2','Project YOU':'#3f6f8f','Not sure yet':'#8a93a1'};
@@ -1138,14 +1141,6 @@ function compute(){
   /* tracker -> area (most common group in the window), tracker -> worksheet row */
   const areaOf={}, wsOf={};
   D.wr.forEach(w=>{if(w.qs_tracker)wsOf[w.qs_tracker]=w;});
-  /* v5.12: a worksheet row with no qs_tracker link (Cardio was one -- fed
-     straight by Strava, never wired up to a tracker name) used to be
-     invisible to wsOf, so its Insight/Outcome/Identify showed dashes and its
-     × could not park it (nothing to write the park to, so the row just sat
-     there looking like Remove had done nothing). This second pass matches
-     any leftover worksheet row to a tracker of the exact same name, without
-     overwriting a row that was already matched properly by qs_tracker. */
-  D.wr.forEach(w=>{if(!w.qs_tracker&&w.habit&&!wsOf[w.habit])wsOf[w.habit]=w;});
   const gc={};inWin.forEach(r=>{gc[r.tracker]=gc[r.tracker]||{};gc[r.tracker][r.group]=(gc[r.tracker][r.group]||0)+1;});
   Object.keys(gc).forEach(t=>{let best=null,n=-1;Object.keys(gc[t]).forEach(g=>{if(g==='Not sure yet')return;if(gc[t][g]>n){n=gc[t][g];best=g;}});areaOf[t]=best||Object.keys(gc[t])[0];});
   /* days present */
@@ -1200,7 +1195,7 @@ function compute(){
   const clusters={};strong.forEach(k=>{const [a,b]=k.split('|');const r=find(a);clusters[r]=clusters[r]||{members:new Set(),days:new Set()};clusters[r].members.add(a);clusters[r].members.add(b);pairDays[k].forEach(d=>clusters[r].days.add(d));});
   const stacks=Object.values(clusters).map(c=>({members:[...c.members],days:[...c.days].sort()})).sort((a,b)=>b.days.length-a.days.length).slice(0,3);
   /* grid rows grouped by area */
-  const rowsBy={};const allTr=new Set([...Object.keys(tick),...daily].filter(t=>!REMOVED.has(t)));
+  const rowsBy={};const allTr=new Set([...Object.keys(tick),...daily]);
   allTr.forEach(t=>{let area=areaOf[t]||(wsOf[t]&&wsOf[t].area)||'Not sure yet';if(isPhoto(t))area='Project YOU';if(!COMPASS.includes(area)&&!OFF.includes(area))area='Not sure yet';rowsBy[area]=rowsBy[area]||[];rowsBy[area].push(t);});
   /* v5.10: rows used to sort by this week's tick count, recomputed on every
      render, so tapping a habit could jump it past its neighbors mid-week —
@@ -1608,12 +1603,12 @@ function swBuild(){
     const prev=before.length?before[before.length-1]:null;
     SW.cards.push({key:c.person_key,id:c.id,n:c.person,on:c.happened_on,dir:c.direction||null,
       wh:swKindPlace(c),grp:c.social_group||null,sugg:c.social_group?null:swSuggest(c),
-      prev:prev,labels:c.labels||[]});
+      prev:prev,labels:c.labels||[],kind:c.kind||null});
   });
   /* Åsa stands on the card whether or not there is a meet-up, and never carries
      a last seen line. Her date nights live in the list below. */
   if(!seen['Åsa']&&!seen['Asa']){
-    SW.cards.push({key:'Åsa',n:'Åsa',wh:'Your wife',on:null,grp:'my family',sugg:null,prev:null,wife:true,labels:['family']});
+    SW.cards.push({key:'Åsa',n:'Åsa',wh:'Your wife',on:null,grp:'my family',sugg:null,prev:null,wife:true,labels:['family'],kind:null});
   }
   (D.pnotes||[]).forEach(nn=>{ if(nn.noted_on>=D.ws&&nn.noted_on<=D.we)SW.notes[nn.person_key]=nn.note; });
   SW.dates=live.filter(c=>(c.person_key==='Åsa'||c.person_key==='Asa'))
@@ -1622,16 +1617,33 @@ function swBuild(){
 }
 
 /* v3.7: a picture Scott picked himself always wins over one matched from
-   his check-ins. Nothing here invents a match. */
+   his check-ins. Nothing here invents a match.
+   v5.12: two sentinel dates in the same table, never real dates, so no schema
+   change was needed. PDEFAULT holds a person's standing photo (used for a
+   call, or any week with no in-person match). PBLANK means Scott tapped
+   Remove on an auto photo (Swarm or default) he didn't want for THIS one
+   week; it is never shown, and it is the only way to silence a Swarm match
+   that has nothing stored to delete. */
+const PDEFAULT='__default__', PBLANK='__blank__';
 function swMine(c){
   const r=(D.pphotos||[]).filter(x=>x.person_key===c.key&&x.happened_on===(c.on||D.we))[0];
+  return r||null;
+}
+function swDefaultPhoto(c){
+  const r=(D.pphotos||[]).filter(x=>x.person_key===c.key&&x.happened_on===PDEFAULT)[0];
   return r?r.data_url:null;
 }
 function swPhotoFor(c,i){
-  const mine=swMine(c);
-  if(mine)return {kind:'mine',url:mine,lab:'yours'};
-  const sw=c.on?swFindPhoto({happened_on:c.on,place:c.wh}):null;
+  const row=swMine(c);
+  if(row&&row.data_url===PBLANK)return {kind:'none'};
+  if(row&&row.data_url)return {kind:'mine',url:row.data_url,lab:'yours'};
+  /* a call has no place to match a check-in against; try Swarm only when
+     there is an actual in-person kind and a date. */
+  const tryVenue=c.on&&c.kind!=='call';
+  const sw=tryVenue?swFindPhoto({happened_on:c.on,place:c.wh}):null;
   if(sw)return {kind:'swarm',url:sw.url,lab:'from Swarm'};
+  const def=swDefaultPhoto(c);
+  if(def)return {kind:'default',url:def,lab:c.n+"\u2019s photo"};
   return {kind:'none'};
 }
 function swCardHtml(c,i){
@@ -1662,6 +1674,7 @@ function swCardHtml(c,i){
                      :'<span class="swsrc">'+esc(ph.lab)+'</span>')+inner+
     '<button class="swchg" type="button" data-swchg="'+i+'">'+
       (ph.kind==='none'?'+ Add photo':'Change')+'</button>'+
+    (ph.kind!=='none'?'<button class="swrm" type="button" data-swrm="'+i+'">Remove</button>':'')+
     '<input class="swpick" type="file" accept="image/*" data-swpick="'+i+'">'+
     '</div>'+
     '<div class="swbd"><div class="swnm">'+esc(c.n)+'</div>'+
@@ -1751,13 +1764,50 @@ async function swTakePhoto(i,file){
   try{ url=await swShrink(file,420,0.78); }
   catch(err){ swSay(err.message||'Could not use that picture'); swRenderCards(); return; }
   const on=c.on||D.we;
-  D.pphotos=(D.pphotos||[]).filter(x=>!(x.person_key===c.key&&x.happened_on===on));
+  /* v5.12, his call: a photo uploaded here also becomes this person's
+     standing photo, so it shows up for a future call or a quiet week with
+     nothing to match, not just this one week's card. */
+  D.pphotos=(D.pphotos||[]).filter(x=>!(x.person_key===c.key&&(x.happened_on===on||x.happened_on===PDEFAULT)));
   D.pphotos.push({person_key:c.key,happened_on:on,data_url:url});
+  D.pphotos.push({person_key:c.key,happened_on:PDEFAULT,data_url:url});
   swRenderCards(); swSay('Saving the picture...');
-  const {error}=await sb.from('person_photos')
-    .upsert({person_key:c.key,happened_on:on,data_url:url,bytes:url.length,
-             updated_at:new Date().toISOString()},{onConflict:'person_key,happened_on'});
-  swSay(error?('Could not save the picture: '+error.message):'Picture saved');
+  const stamp=new Date().toISOString();
+  const [{error:e1},{error:e2}]=await Promise.all([
+    sb.from('person_photos').upsert({person_key:c.key,happened_on:on,data_url:url,bytes:url.length,
+             updated_at:stamp},{onConflict:'person_key,happened_on'}),
+    sb.from('person_photos').upsert({person_key:c.key,happened_on:PDEFAULT,data_url:url,bytes:url.length,
+             updated_at:stamp},{onConflict:'person_key,happened_on'})
+  ]);
+  const err=e1||e2;
+  swSay(err?('Could not save the picture: '+err.message):'Picture saved, and set as '+c.n+"\u2019s go-to photo");
+}
+/* v5.12: Remove clears whatever is showing on this card. A photo Scott
+   picked for this date is deleted outright, falling back to the standing
+   photo (or initials). An automatic Swarm match has nothing stored to
+   delete, so this writes an explicit "blank" marker for this one date, the
+   only way to stop it reappearing on the next render. */
+async function swRemovePhoto(i){
+  const c=SW.cards[i]; if(!c)return;
+  const on=c.on||D.we;
+  const row=swMine(c);
+  const hadMine=row&&row.data_url&&row.data_url!==PBLANK;
+  const btn=document.querySelector('.swc[data-i="'+i+'"] .swrm');
+  if(btn){btn.textContent='Removing...';btn.classList.add('busy');}
+  let error;
+  if(hadMine){
+    D.pphotos=(D.pphotos||[]).filter(x=>!(x.person_key===c.key&&x.happened_on===on));
+    swRenderCards(); swSay('Removing...');
+    ({error}=await sb.from('person_photos').delete().eq('person_key',c.key).eq('happened_on',on));
+  }else{
+    D.pphotos=(D.pphotos||[]).filter(x=>!(x.person_key===c.key&&x.happened_on===on));
+    D.pphotos.push({person_key:c.key,happened_on:on,data_url:PBLANK});
+    swRenderCards(); swSay('Removing...');
+    ({error}=await sb.from('person_photos')
+      .upsert({person_key:c.key,happened_on:on,data_url:PBLANK,bytes:PBLANK.length,
+               updated_at:new Date().toISOString()},{onConflict:'person_key,happened_on'}));
+  }
+  swRenderCards();
+  swSay(error?('Could not remove the picture: '+error.message):'Removed');
 }
 /* v4.0: the tiny grid. Every group in its own colour, the one in force ticked,
    the suggested one named as a suggestion rather than pre-applied. Accepting a
@@ -1796,6 +1846,7 @@ function swRenderCards(){
   box.querySelectorAll('[data-swchg]').forEach(b=>b.onclick=e=>{e.stopPropagation();
     const inp=box.querySelector('[data-swpick="'+b.dataset.swchg+'"]');
     if(inp)inp.click();});
+  box.querySelectorAll('[data-swrm]').forEach(b=>b.onclick=e=>{e.stopPropagation();swRemovePhoto(+b.dataset.swrm);});
   swWireDrop(box);
   box.querySelectorAll('[data-swpick]').forEach(inp=>{
     inp.onclick=e=>e.stopPropagation();
@@ -2591,20 +2642,13 @@ function render(){
          right opens the Keep/Remove popup, parkTracker below). data-t/
          data-area on the <tr> and data-i (this row's index within its own
          section) on the grip are what the drag wiring reads. */
-      h+='<tr class="hrow" data-t="'+esc(t)+'" data-area="'+esc(area)+'">'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'"><div class="namewrap"><span class="grip" data-i="'+i+'" title="Drag to reorder">⠿</span><span class="hname">'+esc(t)+'</span><button type="button" class="rowx" data-t="'+esc(t)+'" data-area="'+esc(area)+'" title="Remove '+esc(t)+'">&times;</button></div></td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;
-        /* v5.12: a tick with no minutes recorded (a manual tap here, or a
-           source like Strava that didn't send a duration) was landing in the
-           very palest heat tier, .16, making it look barely-done next to
-           other ticked squares in the same row that have real minutes
-           logged. No-minutes-recorded isn't the same thing as barely-done,
-           so it now gets a solid mid tier instead of the palest one. */
-        const al=!on?0:(m===0?.55:(m<=2?.16:m<=5?.3:m<=10?.46:m<=30?.62:.78));const future=d>today;const n=on?((C.cnt[t]&&C.cnt[t][d])||1):0;
+      h+='<tr class="hrow" data-t="'+esc(t)+'" data-area="'+esc(area)+'">'+(i?'':first)+'<td class="name" style="background:'+(py?PYPINK:tint(c,.12))+'" title="'+esc(t)+': '+done+' of '+poss+' days'+(wkMin?', '+wkMin+' min this week':'')+'"><div class="namewrap"><span class="grip" data-i="'+i+'" title="Drag to reorder">⠿</span><span class="hname">'+esc(t)+'</span><button type="button" class="rowx" data-t="'+esc(t)+'" data-area="'+esc(area)+'" title="Remove '+esc(t)+'">&times;</button></div></td>'+days.map(d=>{const on=C.tick[t]&&C.tick[t][d];const m=on?((C.mins[t]&&C.mins[t][d])||0):0;const al=!on?0:(m<=2?.16:m<=5?.3:m<=10?.46:m<=30?.62:.78);const future=d>today;const n=on?((C.cnt[t]&&C.cnt[t][d])||1):0;
           let tip;
           if(future)tip=dname(d)+' '+fmt(d)+' · in the future, nothing to tick yet';
           else if(on)tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(m?' · '+m+' min':' · ticked, no minutes')+(isCtr&&n>1?' · logged '+n+' times':'')+' · '+done+' of '+poss+' days this week'+(wkMin?' · '+wkMin+' min this week':'')+(isCtr?' · tap to log one more':' · tap to undo');
           else tip=dname(d)+' '+fmt(d)+' · '+esc(t)+(isCtr?' · tap to log one':' · not ticked · tap to mark done');
           const cls='c'+(future?' future':' tick');
-          return '<td class="'+cls+'" data-t="'+esc(t)+'" data-d="'+d+'" data-area="'+esc(area)+'" data-counter="'+(isCtr?'1':'0')+'" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t,ICONCOL):'')+(isCtr&&n>1?'<span class="cnt">&times;'+n+'</span>':'')+'</td>';}).join('')+
+          return '<td class="'+cls+'" data-t="'+esc(t)+'" data-d="'+d+'" data-area="'+esc(area)+'" data-counter="'+(isCtr?'1':'0')+'" style="'+(on?'background:'+(py?PYPINK:tint(c,al)):'')+'" title="'+tip+'">'+(on?icon(t,py?PYLINE:c):'')+(isCtr&&n>1?'<span class="cnt">&times;'+n+'</span>':'')+'</td>';}).join('')+
         (function(){
           const span=Math.max(1,C.present.length);
           const withMin=days.filter(d=>((C.mins[t]&&C.mins[t][d])||0)>0).length;
@@ -2856,23 +2900,12 @@ function openRemoveModal(t,area){
 async function parkTracker(t,area){
   pyModalClose();
   const w=C.wsOf[t];
-  /* v5.12: removing a row now always removes it, even one with no Habit
-     Worksheets row to park (Cardio was exactly this case, fed straight by
-     Strava with no worksheet link, so the old code found nothing to write
-     to and quietly did nothing while the row stayed put). REMOVED is what
-     actually keeps it off the grid; the worksheet park underneath is a
-     bonus when there is a row to park, not a requirement for Remove to work. */
-  REMOVED.add(t);
+  if(!w||!w.id){status('"'+t+'" is not on your Habit Worksheets, so there is nothing to park here.',true);return;}
   const arr=C.rowsBy[area];if(arr){const idx=arr.indexOf(t);if(idx>-1)arr.splice(idx,1);}
   render();
-  if(!w||!w.id){
-    status('Removed for this visit. "'+t+'" has no Habit Worksheets row, so there is nothing to park permanently, and it may come back if something logs it again.',true);
-    return;
-  }
-  const idx2=D.wr.indexOf(w);if(idx2>-1)D.wr.splice(idx2,1);
   const {error}=await sb.from('worksheet_rows').update({is_active:false,parked:true,updated_at:new Date().toISOString()}).eq('id',w.id);
   if(error)status('Could not park that: '+error.message,true);
-  else status('Parked. Find it again in Habit Worksheets.');
+  else status('Parked — find it again in Habit Worksheets.');
 }
 
 /* Drag the grip to reorder a row within its own section. Rather than
@@ -2911,12 +2944,6 @@ async function reorderRow(area,from,target,where){
    v5.6: these are now the same "window shade" contenteditable boxes as Habit
    Worksheets — wsOpen remembers which ones you've tapped open so a re-render
    (from ticking a day, say) doesn't quietly close a box you're reading. */
-/* v5.12: trackers removed via a row's × this session. compute() rebuilds the
-   whole grid from qs_log every time (any tick anywhere retriggers it), so
-   without this a tracker that already had ticks logged this week would keep
-   reappearing right after being removed, whether or not it had a Habit
-   Worksheets row to park. See parkTracker below. */
-const REMOVED=new Set();
 const wsOpen=new Set();
 const wsSaveT={};
 function wsEdited(box){
