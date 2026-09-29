@@ -49,6 +49,8 @@
   .mintotal{font-size:11.5px;color:var(--muted);font-weight:700;margin-top:4px;display:none}
   .mintotal.show{display:block}
   #fin:disabled{opacity:.55;pointer-events:none}
+  .dt{position:absolute;top:15px;left:54px;height:26px;padding:0 11px;border-radius:13px;border:0;cursor:pointer;background:rgba(255,255,255,.92);color:#1f2a44;font:700 11px/26px Arial,Helvetica,sans-serif;letter-spacing:.2px;box-shadow:0 1px 4px rgba(0,0,0,.25);z-index:2}
+  .dt[aria-pressed="true"]{background:#c0453b;color:#fff}
   .st svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9}
   .st[aria-pressed="true"]{background:var(--star);color:#fff}
   .st[aria-pressed="true"] svg{fill:currentColor}
@@ -66,12 +68,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; from The Rundown AI</div>
-  <h1>AI Workout <span class="ver">v1.2</span></h1>
+  <h1>AI Workout <span class="ver">v1.3</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
   <div class="note">Only three parts of the newsletter make it here: AI Training, Workflow of the Day, and the Roundtable when there is one. Everything else stays in your inbox.</div>
-  <div class="stamp" id="stamp">v1.2</div>
+  <div class="stamp" id="stamp">v1.3</div>
 </div>
 
 <script>
@@ -145,6 +147,7 @@ function tileHTML(r,i,n){
   if(inList) h+='</ol>';
   var last=(i===n-1);
   return '<div class="tile">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+
+    '<button class="dt" type="button" data-do="'+r.id+'" aria-pressed="'+(r.do_this?"true":"false")+'" title="Do this!">Do this</button>'+
     '<button class="st" type="button" data-save="'+r.id+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
     (r.img?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
     '<div class="top"><div class="k">'+esc(r.section)+'</div><h2>'+esc(r.title)+'</h2>'+h+
@@ -214,12 +217,26 @@ document.addEventListener("click",function(e){
     .catch(function(err){ s.setAttribute("aria-pressed",on?"false":"true"); toast("Could not save: "+err.message); });
 });
 
+document.addEventListener("click",function(e){
+  var d=e.target.closest("[data-do]"); if(!d) return;
+  var id=+d.getAttribute("data-do"), on=d.getAttribute("aria-pressed")!=="true";
+  var row=TILES.filter(function(t){ return t.id===id; })[0];
+  d.setAttribute("aria-pressed",on?"true":"false");
+  api("rundown_items?id=eq."+id,{method:"PATCH",body:JSON.stringify({do_this:on,do_this_at:on?new Date().toISOString():null})})
+    .then(function(){
+      if(row){ row.do_this=on; if(on) row.saved=true; }
+      if(on){ var st=document.querySelector('[data-save="'+id+'"]'); if(st) st.setAttribute("aria-pressed","true"); }
+      toast(on?"Tagged Do this! \u2713":"Removed from Do this!");
+    })
+    .catch(function(err){ d.setAttribute("aria-pressed",on?"false":"true"); toast("Could not save: "+err.message); });
+});
+
 Promise.all([deal(), loadHabit()]).then(function(res){
   var rows=(res[0]||[]).slice().sort(function(a,b){ return (a.section in ORDER?ORDER[a.section]:9)-(b.section in ORDER?ORDER[b.section]:9); });
   TILES=rows;
   if(rows.length){
     document.getElementById("sub").textContent=nice(rows[0].issue_date)+" issue · "+rows.length+(rows.length===1?" card":" cards")+" · about 10 minutes";
-    document.getElementById("stamp").textContent="v1.2 · from The Rundown AI, "+nice(rows[0].issue_date);
+    document.getElementById("stamp").textContent="v1.3 · from The Rundown AI, "+nice(rows[0].issue_date);
   } else document.getElementById("sub").textContent="";
   render();
 }).catch(function(e){
