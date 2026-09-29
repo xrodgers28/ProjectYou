@@ -885,7 +885,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.14';
+const VERSION='v5.15';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1635,13 +1635,19 @@ function swBuild(){
 
 /* v3.7: a picture Scott picked himself always wins over one matched from
    his check-ins. Nothing here invents a match.
-   v5.12: two sentinel dates in the same table, never real dates, so no schema
-   change was needed. PDEFAULT holds a person's standing photo (used for a
-   call, or any week with no in-person match). PBLANK means Scott tapped
-   Remove on an auto photo (Swarm or default) he didn't want for THIS one
-   week; it is never shown, and it is the only way to silence a Swarm match
-   that has nothing stored to delete. */
-const PDEFAULT='__default__', PBLANK='__blank__';
+   v5.12: two sentinel markers, never a real date/photo, so no schema change
+   was needed. PDEFAULT holds a person's standing photo (used for a call, or
+   any week with no in-person match). PBLANK means Scott tapped Remove on an
+   auto photo (Swarm or default) he didn't want for THIS one week; it is
+   never shown, and it is the only way to silence a Swarm match that has
+   nothing stored to delete.
+   v5.15: happened_on is a real Postgres date column, so the original
+   '__default__' text sentinel was rejected on every save (invalid date).
+   PDEFAULT is now a real date far enough in the past that no genuine
+   check-in or call will ever land on it, so it can go in that column
+   safely. PBLANK never goes in that column (only in data_url, a plain text
+   field), so it keeps its plain word. */
+const PDEFAULT='1900-01-01', PBLANK='__blank__';
 function swMine(c){
   const r=(D.pphotos||[]).filter(x=>x.person_key===c.key&&x.happened_on===(c.on||D.we))[0];
   return r||null;
