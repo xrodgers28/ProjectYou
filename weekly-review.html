@@ -879,7 +879,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.12';
+const VERSION='v5.13';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1624,7 +1624,13 @@ function swBuild(){
    Remove on an auto photo (Swarm or default) he didn't want for THIS one
    week; it is never shown, and it is the only way to silence a Swarm match
    that has nothing stored to delete. */
-const PDEFAULT='__default__', PBLANK='__blank__';
+/* v5.13 fix: happened_on is a real `date` column, so a text sentinel
+   like '__default__' fails to save (Postgres rejects it as an invalid
+   date). PDEFAULT is now a fixed, impossibly-old real date instead —
+   nothing genuine will ever happen_on 1900-01-01, so it can never
+   collide with a real week. PBLANK is unaffected: it lives in the
+   data_url column, which is plain text. */
+const PDEFAULT='1900-01-01', PBLANK='__blank__';
 function swMine(c){
   const r=(D.pphotos||[]).filter(x=>x.person_key===c.key&&x.happened_on===(c.on||D.we))[0];
   return r||null;
