@@ -26,6 +26,7 @@ window.NAV_CONFIG = {
   "Calendar": [],
   "Habit Modules": [
     { "label": "Cue Cards", "href": "habit-modules.html" },
+    { "label": "Cue Card<br>Library", "href": "cue-card-library.html" },
     { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
     { "label": "Compass<br>Time", "href": "compass-time.html" }
   ],
