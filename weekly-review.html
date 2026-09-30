@@ -72,7 +72,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 .tiny{font-size:8px;font-weight:800;letter-spacing:.5px;color:#aab2bd;text-transform:uppercase}
 .n26{font-size:26px;font-weight:800;line-height:1}.n26sub{font-size:14px;color:var(--faint);font-weight:700}
 .vsep{width:1px;height:30px;background:var(--line)}
-.hdrnums{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px;border-top:3px solid var(--ink);border-bottom:1px solid var(--line);padding:10px 0}
+.hdrnums{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;border-top:3px solid var(--ink);border-bottom:1px solid var(--line);padding:10px 0}
 .hdrnums .cap{font-size:9px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
 .hdrnums .big{display:flex;align-items:baseline;gap:6px}
 .hdrnums .big b{font-size:54px;font-weight:800;line-height:.9;letter-spacing:-2px;font-variant-numeric:tabular-nums}
@@ -901,7 +901,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.30';
+const VERSION='v5.31';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1103,7 +1103,13 @@ async function load(){
     const bad=[qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,quotes,areas].filter(x=>x.error);
     if(bad.length){throw new Error(bad.map(x=>x.error.message).join('; '));}
     (areas.data||[]).forEach(a=>{if(a.color)AREACOL[a.label]=a.color;});
-    D={days,ws,we,from28,from14,qs:qs.data||[],wr:wr.data||[],strava:strava.data||[],sess:sess.data||[],cal:(cal.data||[]).filter(c=>!c.hidden&&!c.dismissed),tl:tl.data||[],deck:deck.data||[],sf:sf.data||[],ai:ai.data||[],fav:fav.data||[],doThis:(doq&&doq.data)||[],quotes:quotes.data||[],prev:prevrow.data||null,row:thisrow.data||null,fs:(fs&&fs.data)||[],stacks:(hstk&&hstk.data)||[],chatreg:(chatreg&&chatreg.data)||[],sleep:(sleepq&&sleepq.data)||[],train:(trainq&&trainq.data)||[],conns:(connq&&connq.data)||[],
+    /* v5.31, Sep 30 2026, Scott: office days. One 'Office day' mark per day lives in qs_log,
+       stamped with its source (badge report, else photo, else Swarm). They are NOT habits, so they are
+       pulled out of the habit maths (days present, habits done, coverage) and shown only in their own tile. */
+    let officeYear=null;
+    try{const {data:oy}=await sb.from('qs_log').select('date').eq('tracker','Office day').gte('date',we.slice(0,4)+'-01-01').lte('date',we).limit(1000);officeYear=new Set((oy||[]).map(r=>r.date)).size;}catch(e){officeYear=null;}
+    const officeWk=[...new Set((qs.data||[]).filter(r=>r.tracker==='Office day'&&r.date>=ws&&r.date<=we).map(r=>r.date))];
+    D={days,ws,we,from28,from14,office:officeWk,officeYear,qs:(qs.data||[]).filter(r=>r.tracker!=='Office day'),wr:wr.data||[],strava:strava.data||[],sess:sess.data||[],cal:(cal.data||[]).filter(c=>!c.hidden&&!c.dismissed),tl:tl.data||[],deck:deck.data||[],sf:sf.data||[],ai:ai.data||[],fav:fav.data||[],doThis:(doq&&doq.data)||[],quotes:quotes.data||[],prev:prevrow.data||null,row:thisrow.data||null,fs:(fs&&fs.data)||[],stacks:(hstk&&hstk.data)||[],chatreg:(chatreg&&chatreg.data)||[],sleep:(sleepq&&sleepq.data)||[],train:(trainq&&trainq.data)||[],conns:(connq&&connq.data)||[],
       quiet:(quietq&&quietq.data)||[],pnotes:(notesq&&notesq.data)||[],
       pphotos:(photoq&&photoq.data)||[],
       slots:swDedupeSlots((slotsq&&slotsq.data)||[]),cks:(ckq&&ckq.data)||[],
@@ -2726,13 +2732,19 @@ function render(){
     return '<div><div class="cap">Time on train</div><div class="big"><b>'+(mins?hrs(mins):'&ndash;')+
            '</b><i>'+(mins?days+(days===1?' day':' days'):'none logged')+'</i></div></div>';
   }
+  /* OFFICE DAYS, Sep 30 2026. Days badged in this week, and the running total for the year.
+     Only days that have already happened. A week with none shows a dash, not a zero. */
+  function officeTile(){
+    const n=(D.office||[]).length;
+    return '<div><div class="cap">Office days</div><div class="big"><b>'+(n?n:'&ndash;')+'</b><i>'+(D.officeYear!=null?D.officeYear+' in '+D.we.slice(0,4):(n?(n===1?'day':'days'):'none logged'))+'</i></div></div>';
+  }
   el('hdrnums').innerHTML=
     '<div><div class="cap">Habits completed</div><div class="big"><b>'+C.done+'</b><i>of '+C.possible+'</i></div></div>'+
     '<div><div class="cap">Votes cast</div><div class="big"><b>'+C.voteN+'</b><i>identity</i></div></div>'+
     '<div class="'+(pyH?'':'bad')+'"><div class="cap">Project YOU hours</div><div class="big"><b>'+(pyH||'?')+'</b><i>'+(pyH?'logged':'no clock')+'</i></div></div>'+
     '<div><div class="cap">Habit hours</div><div class="big"><b>'+hrs(C.habitMin)+'</b><i>'+C.present.length+' days</i></div></div>'+
     '<div class="blue"><div class="cap">Build sessions</div><div class="big"><b>'+C.sessN+'</b><i>this week</i></div></div>'+
-    trainTile();
+    trainTile()+officeTile();
   el('dial').innerHTML=dial(118);el('dial2').innerHTML=dial(170);
   el('covN').innerHTML=C.coverage.toFixed(1)+'<small> of 7 a day</small>';
   el('covSub').textContent='Slices grow with the week’s ticks. '+(C.never.length?C.never.length+' never lit. ':'')+(C.pcov!=null?(C.coverage>=C.pcov?'Up from ':'Down from ')+C.pcov.toFixed(1)+' last week.':'');
