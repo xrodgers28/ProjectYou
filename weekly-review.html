@@ -901,7 +901,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.28';
+const VERSION='v5.29';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1035,6 +1035,7 @@ function showApp(){el('login').classList.add('hidden');el('app').classList.remov
   el('builtOn').textContent=new Date().toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})+' EST';load();loadBirthdays();}
 
 /* ---------- load ---------- */
+let RING={};   /* v5.29: watch exercise-ring minutes by day */
 async function load(){
   const days=weekDays(), ws=days[0], we=days[6];
   el('weekLabel').textContent=fmt(ws)+' to '+fmt(we,true);
@@ -1042,6 +1043,9 @@ async function load(){
   status('Loading '+fmt(ws)+' to '+fmt(we)+'...');
   const from28=addDays(ws,-27), from14=addDays(we,-13);
   try{
+    /* v5.29, Sep 29 2026, Scott: on a day with no recorded walk, ride or outing, Exercise
+       uses the watch's exercise-ring minutes. Loaded here, per day, for this week only. */
+    try{const {data:rg}=await sb.from('health_metrics').select('day,value').eq('metric','apple_exercise_time').gte('day',ws).lte('day',we);RING={};(rg||[]).forEach(r=>{RING[r.day]=(RING[r.day]||0)+Math.round(+r.value||0);});}catch(e){RING={};}
     const q=(t,sel,f)=>{let r=sb.from(t).select(sel);if(f)r=f(r);return r;};
     const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq,impactq]=await Promise.all([
       /* v5.18: added value and note to this list. value already had reader code
@@ -2775,12 +2779,12 @@ function render(){
      to their own Exercise row at the bottom, never into a section subtotal or the
      habit grand total. Twin of EXERCISE_HABITS / cxExerciseKind on Todays Tasks. */
   const EXERCISE_T=new Set(['Walk','Ride','Run','Hike','Swim','Workout','Yoga','Weight Training','Rowing']);
-  let exTotal=0;
+  let exTotal=0;const exDay={};
   sections.forEach(area=>{const rows=C.rowsBy[area]||[];if(!rows.length&&OFF.includes(area))return;const c=AREACOL[area],py=area==='Project YOU';const bg=py?PYPINK:tint(c,.3),bl=py?PYLINE:c;const nrows=Math.max(1,rows.length);const lbl=(nrows>=3?SECNAME[area]:SECABBR[area])||area;const first='<td class="sec" rowspan="'+nrows+'" style="background:'+bg+';border-left-color:'+bl+'"><div style="color:'+(py?'#7a3a52':'#1f2a44')+';height:'+Math.max(20,nrows*30-6)+'px">'+(py&&nrows>=3?PINWHEEL:'')+esc(lbl)+'</div></td>';if(!rows.length){h+='<tr>'+first+'<td class="empty" colspan="14">Nothing ticked all week.'+(D.wr.some(w=>w.area===area)?' Card and habit are both on, it just did not get ticked.':'')+'</td></tr>';return;}
     let sectionTotal=0;
     rows.forEach((t,i)=>{const done=days.filter(d=>C.tick[t]&&C.tick[t][d]).length,poss=C.perHabit[t]?C.perHabit[t].possible:C.present.length,wkMin=days.reduce((a,d)=>a+((C.mins[t]&&C.mins[t][d])||0),0);
       const isEx=EXERCISE_T.has(t);
-      if(isEx)exTotal+=wkMin;else sectionTotal+=wkMin;
+      if(isEx){exTotal+=wkMin;days.forEach(d=>{exDay[d]=(exDay[d]||0)+((C.mins[t]&&C.mins[t][d])||0);});}else sectionTotal+=wkMin;
       const isCtr=C.isCounter(t);const isLc=C.isLoc(t);
       /* v5.10: the row is now draggable (grip on the left, reorderRow below
          persists it to worksheet_rows.position) and removable (× on the
@@ -2849,6 +2853,8 @@ function render(){
      finished row rather than a rendering glitch. */
   const grandAvg=grandTotal/Math.max(1,C.present.length);
   h+='<tr class="grandtotal"><td></td><td class="gtlbl" colspan="8">GRAND TOTAL, HABITS, THE WEEK</td><td class="n" title="The whole week&#39;s total spread across '+Math.max(1,C.present.length)+' day'+(C.present.length===1?'':'s')+' present.">'+(grandTotal?esc(mdur(grandAvg)):'&ndash;')+'</td><td class="n tot">'+(grandTotal?esc(mdur(grandTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
+  /* v5.29: a day with no recorded outing takes the watch ring instead of zero */
+  days.forEach(d=>{if(!exDay[d]&&RING[d])exTotal+=RING[d];});
   const exAvg=exTotal/Math.max(1,C.present.length);
   h+='<tr class="grandtotal extotal"><td></td><td class="gtlbl" colspan="8" style="background:#c05f7a">EXERCISE, THE WEEK (WALKING, BIKING AND MORE, NOT IN THE HABIT TOTAL)</td><td class="n" style="background:#c05f7a" title="Exercise spread across '+Math.max(1,C.present.length)+' day'+(C.present.length===1?'':'s')+' present.">'+(exTotal?esc(mdur(exAvg)):'&ndash;')+'</td><td class="n tot" style="background:#c05f7a;color:#fff">'+(exTotal?esc(mdur(exTotal)):'&ndash;')+'</td><td colspan="4" style="background:#c05f7a"></td></tr>';
   el('habitGrid').innerHTML=h+'</tbody>';
