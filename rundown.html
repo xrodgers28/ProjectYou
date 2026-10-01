@@ -68,12 +68,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; from The Rundown AI</div>
-  <h1>AI Workout <span class="ver">v1.4</span></h1>
+  <h1>AI Workout <span class="ver">v1.6</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
-  <div class="note">Only three parts of the newsletter make it here: AI Training, Workflow of the Day, and the Roundtable when there is one. Everything else stays in your inbox.</div>
-  <div class="stamp" id="stamp">v1.3</div>
+  <div class="note">Each day brings one AI Training card and two Workflow of the Day cards you have not seen, oldest first. Everything else from the newsletter stays in your inbox.</div>
+  <div class="stamp" id="stamp">v1.6</div>
 </div>
 
 <script>
@@ -98,10 +98,19 @@ function __cueClockInit(){
 function __cueAskIfIdle(){
   var el=document.getElementById('tmin')||document.getElementById('mins');
   var typed=(el&&String(el.value).trim()!=='')?parseInt(el.value,10):NaN;
-  if(!(typed>0&&typed<=180)&&__cueAway&&el){
+  var hasTyped=(typed>0&&typed<=180), msg=null;
+  if(!hasTyped&&__cueAway){
+    msg='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+  } else if(!hasTyped&&__cueSt&&(Date.now()-__cueSt.s)>30*60000){
+    msg='The timer says about '+Math.round((Date.now()-__cueSt.s)/60000)+' minutes, which is over 30. Double check: how many minutes did you really spend? Type it in the Minutes box, then tap done again.';
+  } else if(hasTyped&&typed>30&&window.__cueOk!==typed){
+    window.__cueOk=typed;
+    msg='You entered '+typed+' minutes, which is over 30. If that is right, tap done again. If not, change the number first.';
+  }
+  if(msg&&el){
     var m=document.getElementById('cueAskMsg');
     if(!m){ m=document.createElement('div'); m.id='cueAskMsg'; m.setAttribute('role','status'); m.style.cssText='flex-basis:100%;width:100%;margin:8px 0 0;font-size:13.5px;font-weight:600;color:#b45309;line-height:1.4'; var host=el.closest('label')||el.parentNode; host.insertAdjacentElement('afterend',m); }
-    m.textContent='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+    m.textContent=msg;
     try{ el.focus(); }catch(e){}
     return true;
   }
@@ -144,19 +153,28 @@ function toast(m){ var t=document.createElement("div"); t.className="toast"; t.t
 /* a headline is never repeated in the body */
 function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
 
-/* The day's unit is one whole issue: its two or three sections together.
-   seen_on is the ledger. Today's issue is whatever was stamped today; if nothing
-   was, the newest issue not yet seen is stamped today in the same act. */
+/* v1.6 (Sep 30, 2026): each day deals 1 AI Training card and 2 Workflow of the Day cards,
+   oldest unseen first. seen_on is the ledger. Cards already stamped today stay; if a
+   section is short of its quota, the oldest unseen cards in it are stamped today. */
+var QUOTA=[{sec:"AI Training",n:1},{sec:"Workflow of the Day",n:2}];
+function dealOne(q,t){
+  var S=encodeURIComponent(q.sec);
+  return api("rundown_items?select=*&section=eq."+S+"&seen_on=eq."+t+"&order=issue_date.asc").then(function(rows){
+    rows=rows||[];
+    var need=q.n-rows.length;
+    if(need<=0) return rows;
+    return api("rundown_items?select=id&section=eq."+S+"&seen_on=is.null&order=issue_date.asc&limit="+need).then(function(nx){
+      if(!nx || !nx.length) return rows;
+      var ids=nx.map(function(r){ return r.id; }).join(",");
+      return api("rundown_items?id=in.("+ids+")",{method:"PATCH",prefer:"return=representation",
+        body:JSON.stringify({seen_on:t})}).then(function(got){ return rows.concat(got||[]); });
+    });
+  });
+}
 function deal(){
   var t=today();
-  return api("rundown_items?select=*&seen_on=eq."+t+"&order=issue_date.desc").then(function(rows){
-    if(rows && rows.length) return rows;
-    return api("rundown_items?select=issue_link,issue_date&seen_on=is.null&order=issue_date.desc&limit=1").then(function(nx){
-      if(!nx || !nx.length) return [];
-      var link=nx[0].issue_link;
-      return api("rundown_items?issue_link=eq."+encodeURIComponent(link),{method:"PATCH",prefer:"return=representation",
-        body:JSON.stringify({seen_on:t})});
-    });
+  return Promise.all(QUOTA.map(function(q){ return dealOne(q,t); })).then(function(all){
+    return [].concat.apply([],all);
   });
 }
 
@@ -261,11 +279,11 @@ document.addEventListener("click",function(e){
 });
 
 Promise.all([deal(), loadHabit()]).then(function(res){
-  var rows=(res[0]||[]).slice().sort(function(a,b){ return (a.section in ORDER?ORDER[a.section]:9)-(b.section in ORDER?ORDER[b.section]:9); });
+  var rows=(res[0]||[]).slice().sort(function(a,b){ var o=(a.section in ORDER?ORDER[a.section]:9)-(b.section in ORDER?ORDER[b.section]:9); if(o) return o; return String(a.issue_date)<String(b.issue_date)?-1:(String(a.issue_date)>String(b.issue_date)?1:0); });
   TILES=rows;
   if(rows.length){
-    document.getElementById("sub").textContent=nice(rows[0].issue_date)+" issue · "+rows.length+(rows.length===1?" card":" cards")+" · about 10 minutes";
-    document.getElementById("stamp").textContent="v1.3 · from The Rundown AI, "+nice(rows[0].issue_date);
+    document.getElementById("sub").textContent=rows.length+(rows.length===1?" card":" cards")+" · oldest first · about 10 minutes";
+    document.getElementById("stamp").textContent="v1.6 · from The Rundown AI, "+nice(rows[0].issue_date)+(rows.length>1?" to "+nice(rows[rows.length-1].issue_date):"");
   } else document.getElementById("sub").textContent="";
   render();
 }).catch(function(e){
