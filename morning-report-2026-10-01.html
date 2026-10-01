@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f6f5f2; --panel:#ffffff; --ink:#23211d; --soft:#5f5d55; --faint:#8d8a80;
+  --line:#e3e1d9; --shadow:rgba(30,28,22,.07);
+  --green:#2f8f5b; --amber:#c07f10; --red:#b4452f;
+  --b-do:#3f6f8f; --b-tell:#c07f10; --b-did:#2f8f5b; --b-read:#6f7b8a; --b-kill:#a8724a;
+  --pin:#2b3a46; --pin-ink:#eef3f6;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#17181a; --panel:#202224; --ink:#ececea; --soft:#b7b5ad; --faint:#8a887f;
+    --line:#32343700; --line:#333537; --shadow:rgba(0,0,0,.35);
+    --green:#5bc78a; --amber:#e0a63a; --red:#e07a63;
+    --b-do:#5a8fb0; --b-tell:#d99a2c; --b-did:#43a873; --b-read:#8995a4; --b-kill:#c08a5f;
+    --pin:#10171d; --pin-ink:#dfe8ee;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17181a; --panel:#202224; --ink:#ececea; --soft:#b7b5ad; --faint:#8a887f;
+  --line:#333537; --shadow:rgba(0,0,0,.35);
+  --green:#5bc78a; --amber:#e0a63a; --red:#e07a63;
+  --b-do:#5a8fb0; --b-tell:#d99a2c; --b-did:#43a873; --b-read:#8995a4; --b-kill:#c08a5f;
+  --pin:#10171d; --pin-ink:#dfe8ee;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif;line-height:1.5;
+  -webkit-font-smoothing:antialiased;}
+.wrap{max-width:820px;margin:0 auto;padding:20px 16px 80px;}
+header h1{font-size:25px;margin:0 0 2px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.vchip{font-size:11px;font-weight:700;letter-spacing:.04em;color:var(--soft);
+  border:1px solid var(--line);border-radius:999px;padding:2px 9px;background:var(--panel);}
+.date{color:var(--soft);font-size:14px;margin:2px 0 14px;}
+.lead{font-size:15px;color:var(--ink);margin:0 0 10px;}
+.tip{font-size:13px;color:var(--soft);background:var(--panel);border:1px solid var(--line);
+  border-left:4px solid var(--b-did);border-radius:8px;padding:10px 12px;margin:0 0 18px;}
+.tip b{color:var(--ink);}
+
+/* pinned answer box */
+.pin{position:sticky;top:0;z-index:20;background:var(--pin);color:var(--pin-ink);
+  border-radius:10px;padding:12px;margin:0 0 20px;box-shadow:0 2px 10px var(--shadow);}
+.pin .lbl{font-size:12px;font-weight:700;letter-spacing:.03em;margin:0 0 6px;display:flex;
+  justify-content:space-between;align-items:center;gap:8px;}
+.pin textarea{width:100%;min-height:72px;resize:vertical;border:0;border-radius:7px;padding:9px;
+  font-family:Arial, Helvetica, sans-serif;font-size:13px;line-height:1.45;color:#1c1c1c;background:#f4f6f8;}
+.copybtn{background:rgba(255,255,255,.14);color:var(--pin-ink);border:1px solid rgba(255,255,255,.25);
+  border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;}
+.copybtn:active{background:rgba(255,255,255,.28);}
+.pin .hint{font-size:11px;color:rgba(238,243,246,.7);margin:7px 2px 0;}
+
+/* key */
+.key{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 20px;}
+.key h2{font-size:13px;margin:0 0 9px;letter-spacing:.03em;color:var(--soft);text-transform:uppercase;}
+.key ul{margin:0;padding:0;list-style:none;display:grid;gap:7px;}
+.key li{font-size:13px;color:var(--soft);}
+.kname{display:inline-block;min-width:104px;font-weight:700;color:#fff;border-radius:6px;
+  padding:2px 9px;font-size:12px;margin-right:8px;text-align:center;}
+.k-do{background:var(--b-do);} .k-tell{background:var(--b-tell);} .k-did{background:var(--b-did);}
+.k-read{background:var(--b-read);} .k-kill{background:var(--b-kill);}
+
+/* rows */
+.row{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);
+  border-radius:10px;padding:14px 15px;margin:0 0 14px;box-shadow:0 1px 3px var(--shadow);transition:border-color .15s;}
+.row.settled{opacity:.72;}
+.rowhead{display:flex;align-items:flex-start;gap:10px;}
+.dot{width:13px;height:13px;border-radius:50%;flex:0 0 auto;margin-top:5px;}
+.dot.green{background:var(--green);} .dot.amber{background:var(--amber);} .dot.red{background:var(--red);}
+.hl{font-size:16px;font-weight:700;margin:0;}
+.body{font-size:14px;color:var(--soft);margin:8px 0 0;}
+.next{font-size:14px;margin:10px 0 0;}
+.next b{color:var(--ink);}
+.proof{font-size:11px;color:var(--faint);margin:9px 0 0;border-top:1px dashed var(--line);padding-top:7px;}
+.btns{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 0;}
+.btn{border:0;border-radius:8px;padding:9px 16px;font-size:13px;font-weight:500;color:#fff;
+  cursor:pointer;font-family:Arial, Helvetica, sans-serif;}
+.btn.sel{outline:3px solid rgba(0,0,0,.18);}
+.b-do{background:var(--b-do);} .b-tell{background:var(--b-tell);} .b-did{background:var(--b-did);}
+.b-read{background:var(--b-read);} .b-kill{background:var(--b-kill);}
+.status{font-size:12px;font-weight:700;margin:9px 0 0;min-height:16px;}
+.cbox{width:100%;margin:10px 0 0;border:1px solid var(--line);border-radius:7px;padding:8px 9px;
+  font-family:Arial, Helvetica, sans-serif;font-size:13px;background:var(--bg);color:var(--ink);resize:vertical;min-height:34px;}
+.cbox::placeholder{color:var(--faint);}
+.sub{font-size:13px;color:var(--soft);margin:3px 0 0;}
+.sub b{color:var(--ink);font-weight:700;}
+footer{font-size:12px;color:var(--faint);text-align:center;margin:26px 0 0;}
+@media (max-width:560px){ .hl{font-size:15px;} .kname{min-width:90px;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Good morning, Scott <span class="vchip">v1.0</span></h1>
+    <div class="date">Thursday, Oct 1, 2026 &middot; built 5:20am EST</div>
+  </header>
+
+  <p class="lead">Today is a full one. Ten things on the work calendar, bunched from mid morning to early afternoon, then a gap, then two more late. The eight cards below are what is worth knowing. Tap a button on each, and your answers gather in the box at the top to paste back to me.</p>
+
+  <div class="tip"><b>Atomic Habits tip.</b> On a packed day, shrink your one personal win to a two minute version so it survives the crush. Reading one page still counts. Every small action is a vote for the person you want to become, and a tiny vote beats a skipped one.</div>
+
+  <!-- PINNED ANSWER BOX -->
+  <div class="pin">
+    <div class="lbl"><span>YOUR ANSWERS &middot; select all and paste back to me</span>
+      <button class="copybtn" id="copyBtn" type="button">Copy</button></div>
+    <textarea id="compiled" readonly spellcheck="false">Tap a button on any card and your choice shows up here.</textarea>
+    <div class="hint">Copy may be blocked inside the app. If it is, tap in the box, select all, and copy by hand. Nothing here is saved, so paste it to me before you close the page.</div>
+  </div>
+
+  <!-- BUTTON KEY -->
+  <div class="key">
+    <h2>What each button means</h2>
+    <ul>
+      <li><span class="kname k-do">Do this</span>Go and build it, run it, ship it. An instruction, not an answer. The card stays open until the work is done.</li>
+      <li><span class="kname k-tell">Tell me more</span>You lean yes, but want the cost, the risk or the reasoning first. The card stays open and the next move is mine.</li>
+      <li><span class="kname k-did">I did it</span>You handled it yourself. The card settles.</li>
+      <li><span class="kname k-read">I read this</span>Not a task, just good to know. Nothing is owed. The card settles, marked noted.</li>
+      <li><span class="kname k-kill">Kill this task</span>Drop it, and it does not come back. The card settles.</li>
+    </ul>
+  </div>
+
+  <div id="rows"></div>
+
+  <footer>Built for Scott &middot; nothing on this page is saved, so paste your answers back before closing &middot; all times EST</footer>
+</div>
+
+<script>
+// All state in memory only. No browser storage anywhere.
+var ROWS = [
+  {
+    id:"call-1030", light:"amber",
+    hl:"Your 10:30 is booked twice",
+    body:"Pete Whitlock, the advisor working on your parents' inheritance trust, confirmed by email last night that he will call you at 10:30 this morning. Your work calendar already holds the Gabbie 1:1 from 10:30 to 11:00. One of the two needs to move, and Pete is the one planning to dial you. A short note pushing him to late morning or the afternoon clears it cleanly.",
+    next:"Decide which one moves, or send Pete a new time.",
+    proof:"Source: email thread with pwhitlock, his 11:08pm reply Sep 30 confirming 10:30; calendar event Scott / Gabbie 1:1, 10:30 to 11:00."
+  },
+  {
+    id:"vineyard", light:"amber",
+    hl:"The Vineyard rental needs one line back",
+    body:"Wendy at Point B Realty wrote at 6:42 this morning. Their guest system can only hold one email address, so she is waiting to hear whether you want yours or Asa's on file. The Thanksgiving dates are settled at November 25 to 28. This is the last open thread on that booking.",
+    next:"Reply with the email you want listed. Tap Do this and I will draft it.",
+    proof:"Source: Gmail thread Rental Date confirmation, latest message from wendy.harman at 6:42am EST Oct 1."
+  },
+  {
+    id:"overnight", light:"amber",
+    hl:"Last night's overnight run started but never signed off",
+    body:"The 4am run left a note at 4:12 saying the work queue had nothing to build and it was moving on to its checks. After that there is no sign-off and no closing record, which usually means a run stopped partway. I ran the same data checks it was about to do myself, and everything is clean, so nothing was left broken. Worth a glance only if it happens again tonight.",
+    next:"Nothing, unless it repeats tonight.",
+    proof:"Proof: run heartbeat written 4:11am and queue note 4:12am EST; no finish row and no entry in the run log for the night; my own integrity pass found zero bad task rows."
+  },
+  {
+    id:"publish", light:"green",
+    hl:"The site's overnight publish stumbled once, then fixed itself",
+    body:"You got a GitHub failure email around 9 last night when one publish attempt did not go through. A later attempt at 4:53 this morning went through cleanly, so your site is current. No page is stuck on an old version. Nothing for you to do.",
+    next:"Nothing.",
+    proof:"Proof: failed workflow email 9:06pm EST Sep 30; successful commit to the live branch at 4:53am EST Oct 1, confirmed from a fresh copy of the repository."
+  },
+  {
+    id:"treadwell", light:"amber",
+    hl:"TreadWell is waiting on one thing: Mike Cann's feedback",
+    body:"The only open TreadWell item is the recording of Mike Cann's feedback from the August 7 call, still unopened in your folder. It has sat parked since early September. It is the last loop from that round of input. Your folder was not reachable on this run, so I could not open it for you.",
+    next:"Give it a listen when you have a quiet 20 minutes, or drop it if it has gone stale.",
+    proof:"Source: task list, the single open TreadWell row, parked since Sep 3."
+  },
+  {
+    id:"projects", light:"amber",
+    hl:"Where your projects stand, one next step each",
+    body:"Quick tour of the six. Most are quiet. Only a couple want a decision from you.",
+    list:[
+      ["Project YOU","the main build, lots in flight. The top live card is keeping your five map pages in line with the site. <b>Next:</b> pick one card for tonight."],
+      ["Quantified Self","inside Project YOU. Monthly grids for the habit tracker are briefed and waiting. <b>Next:</b> approve the grid layout."],
+      ["CrushingIt","your to-do and time system, now folded into the Project YOU app and running. No open build items. <b>Next:</b> nothing owed."],
+      ["Clever Phrases","your phrase and fun fact library. Twenty-five fun facts have sat unreviewed since early September. <b>Next:</b> keep or cut them when you have a minute."],
+      ["AI Intelligence","the AI learning cards. Two platform cards from August are still flagged to check. <b>Next:</b> verify or retire them."],
+      ["2026 Calendar","live inside Project YOU, pulling from your phone, and running clean. <b>Next:</b> nothing owed."]
+    ],
+    next:"Pick one Project YOU card to aim at tonight.",
+    proof:"Source: task list open counts by project, the AI card pool, and the fun fact queue."
+  },
+  {
+    id:"usage", light:"amber",
+    hl:"I cannot read your Claude usage from here",
+    body:"This run has no view of your Claude usage meter, so I cannot tell you how much of the weekly limit is left. That number lives in your Claude account settings under your plan. If this has been a heavy week of chats, it is worth a look before a long session so a limit does not catch you mid task.",
+    next:"Glance at your plan usage in settings when you get a moment.",
+    proof:"Note: the usage meter is not exposed to an automated run, so this is a heads up, not a reading."
+  },
+  {
+    id:"reconcile", light:"green",
+    hl:"Your records and pages line up, no drift",
+    body:"The reconciliation checks came back clean. Every task row is valid, with no blanks and no stray values, and the pages that build your site are all current after this morning's publish. Nothing has quietly fallen out of step. The deeper page by page map audit needs a run with your computer connected, which this one did not have.",
+    next:"Nothing.",
+    proof:"Proof: integrity pass over the task table returned zero blank or invalid rows; publish branch confirmed current from a fresh copy."
+  }
+];
+
+var LABELS = {"do":"Do this","tell":"Tell me more","did":"I did it","read":"I read this","kill":"Kill this task"};
+var KEEPSOPEN = {"do":true,"tell":true,"did":false,"read":false,"kill":false};
+var state = {}; // id -> {choice, comment}
+
+function el(tag, cls, html){var e=document.createElement(tag); if(cls)e.className=cls; if(html!=null)e.innerHTML=html; return e;}
+
+function render(){
+  var host=document.getElementById("rows");
+  ROWS.forEach(function(r){
+    state[r.id]={choice:null, comment:""};
+    var row=el("div","row"); row.id="row-"+r.id;
+
+    var head=el("div","rowhead");
+    head.appendChild(el("span","dot "+r.light));
+    var htxt=el("div"); htxt.appendChild(el("p","hl",r.hl)); head.appendChild(htxt);
+    row.appendChild(head);
+
+    row.appendChild(el("p","body",r.body));
+
+    if(r.list){
+      r.list.forEach(function(p){
+        row.appendChild(el("p","sub","<b>"+p[0]+":</b> "+p[1]));
+      });
+    }
+
+    row.appendChild(el("p","next","<b>Next:</b> "+r.next));
+
+    var btns=el("div","btns");
+    [["do","b-do"],["tell","b-tell"],["did","b-did"],["read","b-read"],["kill","b-kill"]].forEach(function(b){
+      var bt=el("button","btn "+b[1], LABELS[b[0]]);
+      bt.type="button";
+      bt.onclick=function(){ pick(r, b[0], row, btns); };
+      btns.appendChild(bt);
+    });
+    row.appendChild(btns);
+
+    var st=el("div","status"); st.id="st-"+r.id; row.appendChild(st);
+
+    var cb=el("textarea","cbox"); cb.placeholder="Add a note (optional)";
+    cb.oninput=function(){ state[r.id].comment=cb.value; compile(); };
+    row.appendChild(cb);
+
+    row.appendChild(el("div","proof",r.proof));
+    host.appendChild(row);
+  });
+}
+
+function pick(r, choice, row, btns){
+  state[r.id].choice=choice;
+  // highlight selected button
+  var kids=btns.children;
+  for(var i=0;i<kids.length;i++) kids[i].classList.remove("sel");
+  var order=["do","tell","did","read","kill"];
+  kids[order.indexOf(choice)].classList.add("sel");
+  // left border color
+  var colorVar={"do":"--b-do","tell":"--b-tell","did":"--b-did","read":"--b-read","kill":"--b-kill"}[choice];
+  row.style.borderLeftColor="var("+colorVar+")";
+  // open vs settle
+  var st=document.getElementById("st-"+r.id);
+  if(KEEPSOPEN[choice]){
+    row.classList.remove("settled");
+    st.textContent = choice==="do" ? "Open: I will build this." : "Open: I will come back with more.";
+    st.style.color="var("+colorVar+")";
+  } else {
+    row.classList.add("settled");
+    st.textContent = choice==="read" ? "Settled, noted." : "Settled.";
+    st.style.color="var("+colorVar+")";
+  }
+  compile();
+}
+
+function compile(){
+  var out=[], any=false;
+  out.push("MORNING REPORT ANSWERS, Oct 1, 2026");
+  out.push("");
+  ROWS.forEach(function(r){
+    var s=state[r.id];
+    if(s.choice || (s.comment && s.comment.trim())){
+      any=true;
+      out.push("• "+r.hl);
+      if(s.choice) out.push("   -> "+LABELS[s.choice]);
+      if(s.comment && s.comment.trim()) out.push("   note: "+s.comment.trim());
+      out.push("");
+    }
+  });
+  var ta=document.getElementById("compiled");
+  ta.value = any ? out.join("\n") : "Tap a button on any card and your choice shows up here.";
+}
+
+document.getElementById("copyBtn").onclick=function(){
+  var ta=document.getElementById("compiled");
+  ta.removeAttribute("readonly"); ta.focus(); ta.select();
+  var ok=false; try{ ok=document.execCommand("copy"); }catch(e){ ok=false; }
+  ta.setAttribute("readonly","readonly");
+  this.textContent = ok ? "Copied" : "Select by hand";
+  var b=this; setTimeout(function(){ b.textContent="Copy"; },1800);
+};
+
+render();
+compile();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
