@@ -60,6 +60,14 @@
   .btn:disabled{opacity:.4;cursor:default}
   .minl{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
   .minl input{width:62px;font:inherit;font-size:14px;padding:8px;border-radius:8px;border:1px solid var(--key);background:var(--card);color:var(--ink)}
+  .tile h2.bigq{font-size:25px;line-height:1.2}
+  .tile mark{background:rgba(63,111,143,.16);color:inherit;border-radius:4px;padding:0 3px}
+  .tile .src{margin-top:12px;font-size:11.5px;font-style:italic;color:var(--muted)}
+  .tile .src a{color:inherit;text-decoration:underline}
+  .tile .pf{display:flex;flex-direction:column;gap:3px;border-radius:12px;padding:16px 16px;margin:2px 0 14px;background:linear-gradient(135deg,#e7eef3,#d6e3ec);color:#1f2a44;border:1px solid var(--key)}
+  .tile .pf-k{font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--accent)}
+  .tile .pf-n{font-size:20px;font-weight:700;line-height:1.2}
+  .tile .pf-h{font-size:12px;color:var(--muted)}
   .note{font-size:12px;color:var(--onbg);opacity:.7;margin-top:14px}
   .empty{padding:40px 20px;text-align:center;color:var(--muted)}
   .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1f2a44;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:2147483002}
@@ -67,13 +75,13 @@
 </style>
 
 <div class="wrap">
-  <div class="kick">Cue card &middot; from The Rundown AI</div>
-  <h1>AI Workout <span class="ver">v1.6</span></h1>
+  <div class="kick">Cue card &middot; your daily AI workout</div>
+  <h1>AI Workout <span class="ver">v2.0</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
-  <div class="note">Each day brings one AI Training card and two Workflow of the Day cards you have not seen, oldest first. Everything else from the newsletter stays in your inbox.</div>
-  <div class="stamp" id="stamp">v1.6</div>
+  <div class="note">Each day: one tip, one insight, two new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That.</div>
+  <div class="stamp" id="stamp">v2.0</div>
 </div>
 
 <script>
@@ -125,7 +133,13 @@ function __cueHandTick(){
   line.style.transform='rotate('+deg+'deg)';
 }
 var __cueTickId=setInterval(__cueHandTick,250);
-var ORDER={"AI Training":0,"Workflow of the Day":1,"Roundtable":2};
+/* ===== AI Workout v2.0 (Sep 30, 2026): AI Insights and AI Workout merged into one cue card =====
+   Every day: 1 tip, 1 insight, 2 new platforms (each its own tile), 2 Workflow of the Day cards.
+   Once a week: 1 AI Training guide (first visit from Monday) and 1 Roundtable (first visit from Friday).
+   Tips, insights and platforms are dealt into ai_cards by the database; workflows, guides and
+   roundtables come from rundown_items, where seen_on is the ledger. */
+var ORDER={"tip":0,"insight":1,"platform":2,"AI Training":3,"Roundtable":4,"Workflow of the Day":5};
+var KICKS={"tip":"Working with AI","insight":"Industry insight","platform":"New platform","AI Training":"AI Training · weekly guide","Roundtable":"Roundtable · weekly","Workflow of the Day":"Workflow of the Day"};
 var STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
 var TILES=[], idx=0, sb=null, habitRow=null, ticked=false;
 try{ if(window.supabase && window.supabase.createClient) sb=window.supabase.createClient(SB,KEY); }catch(e){ sb=null; }
@@ -152,11 +166,22 @@ function toast(m){ var t=document.createElement("div"); t.className="toast"; t.t
 
 /* a headline is never repeated in the body */
 function norm(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim(); }
+function noEcho(t,b){
+  b=b||""; var nt=norm(t); if(!nt) return b;
+  var parts=b.match(/[^.!?]+[.!?]*\s*/g)||[b], out=[], cut=false;
+  for(var i=0;i<parts.length;i++){ if(!cut&&norm(parts[i])===nt){ cut=true; continue; } out.push(parts[i]); }
+  var r=out.join("").trim(); return cut?r:b;
+}
+function hl(txt,phrase){
+  var e=esc(txt); if(!phrase) return e;
+  var ep=esc(phrase), i=e.toLowerCase().indexOf(ep.toLowerCase());
+  if(i<0) return e;
+  return e.slice(0,i)+'<mark>'+e.slice(i,i+ep.length)+'</mark>'+e.slice(i+ep.length);
+}
 
-/* v1.6 (Sep 30, 2026): each day deals 1 AI Training card and 2 Workflow of the Day cards,
-   oldest unseen first. seen_on is the ledger. Cards already stamped today stay; if a
-   section is short of its quota, the oldest unseen cards in it are stamped today. */
-var QUOTA=[{sec:"AI Training",n:1},{sec:"Workflow of the Day",n:2}];
+/* ---- workflows (daily) and guides / roundtables (weekly): seen_on is the ledger ---- */
+var DAILY=[{sec:"Workflow of the Day",n:2}];
+var WEEKLY=[{sec:"AI Training",from:0},{sec:"Roundtable",from:4}];   /* from = weekday, Monday = 0 */
 function dealOne(q,t){
   var S=encodeURIComponent(q.sec);
   return api("rundown_items?select=*&section=eq."+S+"&seen_on=eq."+t+"&order=issue_date.asc").then(function(rows){
@@ -171,14 +196,59 @@ function dealOne(q,t){
     });
   });
 }
-function deal(){
-  var t=today();
-  return Promise.all(QUOTA.map(function(q){ return dealOne(q,t); })).then(function(all){
-    return [].concat.apply([],all);
+function monIdx(iso){ var p=iso.split("-"), d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)); return (d.getUTCDay()+6)%7; }
+function weekStart(iso){ var p=iso.split("-"), d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)); d.setUTCDate(d.getUTCDate()-monIdx(iso)); return d.toISOString().slice(0,10); }
+function dealWeekly(w,t){
+  var S=encodeURIComponent(w.sec);
+  return api("rundown_items?select=*&section=eq."+S+"&seen_on=eq."+t+"&order=issue_date.asc").then(function(rows){
+    rows=rows||[];
+    if(rows.length) return rows;                    /* already dealt today, keep showing it */
+    if(monIdx(t)<w.from) return [];                 /* not this section's day yet */
+    return api("rundown_items?select=id&section=eq."+S+"&seen_on=gte."+weekStart(t)+"&seen_on=lte."+t+"&limit=1").then(function(done){
+      if(done && done.length) return [];            /* this week's one is already used */
+      return dealOne({sec:w.sec,n:1},t);
+    });
   });
 }
+function dealRundown(){
+  var t=today();
+  var jobs=DAILY.map(function(q){ return dealOne(q,t); }).concat(WEEKLY.map(function(w){ return dealWeekly(w,t); }));
+  return Promise.all(jobs).then(function(all){ return [].concat.apply([],all); });
+}
 
-function tileHTML(r,i,n){
+/* ---- tips, insights, platforms: the database deals them into ai_cards ---- */
+function dealAi(){
+  return api("rpc/ensure_today_deck",{method:"POST",body:"{}"}).catch(function(){}).then(function(){
+    return api("ai_cards?select=*&for_date=eq."+today()+"&order=deck_position.asc");
+  }).then(function(rows){ return rows||[]; });
+}
+function pickAi(rows){
+  var main=rows.filter(function(r){ return (r.deck_position||0)<=50; }), out=[];
+  var tip=main.filter(function(r){ return r.card_type==="tip"; })[0];
+  var ins=main.filter(function(r){ return r.card_type==="insight"; })[0];
+  var pl=main.filter(function(r){ return r.card_type==="platform"; }).slice(0,2);
+  if(tip) out.push(tip); if(ins) out.push(ins);
+  pl.forEach(function(p,i){ p.__n=i+1; p.__of=pl.length; out.push(p); });
+  return out;
+}
+
+function asTile(kind,r){
+  var t={kind:kind,row:r,key:(kind==="ai"?"a":"r")+r.id,sort:0,sub:""};
+  if(kind==="ai"){ t.type=r.card_type; t.sort=ORDER[r.card_type]*1000+(r.deck_position||0); if(r.card_type==="tip"&&(r.deck_position||0)>50) t.sort=4500+(r.deck_position-50); }
+  else { t.type=r.section; t.sort=(ORDER[r.section]!=null?ORDER[r.section]:9)*1000+(Date.parse(r.issue_date)/86400000%1000); }
+  return t;
+}
+
+function srcLine(t){
+  var r=t.row;
+  if(t.kind==="ai"){
+    var s=r.source||"Written for Project YOU";
+    if(r.source_url && /^https?:\/\//i.test(r.source_url)) return '<div class="src">Source · <a href="'+esc(r.source_url)+'" target="_blank" rel="noopener noreferrer">'+esc(s)+'</a></div>';
+    return '<div class="src">Source · '+esc(s)+'</div>';
+  }
+  return '<div class="src">Source · The Rundown AI, '+esc(nice(r.issue_date))+'</div>';
+}
+function rundownBody(r){
   var body=(r.blocks||[]), h='', inList=false;
   body.forEach(function(b){
     if(norm(b.x)===norm(r.title)) return;
@@ -191,13 +261,37 @@ function tileHTML(r,i,n){
     h+='<p>'+x+'</p>';
   });
   if(inList) h+='</ol>';
-  var last=(i===n-1);
+  return h;
+}
+function aiBody(t){
+  var r=t.row, h="";
+  if(r.card_type==="platform"){
+    var host=""; try{ host=new URL(r.platform_url).hostname.replace(/^www\./,""); }catch(e){}
+    h+='<div class="pf"><span class="pf-k">'+esc(r.source||"New platform")+'</span><span class="pf-n">'+esc(r.platform_name||r.title)+'</span><span class="pf-h">'+esc(host)+'</span></div>';
+    var pb=noEcho(r.platform_name||r.title,r.body);
+    if(pb) h+='<p>'+hl(pb,r.highlight)+'</p>';
+    return {title:r.platform_name||r.title,html:h,link:r.platform_url?'<a class="more" href="'+esc(r.platform_url)+'" target="_blank" rel="noopener noreferrer">Check it out</a>':''};
+  }
+  var mb=noEcho(r.title,r.body); if(mb) h+='<p>'+esc(mb)+'</p>';
+  return {title:r.title,html:h,link:''};
+}
+
+function tileHTML(t,i,n){
+  var r=t.row, kick=KICKS[t.type]||t.type, title, body, link="";
+  if(t.kind==="ai"){
+    var a=aiBody(t); title=a.title; body=a.html; link=a.link;
+    if(t.type==="platform") kick+=" · "+r.__n+" of "+r.__of;
+    if(t.type==="tip" && (r.deck_position||0)>50) kick="Extra tip";
+  } else {
+    title=r.title; body=rundownBody(r);
+    if(r.link) link='<a class="more" href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">Open the full '+(r.section==="AI Training"?"guide":"story")+'</a>';
+  }
+  var last=(i===n-1), big=(t.kind==="ai" && t.type!=="platform");
   return '<div class="tile">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+
-    '<button class="dt" type="button" data-do="'+r.id+'" aria-pressed="'+(r.do_this?"true":"false")+'" title="Do this!">Do this</button>'+
-    '<button class="st" type="button" data-save="'+r.id+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
-    (r.img?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
-    '<div class="top"><div class="k">'+esc(r.section)+'</div><h2>'+esc(r.title)+'</h2>'+h+
-    (r.link?'<a class="more" href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">Open the full '+(r.section==="AI Training"?"guide":"story")+'</a>':'')+
+    '<button class="dt" type="button" data-do="'+esc(t.key)+'" aria-pressed="'+(r.do_this?"true":"false")+'" title="Do this!">Do this</button>'+
+    '<button class="st" type="button" data-save="'+esc(t.key)+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
+    ((t.kind==="rd"&&r.img)?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
+    '<div class="top"><div class="k">'+esc(kick)+'</div><h2'+(big?' class="bigq"':'')+'>'+esc(title)+'</h2>'+body+link+srcLine(t)+
     '</div>'+
     (last?'<div class="mintotal" id="mintotalLine"></div>':'')+
     '<div class="prac">'+
@@ -211,7 +305,7 @@ function render(){
   var n=TILES.length, d="";
   for(var i=0;i<n;i++) d+='<i class="'+(i<=idx?"on":"")+'"></i>';
   document.getElementById("dots").innerHTML=d;
-  if(!n){ document.getElementById("deck").innerHTML='<div class="tile"><div class="empty">Nothing new from The Rundown yet. It lands around 6am on weekdays.</div></div>'; return; }
+  if(!n){ document.getElementById("deck").innerHTML='<div class="tile"><div class="empty">Nothing dealt yet today. Reload in a minute, and if it is still empty the card pool needs a top-up.</div></div>'; return; }
   document.getElementById("deck").innerHTML=tileHTML(TILES[idx],idx,n);
   __cueHandTick();
   var b=document.getElementById("back"); if(b) b.onclick=function(){ if(idx>0){ idx--; render(); window.scrollTo(0,0);} };
@@ -255,40 +349,96 @@ function finish(){
     });
 }
 
+/* ---- keeps and Do this: Rundown cards save straight to their own row (a database mirror copies
+        them into the Cue Card Library); tips, insights and platforms save to the library from here ---- */
+function tileByKey(k){ return TILES.filter(function(t){ return t.key===k; })[0]; }
+function needSession(){
+  if(!sb) return Promise.reject(new Error("The sign-in did not load. Reload the page."));
+  return sb.auth.getSession().then(function(s){
+    if(!(s&&s.data&&s.data.session)) throw new Error("Sign in on any Project YOU page first, then try again.");
+    return s.data.session;
+  });
+}
+function favPayload(c){return {content_type:c.card_type,title:c.title,body:c.body,author:null,url:c.platform_url||null,logo_url:c.logo_url||null,source:"AI Deck "+c.for_date,source_module:"ai-deck",ref_table:"ai_cards",ref_id:c.id,tags:[c.card_type]};}
+function paint(key,sel,on){ var b=document.querySelector('['+sel+'="'+key+'"]'); if(b) b.setAttribute("aria-pressed",on?"true":"false"); }
+
 document.addEventListener("click",function(e){
   var s=e.target.closest("[data-save]"); if(!s) return;
-  var id=+s.getAttribute("data-save"), on=s.getAttribute("aria-pressed")!=="true";
+  var key=s.getAttribute("data-save"), t=tileByKey(key); if(!t) return;
+  var on=s.getAttribute("aria-pressed")!=="true", r=t.row;
   s.setAttribute("aria-pressed",on?"true":"false");
-  api("rundown_items?id=eq."+id,{method:"PATCH",body:JSON.stringify({saved:on})})
-    .then(function(){ toast(on?"Kept.":"Taken out of your keeps."); })
-    .catch(function(err){ s.setAttribute("aria-pressed",on?"false":"true"); toast("Could not save: "+err.message); });
+  var p;
+  if(t.kind==="rd"){
+    p=api("rundown_items?id=eq."+r.id,{method:"PATCH",body:JSON.stringify({saved:on})});
+  } else {
+    p=needSession().then(function(){
+      if(!on){
+        return sb.from("favorites").delete().eq("ref_table","ai_cards").eq("ref_id",r.id).then(function(){
+          return sb.from("ai_cards").update({saved:false,do_this:false,do_this_at:null}).eq("id",r.id); });
+      }
+      return sb.from("favorites").upsert(favPayload(r),{onConflict:"ref_table,ref_id"}).then(function(x){
+        if(x.error) throw x.error;
+        return sb.from("ai_cards").update({saved:true}).eq("id",r.id); });
+    });
+  }
+  p.then(function(){ r.saved=on; if(!on){ r.do_this=false; paint(key,"data-do",false); } toast(on?"Kept.":"Taken out of your keeps."); })
+   .catch(function(err){ s.setAttribute("aria-pressed",on?"false":"true"); toast("Could not save: "+err.message); });
 });
 
 document.addEventListener("click",function(e){
   var d=e.target.closest("[data-do]"); if(!d) return;
-  var id=+d.getAttribute("data-do"), on=d.getAttribute("aria-pressed")!=="true";
-  var row=TILES.filter(function(t){ return t.id===id; })[0];
+  var key=d.getAttribute("data-do"), t=tileByKey(key); if(!t) return;
+  var on=d.getAttribute("aria-pressed")!=="true", r=t.row, nowIso=new Date().toISOString();
   d.setAttribute("aria-pressed",on?"true":"false");
-  api("rundown_items?id=eq."+id,{method:"PATCH",body:JSON.stringify({do_this:on,do_this_at:on?new Date().toISOString():null})})
-    .then(function(){
-      if(row){ row.do_this=on; if(on) row.saved=true; }
-      if(on){ var st=document.querySelector('[data-save="'+id+'"]'); if(st) st.setAttribute("aria-pressed","true"); }
-      toast(on?"Tagged Do this! \u2713":"Removed from Do this!");
-    })
-    .catch(function(err){ d.setAttribute("aria-pressed",on?"false":"true"); toast("Could not save: "+err.message); });
+  var p;
+  if(t.kind==="rd"){
+    p=api("rundown_items?id=eq."+r.id,{method:"PATCH",body:JSON.stringify({do_this:on,do_this_at:on?nowIso:null})});
+  } else {
+    p=needSession().then(function(){
+      if(!on){
+        return sb.from("ai_cards").update({do_this:false,do_this_at:null}).eq("id",r.id).then(function(){
+          return sb.from("favorites").update({do_this:false,do_this_at:null}).eq("ref_table","ai_cards").eq("ref_id",r.id); });
+      }
+      var pre=r.saved?Promise.resolve({}):sb.from("favorites").upsert(favPayload(r),{onConflict:"ref_table,ref_id"});
+      return pre.then(function(x){
+        if(x&&x.error) throw x.error;
+        return sb.from("ai_cards").update({saved:true,do_this:true,do_this_at:nowIso}).eq("id",r.id);
+      }).then(function(){
+        return sb.from("favorites").update({do_this:true,do_this_at:nowIso}).eq("ref_table","ai_cards").eq("ref_id",r.id); });
+    });
+  }
+  p.then(function(){
+    r.do_this=on; if(on){ r.saved=true; paint(key,"data-save",true); }
+    toast(on?"Tagged Do this! ✓":"Removed from Do this!");
+  }).catch(function(err){ d.setAttribute("aria-pressed",on?"false":"true"); toast("Could not save: "+err.message); });
 });
 
-Promise.all([deal(), loadHabit()]).then(function(res){
-  var rows=(res[0]||[]).slice().sort(function(a,b){ var o=(a.section in ORDER?ORDER[a.section]:9)-(b.section in ORDER?ORDER[b.section]:9); if(o) return o; return String(a.issue_date)<String(b.issue_date)?-1:(String(a.issue_date)>String(b.issue_date)?1:0); });
-  TILES=rows;
-  if(rows.length){
-    document.getElementById("sub").textContent=rows.length+(rows.length===1?" card":" cards")+" · oldest first · about 10 minutes";
-    document.getElementById("stamp").textContent="v1.6 · from The Rundown AI, "+nice(rows[0].issue_date)+(rows.length>1?" to "+nice(rows[rows.length-1].issue_date):"");
-  } else document.getElementById("sub").textContent="";
-  render();
+/* ---- build the day ---- */
+function topUp(aiRows,rdRows){
+  /* empty-tile fix: if a workflow is missing, deal extra tips so the deck never has a hole */
+  var wf=rdRows.filter(function(r){ return r.section==="Workflow of the Day"; }).length;
+  var extras=aiRows.filter(function(r){ return r.card_type==="tip" && (r.deck_position||0)>50; });
+  var need=(2-wf)-extras.length;
+  if(need<=0) return Promise.resolve(extras);
+  return api("rpc/ai_fill_tips",{method:"POST",body:JSON.stringify({p_n:need})}).then(function(got){ return extras.concat(got||[]); }).catch(function(){ return extras; });
+}
+Promise.all([dealAi().catch(function(){ return []; }), dealRundown().catch(function(){ return []; }), loadHabit()]).then(function(res){
+  var aiRows=res[0], rdRows=res[1];
+  return topUp(aiRows,rdRows).then(function(extras){
+    var tiles=pickAi(aiRows).map(function(r){ return asTile("ai",r); })
+      .concat(extras.map(function(r){ return asTile("ai",r); }))
+      .concat(rdRows.map(function(r){ return asTile("rd",r); }));
+    tiles.sort(function(a,b){ return a.sort-b.sort; });
+    TILES=tiles;
+    var wf=rdRows.filter(function(r){ return r.section==="Workflow of the Day"; }).length;
+    var plats=tiles.filter(function(t){ return t.type==="platform"; }).length;
+    document.getElementById("sub").textContent=tiles.length+" tiles · about 10 minutes"+(plats?" · "+plats+" new platforms":"")+(wf?" · "+wf+" workflows":"");
+    document.getElementById("stamp").textContent="v2.0 · "+nice(today());
+    render();
+  });
 }).catch(function(e){
   document.getElementById("sub").textContent="";
-  document.getElementById("deck").innerHTML='<div class="tile"><div class="empty">Could not load today&rsquo;s drill: '+esc(e.message)+'</div></div>';
+  document.getElementById("deck").innerHTML='<div class="tile"><div class="empty">Could not load today&rsquo;s workout: '+esc(e.message)+'</div></div>';
 });
 </script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
