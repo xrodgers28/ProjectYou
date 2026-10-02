@@ -659,7 +659,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.12</span></h1>
+      <h1>Sparkboard <span class="ver">v2.13</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -761,7 +761,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.12</div>
+  <div class="stamp" id="stamp">v2.13</div>
 </div>
 
 <aside class="stx-col">
@@ -1825,15 +1825,19 @@ var HABIT="Sparkboard", sb=null, signedIn=false, ticked=false, habitRow=null;
 var __CUE_IDLE=2*3600*1000, __CUE_STALE=12*3600*1000, __cueAway=false, __cueSt=null, __cueKey='', __cueLastW=0;
 function __cueSave(force){ var n=Date.now(); if(!force&&n-__cueLastW<8000) return; __cueLastW=n; try{ localStorage.setItem(__cueKey,JSON.stringify(__cueSt)); }catch(e){} }
 function __cueClockInit(){
-  var now=Date.now(), st=null;
+  var now=Date.now(), st=null, dk='';
+  try{ dk=today(); }catch(e){ dk=''; }
   __cueKey='cueclock:'+(location.pathname.split('/').pop()||'card');
   try{ st=JSON.parse(localStorage.getItem(__cueKey)||'null'); }catch(e){ st=null; }
-  if(!st||st.fin||!(st.s>0)||st.s>now||(now-(st.l||st.s))>__CUE_STALE) st={s:now,l:now};
+  /* v2.13 (Oct 2, 2026): the clock counts ACTIVE time only: the page is on screen and you touched it in the last 15 minutes. A new day, a finished visit or an old save starts it fresh. This replaces the wall-clock start that read 180 for a 15 minute visit. */
+  if(!st||st.fin||!(st.s>0)||st.s>now||(now-(st.l||st.s))>__CUE_STALE||st.d!==dk) st={s:now,l:now,a:0,d:dk};
   if(!(st.l>0)) st.l=now;
-  if(now-st.l>__CUE_IDLE) __cueAway=true;
+  if(!(st.a>=0)) st.a=0;
   __cueSt=st; __cueSave(true);
-  function touch(){ var n=Date.now(); if(n-__cueSt.l>__CUE_IDLE) __cueAway=true; __cueSt.l=n; __cueSave(false); }
-  ['pointerdown','touchstart','keydown','click','scroll'].forEach(function(ev){ try{ window.addEventListener(ev,touch,{capture:true,passive:true}); }catch(e){} });
+  function touch(){ __cueSt.l=Date.now(); __cueSave(false); }
+  ['pointerdown','touchstart','keydown','click','scroll','mousemove'].forEach(function(ev){ try{ window.addEventListener(ev,touch,{capture:true,passive:true}); }catch(e){} });
+  var last=now;
+  setInterval(function(){ var n=Date.now(), dt=Math.min(n-last,2000); last=n; if(__cueSt.fin) return; if(document.visibilityState==='visible' && (n-__cueSt.l)<15*60000){ __cueSt.a+=dt; __cueSave(false); } },1000);
   return st.s;
 }
 function __cueAskIfIdle(){
@@ -1861,7 +1865,7 @@ function __cueAskIfIdle(){
 var __cueStart=__cueClockInit();
 function __cueHandTick(){
   var h=document.getElementById('cueTimerBadge');
-  if(h){ var line=h.querySelector('.cuehand'); if(line){ var deg=((Date.now()-__cueStart)%60000)/60000*360; line.style.transform='rotate('+deg+'deg)'; } }
+  if(h){ var line=h.querySelector('.cuehand'); if(line){ var deg=(((__cueSt&&__cueSt.a)||0)%60000)/60000*360; line.style.transform='rotate('+deg+'deg)'; } }
 }
 var __cueTickId=setInterval(__cueHandTick,250);
 __cueHandTick();
@@ -1975,9 +1979,8 @@ function finish(){
   clearInterval(__cueTickId);
   var el=document.getElementById("mins");
   var typed=(el&&el.value.trim()!=="")?parseInt(el.value,10):NaN;
-  var endAt=(__cueAway&&__cueSt&&__cueSt.l>__cueStart)?__cueSt.l:Date.now();
   if(__cueSt){ __cueSt.fin=Date.now(); __cueSave(true); }
-  var mins=(typed>0&&typed<=180)?typed:Math.min(180,Math.max(1,Math.round((endAt-__cueStart)/60000)));
+  var mins=(typed>0&&typed<=180)?typed:Math.min(180,Math.max(1,Math.round(((__cueSt&&__cueSt.a)||0)/60000)));
   if(el){ el.value=mins; el.disabled=true; }
   var totLine=document.getElementById("wallMinTotal");
   if(totLine){ totLine.textContent="Time on the Sparkboard: "+mins+" min"; totLine.classList.add("show"); }
@@ -2414,7 +2417,7 @@ function renderDateLine(){
   document.getElementById("sub").textContent=
     days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
   document.getElementById("stamp").textContent=
-    "v2.12 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+    "v2.13 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
   var lbl=document.getElementById("daylabel");
   if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
   var ds=document.getElementById("daystep");
