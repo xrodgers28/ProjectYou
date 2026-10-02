@@ -61,10 +61,15 @@
   .minl{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
   .minl input{width:62px;font:inherit;font-size:14px;padding:8px;border-radius:8px;border:1px solid var(--key);background:var(--card);color:var(--ink)}
   .tile h2.bigq{font-size:25px;line-height:1.2}
-  .tile .wf{border-left:3px solid var(--accent);background:rgba(63,111,143,.08);border-radius:0 10px 10px 0;padding:10px 14px;margin:2px 0 14px}
-  .tile .wf p{margin:0 0 8px;font-size:15px;line-height:1.4}
-  .tile .wf p:last-child{margin-bottom:0}
-  .tile .wf b{display:block;font-size:10.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin-bottom:2px}
+  .tile .wfpic{background:var(--sunk);max-height:none;padding:10px 12px 0;display:block}
+  .tile .wfpic img{width:100%;max-height:230px;object-fit:contain;display:block;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;background:#fff}
+  .tile .wfpic .hint{font-size:11px;color:var(--muted);margin:5px 0 8px;text-align:center}
+  .tile .wflog{font-style:italic;color:var(--muted);font-size:15px;margin:0 0 12px}
+  .tile .wfl{display:block;font-size:10.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:16px 0 4px}
+  .tile .wfsw{font-size:13px;color:var(--muted);margin-top:14px}
+  #lbx{position:fixed;inset:0;background:rgba(10,15,20,.9);z-index:200;display:none;overflow:auto;padding:16px;cursor:zoom-out}
+  #lbx img{display:block;max-width:100%;height:auto;margin:0 auto;border-radius:8px;background:#fff}
+  #lbx span{position:fixed;top:10px;right:18px;color:#fff;font-size:32px;line-height:1}
   .tile mark{background:rgba(63,111,143,.16);color:inherit;border-radius:4px;padding:0 3px}
   .tile .src{margin-top:12px;font-size:11.5px;font-style:italic;color:var(--muted)}
   .tile .src a{color:inherit;text-decoration:underline}
@@ -81,12 +86,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; your daily AI workout</div>
-  <h1>AI Workout <span class="ver">v2.2</span></h1>
+  <h1>AI Workout <span class="ver">v2.3</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
   <div class="note">Each day: one tip, one insight, two new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That.</div>
-  <div class="stamp" id="stamp">v2.2</div>
+  <div class="stamp" id="stamp">v2.3</div>
 </div>
 
 <script>
@@ -256,8 +261,12 @@ function srcLine(t){
 function rundownBody(r){
   var body=(r.blocks||[]), h='', inList=false;
   var sm=r.ai_summary;
-  if(r.section==="Workflow of the Day" && sm && sm.made){
-    h+='<div class="wf"><p><b>Made</b>'+esc(sm.made)+'</p>'+(sm.tools?'<p><b>Built with</b>'+esc(sm.tools)+'</p>':'')+(sm.ai?'<p><b>What makes it an interesting application of AI</b>'+esc(sm.ai)+'</p>':'')+'</div>';
+  if(r.section==="Workflow of the Day" && sm && sm.v===2){
+    h+='<p class="wflog">'+esc(sm.log)+'</p><p>'+esc(sm.intro)+'</p>';
+    h+='<span class="wfl">Why it works</span><p>'+esc(sm.why)+'</p>';
+    h+='<span class="wfl">How AI builds it</span><ol>'+(sm.steps||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>';
+    if(sm.software) h+='<p class="wfsw">'+esc(sm.software)+'</p>';
+    return h;
   }
   body.forEach(function(b){
     if(norm(b.x)===norm(r.title)) return;
@@ -293,14 +302,14 @@ function tileHTML(t,i,n){
     if(t.type==="platform") kick+=" · "+r.__n+" of "+r.__of;
     if(t.type==="tip" && (r.deck_position||0)>50) kick="Extra tip";
   } else {
-    title=r.title; body=rundownBody(r);
+    title=(r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.headline)||r.title; body=rundownBody(r);
     if(r.link) link='<a class="more" href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">Open the full '+(r.section==="AI Training"?"guide":"story")+'</a>';
   }
   var last=(i===n-1), big=(t.kind==="ai" && t.type!=="platform");
   return '<div class="tile">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+
     '<button class="dt" type="button" data-do="'+esc(t.key)+'" aria-pressed="'+(r.do_this?"true":"false")+'" title="Do this!">Do this</button>'+
     '<button class="st" type="button" data-save="'+esc(t.key)+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
-    ((t.kind==="rd"&&r.img)?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
+    ((t.kind==="rd"&&r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.shot)?'<div class="pic wfpic"><div style="height:44px"></div><img data-enl="1" src="'+esc(r.ai_summary.shot)+'" alt="Screenshot from the reader\u2019s project" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>':(t.kind==="rd"&&r.img)?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
     '<div class="top"><div class="k">'+esc(kick)+'</div><h2'+(big?' class="bigq"':'')+'>'+esc(title)+'</h2>'+body+link+srcLine(t)+
     '</div>'+
     (last?'<div class="mintotal" id="mintotalLine"></div>':'')+
@@ -443,7 +452,7 @@ Promise.all([dealAi().catch(function(){ return []; }), dealRundown().catch(funct
     var wf=rdRows.filter(function(r){ return r.section==="Workflow of the Day"; }).length;
     var plats=tiles.filter(function(t){ return t.type==="platform"; }).length;
     document.getElementById("sub").textContent=tiles.length+" tiles · about 10 minutes"+(plats?" · "+plats+" new platforms":"")+(wf?" · "+wf+" workflows":"");
-    document.getElementById("stamp").textContent="v2.2 · "+nice(today());
+    document.getElementById("stamp").textContent="v2.3 · "+nice(today());
     render();
   });
 }).catch(function(e){
@@ -451,5 +460,14 @@ Promise.all([dealAi().catch(function(){ return []; }), dealRundown().catch(funct
   document.getElementById("deck").innerHTML='<div class="tile"><div class="empty">Could not load today&rsquo;s workout: '+esc(e.message)+'</div></div>';
 });
 </script>
-<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<script src="nav-config.js"></script><script src="navpatch.js"></script><div id="lbx"><span>&times;</span><img alt=""></div>
+<script>
+document.addEventListener("click",function(e){
+  var im=e.target&&e.target.closest?e.target.closest("img[data-enl]"):null;
+  var box=document.getElementById("lbx");
+  if(im){ box.querySelector("img").src=im.src; box.style.display="block"; return; }
+  if(box && box.style.display==="block" && box.contains(e.target)){ box.style.display="none"; }
+});
+</script>
+</body>
 </html>
