@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Wall &middot; ProjectYou</title>
+<title>Sparkboard &middot; ProjectYou</title>
 <script src="py-day.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="learning-log.js"></script>
@@ -659,7 +659,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>The Wall <span class="ver">v2.10</span></h1>
+      <h1>Sparkboard <span class="ver">v2.11</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -711,7 +711,7 @@
   <div class="card">
     <div class="sec"><h2>Done for today</h2><span class="n">ticks it off your list</span></div>
     <div class="fin">
-      <div class="fintx" id="finmsg">Tick it once you have had your look. It crosses The Wall off today&rsquo;s list, adds the minutes to the wheel, and marks your worksheet.</div>
+      <div class="fintx" id="finmsg">Tick it once you have had your look. It crosses Sparkboard off today&rsquo;s list, adds the minutes to the wheel, and marks your worksheet.</div>
       <div class="mintotal" id="wallMinTotal"></div>
       <div class="finrow">
         <label class="minl"><span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(31,42,68,.25)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#3f6f8f"/></svg></span>Minutes <input id="mins" type="number" min="1" max="180" placeholder="min"></label>
@@ -761,7 +761,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.8</div>
+  <div class="stamp" id="stamp">v2.11</div>
 </div>
 
 <aside class="stx-col">
@@ -1820,7 +1820,7 @@ function mountPhotogs(){
    done with the minutes typed in, then bounce to the Cue Cards board. The
    to-do list is behind a sign-in, so this half of the page needs the account
    even though the pictures do not. */
-var HABIT="The Wall", sb=null, signedIn=false, ticked=false, habitRow=null;
+var HABIT="Sparkboard", sb=null, signedIn=false, ticked=false, habitRow=null;
 /* Cue card clock v2 (Sep 29, 2026). The start time is saved in this browser, so a reload or coming back from another page no longer restarts the clock. After 2+ hours with no touch, Done asks how many minutes instead of guessing. */
 var __CUE_IDLE=2*3600*1000, __CUE_STALE=12*3600*1000, __cueAway=false, __cueSt=null, __cueKey='', __cueLastW=0;
 function __cueSave(force){ var n=Date.now(); if(!force&&n-__cueLastW<8000) return; __cueLastW=n; try{ localStorage.setItem(__cueKey,JSON.stringify(__cueSt)); }catch(e){} }
@@ -1839,10 +1839,19 @@ function __cueClockInit(){
 function __cueAskIfIdle(){
   var el=document.getElementById('tmin')||document.getElementById('mins');
   var typed=(el&&String(el.value).trim()!=='')?parseInt(el.value,10):NaN;
-  if(!(typed>0&&typed<=180)&&__cueAway&&el){
+  var hasTyped=(typed>0&&typed<=180), msg=null;
+  if(!hasTyped&&__cueAway){
+    msg='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+  } else if(!hasTyped&&__cueSt&&(Date.now()-__cueSt.s)>30*60000){
+    msg='The timer says about '+Math.round((Date.now()-__cueSt.s)/60000)+' minutes, which is over 30. Double check: how many minutes did you really spend? Type it in the Minutes box, then tap done again.';
+  } else if(hasTyped&&typed>30&&window.__cueOk!==typed){
+    window.__cueOk=typed;
+    msg='You entered '+typed+' minutes, which is over 30. If that is right, tap done again. If not, change the number first.';
+  }
+  if(msg&&el){
     var m=document.getElementById('cueAskMsg');
     if(!m){ m=document.createElement('div'); m.id='cueAskMsg'; m.setAttribute('role','status'); m.style.cssText='flex-basis:100%;width:100%;margin:8px 0 0;font-size:13.5px;font-weight:600;color:#b45309;line-height:1.4'; var host=el.closest('label')||el.parentNode; host.insertAdjacentElement('afterend',m); }
-    m.textContent='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+    m.textContent=msg;
     try{ el.focus(); }catch(e){}
     return true;
   }
@@ -1856,6 +1865,7 @@ function __cueHandTick(){
 }
 var __cueTickId=setInterval(__cueHandTick,250);
 __cueHandTick();
+
 
 try{ if(window.supabase && window.supabase.createClient) sb=window.supabase.createClient(SB,KEY); }catch(e){ sb=null; }
 
@@ -1947,7 +1957,7 @@ function toBoard(){ setTimeout(function(){ location.href="habit-modules.html?don
 function loadHabit(){
   if(!sb || !signedIn) return Promise.resolve();
   return sb.from("todos").select("id,task,done,actual_minutes,for_date")
-    .eq("is_habit",true).eq("task",HABIT)
+    .eq("is_habit",true).in("task",[HABIT,"Inspiration Wall"])
     .order("for_date",{ascending:false}).limit(1)
     .then(function(r){
       habitRow=(r.data && r.data[0]) || null;
@@ -1960,15 +1970,17 @@ function finish(){
   if(!sb){ finMsg("The sign-in did not load, so the tick cannot be saved. Reload the page."); return; }
   if(!signedIn){ document.getElementById("gate").classList.remove("hidden"); finMsg("Sign in first so the tick reaches the wheel."); return; }
   if(ticked){ toBoard(); return; }
-  if(!habitRow){ finMsg("Could not find The Wall on today's list."); return; }
-  if(__cueAskIfIdle()) return;
+  if(!habitRow){ finMsg("Could not find Sparkboard on today's list."); return; }
+  /* v2.11 (Oct 1, 2026): Done always stops the clock and uses it. No questions asked. If the page sat untouched for 2+ hours, the clock counts only up to your last touch. */
   clearInterval(__cueTickId);
   var el=document.getElementById("mins");
   var typed=(el&&el.value.trim()!=="")?parseInt(el.value,10):NaN;
-  var mins=(typed>0&&typed<=180)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  var endAt=(__cueAway&&__cueSt&&__cueSt.l>__cueStart)?__cueSt.l:Date.now();
+  if(__cueSt){ __cueSt.fin=Date.now(); __cueSave(true); }
+  var mins=(typed>0&&typed<=180)?typed:Math.min(180,Math.max(1,Math.round((endAt-__cueStart)/60000)));
   if(el){ el.value=mins; el.disabled=true; }
   var totLine=document.getElementById("wallMinTotal");
-  if(totLine){ totLine.textContent="Timer total: "+mins+" min"; totLine.classList.add("show"); }
+  if(totLine){ totLine.textContent="Time on the Sparkboard: "+mins+" min"; totLine.classList.add("show"); }
   var fb=document.getElementById("finbtn"); if(fb){ fb.disabled=true; fb.style.opacity=".55"; fb.style.pointerEvents="none"; }
   var now=new Date().toISOString(), t=today();
   sb.from("todos").update({done:true,status:"done",done_at:now,actual_minutes:mins,for_date:t,updated_at:now})
@@ -1977,7 +1989,7 @@ function finish(){
       if(res.error){ finMsg("Did not save: "+res.error.message); return; }
       ticked=true; habitRow.done=true; habitRow.for_date=t;
       paintFinish();
-      finMsg("The Wall to the wheel, "+mins+" min.");
+      finMsg("Time on the Sparkboard: "+mins+" min. Saved to the wheel. Taking you back to the board.");
       setTimeout(function(){ location.href="habit-modules.html?done=wall"; },3000);
     });
 }
@@ -2402,7 +2414,7 @@ function renderDateLine(){
   document.getElementById("sub").textContent=
     days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
   document.getElementById("stamp").textContent=
-    "v2.8 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+    "v2.11 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
   var lbl=document.getElementById("daylabel");
   if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
   var ds=document.getElementById("daystep");
@@ -2471,6 +2483,6 @@ loadSportsTicker();
 </script>
 
 <script src="cue-fav.js"></script>
-<script>CueFav.mount({module:'wall',label:'The Wall',doOnly:true,current:function(){var a=document.querySelector('#oaKeep');if(a){var l=document.querySelector('.oa .bar .tx a');if(l)return {key:l.textContent.trim(),title:l.textContent.trim()};}try{if(typeof VIEW!=='undefined'&&VIEW>=0&&VORDER[VIEW]&&document.getElementById('vkeep')&&document.getElementById('vkeep').offsetParent){var t=String(VORDER[VIEW].title||'').trim();if(t)return {key:t,title:t};}}catch(e){}return null;}});</script>
+<script>CueFav.mount({module:'wall',label:'Sparkboard',doOnly:true,current:function(){var a=document.querySelector('#oaKeep');if(a){var l=document.querySelector('.oa .bar .tx a');if(l)return {key:l.textContent.trim(),title:l.textContent.trim()};}try{if(typeof VIEW!=='undefined'&&VIEW>=0&&VORDER[VIEW]&&document.getElementById('vkeep')&&document.getElementById('vkeep').offsetParent){var t=String(VORDER[VIEW].title||'').trim();if(t)return {key:t,title:t};}}catch(e){}return null;}});</script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
