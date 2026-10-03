@@ -528,6 +528,10 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
 .minrow .cuehand{transform-origin:12px 12px}
 .mintotal{font-size:12px;color:var(--ink-2);font-weight:600;margin:-4px 0 8px;display:none}
 .mintotal.show{display:block}
+/* v2.24 (Oct 3 2026): the lines sent from the Energy card, shown at the top of the energy step. */
+.fromcard{background:#1d1a17;border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:10px 12px;margin:10px 0 4px;text-align:left}
+.fromlab{font-size:10px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;opacity:.65;margin-bottom:5px}
+.fromline{font-size:14px;padding:3px 0}
 /* v2.23 (Sep 30 2026), Scott: the timer total should be visible near the final Done button. */
 .timertotal{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:2px 0 10px;padding:9px 12px;border:1px solid var(--line,rgba(0,0,0,.15));border-radius:10px;font-size:14px;color:var(--ink-2)}
 .timertotal b{font-size:20px;color:var(--ink);font-variant-numeric:tabular-nums}
@@ -667,7 +671,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.23</span>
+    <span id="ver" class="ver">v2.24</span>
   </div>
 </div>
 
@@ -1035,6 +1039,7 @@ async function loadCloud(){
     cloud=true;
     await loadProjects();
     await loadEnergyTags();
+    await loadEnergyIn();
     return true;
   }catch(e){ return false; }
 }
@@ -1075,9 +1080,23 @@ function eightDone(){
   return WRAPCATS.filter(function(c){ return N.a8[c.k]!==undefined; }).length;
 }
 function energyList(){ return ENERGY.concat(S.energyTags||[]); }
+/* v2.24 (Oct 3 2026), Scott: lines typed on the Energy card on the Cue Cards board
+   and sent with its Done button land here, for the same day, so the question
+   arrives already answered. Read-only here; they are edited on the card. */
+function energyIn(){ return (S.energyIn&&S.energyInDay===DAY())?S.energyIn:[]; }
+function energyHas(){ return !!(N.energy.length||N.energyNote.trim()||energyIn().length); }
+async function loadEnergyIn(){
+  if(!sb||!signedIn) return;
+  try{
+    var r=await sb.from('energy_notes').select('text,position,id').eq('day',DAY()).eq('status','sent')
+      .order('position',{ascending:true}).order('id',{ascending:true});
+    if(!r.error){ S.energyIn=(r.data||[]).map(function(x){return x.text;}).filter(Boolean); S.energyInDay=DAY(); save(); }
+  }catch(e){}
+}
 function energyText(){
   var EL=energyList();
-  var parts=N.energy.map(function(i){return EL[i];}).filter(Boolean);
+  var parts=energyIn().slice();
+  N.energy.forEach(function(i){ if(EL[i]) parts.push(EL[i]); });
   if(N.energyNote.trim()) parts.push(N.energyNote.trim());
   return parts.length?parts.join(' · '):null;
 }
@@ -1581,7 +1600,7 @@ function settleSkip(){
   if(view==='insight') unmark('insight');
   if(view==='words' && N.words.length) unmark('words');
   if(view==='tags' && (N.presel.length||N.withw.length||N.wherew!==null)) unmark('tags');
-  if(view==='energy' && (N.energy.length||N.energyNote.trim())) unmark('energy');
+  if(view==='energy' && energyHas()) unmark('energy');
   if(view==='hard' && (N.hardText.trim()||N.hardHelp.trim())) unmark('hard');
   if(view==='three' && threeFilled().length) unmark('things');
   if(view==='relationship' && N.relationship.some(function(r){return r>0;})) unmark('relationship');
@@ -1873,6 +1892,11 @@ function render(){
     h+='<p class="kick">Fourth</p>';
     h+='<div class="h2ico">'+BOLT+'<h2>What gave you energy today?</h2></div>';
     h+='<p class="sub">Whatever put something back in the tank. More than one is fine.</p>';
+    if(energyIn().length){
+      h+='<div class="fromcard"><div class="fromlab">From your Energy card today</div>';
+      energyIn().forEach(function(x){ h+='<div class="fromline">'+esc(x)+'</div>'; });
+      h+='</div>';
+    }
     h+='<div class="chiprow sm">';
     energyList().forEach(function(w,i){
       h+='<button class="chip sm'+(i>=ENERGY.length?' mine':'')+(N.energy.indexOf(i)>-1?' on':'')+'" data-en="'+i+'">'+esc(w)+'</button>';
@@ -1885,7 +1909,7 @@ function render(){
     h+='<button class="mini" data-entagadd="1">Add</button></div>';
     h+='<textarea class="box" id="entx" style="min-height:70px" placeholder="Or say it in your own words. Optional.">'+esc(N.energyNote)+'</textarea>';
     h+='<div class="foot"><button class="btn" data-go="creative">Next</button>';
-    h+='<p class="gateline" id="gate1">'+((N.energy.length||N.energyNote.trim())?'Ready.':'Tap one, or write a line, or skip this one.')+'</p>';
+    h+='<p class="gateline" id="gate1">'+(energyHas()?'Ready.':'Tap one, or write a line, or skip this one.')+'</p>';
     h+='<button class="skiplink" data-go="skipenergy">Skip this one tonight</button></div>';
   }
 
@@ -2440,7 +2464,7 @@ function addEnergyTag(){
 }
 function paintEnergyGate(){
   var g=document.getElementById('gate1'); if(!g) return;
-  var ok=!!(N.energy.length||N.energyNote.trim());
+  var ok=energyHas();
   g.textContent=ok?'Ready.':'Tap one, or write a line, or skip this one.';
   g.classList.remove('hot');
 }
@@ -2761,7 +2785,7 @@ function act(a){
   }
   if(a==='energy'){ view='energy'; render(); return; }
   if(a==='creative'){
-    if(!(N.energy.length||N.energyNote.trim())){ gateSay('Tap one or write a line, or skip this one.'); return; }
+    if(!energyHas()){ gateSay('Tap one or write a line, or skip this one.'); return; }
     view='hard'; render(); return;
   }
   /* v2.15 */
