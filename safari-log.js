@@ -27,10 +27,15 @@
 
    Change the form here and every page gets the change. Do not copy it into a page.
 
+   v1.1, Oct 3 2026, Scott's answer: one centralized form that updates all trackers. A save now
+   also writes the day's tracker row WITH the place as its note, the same shape the Weekly
+   Review's old Where? popup wrote, so rollover and counts agree. PYSafari.dropTrackers(sb, id)
+   removes those rows when an entry is deleted. opts.which and opts.place pre-fill the form.
+
    v1.0, Oct 3 2026. First version. Custom words added with + are kept in this browser. */
 window.PYSafari = (function () {
   'use strict';
-  var VERSION = '1.0';
+  var VERSION = '1.1';
   var HOME_STATES = ['ct', 'connecticut', 'ny', 'new york'];
   var KINDS = ['Library','Park','Museum','Cafe','Gallery','Hotel lobby','Waterfront','Trail','Town','Landmark','Other'];
   var WHYS = ['Work from here','Explore','Both'];
@@ -53,36 +58,49 @@ window.PYSafari = (function () {
     return x.getUTCFullYear() + '-' + String(x.getUTCMonth()+1).padStart(2,'0') + '-' + String(x.getUTCDate()).padStart(2,'0');
   }
   function shortD(d){ var p = String(d||'').split('-'); if (p.length < 3) return d || ''; return MON[+p[1]-1] + ' ' + (+p[2]) + ', ' + p[0]; }
+  var STATES = ['alabama','alaska','arizona','arkansas','california','colorado','connecticut','delaware','florida','georgia','hawaii','idaho','illinois','indiana','iowa','kansas','kentucky','louisiana','maine','maryland','massachusetts','michigan','minnesota','mississippi','missouri','montana','nebraska','nevada','new hampshire','new jersey','new mexico','new york','north carolina','north dakota','ohio','oklahoma','oregon','pennsylvania','rhode island','south carolina','south dakota','tennessee','texas','utah','vermont','virginia','washington','west virginia','wisconsin','wyoming','district of columbia'];
+  /* a state is only a state if it looks like one: two letters, or a full name. "Manhattan" is not. */
   function stateOf(town){
     var m = String(town||'').match(/,\s*([A-Za-z .]+)\s*$/);
-    return m ? m[1].trim() : '';
+    if (!m) return '';
+    var s = m[1].trim(), k = s.toLowerCase().replace(/\./g, '');
+    if (/^[a-z]{2}$/.test(k) || STATES.indexOf(k) > -1) return s;
+    return '';
   }
   function isHome(state){ return HOME_STATES.indexOf(String(state||'').toLowerCase().replace(/\./g,'')) > -1; }
   function readVocab(key){ try { return JSON.parse(localStorage.getItem('pysf_' + key) || '[]') || []; } catch (e) { return []; } }
   function writeVocab(key, arr){ try { localStorage.setItem('pysf_' + key, JSON.stringify(arr)); } catch (e) {} }
 
-  /* ---------- the habit tick ---------- */
-  async function tickHabit(sb, which, date, minutes){
+  /* ---------- the trackers: one write that every page reads ----------
+     Scott, Oct 3 2026: "this should be a centralized form that updates all trackers
+     from one source." So the form writes the same rows the old Weekly Review popup
+     wrote: a quantified-self row for the day with the place as its note (the Weekly
+     Review rollover reads that note), plus, for today, the habit row on Todays
+     Tasks. The habit's own automatic row is removed so the day counts once. */
+  async function recordTrackers(sb, logId, which, date, minutes, place){
     var TASK = which === 'National' ? 'National Safari' : 'Local Safari', DAY = today();
+    var out = { habitId: null, qs: null };
     try {
+      var qs = { date: date, group: 'Environmental Health', tracker: TASK, value: 1, unit: 'done', minutes: minutes || 0,
+        minutes_estimated: false, status: 'done', note: place, source: 'safari-log:' + logId,
+        logged_at: date === DAY ? new Date().toISOString() : date + 'T16:00:00Z' };
+      var r = await sb.from('qs_log').insert(qs);
+      if (!r.error) out.qs = qs;
       if (date === DAY) {
-        var r = await sb.from('todos').select('id,done').eq('is_habit', true).eq('task', TASK).limit(1);
-        var row = r.data && r.data[0];
-        if (!row) return null;
-        if (!row.done) {
-          var now = new Date().toISOString();
-          await sb.from('todos').update({ done: true, status: 'done', done_at: now, completed_at: now,
-            actual_minutes: minutes || null, for_date: DAY, updated_at: now }).eq('id', row.id);
+        var h = await sb.from('todos').select('id,done').eq('is_habit', true).eq('task', TASK).limit(1);
+        var row = h.data && h.data[0];
+        if (row) {
+          out.habitId = row.id;
+          if (!row.done) {
+            var now = new Date().toISOString();
+            await sb.from('todos').update({ done: true, status: 'done', done_at: now, completed_at: now,
+              actual_minutes: minutes || null, for_date: DAY, updated_at: now }).eq('id', row.id);
+            await sb.from('qs_log').delete().eq('date', DAY).eq('tracker', TASK).eq('source', 'habit-bandit');
+          }
         }
-        return row.id;
-      }
-      if (date < DAY) {
-        await sb.from('qs_log').upsert([{ date: date, group: 'Environmental Health', tracker: TASK, value: 1, unit: 'done',
-          minutes: minutes || null, minutes_estimated: !minutes, status: 'done', source: 'habit-bandit',
-          logged_at: new Date().toISOString(), note: 'Logged from the safari log on ' + DAY }], { onConflict: 'date,tracker,source' });
       }
     } catch (e) {}
-    return null;
+    return out;
   }
 
   /* ---------- the look, scoped to .pysf so it sits inside any page ---------- */
@@ -135,6 +153,9 @@ window.PYSafari = (function () {
     this.s = { which: o.which === 'National' ? 'National' : 'Local', whichTouched: !!o.which, place: o.place || '', town: o.town || '',
                kind: '', why: '', withs: ['Solo'], when: o.when || today(), mins: null, felt: null, note: '', fav: false, lat: null, lng: null };
     this.sug = [];
+    if (o.lat) this.s.lat = o.lat; if (o.lng) this.s.lng = o.lng;
+    if (o.category) { var kw = String(o.category).toLowerCase(); for (var i = 0; i < KINDS.length; i++) if (kw.indexOf(KINDS[i].toLowerCase()) > -1) { this.s.kind = KINDS[i]; break; } }
+    if (o.town && !o.which) this.autoWhich();
   }
   Form.prototype.$ = function(q){ return this.el.querySelector(q); };
   Form.prototype.say = function(t, cls){ var e = this.$('.sf-say'); if (e) { e.textContent = t || ''; e.className = 'sf-say' + (cls ? ' ' + cls : ''); } };
@@ -279,7 +300,8 @@ window.PYSafari = (function () {
       var r = await sb.from('safari_log').insert(row).select('id').single();
       if (r.error) throw r.error;
       res.logId = r.data.id;
-      res.habitId = await tickHabit(sb, st.which, st.when, st.mins);
+      var tr = await recordTrackers(sb, res.logId, st.which, st.when, st.mins, place);
+      res.habitId = tr.habitId; res.qsRow = tr.qs; res.mins = st.mins || 0; res.tracker = st.which === 'National' ? 'National Safari' : 'Local Safari';
     } catch (e) {
       go.disabled = false; this.say('That did not save. Try again in a moment.', 'warn'); return;
     }
@@ -291,6 +313,10 @@ window.PYSafari = (function () {
     if (o.closeOnSave) return;
     await this.draw(); this.say(said, '');
   };
+
+  async function dropTrackers(sb, logId){
+    try { await sb.from('qs_log').delete().eq('source', 'safari-log:' + logId); } catch (e) {}
+  }
 
   function mount(el, opts){
     if (!el || !opts || !opts.sb) return null;
@@ -319,5 +345,5 @@ window.PYSafari = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, shortD: shortD, version: VERSION };
+  return { mount: mount, open: open, shortD: shortD, dropTrackers: dropTrackers, version: VERSION };
 })();

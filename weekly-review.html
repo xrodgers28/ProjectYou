@@ -304,6 +304,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .safph{width:100%;height:80px;object-fit:cover;border-radius:6px}
 .safmini{height:44px;border-radius:6px;background:#e6ebf0;overflow:hidden;border:1px solid var(--line)}
 .safmini .leaflet-tile-pane{filter:grayscale(1) opacity(.8);transition:filter .35s}.safstamp:hover .safmini .leaflet-tile-pane,.safmini:hover .leaflet-tile-pane{filter:none}
+.safbtn{font:inherit;font-size:12px;font-weight:800;color:#fff;background:#3f6f8f;border:none;border-radius:999px;padding:7px 14px;cursor:pointer}
 .safnote{font-family:inherit;font-size:12px;padding:6px 8px;border:1px solid #cfd3d9;border-radius:6px;width:100%;min-height:40px;color:var(--ink);resize:vertical}
 .safsaved{font-size:10px;color:var(--good);font-weight:700;min-height:12px}
 .safrow{display:flex;justify-content:flex-end}
@@ -902,7 +903,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.36';
+const VERSION='v5.37';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1136,7 +1137,7 @@ async function load(){
    place (safari_notes) like a travel journal. A yes on the quiet NYC map line
    writes into the Safaris list with a nyc-map tag. Two or more places: passport
    stamps. One place: postcard. None: days since the last new place. */
-const SAF={rows:[],notes:{},safaris:[],last:null,ws:null,we:null,maps:[]};
+const SAF={rows:[],notes:{},logged:{},safaris:[],last:null,ws:null,we:null,maps:[]};
 const SAF_HOME=[41.0226,-73.5665];
 function safMiles(lat,lng){const R=3958.8,r=x=>x*Math.PI/180;const dLat=r(lat-SAF_HOME[0]),dLng=r(lng-SAF_HOME[1]);const h=Math.sin(dLat/2)**2+Math.cos(r(SAF_HOME[0]))*Math.cos(r(lat))*Math.sin(dLng/2)**2;return 2*R*Math.asin(Math.sqrt(h));}
 function safIsNYC(p){return p.lat>40.49&&p.lat<40.92&&p.lng>-74.27&&p.lng<-73.68;}
@@ -1144,9 +1145,9 @@ function safFind(name){const n=(name||'').toLowerCase();return SAF.safaris.find(
 async function safariLoad(ws,we){
   SAF.ws=ws;SAF.we=we;SAF.rows=[];SAF.last=null;
   try{
-    const [wk,notes,saf]=await Promise.all([sb.rpc('safari_week',{ws,we}),sb.from('safari_notes').select('venue,note'),sb.from('safaris').select('id,name,status,tags,visited_on')]);
+    const [wk,notes,saf]=await Promise.all([sb.rpc('safari_week',{ws,we}),sb.from('safari_log').select('place,happened_on').gte('happened_on',ws).lte('happened_on',we),sb.from('safaris').select('id,name,status,tags,visited_on')]);
     if(wk.error)throw wk.error;
-    SAF.rows=(wk.data||[]);SAF.notes={};(notes.data||[]).forEach(n=>{SAF.notes[n.venue]=n.note||'';});SAF.safaris=saf.data||[];
+    SAF.rows=(wk.data||[]);SAF.logged={};(notes.data||[]).forEach(n=>{SAF.logged[(n.place||'').toLowerCase()]=n.happened_on;});SAF.safaris=saf.data||[];
     const shown=SAF.rows.filter(r=>!r.is_errand);
     if(!shown.length){const l=await sb.rpc('safari_last_new',{before:we});SAF.last=(l.data||[])[0]||null;}
     /* a new place already on the Safaris list as an idea flips to been, once */
@@ -1156,7 +1157,8 @@ async function safariLoad(ws,we){
   renderWordSug();
 }
 function safMiniMap(id,lat,lng,zoom,hero){if(!window.L)return;const m=L.map(id,{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,touchZoom:false}).setView([lat,lng],zoom);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{detectRetina:true}).addTo(m);L.circleMarker([lat,lng],{radius:hero?8:4,color:'#fff',weight:hero?2:1,fillColor:'#4fa08a',fillOpacity:1}).addTo(m);SAF.maps.push(m);}
-function safNote(p){return '<textarea class="safnote" data-venue="'+esc(p.venue)+'" placeholder="Your note on this place" onblur="safariSaveNote(this)">'+esc(SAF.notes[p.venue]||'')+'</textarea><span class="safsaved" data-for="'+esc(p.venue)+'"></span>';}
+function safNote(p){const lg=SAF.logged[(p.venue||'').toLowerCase()];return lg?'<span class="safsaved on">Logged '+esc(fmt(lg))+'</span>':'<button type="button" class="safbtn" data-venue="'+esc(p.venue)+'" onclick="safariOpenForm(this)">Log Safari Moment</button>';}
+function safariOpenForm(btn){const p=SAF.rows.find(r=>r.venue===btn.dataset.venue);if(!p)return;PYSafari.open({sb:sb,when:p.day,place:p.venue,town:[p.city,p.state].filter(Boolean).join(', '),category:p.category,lat:p.lat,lng:p.lng,onSaved:function(){try{safariLoad(SAF.ws,SAF.we);}catch(e){}}});}
 function safGm(p){
   if(!safIsNYC(p))return '<span></span>';
   const s=safFind(p.venue);
@@ -1185,15 +1187,7 @@ function safariRender(){
   body.innerHTML='<div class="safstamps">'+shown.map((p,i)=>'<div class="safstamp"><div class="ring">'+(p.visit_no===1?'FIRST<br>TIME':'2ND<br>VISIT')+'</div><div class="d">'+dname(p.day)+' '+fmt(p.day)+'</div><div class="nm">'+esc(p.venue)+'</div><div class="ct">'+esc(p.category||'')+(p.city?' · '+esc(p.city):'')+'</div>'+(p.photo?'<img class="safph" src="'+p.photo+'" alt="">':'')+'<div class="safmini" id="safMini'+i+'"></div>'+safNote(p)+'<div class="safrow">'+safGm(p)+'</div></div>').join('')+'</div>'+foot(null);
   shown.forEach((p,i)=>safMiniMap('safMini'+i,p.lat,p.lng,13,false));
 }
-async function safariSaveNote(t){
-  const venue=t.dataset.venue,note=t.value.trim();const tag=document.querySelector('.safsaved[data-for="'+CSS.escape(venue)+'"]');
-  if((SAF.notes[venue]||'')===note)return;
-  const {error}=await sb.from('safari_notes').upsert({venue,note,updated_at:new Date().toISOString()});
-  if(error){if(tag)tag.textContent='Not saved: '+error.message;return;}
-  SAF.notes[venue]=note;if(tag){tag.textContent='Saved';setTimeout(()=>{tag.textContent='';},2000);}
-  /* a note that starts with "fix" is also a to-do for Claude */
-  if(/^fix\b/i.test(note)){await sb.from('session_todos').insert({cat:'Fixes to make',txt:'Local Safari, '+venue+': '+note.replace(/^fix[:\s]*/i,''),own:'Claude',project:'Project YOU',page:'weekly-review.html'});}
-}
+/* v5.37: the old per-place note box and its table are retired; notes are written in Log Safari Moment. */
 async function safariNyc(venue){
   const p=SAF.rows.find(r=>r.venue===venue);if(!p)return;
   const s=safFind(venue);const now=new Date().toISOString();
@@ -3207,20 +3201,13 @@ async function wrTickCounter(t,d,area,n){
    same as a counter, since more than one safari can happen in a day and
    each one gets its own row so rollover can list them all. */
 function openLocationModal(td){
-  const t=td.dataset.t,d=td.dataset.d,area=td.dataset.area;
-  pyModalOpen(
-    '<div class="pyModalTitle">Log '+esc(t)+'</div>'+
-    '<div class="pyModalBody">'+esc(dname(d))+' '+esc(fmt(d))+'. Where?</div>'+
-    '<input type="text" class="pyModalInput" id="pyLocInput" placeholder="Place or neighborhood" maxlength="80">'+
-    '<div class="pyModalRow"><button class="pyModalBtn" id="pyModalCancel" type="button">Cancel</button>'+
-    '<button class="pyModalBtn primary" id="pyModalSave" type="button">Log it</button></div>'
-  );
-  const input=el('pyLocInput');
-  setTimeout(()=>input.focus(),0);
-  const save=()=>{const v=input.value.trim();if(!v)return;pyModalClose();wrTickLocation(t,d,area,v);};
-  input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();save();}});
-  el('pyModalCancel').onclick=()=>pyModalClose();
-  el('pyModalSave').onclick=save;
+  /* v5.37: the Where? popup is gone. Ticking Local or National Safari opens the one
+     Log Safari Moment form (safari-log.js), which writes this same tracker row. */
+  const t=td.dataset.t,d=td.dataset.d;
+  PYSafari.open({sb:sb,when:d,which:t==='National Safari'?'National':'Local',onSaved:function(res){
+    if(res&&res.qsRow){D.qs.push({date:res.qsRow.date,group:res.qsRow.group,tracker:res.qsRow.tracker,minutes:res.qsRow.minutes,note:res.qsRow.note,logged_at:res.qsRow.logged_at});}
+    compute();render();saveScores();try{safariLoad(SAF.ws,SAF.we);}catch(e){}
+  }});
 }
 async function wrTickLocation(t,d,area,place){
   if(tickBusy)return;

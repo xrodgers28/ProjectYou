@@ -11,6 +11,7 @@
      See project memory day-boundary-rule. -->
 <script src="py-day.js"></script>
 <script src="social-log.js"></script>
+<script src="safari-log.js"></script>
 <script src="learning-log.js"></script>
 <!-- The two ES modules below are the longest pole in the first paint: the browser cannot
      even ask for them until it has parsed 170KB of this file and reached the module tag,
@@ -2611,6 +2612,16 @@ function taskRow(t, kids) {
   try { row.appendChild(cxGrab(t)); } catch (e) {}
   const check = el('span', 'check');
   check.onclick = () => {
+    /* Oct 3 2026: Local and National Safari open the one Log Safari Moment form
+       (safari-log.js) instead of a bare tick. The form ticks this row itself. */
+    if (t.is_habit && !t.done && (t.task === 'Local Safari' || t.task === 'National Safari') && window.PYSafari) {
+      PYSafari.open({ sb: sb, which: t.task === 'National Safari' ? 'National' : 'Local', onSaved: function (res) {
+        patch(t.id, { done: true, status: 'done', done_at: new Date().toISOString(), actual_minutes: (res && res.mins) || null });
+        try { cxOnTick(t); } catch (e) {}
+        render(); maybeClearHabits(); checkHabitConfetti();
+      } });
+      return;
+    }
     snapshot();
     const done = !t.done;
     const wasSocial = (t.section === 'Social Well-Being' || t.subsection === 'Social Well-Being' || t.origin_section === 'Social Well-Being');
