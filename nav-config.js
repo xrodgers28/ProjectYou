@@ -28,7 +28,14 @@ window.NAV_CONFIG = {
     { "label": "Cue Cards", "href": "habit-modules.html" },
     { "label": "Cue Card<br>Library", "href": "cue-card-library.html" },
     { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
-    { "label": "Compass<br>Time", "href": "compass-time.html" }
+    { "label": "Compass<br>Time", "href": "compass-time.html" },
+    /* Oct 3 2026, Scott: Safari Log goes "under Environmental Health". There was no
+       Environmental Health slot in the bar, so this adds one as a dropdown: the
+       section page, then its log. */
+    { "label": "Environmental<br>Health", "children": [
+      { "label": "Environmental Health", "href": "environmental.html" },
+      { "label": "Safari Log", "href": "safari-log.html" }
+    ] }
   ],
   /* Sep 3 2026, Scott. Two items left this group. Food Log moved to LISTS, where
      it is now the fifth tab. Intrinsic Capacity came off the bar entirely and is

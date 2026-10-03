@@ -27,6 +27,9 @@
 
    Change the form here and every page gets the change. Do not copy it into a page.
 
+   v1.2, Oct 3 2026, Scott's answer: a note that starts with the word fix also becomes a to-do for Claude
+   (Fixes to make), the shortcut the Weekly Review's old note box had. Safari minutes count for real.
+
    v1.1, Oct 3 2026, Scott's answer: one centralized form that updates all trackers. A save now
    also writes the day's tracker row WITH the place as its note, the same shape the Weekly
    Review's old Where? popup wrote, so rollover and counts agree. PYSafari.dropTrackers(sb, id)
@@ -35,7 +38,7 @@
    v1.0, Oct 3 2026. First version. Custom words added with + are kept in this browser. */
 window.PYSafari = (function () {
   'use strict';
-  var VERSION = '1.1';
+  var VERSION = '1.2';
   var HOME_STATES = ['ct', 'connecticut', 'ny', 'new york'];
   var KINDS = ['Library','Park','Museum','Cafe','Gallery','Hotel lobby','Waterfront','Trail','Town','Landmark','Other'];
   var WHYS = ['Work from here','Explore','Both'];
@@ -301,12 +304,15 @@ window.PYSafari = (function () {
       if (r.error) throw r.error;
       res.logId = r.data.id;
       var tr = await recordTrackers(sb, res.logId, st.which, st.when, st.mins, place);
+      if (/^fix\b/i.test(row.note || '')) {
+        try { await sb.from('session_todos').insert({ cat: 'Fixes to make', txt: 'Safari, ' + place + ': ' + row.note.replace(/^fix[:\s]*/i, ''), own: 'Claude', project: 'Project YOU', page: 'safari-log.html' }); res.fixTodo = true; } catch (e) {}
+      }
       res.habitId = tr.habitId; res.qsRow = tr.qs; res.mins = st.mins || 0; res.tracker = st.which === 'National' ? 'National Safari' : 'Local Safari';
     } catch (e) {
       go.disabled = false; this.say('That did not save. Try again in a moment.', 'warn'); return;
     }
     go.disabled = false;
-    var said = 'Logged: ' + place + ', ' + shortD(st.when) + '. ' + (st.which === 'National' ? 'National' : 'Local') + ' Safari ticked.';
+    var said = 'Logged: ' + place + ', ' + shortD(st.when) + '. ' + (st.which === 'National' ? 'National' : 'Local') + ' Safari ticked.' + (res.fixTodo ? ' Added to Claude\'s list under Fixes to make.' : '');
     this.s = { which: st.which, whichTouched: false, place: '', town: '', kind: '', why: '', withs: ['Solo'], when: today(), mins: null, felt: null, note: '', fav: false, lat: null, lng: null };
     this.sugLoaded = false;
     if (typeof o.onSaved === 'function') { try { o.onSaved(res); } catch (e) {} }
