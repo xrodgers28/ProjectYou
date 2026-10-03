@@ -27,6 +27,8 @@ window.NAV_CONFIG = {
   "Habit Modules": [
     { "label": "Cue Cards", "href": "habit-modules.html" },
     { "label": "Cue Card<br>Library", "href": "cue-card-library.html" },
+    /* Oct 3 2026, Scott: the Daily Habit Tracker page goes in the main nav right after Cue Card Library. */
+    { "label": "Daily Habit<br>Tracker", "href": "daily-habit-tracker.html" },
     { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
     { "label": "Compass<br>Time", "href": "compass-time.html" },
     /* Oct 3 2026, Scott: Safari Log goes "under Environmental Health". There was no

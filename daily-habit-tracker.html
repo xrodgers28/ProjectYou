@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daily Habit Tracker · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="py-day.js"></script>
+<script src="py-icons.js"></script>
+<script src="habit-tracker-art.js"></script>
+<script src="habit-tracker-designs.js"></script>
+<script src="habit-tracker-engine.js"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;--amber:#b8801f}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .hidden{display:none}
+  .btn{font-family:inherit;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:12px;padding:10px 16px;cursor:pointer;font-size:14px}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .wrap{max-width:1000px;margin:0 auto;padding:10px 16px 70px}
+  .intro{font-size:14px;color:var(--muted);margin:6px 0 14px;max-width:70ch;line-height:1.45}
+  .bar{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+  .bar .stat{font-size:13px;color:var(--muted)} .bar .stat b{color:var(--ink);font-size:15px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+  .seg button{font-family:inherit;font-size:12px;font-weight:700;border:0;background:#fff;color:var(--muted);padding:6px 11px;cursor:pointer;border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:var(--accent);color:#fff}
+  .seglab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;margin-right:6px}
+  .sample{background:#f8eed6;border:1px solid var(--amber);color:#7a5a14;border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:12px}
+  .err{color:var(--hot);font-size:13px}
+  details.chk{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:16px}
+  details.chk summary{cursor:pointer;font-weight:700;font-size:13.5px;color:var(--accent)}
+  .chk table{border-collapse:collapse;width:100%;margin-top:10px;font-size:12.5px}
+  .chk th{text-align:left;color:#9aa6b4;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;padding:4px 6px;border-bottom:1px solid var(--line)}
+  .chk td{padding:4px 6px;border-bottom:1px solid #f0f2f6}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  .dsn{background:#fff;border:1px solid var(--line);border-radius:18px;padding:16px 16px 14px;margin-bottom:18px;box-shadow:0 10px 30px rgba(31,42,68,.07)}
+  .dh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .dh .dl{width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .dh h2{font-size:17px}
+  .dh .ref{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .dh .ready{margin-left:auto;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px}
+  .ready.yes{background:#e3f3ea;color:var(--green)} .ready.no{background:#f7e9dc;color:#b06a2c}
+  .pair{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .pv .pl{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;margin-bottom:6px}
+  .mount.card{width:330px;max-width:100%}
+  .mount.phone{width:262px;max-width:100%;border:6px solid #1f2a44;border-radius:30px;overflow:hidden;background:#fff}
+  .soon{width:330px;max-width:100%;min-height:140px;border:2px dashed var(--line);border-radius:14px;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px;color:#9aa6b4;font-size:13px}
+  .cm{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+  .cm label{display:block;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;margin-bottom:6px}
+  .cm textarea{width:100%;min-height:58px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-family:inherit;font-size:14px;resize:vertical}
+  .cm .row{display:flex;gap:10px;align-items:center;margin-top:8px}
+  .cm .said{font-size:12.5px;color:var(--green);font-weight:700}
+  .clist{margin-top:10px;display:grid;gap:8px}
+  .clist .c{background:#f7f9fb;border:1px solid #edf0f4;border-radius:10px;padding:8px 11px;font-size:13.5px;line-height:1.4;white-space:pre-wrap}
+  .clist .c .t{display:block;font-size:11px;font-weight:700;color:#9aa6b4;margin-bottom:2px}
+  .clist .none{font-size:12.5px;color:#9aa6b4}
+  .copybox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:6px}
+  .copybox h3{font-size:14px;margin-bottom:6px}
+  .copybox textarea{width:100%;min-height:140px;border:1px solid var(--line);border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#f7f9fb}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+</style>
+<style id="pynav-css">
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+</style>
+<style>.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:2px 0 2px}.secbar h1{font-size:23px;color:var(--accent,#3f6f8f)}.secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line,#e3e7ee);border-radius:999px;padding:2px 8px}.secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}.secbar-wrap{max-width:900px;margin:0 auto;padding:10px 16px 0}</style>
+</head>
+<body>
+<div id="login">
+  <h1>Daily Habit Tracker</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn primary" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.13</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>Daily Habit Tracker</h1><span class="ver">v1.0</span><span class="date"></span></div></div>
+  <div class="wrap">
+    <p class="intro">Seven ways to see today's habits, side by side, drawn from your real habits and real ticks. This page only reads your habits. The one thing it saves is the comments you write under each design.</p>
+
+    <div class="bar">
+      <span class="stat" id="stat">Loading your habits...</span>
+      <span style="margin-left:auto"><span class="seglab">View</span><span class="seg" id="seg">
+        <button data-m="live" class="on">Live today</button><button data-m="start">Sample: start of day</button><button data-m="mid">Sample: mid day</button><button data-m="done">Sample: all done</button>
+      </span></span>
+    </div>
+    <div class="sample hidden" id="sample">You are looking at a sample, not your real habits. Nothing here changes your data. Switch back to Live today to see the real day.</div>
+    <div class="err hidden" id="loaderr"></div>
+
+    <details class="chk"><summary>Check: today's habits as the tracker engine sees them</summary>
+      <table><thead><tr><th>Habit</th><th>Level</th><th>Stack</th><th>Section</th><th>Today</th></tr></thead><tbody id="chkbody"></tbody></table>
+    </details>
+
+    <div id="designs"></div>
+
+    <div class="copybox">
+      <h3>All my comments (copy and paste into the chat)</h3>
+      <textarea id="allc" readonly></textarea>
+      <div class="row" style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="btn primary" id="copyall">Copy all comments</button><span class="said" id="copysaid"></span></div>
+    </div>
+  </div>
+  <div class="badge">Daily Habit Tracker v1.0</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');_a.style.display='none';}if(_l){_l.classList.remove('hidden');_l.style.display='';var _e=document.getElementById('loginErr');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
+
+var MODE='live', STATE=null, STARTED=false, COMMENTS={};
+try{var sm=localStorage.getItem('pyht-mode'); if(sm&&['live','start','mid','done'].indexOf(sm)>=0)MODE=sm;}catch(e){}
+
+async function boot(){const {data:{session}}=await sb.auth.getSession();if(session){onLogin(session);return;}
+  document.getElementById('login').classList.remove('hidden');}
+async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){document.getElementById('loginErr').textContent=error.message;return;}onLogin(data.session);}
+async function onLogin(session){try{await sb.realtime.setAuth(session.access_token);}catch(e){}
+  document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');
+  if(!STARTED){STARTED=true;start();}}
+
+function $(id){return document.getElementById(id);}
+var P=window.PYHT;
+
+function buildShells(){
+  var h='';
+  P.registry().forEach(function(r){
+    var ready=!!r.file&&!r.failed;
+    h+='<section class="dsn" id="d-'+r.id+'"><div class="dh"><span class="dl">'+P.esc(r.letter)+'</span><h2>'+P.esc(r.name)+'</h2><span class="ref">'+P.esc(r.ref)+'</span>'+
+      '<span class="ready '+(ready?'yes':'no')+'">'+(ready?'Live':'Not built yet')+'</span></div>'+
+      '<div class="pair">'+
+      '<div class="pv"><div class="pl">Card (cue card page)</div>'+(ready?'<div class="mount card" data-d="'+r.id+'" data-size="card"></div>':'<div class="soon">Coming in Step 2</div>')+'</div>'+
+      '<div class="pv"><div class="pl">Phone (one-tap shortcut)</div>'+(ready?'<div class="mount phone" data-d="'+r.id+'" data-size="phone"></div>':'<div class="soon" style="width:262px">Coming in Step 2</div>')+'</div>'+
+      '</div>'+
+      '<div class="cm"><label for="t-'+r.id+'">Your comments on this design</label><textarea id="t-'+r.id+'" placeholder="What works, what does not (saved with today\'s date and time)"></textarea>'+
+      '<div class="row"><button class="btn primary" data-save="'+r.id+'">Save comment</button><span class="said" id="s-'+r.id+'"></span></div>'+
+      '<div class="clist" id="c-'+r.id+'"><div class="none">Loading earlier comments...</div></div></div></section>';
+  });
+  $('designs').innerHTML=h;
+  document.querySelectorAll('[data-save]').forEach(function(b){b.addEventListener('click',function(){saveComment(b.getAttribute('data-save'));});});
+}
+
+function drawDesigns(){
+  if(!STATE)return;
+  document.querySelectorAll('.mount').forEach(function(m){
+    m.innerHTML=P.render(STATE,m.getAttribute('data-d'),m.getAttribute('data-size'));
+  });
+}
+function drawStat(){
+  var s=STATE,c=s.counts;
+  $('stat').innerHTML='<b>'+P.fmtDay(s.day)+'</b> &middot; Core <b>'+c.cd+' of '+c.ct+'</b> done &middot; Secondary <b>'+c.sd+' of '+c.st+'</b> done &middot; '+s.left+' to go &middot; updated '+P.esc(P.fmtET(s.loadedAt));
+  $('sample').classList.toggle('hidden',s.mode==='live');
+  var rows='';
+  s.habits.forEach(function(h){
+    rows+='<tr><td><span class="dot" style="background:'+h.color+'"></span>'+P.esc(h.n)+'</td><td>'+(h.core?'Core':'Secondary')+'</td><td>'+P.esc(h.stack)+'</td><td>'+P.esc(h.secName||h.sec)+'</td><td>'+(h.done?'Done':'Open')+'</td></tr>';
+  });
+  $('chkbody').innerHTML=rows;
+}
+async function redraw(){
+  try{
+    STATE=await P.getState(MODE); $('loaderr').classList.add('hidden');
+    drawStat(); drawDesigns();
+  }catch(e){var el=$('loaderr');el.textContent='Could not load your habits: '+(e&&e.message?e.message:e);el.classList.remove('hidden');}
+}
+
+function drawComments(id){
+  var box=$('c-'+id); if(!box)return;
+  var l=COMMENTS[id]||[];
+  box.innerHTML=l.length?l.slice().reverse().map(function(c){return '<div class="c"><span class="t">'+P.esc(P.fmtET(c.created_at))+'</span>'+P.esc(c.body)+'</div>';}).join(''):'<div class="none">No comments yet.</div>';
+}
+function drawAll(){
+  var out=['MY COMMENTS ON THE DAILY HABIT TRACKER DESIGNS',''];
+  P.registry().forEach(function(r){
+    var l=(COMMENTS[r.id]||[]).slice().reverse();
+    if(!l.length)return;
+    out.push(r.letter+'. '+r.name);
+    l.forEach(function(c){out.push('  '+P.fmtET(c.created_at)+': '+c.body.replace(/\n/g,' '));});
+    out.push('');
+  });
+  if(out.length===2)out.push('(no comments yet)');
+  $('allc').value=out.join('\n');
+}
+async function loadComments(){
+  try{
+    var all=await P.comments.all(); COMMENTS={};
+    all.forEach(function(c){(COMMENTS[c.design_id]=COMMENTS[c.design_id]||[]).push(c);});
+    P.registry().forEach(function(r){drawComments(r.id);}); drawAll();
+  }catch(e){P.registry().forEach(function(r){var b=$('c-'+r.id);if(b)b.innerHTML='<div class="none">Could not load comments: '+P.esc(e.message||e)+'</div>';});}
+}
+async function saveComment(id){
+  var t=$('t-'+id), v=t.value.trim(), s=$('s-'+id);
+  if(!v){s.textContent='Type a comment first.';return;}
+  try{
+    var row=await P.comments.add(id,v);
+    (COMMENTS[id]=COMMENTS[id]||[]).push(row); t.value=''; drawComments(id); drawAll(); s.textContent='Saved.';
+  }catch(e){s.textContent='Not saved: '+(e.message||e);}
+  setTimeout(function(){s.textContent='';},3000);
+}
+
+function setupSwitch(){
+  function paint(){document.querySelectorAll('#seg button').forEach(function(b){b.classList.toggle('on',b.getAttribute('data-m')===MODE);});}
+  document.querySelectorAll('#seg button').forEach(function(b){b.addEventListener('click',function(){
+    MODE=b.getAttribute('data-m'); try{localStorage.setItem('pyht-mode',MODE);}catch(e){} paint(); redraw();});});
+  paint();
+}
+async function start(){
+  $('copyall').addEventListener('click',function(){
+    var o=$('allc'),m=$('copysaid');o.select();var ok=false;try{ok=document.execCommand('copy');}catch(e){}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(o.value).then(function(){m.textContent='Copied.';},function(){m.textContent=ok?'Copied.':'Press and hold the text to copy.';});}
+    else m.textContent=ok?'Copied.':'Press and hold the text to copy.';
+    setTimeout(function(){m.textContent='';},2500);});
+  try{
+    await P.init(sb); await P.loadDesigns();
+  }catch(e){var el=$('loaderr');el.textContent='Could not start: '+(e.message||e);el.classList.remove('hidden');}
+  buildShells(); setupSwitch();
+  await redraw(); loadComments();
+  P.every(function(){ if(document.visibilityState!=='hidden') redraw(); });
+}
+boot();
+</script>
+<script>(function(){var e=document.querySelector('.secbar .date');if(e){var d=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];e.textContent=M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();}})();</script>
+<script id="pn-maps-js">document.addEventListener("click",function(e){var b=e.target.closest(".pn-dropbtn");var cur=b?b.parentNode.querySelector(".pn-menu"):null;document.querySelectorAll(".pn-menu.open").forEach(function(m){if(m!==cur)m.classList.remove("open");});if(b){var r=b.getBoundingClientRect();cur.style.left=Math.max(6,Math.min(r.left,window.innerWidth-210))+"px";cur.style.top=(r.bottom+2)+"px";cur.classList.toggle("open");e.stopPropagation();e.preventDefault();}});</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
