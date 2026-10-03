@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f4f2ec; --panel:#ffffff; --ink:#23262b; --soft:#5d6470; --faint:#8b92a0;
+  --line:#e3e0d7; --line2:#eeece5; --shadow:0 1px 3px rgba(20,24,30,.07);
+  --pin-bg:#fffdf6; --pin-line:#e7e2d2;
+  --green:#2f8f5b; --amber:#c07f10; --red:#c0453a;
+  --b-do:#3f6f8f; --b-more:#c07f10; --b-did:#2f8f5b; --b-read:#6f7b8a; --b-kill:#a8724a;
+  --chip:#eceee7; --chip-ink:#4a5160;
+}
+:root:not([data-theme="light"]){
+  @media (prefers-color-scheme: dark){
+    --bg:#15171b; --panel:#1e2228; --ink:#e9ebef; --soft:#aeb5c0; --faint:#79808d;
+    --line:#2c3139; --line2:#262b32; --shadow:0 1px 3px rgba(0,0,0,.4);
+    --pin-bg:#20242b; --pin-line:#333a44;
+    --green:#58b985; --amber:#e0a63a; --red:#e07065;
+    --b-do:#5b93b6; --b-more:#d79a2e; --b-did:#44ab74; --b-read:#8995a6; --b-kill:#c08a62;
+    --chip:#2a3038; --chip-ink:#aeb5c0;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171b; --panel:#1e2228; --ink:#e9ebef; --soft:#aeb5c0; --faint:#79808d;
+  --line:#2c3139; --line2:#262b32; --shadow:0 1px 3px rgba(0,0,0,.4);
+  --pin-bg:#20242b; --pin-line:#333a44;
+  --green:#58b985; --amber:#e0a63a; --red:#e07065;
+  --b-do:#5b93b6; --b-more:#d79a2e; --b-did:#44ab74; --b-read:#8995a6; --b-kill:#c08a62;
+  --chip:#2a3038; --chip-ink:#aeb5c0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:820px;margin:0 auto;padding:22px 16px 80px}
+header.top{margin-bottom:8px}
+.titlerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+h1{font-size:25px;margin:0;letter-spacing:-.2px}
+.vchip{font-size:11px;font-weight:bold;background:var(--chip);color:var(--chip-ink);padding:3px 8px;border-radius:6px;letter-spacing:.4px}
+.datestamp{color:var(--soft);font-size:13px;margin-top:4px}
+.lede{color:var(--soft);font-size:14px;margin:12px 0 0}
+.habit{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:8px;padding:11px 14px;margin:16px 0;font-size:13.5px;color:var(--soft);box-shadow:var(--shadow)}
+.habit b{color:var(--ink)}
+
+/* key */
+.key{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:16px 0;box-shadow:var(--shadow)}
+.key h2{font-size:13px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin:0 0 10px}
+.keyrow{display:flex;gap:10px;align-items:flex-start;margin:7px 0;font-size:13px;color:var(--soft)}
+.kname{font-weight:bold;color:var(--ink);min-width:108px;display:inline-block}
+
+/* pinned answers box */
+.pin{position:sticky;top:0;z-index:20;background:var(--pin-bg);border:1px solid var(--pin-line);border-radius:10px;padding:12px 14px;margin:16px 0 22px;box-shadow:var(--shadow)}
+.pin h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+.pin textarea{width:100%;min-height:92px;resize:vertical;border:1px solid var(--pin-line);border-radius:8px;background:var(--panel);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:13px;padding:10px;line-height:1.5}
+.copybtn{font:inherit;font-size:11px;font-weight:bold;letter-spacing:.3px;border:1px solid var(--pin-line);background:var(--panel);color:var(--chip-ink);border-radius:6px;padding:5px 10px;cursor:pointer}
+.copybtn:active{transform:translateY(1px)}
+.pinhint{font-size:11.5px;color:var(--faint);margin-top:7px}
+
+/* rows */
+.row{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:15px 16px;margin:0 0 14px;box-shadow:var(--shadow)}
+.row.settled{opacity:.72}
+.rhead{display:flex;gap:11px;align-items:flex-start}
+.dot{width:13px;height:13px;border-radius:50%;flex:0 0 auto;margin-top:5px}
+.dot.green{background:var(--green)} .dot.amber{background:var(--amber)} .dot.red{background:var(--red)}
+.rtitle{font-size:16px;font-weight:bold;margin:0;color:var(--ink)}
+.rnum{color:var(--faint);font-weight:bold;font-size:13px;margin-right:2px}
+.rbody{color:var(--soft);font-size:14px;margin:9px 0 0;padding-left:24px}
+.next{padding-left:24px;margin-top:10px;font-size:13.5px}
+.next b{color:var(--ink)}
+.proof{padding-left:24px;margin-top:9px;font-size:11.5px;color:var(--faint);border-top:1px dashed var(--line2);padding-top:7px}
+.proof span{font-weight:bold;text-transform:uppercase;letter-spacing:.4px}
+
+/* buttons */
+.btns{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 0;padding-left:24px}
+.btn{font:inherit;font-weight:500;font-size:13px;color:#ffffff;border:none;border-radius:8px;padding:9px 14px;cursor:pointer;opacity:.92}
+.btn:hover{opacity:1}
+.btn:active{transform:translateY(1px)}
+.btn.do{background:var(--b-do)} .btn.more{background:var(--b-more)} .btn.did{background:var(--b-did)} .btn.read{background:var(--b-read)} .btn.kill{background:var(--b-kill)}
+.btn.chosen{outline:3px solid rgba(0,0,0,.14);outline-offset:1px}
+.cmt{width:100%;margin:11px 0 0;margin-left:24px;max-width:calc(100% - 24px);border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:13px;padding:8px 10px;resize:vertical;min-height:34px}
+.state{padding-left:24px;margin-top:9px;font-size:12px;font-weight:bold}
+.state.open{color:var(--b-do)}
+.state.done{color:var(--faint)}
+
+/* row left border colors when tapped */
+.row[data-pick="do"]{border-left-color:var(--b-do)}
+.row[data-pick="more"]{border-left-color:var(--b-more)}
+.row[data-pick="did"]{border-left-color:var(--b-did)}
+.row[data-pick="read"]{border-left-color:var(--b-read)}
+.row[data-pick="kill"]{border-left-color:var(--b-kill)}
+
+footer{color:var(--faint);font-size:11.5px;text-align:center;margin-top:26px}
+
+@media (max-width:640px){
+  h1{font-size:22px}
+  .rbody,.next,.btns,.proof,.state{padding-left:0}
+  .cmt{margin-left:0;max-width:100%}
+  .kname{min-width:92px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="titlerow">
+    <h1>Morning Report</h1>
+    <span class="vchip">v1.0</span>
+  </div>
+  <div class="datestamp">Saturday, Oct 3, 2026 &middot; all times EST</div>
+  <p class="lede">Eleven things worth a look this morning. Most of the day is yours. The ones that need you are flagged, and you answer every one by tapping, never by typing a reply.</p>
+</header>
+
+<div class="habit">
+  <b>Atomic Habits, woven in: make it obvious.</b> A check you cannot see is a check that quietly stops. Three items below are failures that sat behind a green light for days. The fix is the same each time: move the signal to where your daily glance already lands, so a silence shows up as a silence.
+</div>
+
+<section class="key">
+  <h2>What the five buttons mean</h2>
+  <div class="keyrow"><span class="kname">Do this</span><span>Go and build it, run it, ship it. An instruction, not an answer. The item stays open until the work is finished.</span></div>
+  <div class="keyrow"><span class="kname">Tell me more</span><span>You lean yes, but want the cost, the risk or the reasoning first. Your question goes in the note and the item stays open.</span></div>
+  <div class="keyrow"><span class="kname">I did it</span><span>You handled it yourself. The item closes.</span></div>
+  <div class="keyrow"><span class="kname">I read this</span><span>Not a task, just noting you have seen it. Nothing is owed. The item closes.</span></div>
+  <div class="keyrow"><span class="kname">Kill this task</span><span>Dead, and it does not come back. The item closes.</span></div>
+</section>
+
+<div class="pin">
+  <h2><span>Your answers, ready to copy back into the chat</span><button class="copybtn" type="button" onclick="copyAnswers()">Copy</button></h2>
+  <textarea id="answers" readonly placeholder="Tap a button on any item and your answer appears here. Select all of this text and paste it back into the chat. The copy button is a shortcut, not the only way."></textarea>
+  <div class="pinhint">This box is the way your answers travel. Select the text and paste it into the chat. Nothing here is saved on its own.</div>
+</div>
+
+<main id="rows">
+
+<!-- ROW 1 -->
+<section class="row" id="r1" data-title="Overnight task runner never clocked in">
+  <div class="rhead"><span class="dot red"></span><h3 class="rtitle"><span class="rnum">1.</span>The overnight task runner never clocked in last night</h3></div>
+  <p class="rbody">The job that works through your queued overnight tasks around 4am left no record of starting at all last night, which by its own rule means it never ran, not that it had a quiet night. Separately, your early housekeeping did run fine: the site map refreshed and published at 4:52am and picked up yesterday's report, and the map check at 3:44am looked over all six map pages. Its queue was also empty, so even had it fired there was nothing flagged for it to do. So the result is honest but hollow: nothing was worked because nothing was waiting and the runner did not wake.</p>
+  <p class="next"><b>Next:</b> Decide whether you want the runner looked at now, or left alone since there was nothing queued for it.</p>
+  <p class="proof"><span>Proof</span> &middot; run_log has zero rows since Oct 2 noon; session_todos lane queue_run has no rows flagged run_status overnight.</p>
+  <div class="btns" data-row="r1">
+    <button class="btn do" onclick="pick('r1','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r1','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r1','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r1','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r1','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r1"></div>
+  <textarea class="cmt" id="c-r1" placeholder="Comment (optional)" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 2 -->
+<section class="row" id="r2" data-title="Apple Watch stopped filing readings Sep 30">
+  <div class="rhead"><span class="dot red"></span><h3 class="rtitle"><span class="rnum">2.</span>Your watch stopped filing readings on Sep 30</h3></div>
+  <p class="rbody">The last batch of watch readings landed at 9:31pm on Sep 30. Nothing has come in for Oct 1, Oct 2, or so far today, so three days of steps, heart rate and the rest are missing. Your workouts are still arriving, so this is the health sync from watch to phone specifically, not everything going dark. I checked this straight against your readings, not just the overnight note that first raised it, and the gap is real and still open.</p>
+  <p class="next"><b>Next:</b> On your iPhone, open Health, then your profile, then the app that pushes readings, and confirm it is still connected. A reconnect usually backfills the missing days.</p>
+  <p class="proof"><span>Proof</span> &middot; health_metrics latest day 2026-09-30; zero rows for Oct 1 and Oct 2. health_workouts current to Oct 2.</p>
+  <div class="btns" data-row="r2">
+    <button class="btn do" onclick="pick('r2','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r2','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r2','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r2','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r2','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r2"></div>
+  <textarea class="cmt" id="c-r2" placeholder="Comment (optional)" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 3 -->
+<section class="row" id="r3" data-title="Background sync failing 31 times in silence">
+  <div class="rhead"><span class="dot red"></span><h3 class="rtitle"><span class="rnum">3.</span>A background sync has failed 31 times with no alarm</h3></div>
+  <p class="rbody">The job that turns your social check-ins into Quantified Self minutes has thirty one failed runs on record, and nothing anywhere surfaced it. It went in on Sep 29 to follow an instruction written into its own code about counting social time as real time out. The catch is that it writes its own failures into a place no page ever reads, so it can keep failing forever and still look healthy from the outside. This is exactly the obvious-signal problem from the top of the page.</p>
+  <p class="next"><b>Next:</b> Let me read the failure record, find why it keeps erroring, and fix it so the minutes actually flow.</p>
+  <p class="proof"><span>Proof</span> &middot; sync-social-to-qs, 31 failed runs logged; finding raised by the Oct 2 System Map freshness check (session_todos id 581).</p>
+  <div class="btns" data-row="r3">
+    <button class="btn do" onclick="pick('r3','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r3','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r3','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r3','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r3','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r3"></div>
+  <textarea class="cmt" id="c-r3" placeholder="Comment (optional)" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 4 -->
+<section class="row" id="r4" data-title="Dictated-notes capture silent since Sep 5">
+  <div class="rhead"><span class="dot amber"></span><h3 class="rtitle"><span class="rnum">4.</span>Nothing has reached your task capture since Sep 5</h3></div>
+  <p class="rbody">The dictated-notes lane, the sweep that turns your spoken notes into to-dos, still shows green and healthy, but nothing has actually landed in the capture inbox since 8:19pm on Sep 5, almost a month ago. Either you have stopped dictating notes into the app, or the pipe between the app and your list has quietly come loose. If you have been dictating and they are vanishing, that is a real loss of your ideas, which is the one thing the whole capture habit exists to prevent.</p>
+  <p class="next"><b>Next:</b> Tell me whether you have been dictating notes lately. If yes, I will trace exactly where they are getting lost.</p>
+  <p class="proof"><span>Proof</span> &middot; capture inbox last entry Sep 5, 2026 8:19pm; flagged by the Oct 3 System Map freshness check (session_todos id 174).</p>
+  <div class="btns" data-row="r4">
+    <button class="btn do" onclick="pick('r4','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r4','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r4','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r4','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r4','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r4"></div>
+  <textarea class="cmt" id="c-r4" placeholder="Comment (optional)" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 5 -->
+<section class="row" id="r5" data-title="Six new design feeds, keep or toss">
+  <div class="rhead"><span class="dot amber"></span><h3 class="rtitle"><span class="rnum">5.</span>Six new design feeds are waiting for a keep or toss</h3></div>
+  <p class="rbody">Last night's community scan found six sources it thinks fit your inspiration wall, all offered on Oct 2 and not yet added: Cool Hunting, Logo Design Love, Packaging of the World, Street Art Utopia, The Coolector, and The Design Files. Each one leans on strong single images, which is what reads well on the wall, and The Coolector was picked as a close cousin of Yanko Design, which you already keep. They are sitting as offers only, so nothing changes on the wall until you say so.</p>
+  <p class="next"><b>Next:</b> Tell me which to keep and I will wire them in. Anything you do not name, I discard.</p>
+  <p class="proof"><span>Proof</span> &middot; wall_candidates status offered, 6 rows, offered_on 2026-10-02.</p>
+  <div class="btns" data-row="r5">
+    <button class="btn do" onclick="pick('r5','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r5','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r5','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r5','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r5','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r5"></div>
+  <textarea class="cmt" id="c-r5" placeholder="Which ones to keep?" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 6 -->
+<section class="row" id="r6" data-title="Two older AI cards still unverified">
+  <div class="rhead"><span class="dot amber"></span><h3 class="rtitle"><span class="rnum">6.</span>Two older AI cards are still unverified</h3></div>
+  <p class="rbody">Two cards in your AI deck, one for an Amazon AI marketplace and one for a thought-partner agent, have been flagged as needing a check since Aug 10 and were never resolved. While they sit in that state they will not show on the wall, so they are neither live nor cleared, just stuck. They are old enough now that the facts may have moved on, so a quick verify or drop is the honest move.</p>
+  <p class="next"><b>Next:</b> Say verify and I will check them fresh, or say drop and I will clear them out.</p>
+  <p class="proof"><span>Proof</span> &middot; ai_deck_pool needs_verify true, 2 rows, created 2026-08-10.</p>
+  <div class="btns" data-row="r6">
+    <button class="btn do" onclick="pick('r6','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r6','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r6','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r6','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r6','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r6"></div>
+  <textarea class="cmt" id="c-r6" placeholder="Verify or drop?" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 7 -->
+<section class="row" id="r7" data-title="Newsletter reads keep stalling unattended">
+  <div class="rhead"><span class="dot amber"></span><h3 class="rtitle"><span class="rnum">7.</span>Your two newsletter reads keep stalling overnight</h3></div>
+  <p class="rbody">The scheduled reads of James Clear's 3-2-1 and Farnam Street's Brain Food keep failing in the early morning, because fetching a web page needs a person to approve it and nobody is awake at 7am to say yes. The good news is your 3-2-1 archive is actually current to Oct 1, with sixty five issues on file, so a later session caught it up and the failure notes are out of date. Brain Food still has a healthy backlog of unseen items, so no card ran dry in the meantime.</p>
+  <p class="next"><b>Next:</b> Decide whether to move these two reads into a session you are present for, or pre-approve the two sites so the overnight run can finish on its own.</p>
+  <p class="proof"><span>Proof</span> &middot; run_log Oct 2 atomic ingest status failed (PROVENANCE_REQUIRED); jc_321 now max date 2026-10-01, 65 issues, 386 cards.</p>
+  <div class="btns" data-row="r7">
+    <button class="btn do" onclick="pick('r7','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r7','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r7','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r7','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r7','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r7"></div>
+  <textarea class="cmt" id="c-r7" placeholder="Comment (optional)" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 8 -->
+<section class="row" id="r8" data-title="Calendar and inbox quiet today">
+  <div class="rhead"><span class="dot green"></span><h3 class="rtitle"><span class="rnum">8.</span>One early appointment today, and your inbox is quiet</h3></div>
+  <p class="rbody">Today holds one thing on the calendar: an appointment at Darien HS from 7:45 to 8:45 this morning. After that the day is open, with nothing else booked today and nothing on tomorrow either. Your unread mail is all newsletters, brokerage statements and school notices, with no message where a real person is waiting on your reply. So there is no inbox bottleneck to clear.</p>
+  <p class="next"><b>Next:</b> Nothing. This one is just so you know the day is clear.</p>
+  <p class="proof"><span>Proof</span> &middot; Google Calendar, 1 event Oct 3 07:45-08:45; Gmail unread last 3 days all automated senders.</p>
+  <div class="btns" data-row="r8">
+    <button class="btn do" onclick="pick('r8','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r8','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r8','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r8','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r8','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r8"></div>
+  <textarea class="cmt" id="c-r8" placeholder="Comment (optional)" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 9 -->
+<section class="row" id="r9" data-title="Four projects offline until folder reconnects">
+  <div class="rhead"><span class="dot amber"></span><h3 class="rtitle"><span class="rnum">9.</span>Four of your projects are offline this morning</h3></div>
+  <p class="rbody">This run happened in the cloud with your computer disconnected, so I could only read what lives in the shared database. There I can see Project YOU, which has 307 open items, most of them unfiled, with seven of them specifically parked and waiting on your call, including one about the calendar shortcut sending every meeting a dozen times over. TreadWell shows a single open item: listen to Mike Cann's feedback recording from the Aug 7 call, still unopened in the folder. CrushingIt, Clever Phrases, AI Intelligence and the 2026 Calendar live only in your folder, which was not reachable, so their status is pending until a run with your computer connected.</p>
+  <p class="next"><b>Next:</b> For Project YOU the single next step is to clear the seven items waiting on your input. For TreadWell it is to play that Aug 7 recording. Reconnect your computer if you want the other four filled in today.</p>
+  <p class="proof"><span>Proof</span> &middot; session_todos open: Project YOU 307 (262 unfiled, 7 needs_input), TreadWell 1. Desktop bridge unavailable this run.</p>
+  <div class="btns" data-row="r9">
+    <button class="btn do" onclick="pick('r9','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r9','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r9','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r9','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r9','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r9"></div>
+  <textarea class="cmt" id="c-r9" placeholder="Comment (optional)" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 10 -->
+<section class="row" id="r10" data-title="Claude weekly usage not readable here">
+  <div class="rhead"><span class="dot amber"></span><h3 class="rtitle"><span class="rnum">10.</span>Your weekly Claude usage is not readable from here</h3></div>
+  <p class="rbody">There is no connected source in this run that reports how much of your Claude plan you have used, and the number is not stored anywhere I can read. So I cannot honestly tell you where you stand on the weekly limit this morning, and I would rather say that than guess. The place that shows it live is your Claude account settings, under usage.</p>
+  <p class="next"><b>Next:</b> Open your Claude settings and check usage if you want the figure today. Nothing is needed from me.</p>
+  <p class="proof"><span>Proof</span> &middot; no usage metric in board_meta or any connected tool this run.</p>
+  <div class="btns" data-row="r10">
+    <button class="btn do" onclick="pick('r10','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r10','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r10','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r10','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r10','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r10"></div>
+  <textarea class="cmt" id="c-r10" placeholder="Comment (optional)" oninput="rebuild()"></textarea>
+</section>
+
+<!-- ROW 11 -->
+<section class="row" id="r11" data-title="Old parked report still in storage">
+  <div class="rhead"><span class="dot amber"></span><h3 class="rtitle"><span class="rnum">11.</span>An old unpublished report is still sitting in storage</h3></div>
+  <p class="rbody">A morning report from Sep 25 failed to publish that day and was parked in storage as a safety copy, which is the right behavior when a publish fails twice. The problem is it was never cleared afterward, so a nine-day-old copy is still taking up its slot, long superseded by every report since. It is harmless but it is clutter, and clutter is how a real parked report could one day get missed.</p>
+  <p class="next"><b>Next:</b> Say clear it and I will remove the stale parked copy.</p>
+  <p class="proof"><span>Proof</span> &middot; board_meta key morning_report_parked, updated 2026-09-25 05:51.</p>
+  <div class="btns" data-row="r11">
+    <button class="btn do" onclick="pick('r11','do','Do this')">Do this</button>
+    <button class="btn more" onclick="pick('r11','more','Tell me more')">Tell me more</button>
+    <button class="btn did" onclick="pick('r11','did','I did it')">I did it</button>
+    <button class="btn read" onclick="pick('r11','read','I read this')">I read this</button>
+    <button class="btn kill" onclick="pick('r11','kill','Kill this task')">Kill this task</button>
+  </div>
+  <div class="state" id="s-r11"></div>
+  <textarea class="cmt" id="c-r11" placeholder="Comment (optional)" oninput="rebuild()"></textarea>
+</section>
+
+</main>
+
+<footer>Morning Report v1.0 &middot; built Oct 3, 2026 &middot; answers live in this page only, nothing is saved</footer>
+</div>
+
+<script>
+// state in memory only, no browser storage
+var LABELS = {do:'DO THIS',more:'TELL ME MORE',did:'I DID IT',read:'I READ THIS',kill:'KILL THIS TASK'};
+var OPEN = {do:true, more:true, did:false, read:false, kill:false};
+var picks = {}; // rowId -> key
+
+function pick(rowId, key, label){
+  picks[rowId] = key;
+  var row = document.getElementById(rowId);
+  row.setAttribute('data-pick', key);
+  // settle or keep open
+  if(OPEN[key]){ row.classList.remove('settled'); }
+  else { row.classList.add('settled'); }
+  // highlight chosen button
+  var btns = row.querySelectorAll('.btn');
+  for(var i=0;i<btns.length;i++){ btns[i].classList.remove('chosen'); }
+  var map = {do:'.do',more:'.more',did:'.did',read:'.read',kill:'.kill'};
+  var chosen = row.querySelector('.btn'+map[key]);
+  if(chosen){ chosen.classList.add('chosen'); }
+  // state line
+  var st = document.getElementById('s-'+rowId);
+  if(OPEN[key]){ st.className='state open'; st.textContent = (key==='do'?'Open: work owed. ':'Open: waiting on more from me. ') + 'This item stays until it is finished.'; }
+  else { st.className='state done'; st.textContent = 'Settled, marked ' + (key==='read'?'noted':label.toLowerCase()) + '.'; }
+  rebuild();
+}
+
+function rebuild(){
+  var rows = document.querySelectorAll('.row');
+  var out = [];
+  out.push('MORNING REPORT v1.0 - Oct 3, 2026 - my answers');
+  out.push('');
+  var any = false;
+  for(var i=0;i<rows.length;i++){
+    var id = rows[i].id;
+    if(!picks[id]) continue;
+    any = true;
+    var title = rows[i].getAttribute('data-title');
+    var num = rows[i].querySelector('.rnum').textContent.replace('.','');
+    var cmt = document.getElementById('c-'+id);
+    var line = num + '. ' + title + '  ->  ' + LABELS[picks[id]];
+    out.push(line);
+    if(cmt && cmt.value.trim()){ out.push('   note: ' + cmt.value.trim()); }
+  }
+  if(!any){ document.getElementById('answers').value=''; return; }
+  document.getElementById('answers').value = out.join('\n');
+}
+
+function copyAnswers(){
+  var ta = document.getElementById('answers');
+  ta.removeAttribute('readonly');
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try{ document.execCommand('copy'); }catch(e){}
+  ta.setAttribute('readonly','readonly');
+  var b = document.querySelector('.copybtn');
+  var old = b.textContent; b.textContent='Copied';
+  setTimeout(function(){ b.textContent=old; }, 1400);
+}
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
