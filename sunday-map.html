@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sunday Week Map · ProjectYou</title>
+<!-- The one definition of a day, 2am to 2am Eastern. Never reimplement it here. -->
+<script src="py-day.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--good:#1e8e5a;--good-soft:#e1f2e9;--warn:#c2761f;--warn-soft:#fbeedb;--grey:#c9ced6;--hot:#c0453b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45}
+  .hidden{display:none !important}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .btn{font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:999px;padding:9px 18px}
+  .btn.ghost{background:#fff;color:var(--accent)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .wrap{max-width:640px;margin:0 auto;padding:14px 14px 90px}
+  .head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:6px 0 4px}
+  .head h1{font-size:22px}
+  .ver{font-size:11px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px 9px}
+  .date{font-size:12.5px;color:var(--muted)}
+  .sub{font-size:14px;color:var(--muted);margin:0 0 12px}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 14px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px}
+  .stat b{display:block;font-size:22px;line-height:1.15}
+  .stat span{font-size:11.5px;color:var(--muted)}
+  .stat.pop{animation:pop .4s ease}
+  @keyframes pop{50%{transform:scale(1.07);background:var(--warn-soft)}}
+  @media (prefers-reduced-motion: reduce){.stat.pop,.dot.miss{animation:none !important}}
+  .bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin:0 0 4px}
+  .bar i{display:block;height:100%;width:0;background:var(--good);border-radius:99px;transition:width .25s ease}
+  .barcap{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+  .row{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 12px 10px;margin:0 0 10px}
+  .row .top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin:0 0 8px}
+  .row .nm{font-weight:700;font-size:15px}
+  .row .cnt{font-size:12px;color:var(--muted);white-space:nowrap}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}
+  .cell{text-align:center}
+  .cell .lab{font-size:10.5px;color:var(--muted);margin-bottom:3px}
+  .dot{width:100%;max-width:44px;aspect-ratio:1;margin:0 auto;border-radius:50%;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;background:#fff;color:var(--muted)}
+  .dot.done{background:var(--good);border-color:var(--good);color:#fff}
+  .dot.skip{background:#f1f2f5;border-color:var(--grey);color:var(--grey)}
+  .dot.na{border-style:dashed;border-color:#eceef2;color:#d4d8de}
+  .dot.miss{border-color:var(--warn);color:var(--warn);cursor:pointer;animation:pulse 1.6s infinite;background:#fff}
+  .dot.tagged{background:var(--warn-soft);animation:none}
+  .dot.nd{background:#f1f2f5;border-color:var(--grey);color:var(--muted);animation:none}
+  @keyframes pulse{50%{box-shadow:0 0 0 5px var(--warn-soft)}}
+  .acts{display:flex;gap:8px;flex-wrap:wrap;margin:9px 0 0}
+  .link{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;text-decoration:underline;padding:2px 0}
+  .link.muted{color:var(--muted);font-weight:400}
+  .done-banner{background:var(--good-soft);border:1px solid var(--good);border-radius:14px;padding:12px 14px;margin:0 0 14px;font-weight:700;color:#14633f}
+  details.perfect{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;font-size:13.5px;margin:0 0 10px}
+  details.perfect summary{cursor:pointer;font-weight:700}
+  details.perfect p{margin-top:6px;color:var(--muted)}
+  .sheetbg{position:fixed;inset:0;background:rgba(31,42,68,.4);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+  .sheet{width:100%;max-width:640px;background:#fff;border-radius:20px 20px 0 0;padding:18px 16px 22px;box-shadow:0 -10px 40px rgba(31,42,68,.3)}
+  .sheet h2{font-size:16px;margin-bottom:2px}
+  .sheet .s2{font-size:12.5px;color:var(--muted);margin-bottom:12px}
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .pill{font-family:inherit;font-size:14px;font-weight:600;border:1.5px solid var(--line);background:#fff;color:var(--ink);border-radius:999px;padding:9px 14px;cursor:pointer}
+  .pill:hover{border-color:var(--accent)}
+  .pill.add{border-style:dashed;color:var(--accent)}
+  .field{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:14px;font-family:inherit;margin-bottom:10px}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:10px 16px;border-radius:999px;font-size:13.5px;font-weight:700;opacity:0;pointer-events:none;transition:all .25s ease;z-index:60;max-width:90%}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .empty{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;text-align:center;color:var(--muted)}
+  .back{font-size:13px;color:var(--accent);text-decoration:none;font-weight:700}
+  .badge{text-align:center;font-size:11px;color:var(--muted);margin-top:22px}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>Sunday Week Map</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="wrap">
+    <a class="back" href="weekly-review.html">&larr; Weekly Review</a>
+    <div class="head"><h1>Sunday Week Map</h1><span class="ver">v1.0</span><span class="date" id="dateline"></span></div>
+    <p class="sub" id="sub"></p>
+    <div class="stats">
+      <div class="stat" id="stPts"><b>0</b><span>points</span></div>
+      <div class="stat" id="stStreak"><b>0</b><span>Sunday streak</span></div>
+      <div class="stat" id="stWeek"><b>0 of 0</b><span>misses tagged</span></div>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <p class="barcap" id="barcap"></p>
+    <div id="done"></div>
+    <div id="rows"></div>
+    <div id="perfect"></div>
+    <div class="badge">Sunday Week Map v1.0</div>
+  </div>
+</div>
+
+<div class="sheetbg hidden" id="sheetbg"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const VERSION='v1.0';
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+
+/* Reasons, decided Oct 3, 2026: seven fixed ones plus any Scott adds himself. */
+const REASONS=['Tired','Travel','Rushed','Sick','Forgot','Chose to skip','Something else'];
+const NOT_DAILY='Not a daily habit';
+const PTS_PER_TAG=10, PTS_COMPLETE=20, FREE_WEEKS_PER_MONTH=1;
+
+let WEEK='', START='', END='', DAYS=[], HABITS=[], ANS={}, WEEKS=[], MYREASONS=[], SHEET=null;
+
+/* ---------- dates (the 2am day comes from PY.today(), never rebuilt here) ---------- */
+function ymdAdd(ymd,n){const p=ymd.split('-').map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2],12));d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function mondayOf(ymd){const p=ymd.split('-').map(Number);const d=new Date(Date.UTC(p[0],p[1]-1,p[2],12));return ymdAdd(ymd,-((d.getUTCDay()+6)%7));}
+function fmt(ymd){return new Date(ymd+'T12:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'});}
+function dayName(ymd){return new Date(ymd+'T12:00:00Z').toLocaleDateString('en-US',{weekday:'short',timeZone:'UTC'});}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2400);}
+
+/* ---------- sign in ---------- */
+sb.auth.onAuthStateChange(function(_e,s){if(!s){document.getElementById('app').classList.add('hidden');document.getElementById('login').classList.remove('hidden');}});
+async function boot(){
+  const r=await sb.auth.getSession();
+  if(r.data&&r.data.session){onLogin();return;}
+  document.getElementById('login').classList.remove('hidden');
+}
+async function signIn(){
+  const r=await sb.auth.signInWithPassword({email:document.getElementById('email').value.trim(),password:document.getElementById('pass').value});
+  if(r.error){document.getElementById('loginErr').textContent=r.error.message;return;}
+  onLogin();
+}
+async function onLogin(){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  await load();
+}
+
+/* ---------- load ---------- */
+async function load(){
+  const today=PY.today();
+  END=ymdAdd(today,-1); START=ymdAdd(today,-7); WEEK=mondayOf(today);
+  DAYS=[];for(let i=0;i<7;i++)DAYS.push(ymdAdd(START,i));
+  document.getElementById('dateline').textContent=fmt(START)+' to '+fmt(END);
+  document.getElementById('sub').textContent='The 7 finished days before today. Tap each pulsing day and say what got in the way.';
+
+  const hh=await sb.from('habit_history').select('habit_id,day,task,tracker,done,skipped').gte('day',START).lte('day',END).limit(5000);
+  if(hh.error){document.getElementById('rows').innerHTML='<div class="empty">Could not read your habit log: '+esc(hh.error.message)+'</div>';return;}
+  const by={};
+  (hh.data||[]).forEach(function(r){
+    const h=by[r.habit_id]||(by[r.habit_id]={id:r.habit_id,label:(r.tracker||r.task||'Unnamed habit'),cells:{}});
+    const c=h.cells[r.day]||(h.cells[r.day]={done:false,skipped:false});
+    if(r.done)c.done=true; if(r.skipped)c.skipped=true;
+  });
+  HABITS=Object.keys(by).map(function(k){
+    const h=by[k];h.misses=[];
+    DAYS.forEach(function(d){const c=h.cells[d];if(c&&!c.done&&!c.skipped)h.misses.push(d);});
+    return h;
+  });
+  const a=await sb.from('sunday_map_answers').select('day,habit_id,reason').gte('day',START).lte('day',END);
+  ANS={};(a.data||[]).forEach(function(r){ANS[r.day+'|'+r.habit_id]=r.reason;});
+  const w=await sb.from('sunday_map_weeks').select('*').order('week_key');
+  WEEKS=w.data||[];
+  const mr=await sb.from('sunday_map_reasons').select('label').order('created_at');
+  MYREASONS=(mr.data||[]).map(function(r){return r.label;});
+  render();
+}
+
+/* ---------- numbers ---------- */
+function totals(){
+  let misses=0,tagged=0,scored=0;
+  HABITS.forEach(function(h){h.misses.forEach(function(d){misses++;const r=ANS[d+'|'+h.id];if(r){tagged++;if(r!==NOT_DAILY)scored++;}});});
+  const week=WEEKS.find(function(x){return x.week_key===WEEK;})||{};
+  const completed=(misses>0&&tagged===misses)||(misses===0&&!!week.completed);
+  const points=scored*PTS_PER_TAG+(completed?PTS_COMPLETE:0);
+  return {misses:misses,tagged:tagged,completed:completed,points:points};
+}
+function streakInfo(){
+  const done=WEEKS.filter(function(x){return x.completed;}).map(function(x){return x.week_key;}).sort();
+  if(!done.length)return {n:0,freeLeft:FREE_WEEKS_PER_MONTH};
+  const first=done[0], set={};done.forEach(function(k){set[k]=1;});
+  let n=0,usedByMonth={},wk=WEEK,k=0;
+  while(wk>=first){
+    if(set[wk]){n++;}
+    else if(k===0){/* this week is still being answered, no penalty */}
+    else{
+      const m=wk.slice(0,7);usedByMonth[m]=usedByMonth[m]||0;
+      if(usedByMonth[m]<FREE_WEEKS_PER_MONTH)usedByMonth[m]++;else break;
+    }
+    wk=ymdAdd(wk,-7);k++;
+  }
+  const thisM=WEEK.slice(0,7);
+  return {n:n,freeLeft:Math.max(0,FREE_WEEKS_PER_MONTH-(usedByMonth[thisM]||0))};
+}
+function totalPoints(t){
+  let sum=0;WEEKS.forEach(function(x){if(x.week_key!==WEEK)sum+=(x.points||0);});
+  return sum+t.points;
+}
+
+/* ---------- draw ---------- */
+function bump(id){const e=document.getElementById(id);e.classList.remove('pop');void e.offsetWidth;e.classList.add('pop');}
+function render(){
+  const t=totals(), s=streakInfo();
+  document.querySelector('#stPts b').textContent=totalPoints(t);
+  document.querySelector('#stStreak b').textContent=s.n;
+  document.querySelector('#stStreak span').textContent='Sunday streak';document.getElementById('stStreak').title=s.freeLeft+' free missed week left this month';
+  document.querySelector('#stWeek b').textContent=t.tagged+' of '+t.misses;
+  document.getElementById('bar').style.width=(t.misses?Math.round(t.tagged/t.misses*100):(t.completed?100:0))+'%';
+  document.getElementById('barcap').textContent=(streakInfo().freeLeft+' free missed week left this month. ')+t.misses?(t.completed?'Map complete.':(t.misses-t.tagged)+' misses left to tag.'):(t.completed?'This week is counted.':'No misses in these 7 days.');
+  document.getElementById('done').innerHTML=t.completed?'<div class="done-banner">Map complete. +'+PTS_COMPLETE+' bonus points, and this week counts toward your streak.</div>':'';
+
+  const withMiss=HABITS.filter(function(h){return h.misses.length;}).sort(function(a,b){return b.misses.length-a.misses.length||a.label.localeCompare(b.label);});
+  const clean=HABITS.filter(function(h){return !h.misses.length;});
+  let html='';
+  withMiss.forEach(function(h){
+    const open=h.misses.filter(function(d){return !ANS[d+'|'+h.id];}).length;
+    let cells='';
+    DAYS.forEach(function(d){
+      const c=h.cells[d];let cls='na',txt='',attr='';
+      if(c){
+        if(c.done){cls='done';txt='✓';}
+        else if(c.skipped){cls='skip';txt='-';}
+        else{
+          const r=ANS[d+'|'+h.id];
+          cls='miss'+(r?(r===NOT_DAILY?' tagged nd':' tagged'):'');
+          txt=r?(r===NOT_DAILY?'n/a':r.charAt(0).toUpperCase()):'?';
+          attr=' onclick="openSheet(\''+h.id+'\',\''+d+'\')" title="'+esc(dayName(d)+' '+fmt(d))+'"';
+        }
+      }
+      cells+='<div class="cell"><div class="lab">'+dayName(d).charAt(0)+'</div><div class="dot '+cls+'"'+attr+'>'+txt+'</div></div>';
+    });
+    html+='<div class="row"><div class="top"><span class="nm">'+esc(h.label)+'</span><span class="cnt">'+h.misses.length+' miss'+(h.misses.length>1?'es':'')+(open?', '+open+' to tag':', all tagged')+'</span></div><div class="grid">'+cells+'</div>'+
+      (open?'<div class="acts"><button class="link" onclick="openSheet(\''+h.id+'\',null)">Same reason for all '+open+'</button><button class="link muted" onclick="applyAll(\''+h.id+'\',\''+NOT_DAILY+'\')">Not a daily habit</button></div>':'')+'</div>';
+  });
+  if(!withMiss.length)html='<div class="empty">'+(HABITS.length?'No misses in these 7 days. Nothing to tag.':'No habit history found for these 7 days.')+(t.misses===0&&HABITS.length&&!t.completed?'<p style="margin-top:12px"><button class="btn" onclick="countCleanWeek()">Count this week (+'+PTS_COMPLETE+')</button></p>':'')+'</div>';
+  document.getElementById('rows').innerHTML=html;
+  document.getElementById('perfect').innerHTML=clean.length?'<details class="perfect"><summary>'+clean.length+' habit'+(clean.length>1?'s':'')+' with no misses</summary><p>'+clean.map(function(h){return esc(h.label);}).join(', ')+'</p></details>':'';
+}
+
+/* ---------- the reason sheet ---------- */
+function allReasons(){return REASONS.concat(MYREASONS.filter(function(r){return REASONS.indexOf(r)<0;}));}
+function openSheet(habitId,day){
+  const h=HABITS.find(function(x){return x.id===habitId;});if(!h)return;
+  SHEET={habitId:habitId,day:day};
+  const open=h.misses.filter(function(d){return !ANS[d+'|'+habitId];});
+  const title=day?(esc(h.label)+', '+esc(dayName(day)+' '+fmt(day))):(esc(h.label)+', all '+open.length+' open misses');
+  let p='';allReasons().forEach(function(r,i){p+='<button class="pill" data-i="'+i+'">'+esc(r)+'</button>';});
+  p+='<button class="pill add" id="addOwn">+ Add my own</button>';
+  document.getElementById('sheet').innerHTML='<h2>What got in the way?</h2><div class="s2">'+title+'</div><div class="pills">'+p+'</div><div id="ownbox" class="hidden"><input class="field" id="ownText" maxlength="40" placeholder="Type your own reason"><button class="btn" id="ownSave">Save and use it</button></div><input class="field" id="noteText" maxlength="140" placeholder="One-line note (optional)" style="margin-top:6px"><button class="link muted" id="cancelSheet">Cancel</button>';
+  document.getElementById('sheetbg').classList.remove('hidden');
+  const list=allReasons();
+  document.querySelectorAll('#sheet .pill[data-i]').forEach(function(b){b.addEventListener('click',function(){choose(list[+b.getAttribute('data-i')]);});});
+  document.getElementById('addOwn').addEventListener('click',function(){document.getElementById('ownbox').classList.remove('hidden');document.getElementById('ownText').focus();});
+  document.getElementById('ownSave').addEventListener('click',async function(){
+    const v=document.getElementById('ownText').value.trim();if(!v)return;
+    if(MYREASONS.indexOf(v)<0&&REASONS.indexOf(v)<0){MYREASONS.push(v);try{await sb.from('sunday_map_reasons').upsert({label:v},{onConflict:'label'});}catch(e){}}
+    choose(v);
+  });
+  document.getElementById('cancelSheet').addEventListener('click',closeSheet);
+}
+function closeSheet(){document.getElementById('sheetbg').classList.add('hidden');SHEET=null;}
+document.getElementById('sheetbg').addEventListener('click',function(e){if(e.target.id==='sheetbg')closeSheet();});
+async function choose(reason){
+  if(!SHEET)return;
+  const h=HABITS.find(function(x){return x.id===SHEET.habitId;});
+  const note=(document.getElementById('noteText')||{}).value||'';
+  const days=SHEET.day?[SHEET.day]:h.misses.filter(function(d){return !ANS[d+'|'+h.id];});
+  closeSheet();
+  await save(h,days,reason,note.trim());
+}
+async function applyAll(habitId,reason){
+  const h=HABITS.find(function(x){return x.id===habitId;});if(!h)return;
+  await save(h,h.misses.filter(function(d){return !ANS[d+'|'+h.id];}),reason,'');
+}
+async function save(h,days,reason,note){
+  if(!days.length)return;
+  const before=totals();
+  const rows=days.map(function(d){return {week_key:WEEK,day:d,habit_id:h.id,habit_label:h.label,reason:reason,note:note||null};});
+  const r=await sb.from('sunday_map_answers').upsert(rows,{onConflict:'day,habit_id'});
+  if(r.error){toast('Could not save: '+r.error.message);return;}
+  days.forEach(function(d){ANS[d+'|'+h.id]=reason;});
+  const t=totals();
+  await saveWeek(t);
+  const gained=t.points-before.points;
+  render();bump('stPts');
+  toast(gained>0?'+'+gained+' points':'Saved');
+  if(t.completed&&!before.completed)bump('stStreak');
+}
+async function saveWeek(t){
+  const row={week_key:WEEK,window_start:START,window_end:END,misses:t.misses,tagged:t.tagged,completed:t.completed,points:t.points,finished_at:t.completed?new Date().toISOString():null,updated_at:new Date().toISOString()};
+  const r=await sb.from('sunday_map_weeks').upsert(row,{onConflict:'week_key'});
+  if(r.error){toast('Week not saved: '+r.error.message);return;}
+  const i=WEEKS.findIndex(function(x){return x.week_key===WEEK;});
+  if(i>-1)WEEKS[i]=row;else WEEKS.push(row);
+}
+async function countCleanWeek(){
+  const t={misses:0,tagged:0,completed:true,points:PTS_COMPLETE};
+  await saveWeek(t);render();bump('stPts');toast('+'+PTS_COMPLETE+' points');
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
