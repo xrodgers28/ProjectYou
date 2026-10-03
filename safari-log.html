@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safari Log · ProjectYou</title>
+<script src="py-day.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="safari-log.js"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--sand:#b8801f;--hot:#c0453b}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ink:#e6ebf3;--muted:#9aa6b6;--line:#2c3644;--bg:#12171f;--card:#1a212c;--accent:#7fb0d0;--sand:#e0ab52;--hot:#e0776d}}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  .wrap{max-width:760px;margin:0 auto;padding:14px 16px 70px}
+  h1{font-size:22px;margin:4px 0 2px}
+  .ver{font-size:11.5px;color:var(--muted);margin-bottom:12px}
+  .intro{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}
+  .formcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;box-shadow:0 6px 16px rgba(31,42,68,.06)}
+  .stat{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .stat .s{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;font-size:12px;color:var(--muted)}
+  .stat .s b{color:var(--ink);font-size:18px;display:block}
+  .tabs{display:flex;gap:6px;margin:0 0 12px}
+  .tab{font:inherit;font-size:13px;font-weight:800;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 16px;cursor:pointer}
+  .tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .mh{font-size:11px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+  .cx{position:relative;display:flex;gap:12px;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:11px 30px 11px 14px;margin-bottom:9px}
+  .cx.nat{border-left-color:var(--sand)}
+  .cx .who{font-weight:800;font-size:15px}.cx .meta{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.55}
+  .cx .note{font-size:12.5px;margin-top:4px;color:var(--ink)}
+  .cx .date{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
+  .cx .del{position:absolute;bottom:7px;right:10px;font-size:15px;color:var(--muted);opacity:.5;cursor:pointer;background:none;border:none}
+  .cx .del:hover{color:var(--hot);opacity:1}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;color:#fff;margin-right:5px;background:var(--accent)}
+  .pill.nat{background:var(--sand)}.pill.k{background:#6f5aa8}.pill.fav{background:#d9a31f;color:#1f2a44}
+  .empty{color:var(--muted);font-size:14px;padding:16px 2px}
+  .hidden{display:none}
+  .loginbox{max-width:340px;margin:12vh auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  .loginbox h1{font-size:18px;color:var(--accent);margin-bottom:4px}.loginbox p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .loginbox input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit;background:var(--card);color:var(--ink)}
+  .loginbox .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .btn{font-family:inherit;font-weight:700;border:none;border-radius:10px;padding:11px 14px;cursor:pointer;font-size:14px;background:var(--accent);color:#fff;width:100%}
+  .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="login" class="loginbox">
+  <h1>Safari Log</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+<div class="wrap hidden" id="app">
+  <h1>Safari Log</h1>
+  <div class="ver">Safari Log <b>v1.0</b> &middot; Oct 3, 2026</div>
+  <p class="intro">Every Local and National Safari you have actually been on. Local is Connecticut and New York; National is anywhere else. Logging one adds the place to your Safari list and ticks the habit.</p>
+  <div class="formcard" id="formhost"></div>
+  <div class="stat" id="stats"></div>
+  <div class="tabs"><button class="tab on" data-t="all">All</button><button class="tab" data-t="Local">Local</button><button class="tab" data-t="National">National</button></div>
+  <div id="list"><div class="empty">Loading...</div></div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+let ROWS=[],TAB='all';
+const el=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function fmt(d){const p=String(d).split('-');return MS[+p[1]-1]+' '+(+p[2])+', '+p[0];}
+function toast(t){const e=el('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2400);}
+function lenWord(m){return ({30:'30 min',60:'1 hour',120:'2 hours',240:'half day',480:'all day',1440:'overnight or more'})[m]||'';}
+function render(){
+  const yr=String((window.PY&&PY.today)?PY.today():new Date().toISOString()).slice(0,4);
+  const mine=ROWS.filter(r=>r.happened_on.slice(0,4)===yr);
+  const loc=mine.filter(r=>r.kind==='Local').length,nat=mine.filter(r=>r.kind==='National').length;
+  const places=new Set(ROWS.map(r=>r.place.toLowerCase())).size,favs=new Set(ROWS.filter(r=>r.favourite).map(r=>r.place.toLowerCase())).size;
+  el('stats').innerHTML='<div class="s"><b>'+loc+'</b>local this year</div><div class="s"><b>'+nat+'</b>national this year</div><div class="s"><b>'+places+'</b>different places</div><div class="s"><b>'+favs+'</b>favourites</div>';
+  const list=ROWS.filter(r=>TAB==='all'||r.kind===TAB);
+  if(!list.length){el('list').innerHTML='<div class="empty">Nothing logged yet. Log your first safari above.</div>';return;}
+  let html='',cur='';
+  list.forEach(r=>{
+    const p=r.happened_on.split('-'),key=MON[+p[1]-1]+' '+p[0];
+    if(key!==cur){cur=key;html+='<div class="mh">'+key+'</div>';}
+    const w=(r.with_whom||[]).filter(x=>x&&x!=='Solo');
+    const bits=[r.town,r.why,w.length?'with '+w.join(', '):(r.with_whom&&r.with_whom.indexOf('Solo')>-1?'solo':''),lenWord(r.mins),r.felt?'felt '+r.felt:''].filter(Boolean).map(esc).join(' &middot; ');
+    html+='<div class="cx'+(r.kind==='National'?' nat':'')+'"><div><div class="who">'+esc(r.place)+'</div><div class="meta"><span class="pill'+(r.kind==='National'?' nat':'')+'">'+r.kind+'</span>'+(r.place_kind?'<span class="pill k">'+esc(r.place_kind)+'</span>':'')+(r.favourite?'<span class="pill fav">Favourite</span>':'')+bits+'</div>'+(r.note?'<div class="note">'+esc(r.note)+'</div>':'')+'</div><div class="date">'+fmt(r.happened_on)+'</div><button class="del" title="Remove this entry" data-id="'+r.id+'">&times;</button></div>';
+  });
+  el('list').innerHTML=html;
+  el('list').querySelectorAll('.del').forEach(b=>b.onclick=async()=>{
+    const {error}=await sb.from('safari_log').delete().eq('id',b.dataset.id);
+    if(error){toast('Could not remove: '+error.message);return;}
+    toast('Removed. The place stays on your Safari list.');load();
+  });
+}
+async function load(){
+  const r=await sb.from('safari_log').select('*').order('happened_on',{ascending:false}).order('created_at',{ascending:false});
+  if(r.error){el('list').innerHTML='<div class="empty">Could not read the log: '+esc(r.error.message)+'</div>';return;}
+  ROWS=r.data||[];render();
+}
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));t.classList.add('on');TAB=t.dataset.t;render();});
+let STARTED=false;
+function onLogin(){if(STARTED)return;STARTED=true;el('login').classList.add('hidden');el('app').classList.remove('hidden');PYSafari.mount(el('formhost'),{sb:sb,noLink:true,onSaved:()=>{load();}});load();}
+async function signIn(){const email=el('email').value.trim(),pass=el('pass').value;const {error}=await sb.auth.signInWithPassword({email,password:pass});if(error){el('loginErr').textContent=error.message;return;}onLogin();}
+sb.auth.onAuthStateChange((_e,s)=>{if(!s){STARTED=false;el('app').classList.add('hidden');el('login').classList.remove('hidden');}});
+(async()=>{const {data:{session}}=await sb.auth.getSession();if(session)onLogin();})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
