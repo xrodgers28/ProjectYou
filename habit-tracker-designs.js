@@ -3,7 +3,7 @@
    To remove one: delete its line. file:null means not built yet (the page shows a placeholder).
    A design file only draws. It must never hold a habit name or any of Scott's data. */
 window.PYHT_REGISTRY = [
-  { id: 'poster', letter: 'A', name: 'Poster Hourglass: Gravity Fill, Black on Beige', ref: '34B', file: null },
+  { id: 'poster', letter: 'A', name: 'Poster Hourglass: Gravity Fill, Black on Beige', ref: '34B', file: 'habit-tracker-d-poster.js' },
   { id: 'heap',   letter: 'B', name: 'Heap Ring: Soft Matte, tube-style icons',        ref: '42B-B', file: null },
   { id: 'blocks', letter: 'C', name: 'Color Blocks (Spinner Garden)',                  ref: '50C', file: null },
   { id: 'wheel',  letter: 'D', name: 'Two-Ring Wheel',                                 ref: '2', file: 'habit-tracker-d-wheel.js' },
