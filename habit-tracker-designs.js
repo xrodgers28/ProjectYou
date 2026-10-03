@@ -8,6 +8,6 @@ window.PYHT_REGISTRY = [
   { id: 'blocks', letter: 'C', name: 'Color Blocks (Spinner Garden)',                  ref: '50C', file: null },
   { id: 'wheel',  letter: 'D', name: 'Two-Ring Wheel',                                 ref: '2', file: null },
   { id: 'rings',  letter: 'E', name: 'Stack Rings',                                    ref: '8', file: null },
-  { id: 'grid',   letter: 'F', name: 'Icon Grid',                                      ref: '1', file: null },
+  { id: 'grid',   letter: 'F', name: 'Icon Grid',                                      ref: '1', file: 'habit-tracker-d-grid.js' },
   { id: 'tubes',  letter: 'G', name: 'Solid Steel Plate (Gated Marble Tubes)',         ref: '55J', file: null }
 ];
