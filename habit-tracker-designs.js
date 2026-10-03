@@ -5,7 +5,7 @@
 window.PYHT_REGISTRY = [
   { id: 'poster', letter: 'A', name: 'Poster Hourglass: Gravity Fill, Black on Beige', ref: '34B', file: 'habit-tracker-d-poster.js' },
   { id: 'heap',   letter: 'B', name: 'Heap Ring: Soft Matte, tube-style icons',        ref: '42B-B', file: 'habit-tracker-d-heap.js' },
-  { id: 'blocks', letter: 'C', name: 'Color Blocks (Spinner Garden)',                  ref: '50C', file: null },
+  { id: 'blocks', letter: 'C', name: 'Color Blocks (Spinner Garden)',                  ref: '50C', file: 'habit-tracker-d-blocks.js' },
   { id: 'wheel',  letter: 'D', name: 'Two-Ring Wheel',                                 ref: '2', file: 'habit-tracker-d-wheel.js' },
   { id: 'rings',  letter: 'E', name: 'Stack Rings',                                    ref: '8', file: 'habit-tracker-d-rings.js' },
   { id: 'grid',   letter: 'F', name: 'Icon Grid',                                      ref: '1', file: 'habit-tracker-d-grid.js' },
