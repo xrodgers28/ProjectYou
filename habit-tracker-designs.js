@@ -4,7 +4,7 @@
    A design file only draws. It must never hold a habit name or any of Scott's data. */
 window.PYHT_REGISTRY = [
   { id: 'poster', letter: 'A', name: 'Poster Hourglass: Gravity Fill, Black on Beige', ref: '34B', file: 'habit-tracker-d-poster.js' },
-  { id: 'heap',   letter: 'B', name: 'Heap Ring: Soft Matte, tube-style icons',        ref: '42B-B', file: null },
+  { id: 'heap',   letter: 'B', name: 'Heap Ring: Soft Matte, tube-style icons',        ref: '42B-B', file: 'habit-tracker-d-heap.js' },
   { id: 'blocks', letter: 'C', name: 'Color Blocks (Spinner Garden)',                  ref: '50C', file: null },
   { id: 'wheel',  letter: 'D', name: 'Two-Ring Wheel',                                 ref: '2', file: 'habit-tracker-d-wheel.js' },
   { id: 'rings',  letter: 'E', name: 'Stack Rings',                                    ref: '8', file: 'habit-tracker-d-rings.js' },
