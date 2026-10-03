@@ -85,10 +85,10 @@
       var nm = nextH ? e(nextH.n) : 'All done', tag = nextH ? 'NEXT UP' : 'TODAY';
       s += T(160, 34, tag, 9.5, '#e3b23c', 800, 'middle', 2.2) + T(160, 64, nm, 26, '#f3f3f3', 300);
       if (nx && nx.y - nx.r > 78) s += '<line x1="' + nx.x + '" y1="78" x2="' + nx.x + '" y2="' + (nx.y - nx.r - 3) + '" stroke="#8a8a92" stroke-width="1"/>';
-      s += T(100, 486, st.open.length, 38, '#1a2340', 300) + T(100, 502, 'TO GO', 9.5, '#6b7390', 800, 'middle', 2) +
-        T(220, 486, st.done.length, 38, '#1a2340', 300) + T(220, 502, 'DONE', 9.5, '#6b7390', 800, 'middle', 2);
+      s += T(132, 480, st.open.length, 38, '#1a2340', 300) + T(132, 493, 'TO GO', 9.5, '#6b7390', 800, 'middle', 2) +
+        T(188, 480, st.done.length, 38, '#1a2340', 300) + T(188, 493, 'DONE', 9.5, '#6b7390', 800, 'middle', 2);
       return '<div style="background:' + BEI + ';border-radius:14px;padding:6px 4px 8px;overflow:hidden;font-family:Arial,Helvetica,sans-serif">' +
-        '<svg viewBox="0 0 320 512" width="' + W + '" style="max-width:100%;display:block;margin:0 auto;overflow:visible">' +
+        '<svg viewBox="0 0 320 502" width="' + W + '" style="max-width:100%;display:block;margin:0 auto;overflow:visible">' +
         '<defs><filter id="phb1" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="1.1"/></filter></defs>' + s + '</svg></div>';
     }
   });
