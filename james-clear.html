@@ -92,7 +92,9 @@
 #deck .sstar{position:absolute;right:16px;top:62px;width:25px;height:25px;cursor:pointer;z-index:3}
 #deck .sstar svg{width:100%;height:100%;display:block;fill:#c3c9d2}
 #deck .sstar.on svg{fill:var(--acc)}
-#deck .sdo{position:absolute;right:14px;top:94px;height:24px;padding:0 10px;border-radius:12px;border:1px solid #c3c9d2;background:#fff;color:#5b6472;font:700 11px/22px Arial,Helvetica,sans-serif;letter-spacing:.2px;white-space:nowrap;cursor:pointer;z-index:3}
+#deck .sdo{position:absolute;right:51px;top:62px;height:24px;padding:0 10px;border-radius:12px;border:1px solid #c3c9d2;background:#fff;color:#5b6472;font:700 11px/22px Arial,Helvetica,sans-serif;letter-spacing:.2px;white-space:nowrap;cursor:pointer;z-index:3}
+#deck .retire{margin-top:10px}
+#deck .retire span{font-size:12px;color:#8a93a1;text-decoration:underline;cursor:pointer}
 #deck .sdo.on{background:#c0453b;border-color:#c0453b;color:#fff}
 #deck .bd{padding:29px 19px 5px;flex:1;display:flex;flex-direction:column}
 #deck .step{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-weight:800}
@@ -138,7 +140,7 @@
 
 <div id="app" class="hidden">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.13</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
-  <div class="secbar-wrap"><div class="secbar"><h1>Atomic Habits</h1><span class="ver">v1.18</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>Atomic Habits</h1><span class="ver">v1.20</span><span class="date"></span></div></div>
 
   <div class="toggle">
     <button id="tgToday" class="on" onclick="showView('deck')">Today's mix</button>
@@ -162,13 +164,14 @@
         <button class="chip" data-f="question" onclick="setFilter('question')">Questions</button>
         <button class="chip" data-f="fav" onclick="setFilter('fav')">★ Favorites</button>
         <button class="chip" data-f="doit" onclick="setFilter('doit')">&#10003; Do this!</button>
+        <button class="chip" data-f="retired" onclick="setFilter('retired')">Retired</button>
       </div>
       <div class="count" id="bcount"></div>
       <div class="grid" id="grid"></div>
     </div>
   </div>
 
-  <div class="badge">Atomic Habits v1.18</div>
+  <div class="badge">Atomic Habits v1.20</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -228,11 +231,52 @@ async function load(){
   if(!CARDS.length){document.getElementById('deck').innerHTML='<div class="card"><div class="datestamp">'+dstamp()+'</div><div class="kicker">Atomic Habits</div><h2>Nothing to show.</h2>'+PY.needMore('Import more 3-2-1 issues to build the daily mix.')+'</div>';return;}
   buildMix(); idx=0; render(); drawBrowse();
 }
+/* Fresh-card memory (v1.20, Oct 2, 2026). Each card remembers the day it was last shown.
+   Every card is shown once before any card repeats; never-shown cards go first.
+   The day is the 2am-to-2am day from etToday(). Retired cards never come up. */
+function dayKey(){return String(etToday()).slice(0,10);}
+function pickFresh(type,exclude){
+  const seed=dayKey();
+  const pool=CARDS.filter(c=>c.card_type===type&&!c.retired&&!(exclude&&exclude.indexOf(c.id)>-1));
+  if(!pool.length)return null;
+  pool.sort((a,b)=>{
+    const la=a.last_shown||'0000-00-00', lb=b.last_shown||'0000-00-00';
+    if(la!==lb)return la<lb?-1:1;
+    return hstr(seed+a.id)-hstr(seed+b.id);
+  });
+  return pool[0];
+}
+function markShown(c){
+  const t=dayKey(); if(c.last_shown===t)return; c.last_shown=t;
+  try{ sb.from('jc_321').update({last_shown:t}).eq('id',c.id).then(function(){},function(){}); }catch(e){}
+}
 function buildMix(){
-  const seed=etToday();
-  const pick=(type,n)=>CARDS.filter(c=>c.card_type===type).slice().sort((a,b)=>hstr(seed+a.id)-hstr(seed+b.id)).slice(0,n);
-  const ideas=pick('idea',1), quotes=pick('quote',1), questions=pick('question',1);
-  MIX=[ideas[0],quotes[0],questions[0]].filter(Boolean);
+  const today=dayKey();
+  MIX=['idea','quote','question'].map(function(type){
+    const already=CARDS.filter(c=>c.card_type===type&&!c.retired&&c.last_shown===today).sort((a,b)=>hstr(a.id)-hstr(b.id))[0];
+    if(already)return already;
+    const c=pickFresh(type); if(c)markShown(c); return c;
+  }).filter(Boolean);
+}
+async function toggleRetire(id){
+  const c=CARDS.find(x=>x.id===id); if(!c)return;
+  if(c.retired){
+    const r=await sb.from('jc_321').update({retired:false,retired_at:null}).eq('id',id);
+    if(r.error){toast('Could not restore: '+r.error.message);return;}
+    c.retired=false; toast('Back in the rotation.'); drawBrowse(); return;
+  }
+  const r=await sb.from('jc_321').update({retired:true,retired_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){toast('Could not retire: '+r.error.message);return;}
+  c.retired=true;
+  const i=MIX.findIndex(x=>x.id===id);
+  if(i>-1){
+    const rep=pickFresh(c.card_type,MIX.map(x=>x.id));
+    if(rep){markShown(rep);MIX[i]=rep;} else {MIX.splice(i,1);}
+    if(idx>MIX.length)idx=MIX.length;
+  }
+  toast('Retired. It lives under Retired in Browse if you change your mind.');
+  render();
+  if(!document.getElementById('browse').classList.contains('hidden'))drawBrowse();
 }
 function noEcho(t,b){b=b||'';if(!t)return b;var n=function(s){return (s||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();};var nt=n(t);if(!nt)return b;var parts=b.match(/[^.!?]+[.!?]*\s*/g)||[b];var out=[],cut=false;for(var i=0;i<parts.length;i++){if(!cut&&n(parts[i])===nt){cut=true;continue;}out.push(parts[i]);}var r=out.join('').trim();return cut?r:b;}
 /* THE SOURCE LINE. The module name already says James Clear, so this line earns
@@ -257,10 +301,19 @@ function __cueClockInit(){
 function __cueAskIfIdle(){
   var el=document.getElementById('tmin')||document.getElementById('mins');
   var typed=(el&&String(el.value).trim()!=='')?parseInt(el.value,10):NaN;
-  if(!(typed>0&&typed<=180)&&__cueAway&&el){
+  var hasTyped=(typed>0&&typed<=180), msg=null;
+  if(!hasTyped&&__cueAway){
+    msg='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+  } else if(!hasTyped&&__cueSt&&(Date.now()-__cueSt.s)>30*60000){
+    msg='The timer says about '+Math.round((Date.now()-__cueSt.s)/60000)+' minutes, which is over 30. Double check: how many minutes did you really spend? Type it in the Minutes box, then tap done again.';
+  } else if(hasTyped&&typed>30&&window.__cueOk!==typed){
+    window.__cueOk=typed;
+    msg='You entered '+typed+' minutes, which is over 30. If that is right, tap done again. If not, change the number first.';
+  }
+  if(msg&&el){
     var m=document.getElementById('cueAskMsg');
     if(!m){ m=document.createElement('div'); m.id='cueAskMsg'; m.setAttribute('role','status'); m.style.cssText='flex-basis:100%;width:100%;margin:8px 0 0;font-size:13.5px;font-weight:600;color:#b45309;line-height:1.4'; var host=el.closest('label')||el.parentNode; host.insertAdjacentElement('afterend',m); }
-    m.textContent='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+    m.textContent=msg;
     try{ el.focus(); }catch(e){}
     return true;
   }
@@ -286,7 +339,7 @@ function render(){
   document.getElementById('dots').innerHTML=MIX.map((_,i)=>'<div class="dot '+(i===idx?'on':'')+'"></div>').join('')+'<div class="dot '+(idx===total?'on':'')+'"></div>';
   if(idx>=total){renderSave();return;}
   const c=MIX[idx];
-  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div>'+CUEDIAL+'<span class="ver">v1.18</span></div>';
+  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div>'+CUEDIAL+'<span class="ver">v1.20</span></div>';
   const star='<span class="sstar'+(c.saved?' on':'')+'" title="Save to favorites" onclick="toggleFav(\''+c.id+'\')"><svg viewBox="0 0 24 24">'+STARP+'</svg></span>';
   const doBtn='<span class="sdo'+(c.do_this?' on':'')+'" role="button" title="Do this!" onclick="event.stopPropagation();toggleDo(\''+c.id+'\')">Do this</span>';
   let bd='<div class="step">'+esc(KICK[c.card_type]||c.card_type)+'</div>';
@@ -305,6 +358,7 @@ function render(){
     var mb=noEcho(t,c.body); if(mb) bd+='<div class="mean">'+esc(mb)+'</div>';
   }
   bd+=jcSrc(c);
+  bd+='<div class="retire"><span role="button" onclick="event.stopPropagation();toggleRetire(\''+c.id+'\')">Retire this card</span></div>';
   bd+='<div class="date bottom">'+dstamp()+'</div>';
   const backCls=idx===0?'back off':'back';
   const backOn=idx===0?'':'onclick="go(-1)"';
@@ -317,7 +371,7 @@ function renderSave(){
     const lbl=c.card_type.charAt(0).toUpperCase()+c.card_type.slice(1)+' · '+fmtDate(c.issue_date);
     return '<div class="ck"><input type="checkbox" id="sv'+i+'" '+(c.saved?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(lbl)+'</div><div class="d">'+esc((c.title||'').slice(0,95))+'</div></label></div>';
   }).join('');
-  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div>'+CUEDIAL+'<span class="ver">v1.18</span></div>';
+  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div>'+CUEDIAL+'<span class="ver">v1.20</span></div>';
   document.getElementById('deck').innerHTML='<div class="card" style="--acc:#3f8f7a;--tint:#e4f1ec">'+hd+
     '<div class="bd"><div class="step">End of mix</div><div class="big">Keep what mattered.</div><div class="cklist">'+rows+'</div>'+
     '<div class="howlong">Time on this: <input id="tmin" type="number" min="1" placeholder="min" class="in"> min <span class="autonote">(keeps time until you tap Done, or type your own)</span></div>'+
@@ -353,7 +407,7 @@ function setFilter(f){filter=f;document.querySelectorAll('.chip').forEach(b=>b.c
 function drawBrowse(){
   const term=(document.getElementById('q').value||'').toLowerCase();
   let list=CARDS.filter(c=>{
-    const typeOk = filter==='all' ? true : filter==='fav' ? c.saved : filter==='doit' ? c.do_this : c.card_type===filter;
+    const typeOk = filter==='retired' ? !!c.retired : (!c.retired && (filter==='all' ? true : filter==='fav' ? c.saved : filter==='doit' ? c.do_this : c.card_type===filter));
     const hit=(c.title||'').toLowerCase().includes(term)||(c.body||'').toLowerCase().includes(term)||(c.source_book||'').toLowerCase().includes(term)||(c.issue_theme||'').toLowerCase().includes(term);
     return typeOk&&hit;
   });
@@ -363,7 +417,7 @@ function drawBrowse(){
     const txt=c.card_type==='quote'?('&ldquo;'+esc(qparts(c).q)+'&rdquo;'):esc(c.title);
     const meta=c.card_type==='quote'&&c.source_book?(',  '+esc(c.source_book)+' · '+esc(fmtDate(c.issue_date))):('From '+esc(fmtDate(c.issue_date)));
     return '<div class="pcard"><span class="star '+(c.saved?'on':'')+'" onclick="toggleFav(\''+c.id+'\')">&#9733;</span>'+
-      '<span class="doit '+(c.do_this?'on':'')+'" role="button" title="Do this!" onclick="event.stopPropagation();toggleDo(\''+c.id+'\')">Do this</span>'+
+      (c.retired?'<span class="doit" role="button" title="Put back in the rotation" onclick="event.stopPropagation();toggleRetire(\''+c.id+'\')">Restore</span>':'<span class="doit '+(c.do_this?'on':'')+'" role="button" title="Do this!" onclick="event.stopPropagation();toggleDo(\''+c.id+'\')">Do this</span>')+
       '<div class="ptag">'+tag+'</div><div class="txt">'+txt+'</div><div class="meta">'+meta+'</div></div>';
   }).join('') || '<div style="color:var(--muted);font-size:14px;padding:10px">Nothing matches.</div>';
 }
