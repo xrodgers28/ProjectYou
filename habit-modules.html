@@ -601,6 +601,8 @@
   .ecard .esent{margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
   .ecard .esent .elab{margin-top:0;color:#3f8f6a}
   .ecard .esent div.sl{font-size:12.5px;color:#7b8594;padding:3px 0 0 2px;display:flex;align-items:center;gap:6px}
+  .ecard .esent div.sl span{flex:1;min-width:0}
+  .ecard .esent .esx{font-size:17px;padding:0 4px}
   .ecard .esent img{width:15px;height:15px;object-fit:contain}
   .ecard .ekey{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
   .ecard .ekey span{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)}
@@ -824,13 +826,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.60</span>
+    <span class="pn-ver">v6.61</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.60</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.61</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -3467,7 +3469,7 @@ var EN=(function(){
       '<div class="emsg'+(st.ok?' ok':'')+'" id="emsg">'+esc(st.msg)+'</div>';
     if(st.sent.length){
       h+='<div class="esent"><div class="elab">Sent to It’s a wrap today</div>'+
-        st.sent.map(function(r){return '<div class="sl">'+(r.g?'<img src="'+WIC[r.g]+'" alt="">':'')+'<span>'+esc(r.t)+'</span></div>';}).join('')+'</div>';
+        st.sent.map(function(r,i){return '<div class="sl" data-si="'+i+'">'+(r.g?'<img src="'+WIC[r.g]+'" alt="">':'')+'<span>'+esc(r.t)+'</span><button class="edel esx" title="Take this line back" aria-label="Take this line back">&times;</button></div>';}).join('')+'</div>';
     }
     h+='<div class="ekey">'+ORDER.filter(Boolean).map(function(g){return '<span><img src="'+WIC[g]+'" alt="">'+NAME[g]+'</span>';}).join('')+'</div>';
     el.innerHTML=h;
@@ -3482,6 +3484,13 @@ var EN=(function(){
       row.querySelector('.edel').onclick=function(){
         st.rows.splice(i,1); if(r.id){ sb.from('energy_notes').delete().eq('id',r.id).then(function(){}); }
         setMsg(''); paint();
+      };
+    });
+    el.querySelectorAll('.sl .esx').forEach(function(b){
+      b.onclick=async function(){
+        var i=+b.closest('.sl').dataset.si, r=st.sent[i]; if(!r) return;
+        if(r.id){ var d=await sb.from('energy_notes').delete().eq('id',r.id); if(d.error){ setMsg('Could not take it back: '+d.error.message); return; } }
+        st.sent.splice(i,1); setMsg('Taken back'); paint();
       };
     });
     document.getElementById('eadd').onclick=add;
