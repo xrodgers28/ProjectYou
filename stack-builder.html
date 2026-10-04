@@ -211,6 +211,10 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .daypick .dw{font-size:10px;color:var(--faint);margin-left:4px}
 .hab .pull{position:absolute;top:-7px;right:-7px;width:18px;height:18px;border-radius:50%;border:1px solid #cfd3d9;background:#fff;color:var(--muted);font-family:inherit;font-size:13px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(31,42,68,.14)}
 .hab .pull:hover{border-color:var(--bad);color:var(--bad)}
+.hab .tierb{position:absolute;bottom:-6px;left:-6px;width:18px;height:18px;border-radius:50%;border:1px solid #cfd3d9;background:#fff;color:var(--muted);font-family:inherit;font-size:10px;font-weight:800;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.15);z-index:3}
+.hab .tierb.core{background:#1f2937;border-color:#1f2937;color:#fff}
+.hab .tierb.sec{background:#e5e7eb;border-color:#9ca3af;color:#374151}
+.hab .tierb.none{border-style:dashed}
 .deckwrap{margin-top:12px;border-top:1px solid var(--line);padding-top:10px}
 .deckrow{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start}
 .dbox{width:62px;height:54px;border-radius:11px;border:2px solid var(--accent);background:#eef3f8;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:3px;cursor:grab;box-shadow:0 2px 0 rgba(31,42,68,.10);touch-action:none}
@@ -247,7 +251,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>Stack Builder</h1><span class="ver">v1.8</span><span class="date" id="builtOn"></span>
+  <div class="secbar"><h1>Stack Builder</h1><span class="ver">v1.9</span><span class="date" id="builtOn"></span>
     <span class="weeknav"><a class="btn" href="weekly-review.html">The PY Week in Review</a><a class="btn" href="habit-worksheets.html">Habit Worksheets</a><a class="btn" id="signout">sign out</a></span>
   </div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading your habits...</span></div>
@@ -308,7 +312,7 @@ const SUPABASE_URL='https://arnjntspmrhigodlssbn.supabase.co';
 const SUPABASE_KEY='sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
-const VERSION='v1.8';
+const VERSION='v1.9';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const ORDER=['Physical Health','Mental Fitness','Sense of Purpose','Emotional Health','Social Well-Being','Environmental Health','Recreational Health','Project YOU','Not sure yet'];
 const ADDABLE=COMPASS.concat(['Project YOU']);
@@ -366,7 +370,7 @@ async function load(){
   try{
     const from=addDays(PY.today(),-13);
     const [wr,qs,areas,secs,stk,dck,hid]=await Promise.all([
-      sb.from('worksheet_rows').select('id,habit,area,section,icon,qs_tracker,count_on,is_active,retired,position,from_stack_builder'),
+      sb.from('worksheet_rows').select('id,habit,area,section,icon,qs_tracker,count_on,is_active,retired,position,from_stack_builder,tier'),
       sb.from('qs_log').select('date,"group",tracker').gte('date',from).limit(5000),
       sb.from('kg_areas').select('label,color'),
       sb.from('worksheet_sections').select('area,label,sort').order('sort'),
@@ -396,7 +400,7 @@ async function load(){
     const gc={};(qs.data||[]).forEach(r=>{gc[r.tracker]=gc[r.tracker]||{};gc[r.tracker][r.group]=(gc[r.tracker][r.group]||0)+1;});
     const areaOf={};Object.keys(gc).forEach(t=>{let best=null,n=-1;Object.keys(gc[t]).forEach(g=>{if(g==='Not sure yet')return;if(gc[t][g]>n){n=gc[t][g];best=g;}});areaOf[t]=best||Object.keys(gc[t])[0];});
     const seen={};HABITS=[];
-    (wr.data||[]).forEach(w=>{if(w.is_active!==true)return;if(!w.qs_tracker||w.retired===true||w.count_on||COUNTERS.includes(w.qs_tracker))return;if(seen[w.qs_tracker])return;seen[w.qs_tracker]=1;HABITS.push({n:w.qs_tracker,ws:w.habit||'',a:w.area||areaOf[w.qs_tracker]||'Not sure yet',img:w.icon?'wsicons/'+w.icon+'.webp':null,mine:w.from_stack_builder===true,rowId:w.id});});
+    (wr.data||[]).forEach(w=>{if(w.is_active!==true)return;if(!w.qs_tracker||w.retired===true||w.count_on||COUNTERS.includes(w.qs_tracker))return;if(seen[w.qs_tracker])return;seen[w.qs_tracker]=1;HABITS.push({n:w.qs_tracker,ws:w.habit||'',a:w.area||areaOf[w.qs_tracker]||'Not sure yet',img:w.icon?'wsicons/'+w.icon+'.webp':null,mine:w.from_stack_builder===true,rowId:w.id,tier:w.tier||''});});
     Object.keys(gc).forEach(t=>{if(seen[t]||COUNTERS.includes(t))return;const days=(qs.data||[]).filter(r=>r.tracker===t).map(r=>r.date);if(new Set(days).size<2)return;seen[t]=1;HABITS.push({n:t,a:areaOf[t]||'Not sure yet',img:null,mine:false,rowId:null});});
     HABITS.forEach(h=>{if(!COMPASS.includes(h.a)&&h.a!=='Project YOU')h.a='Not sure yet';});
     /* v1.8: habits Scott removed from the drawer that have no worksheet row to retire */
@@ -438,6 +442,7 @@ function habEl(h,where,i,j){
   if(where==='palette'&&(n||dn))bits+='<i class="cnt" title="in '+n+' stack'+(n===1?'':'s')+(dn?' and '+dn+' mini deck'+(dn===1?'':'s'):'')+'">'+(n+dn)+'</i>';
   if(where==='palette'&&!mergeMode)bits+='<button class="undo" data-undo="'+esc(h.n)+'" title="remove this habit">&times;</button>';
   if(where==='stack')bits+='<button class="pull" data-pull="'+i+':'+j+'" title="take this habit out of this stack">&times;</button>';
+  if(where==='stack')bits+='<button class="tierb '+(h.tier==='core'?'core':h.tier==='secondary'?'sec':'none')+'" data-tier="'+esc(h.n)+'" title="'+(h.tier==='core'?'Core':h.tier==='secondary'?'Secondary':'No tier set')+'. Press to switch Core / Secondary. Saved on your Habit Worksheets.">'+(h.tier==='core'?'C':h.tier==='secondary'?'S':'?')+'</button>';
   if(where==='deck')bits+='<button class="pull" data-dpull="'+j+'" title="take this habit out of this mini deck">&times;</button>';
   const extra=where==='stack'?(' data-from="'+i+'" data-idx="'+j+'"'):(where==='deck'?' data-deckfrom="'+j+'"':'');
   const ttl=(h.ws&&h.ws!==h.n)?' title="On your Habit Worksheets this one is called: '+esc(h.ws)+'"':'';
@@ -553,6 +558,15 @@ function render(){
   el('saved').innerHTML=DIRTY?'Saving your changes…':(S.stacks.some(s=>s.saved)?'<b>All saved.</b> Last change kept '+new Date(Math.max.apply(null,S.stacks.filter(s=>s.saved).map(s=>new Date(s.saved).getTime()))).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' EST. There is nothing to press.':'Nothing saved yet. This page saves itself, there is no save button.');
   el('foot').textContent='Project YOU · Stack Builder '+VERSION+' · habits read live from your worksheets and habit log · a habit you add here is saved to your worksheets, where its minutes live · stacks save themselves as you work · only the stacks you tick show in The PY Week in Review, and only on the days you give them.';
   wire();
+}
+async function flipTier(n){
+  const h=byName(n);if(!h)return;
+  if(!h.rowId){status('"'+n+'" has no row on your Habit Worksheets, so it has no tier to set',true);return;}
+  const next=h.tier==='core'?'secondary':'core';
+  const {error}=await sb.from('worksheet_rows').update({tier:next}).eq('id',h.rowId);
+  if(error){status('Could not save the tier: '+error.message,true);return;}
+  HABITS.filter(x=>x.rowId===h.rowId).forEach(x=>{x.tier=next;});
+  render();status('"'+n+'" is now '+(next==='core'?'Core':'Secondary')+' \u00b7 saved on your Habit Worksheets, the trackers follow within a minute');
 }
 function touch(){S.stacks.forEach(recompute);DIRTY=true;picked=null;render();scheduleSave();}
 let saveT=null,saving=false,againAfter=false;
@@ -704,7 +718,7 @@ function wire(){
     });
     elm.addEventListener('dragend',()=>{drag=null;dragFrom=null;dragIdx=null;clearMarks();});
     elm.addEventListener('click',e=>{
-      if(e.target.closest('.undo')||e.target.closest('.pull'))return;
+      if(e.target.closest('.undo')||e.target.closest('.pull')||e.target.closest('.tierb'))return;
       const n=elm.dataset.h;
       if(mergeMode&&n&&!inStack&&!inDeck){
         if(!mergeA){mergeA=n;}
@@ -717,7 +731,7 @@ function wire(){
       picked=(picked===n)?null:n;undoAsk=null;render();
     });
     elm.addEventListener('touchstart',e=>{
-      if(e.target.closest('.undo')||e.target.closest('.pull'))return;
+      if(e.target.closest('.undo')||e.target.closest('.pull')||e.target.closest('.tierb'))return;
       const t=e.touches[0];touchY0=t.clientY;
       drag=payloadOf(elm);dragFrom=src;dragIdx=idx;dragStack=null;
       if(inDeck){drag={fromDeck:+elm.dataset.deckfrom,n:elm.dataset.h};}
@@ -796,6 +810,8 @@ function wire(){
   }
 
   document.querySelectorAll('[data-pull]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();const p=b.dataset.pull.split(':');removeAt(+p[0],+p[1]);}));
+  /* v1.9: Core / Secondary. Writes the one tag that lives on the Habit Worksheets row. */
+  document.querySelectorAll('[data-tier]').forEach(b=>{b.addEventListener('mousedown',e=>e.stopPropagation());b.addEventListener('click',async e=>{e.stopPropagation();e.preventDefault();flipTier(b.dataset.tier);});});
   document.querySelectorAll('[data-dpull]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deckEdit.habits.splice(+b.dataset.dpull,1);render();}));
   document.querySelectorAll('[data-dt]').forEach(b=>b.addEventListener('click',()=>{const p=b.dataset.dt.split(':'),i=+p[0],d=+p[1];const cur=daysOf(S.stacks[i]);const k=cur.indexOf(d);if(k>=0)cur.splice(k,1);else cur.push(d);setDays(i,cur);}));
   document.querySelectorAll('[data-dq]').forEach(b=>b.addEventListener('click',()=>{const p=b.dataset.dq.split(':'),i=+p[0];setDays(i,p[1]==='wd'?[1,2,3,4,5]:(p[1]==='we'?[0,6]:[0,1,2,3,4,5,6]));}));
