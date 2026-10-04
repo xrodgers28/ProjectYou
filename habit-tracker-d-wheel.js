@@ -1,4 +1,4 @@
-/* Design D: Two-Ring Wheel (design file ref 2). v1.0 Oct 3, 2026. Draws only; every fact comes from the engine state. */
+/* Design D: Two-Ring Wheel (design file ref 2). v1.1 Oct 3, 2026. Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
 (function () {
   var CX = 160, CY = 160;
   function pt(cx, cy, r, deg) { var t = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; }
@@ -21,9 +21,9 @@
         var list = q[0], n = list.length;
         list.forEach(function (h, i) {
           var a1 = i * 360 / n + 1, a2 = (i + 1) * 360 / n - 1, lit = !h.done;
-          s += '<path d="' + arc(CX, CY, q[1], q[2], a1, a2) + '" fill="' + (lit ? h.pastel : '#eef1f6') + '" stroke="#fff" stroke-width="1"/>';
+          s += '<g data-h="' + P.esc(h.n) + '"><path d="' + arc(CX, CY, q[1], q[2], a1, a2) + '" fill="' + (lit ? h.pastel : '#eef1f6') + '" stroke="#fff" stroke-width="1"/>';
           var p = pt(CX, CY, (q[1] + q[2]) / 2, (a1 + a2) / 2);
-          s += ic(h, p[0], p[1], q[3], lit);
+          s += ic(h, p[0], p[1], q[3], lit) + '</g>';
         });
       });
       var total = c.ct + c.st, done = c.cd + c.sd, s1 = 28, s2 = 28, lw = dw(done) * s1, rw = dw(total) * s2, gap = 14,
