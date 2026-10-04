@@ -12,7 +12,7 @@
    state.habits[i] = {n, ic, sec, core(1/0), st(stack index), stack, pos, done, art, color, pastel, bg, secName}. */
 (function () {
   var TZ = 'America/New_York';
-  var E = window.PYHT = { version: '1.1', SIZES: { card: 330, phone: 262 }, _designs: {} };
+  var E = window.PYHT = { version: '1.2', SIZES: { card: 330, phone: 262 }, _designs: {} };
   var sb = null, userId = null, cfg = [], set = {}, ready = null;
 
   /* Match names between the sorted list and the daily habits: ignore emoji, case, curly quotes. */
@@ -59,7 +59,10 @@
         var doneSet = {};
         (r.data || []).forEach(function (t) { if (t.done && !t.skipped) doneSet[norm(t.task)] = 1; });
         var mid = (set.sample_mid || []).map(norm), secs = set.sections || {};
-        var H = cfg.map(function (c) {
+        /* Weekday-only stacks: Train (stack 1) is hidden on Saturdays and Sundays (the 2am-to-2am day). */
+        var dow = day ? new Date(day + 'T12:00:00Z').getUTCDay() : -1;
+        var weekend = dow === 0 || dow === 6;
+        var H = cfg.filter(function (c) { return !(weekend && c.stack_idx === 1); }).map(function (c) {
           var d;
           if (mode === 'done') d = true;
           else if (mode === 'start') d = false;
