@@ -2561,3 +2561,81 @@ else boot();
 <div class="savepill hide" id="savePill">saved</div>
 <script src="nav-config.js"></script>
 <script src="navpatch.js"></script>
+<script>
+/* Tracker check add-on (Oct 4, 2026). Adds one read-only view; keeps no list of its own. */
+(function(){
+  var vc=document.getElementById('vCards'), dh=document.getElementById('dragHint');
+  if(!vc||!dh) return;
+  var btn=document.createElement('button'); btn.className='btn'; btn.id='vTcheck'; btn.textContent='Tracker check';
+  vc.parentNode.insertBefore(btn, vc.nextSibling);
+  var panel=document.createElement('div'); panel.className='today'; panel.id='tcheckPanel';
+  panel.innerHTML='<h3>Tracker check</h3><div class="small">What the trackers are showing right now, read straight from your stacks. Nothing here is a second list: switch a habit on or off and set Core or Secondary on the sheet, and order the stacks in Stack Builder.</div><div id="tcheckBody" style="margin-top:10px"></div>';
+  dh.parentNode.insertBefore(panel, dh);
+  /* Tracker check (v3.1). A read-only look at what the trackers show. It reads the stacks and the sheet, it keeps no list of its own. */
+  var TCHK = null;
+  function norm(x){ return String(x||'').toLowerCase().replace(/[^a-z0-9]+/g,' ').trim(); }
+  function findSheetRow(c){
+    var names = (c.db_names||[]).concat([c.habit]).map(norm);
+    var hit = null;
+    Object.keys(DATA).forEach(function(k){
+      rowsOf(k).forEach(function(r){
+        if(hit || r.retired) return;
+        var p = norm(r.proc);
+        if(names.indexOf(p) > -1) hit = r;
+      });
+    });
+    return hit;
+  }
+  function renderTcheck(){
+    var box = document.getElementById('tcheckBody');
+    if(TCHK === null){
+      box.innerHTML = '<div class="small">Loading the stacks...</div>';
+      sbFetch('habit_tracker_config?select=habit,level,stack,stack_idx,stack_pos,enabled,db_names&order=stack_idx,stack_pos')
+        .then(function(rows){ TCHK = rows || []; renderTcheck(); })
+        .catch(function(e){ box.innerHTML = '<div class="small">Could not read the stacks: '+e.message+'</div>'; });
+      return;
+    }
+    var stacks = {}, order = [], flags = 0;
+    TCHK.forEach(function(c){
+      if(!stacks[c.stack]){ stacks[c.stack] = []; order.push(c.stack); }
+      stacks[c.stack].push(c);
+    });
+    var h = '';
+    order.forEach(function(sn){
+      h += '<div style="margin:14px 0 4px;font-weight:700">'+sn+'</div>';
+      stacks[sn].forEach(function(c){
+        var r = findSheetRow(c), note = '', cls = 'ok';
+        var tier = c.level === 'core' ? 'CORE' : 'SECONDARY';
+        if(!r){ note = 'No sheet row found for this one'; cls = 'warn'; }
+        else if(c.enabled && !r.active){ note = 'On the tracker but switched off on the sheet'; cls = 'warn'; }
+        else if(!c.enabled && r.active){ note = 'Switched on on the sheet but hidden on the tracker'; cls = 'warn'; }
+        else if(!c.enabled){ note = 'Off, as the sheet says'; cls = 'off'; }
+        if(cls === 'warn') flags++;
+        h += '<div style="display:flex;gap:10px;align-items:center;padding:5px 0;border-top:1px solid var(--grid);flex-wrap:wrap">'
+          + '<span style="min-width:190px;font-weight:600">'+esc(c.habit)+'</span>'
+          + '<span class="small" style="min-width:90px">'+(c.enabled?'Showing':'Hidden')+'</span>'
+          + '<span class="small" style="min-width:90px">'+tier+'</span>'
+          + '<span class="small" style="'+(cls==='warn'?'font-weight:700':'')+'">'+note+'</span></div>';
+      });
+    });
+    var onSheet = [];
+    Object.keys(DATA).forEach(function(k){
+      rowsOf(k).forEach(function(r){
+        if(r.active && !r.retired && !r.parked && !TCHK.some(function(c){ return findSheetRow(c) === r; })) onSheet.push(r.proc);
+      });
+    });
+    h = '<div class="small" style="margin-bottom:6px"><b>'+(flags?flags+' to look at':'Everything lines up')+'.</b> '
+      + onSheet.length+' habits are in rotation but not in any stack, so they live on Today\'s Tasks only.</div>' + h;
+    box.innerHTML = h;
+  }
+  
+  var _sv=setView;
+  setView=function(v){
+    if(v==='tcheck'){ _sv('cards'); view='tcheck'; document.getElementById('cards').classList.remove('on'); document.getElementById('vCards').classList.remove('on'); btn.classList.add('on'); panel.classList.add('on'); renderTcheck(); }
+    else { _sv(v); btn.classList.remove('on'); panel.classList.remove('on'); }
+  };
+  btn.onclick=function(){ setView('tcheck'); };
+  var pills=document.querySelectorAll('.pillrow .pill');
+  for(var i=0;i<pills.length;i++){ if(/Habit Worksheets v/.test(pills[i].textContent)) pills[i].textContent='Habit Worksheets v3.3'; }
+})();
+</script>
