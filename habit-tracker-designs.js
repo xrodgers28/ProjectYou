@@ -9,5 +9,5 @@ window.PYHT_REGISTRY = [
   { id: 'wheel',  letter: 'D', name: 'Two-Ring Wheel',                                 ref: '2', file: 'habit-tracker-d-wheel.js' },
   { id: 'rings',  letter: 'E', name: 'Stack Rings',                                    ref: '8', file: 'habit-tracker-d-rings.js' },
   { id: 'grid',   letter: 'F', name: 'Icon Grid',                                      ref: '1', file: 'habit-tracker-d-grid.js' },
-  { id: 'tubes',  letter: 'G', name: 'Solid Steel Plate (Gated Marble Tubes)',         ref: '55J', file: null }
+  { id: 'tubes',  letter: 'G', name: 'Solid Steel Plate (Gated Marble Tubes)',         ref: '55J', file: 'habit-tracker-d-tubes.js' }
 ];
