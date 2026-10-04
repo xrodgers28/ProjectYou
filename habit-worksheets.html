@@ -277,6 +277,11 @@ tr.grandnote td{background:transparent; color:var(--ink-2); font-size:.79rem; fo
 .actpill{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.53rem; letter-spacing:.06em; border:1px solid var(--line-2);
   color:var(--muted); border-radius:99px; padding:2px 5px; cursor:pointer; display:inline-block}
 .actpill.on{background:var(--seg); border-color:var(--seg); color:#fff}
+.tierpill{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace; font-size:.53rem; letter-spacing:.06em; border:1px solid var(--line-2);
+  color:var(--muted); border-radius:99px; padding:2px 5px; cursor:pointer; display:inline-block; margin-left:3px}
+.tierpill.core{background:#1f2937; border-color:#1f2937; color:#fff}
+.tierpill.sec{background:#e5e7eb; border-color:#9ca3af; color:#374151}
+.tierpill.none{border-style:dashed}
 .cardchip{display:inline-block; font-size:.62rem; border:1px solid var(--line-2); border-radius:99px;
   padding:2px 6px; margin:0 3px 3px 0; color:var(--ink-2); white-space:nowrap; text-decoration:none}
 a.cardchip:hover{border-color:var(--seg); color:var(--segInk); background:var(--segTint)}
@@ -1141,7 +1146,8 @@ function render(){
 
     var star='<button class="starbtn" onclick="toggleMust('+i+')" title="Required">'+
       '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.6l2.7 5.9 6.3.7-4.7 4.3 1.3 6.3L12 16.7 6.4 19.8l1.3-6.3L3 9.2l6.3-.7z"/></svg></button>';
-    var pill='<span class="actpill'+(it.active?' on':'')+'" onclick="toggleActive('+i+')">'+(it.active?'ACTIVE':'OFF')+'</span>';
+    var pill='<span class="actpill'+(it.active?' on':'')+'" onclick="toggleActive('+i+')">'+(it.active?'ACTIVE':'OFF')+'</span>'+
+      '<span class="tierpill '+(it.tier==='core'?'core':it.tier==='secondary'?'sec':'none')+'" onclick="toggleTier('+i+')" title="Core or Secondary. This is the one place it is set; the trackers and Stack Builder follow it. Press to switch.">'+(it.tier==='core'?'CORE':it.tier==='secondary'?'SECONDARY':'SET TIER')+'</span>';
     /* Delivered is only for habits that come round a few times a year. A daily
        or weekly habit is ticked off day to day in the summary and never parked
        here, so it gets no Delivered buttons at all. */
@@ -1405,6 +1411,8 @@ function shadeAll(){
   document.getElementById('shadeAll').textContent = allOpen ? 'Collapse insights' : 'Expand insights';
   document.getElementById('shadeAll').classList.toggle('on', allOpen);
 }
+/* Core / Secondary (v3.0). The one switch. Stack Builder and the trackers read it, so there is no second copy to keep in step. */
+function toggleTier(i){ var r=DATA[cur][i]; r.tier=(r.tier==='core')?'secondary':'core'; render(); }
 function toggleMust(i){ var r=DATA[cur][i]; r.must=!r.must; if(r.must) r.active=true; render(); }
 function toggleActive(i){ var r=DATA[cur][i]; r.active=!r.active; if(!r.active) r.must=false; render(); }
 function setCell(i,c,txt){
@@ -2141,7 +2149,7 @@ function cardsOf(trackers){
 }
 function rowToItem(r){
   return {t:'row', _id:r.id, ic:r.icon||'', tag:r.tag||'', proc:r.habit||'', ins:r.insight||'',
-    out:r.outcome||'', id:r.identity||'', cards:cardsOf(r.trackers), card:r.card||'',
+    out:r.outcome||'', id:r.identity||'', tier:r.tier||'', cards:cardsOf(r.trackers), card:r.card||'',
     done:r.completed_on||null, retired:!!r.retired, parked:!!r.parked, back:r.return_on||null,
     auto:r.auto_source||'', cad:r.cadence||'Daily', time:+r.minutes||0,
     cnt:!!r.count_on, cntl:r.count_label||'',
@@ -2155,7 +2163,7 @@ function rowToItem(r){
 function itemToRow(it, areaName, sectionLabel, pos){
   return {area:areaName, section:sectionLabel||it._sec||'General', habit:it.proc||'',
     tag:it.tag||null, icon:it.ic||null, insight:it.ins||null, outcome:it.out||null,
-    identity:it.id||null, trackers:(it.cards||[]).map(function(c){return c[0];}),
+    identity:it.id||null, tier:it.tier||null, trackers:(it.cards||[]).map(function(c){return c[0];}),
     card:it.card || cardFor(it), auto_source:it.auto||null, cadence:it.cad||'Daily',
     minutes:+it.time||0, is_required:!!it.must, is_active:!!it.active, position:pos,
     summary_pos:(it._spos==null ? null : +it._spos),
@@ -2180,7 +2188,7 @@ var booted = false, snapshot = {};
 /* The fingerprint that decides whether a row needs saving. It has to name
    every field the sheet can change: cue-card connections were missing, so
    connecting a habit to a card looked right on screen and was never written. */
-function snapOf(it){ return JSON.stringify([it.proc,it.tag,it.ic,it.ins,it.out,it.id,it.auto,it.cad,it.time,it.must,it.active,it._sec,it._pos,it._spos,
+function snapOf(it){ return JSON.stringify([it.proc,it.tag,it.ic,it.ins,it.out,it.id,it.tier||'',it.auto,it.cad,it.time,it.must,it.active,it._sec,it._pos,it._spos,
   (it.cards||[]).map(function(c){return c[0];}).join('|'), it.card||'', it.done||'', !!it.retired, !!it.parked, it.back||'']); }
 
 function buildDATA(rows, secs){
