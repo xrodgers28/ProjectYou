@@ -27,6 +27,12 @@
 
    Change the form here and every page gets the change. Do not copy it into a page.
 
+   v1.3, Oct 3 2026, Scott's ask: Why and Long (and Kind, With) all take a typed new option with the
+   + chip, kept for every future log and shared across his devices (table safari_vocab), and every
+   option wears a small x to remove it. A removed built-in is only switched off; "Put back options I
+   removed" under the form restores them. Long takes a length like 45 min or 3 hours. Also: an
+   old entry can be edited (PYSafari.edit), which re-writes its tracker rows.
+
    v1.2, Oct 3 2026, Scott's answer: a note that starts with the word fix also becomes a to-do for Claude
    (Fixes to make), the shortcut the Weekly Review's old note box had. Safari minutes count for real.
 
@@ -38,7 +44,7 @@
    v1.0, Oct 3 2026. First version. Custom words added with + are kept in this browser. */
 window.PYSafari = (function () {
   'use strict';
-  var VERSION = '1.2';
+  var VERSION = '1.3';
   var HOME_STATES = ['ct', 'connecticut', 'ny', 'new york'];
   var KINDS = ['Library','Park','Museum','Cafe','Gallery','Hotel lobby','Waterfront','Trail','Town','Landmark','Other'];
   var WHYS = ['Work from here','Explore','Both'];
@@ -73,6 +79,83 @@ window.PYSafari = (function () {
   function isHome(state){ return HOME_STATES.indexOf(String(state||'').toLowerCase().replace(/\./g,'')) > -1; }
   function readVocab(key){ try { return JSON.parse(localStorage.getItem('pysf_' + key) || '[]') || []; } catch (e) { return []; } }
   function writeVocab(key, arr){ try { localStorage.setItem('pysf_' + key, JSON.stringify(arr)); } catch (e) {} }
+
+  /* ---------- the option lists: built-ins in this file, custom + removed ones in safari_vocab ---------- */
+  var VOC = { rows: [], loaded: false };
+  function baseList(field){
+    if (field === 'kind') return KINDS.map(function(k){ return { v: k, m: null }; });
+    if (field === 'why') return WHYS.map(function(k){ return { v: k, m: null }; });
+    if (field === 'with') return WITHS.map(function(k){ return { v: k, m: null, fixed: k === 'Solo' }; });
+    return LONGS.map(function(l){ return { v: l[1], m: l[0] }; });
+  }
+  function items(field){
+    var removed = {}, custom = [];
+    VOC.rows.forEach(function(r){
+      if (r.field !== field) return;
+      if (r.builtin) { if (!r.active) removed[r.value] = 1; }
+      else if (r.active) custom.push(r);
+    });
+    var out = baseList(field).filter(function(b){ return !removed[b.v]; });
+    custom.sort(function(a, b){ return (a.sort - b.sort) || (a.id - b.id); }).forEach(function(r){
+      if (!out.some(function(o){ return o.v === r.value; })) out.push({ v: r.value, m: r.mins, custom: true, id: r.id });
+    });
+    if (field === 'mins') out.sort(function(a, b){ return a.m - b.m; });
+    return out;
+  }
+  function removedCount(){ return VOC.rows.filter(function(r){ return r.builtin && !r.active; }).length; }
+  async function loadVocab(sb, force){
+    if (VOC.loaded && !force) return;
+    try {
+      var r = await sb.from('safari_vocab').select('*').order('sort').order('id');
+      if (r.error) throw r.error;
+      VOC.rows = r.data || []; VOC.loaded = true;
+      /* one-time move of words an earlier version kept only in this browser */
+      var mv = [], pairs = [['kinds', 'kind'], ['withs', 'with']];
+      pairs.forEach(function(p){
+        readVocab(p[0]).forEach(function(w){
+          if (baseList(p[1]).some(function(b){ return b.v === w; })) return;
+          if (VOC.rows.some(function(x){ return x.field === p[1] && x.value === w; })) return;
+          mv.push({ field: p[1], value: w, builtin: false, active: true, sort: Date.now() % 1e9 });
+        });
+      });
+      if (mv.length) {
+        var ins = await sb.from('safari_vocab').upsert(mv, { onConflict: 'field,value' });
+        if (!ins.error) { pairs.forEach(function(p){ writeVocab(p[0], []); }); await loadVocab(sb, true); }
+      }
+    } catch (e) { VOC.loaded = true; }
+  }
+  async function addWord(sb, field, label, mins){
+    var existing = VOC.rows.filter(function(r){ return r.field === field && r.value === label; })[0];
+    var rec = { field: field, value: label, mins: mins || null, builtin: existing ? existing.builtin : false, active: true, sort: Date.now() % 1e9 };
+    var r = await sb.from('safari_vocab').upsert(rec, { onConflict: 'field,value' });
+    if (r.error) return false;
+    await loadVocab(sb, true); return true;
+  }
+  async function removeWord(sb, field, label){
+    var it = items(field).filter(function(x){ return x.v === label; })[0]; if (!it) return false;
+    var r;
+    if (it.custom) r = await sb.from('safari_vocab').delete().eq('id', it.id);
+    else r = await sb.from('safari_vocab').upsert({ field: field, value: label, builtin: true, active: false, mins: it.m || null }, { onConflict: 'field,value' });
+    if (r.error) return false;
+    await loadVocab(sb, true); return true;
+  }
+  async function restoreAll(sb){
+    var r = await sb.from('safari_vocab').delete().eq('builtin', true);
+    if (r.error) return false;
+    await loadVocab(sb, true); return true;
+  }
+  /* "45", "45 min", "3 hours", "1.5h" -> minutes, or null */
+  function parseLong(t){
+    var m = String(t || '').trim().toLowerCase().match(/^(\d+(?:\.\d+)?)\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours)?$/);
+    if (!m) return null;
+    var n = parseFloat(m[1]), mins = Math.round(/^h/.test(m[2] || '') ? n * 60 : n);
+    return (mins >= 1 && mins <= 10080) ? mins : null;
+  }
+  function longLabel(mins){
+    if (mins < 60) return mins + ' min';
+    if (mins % 60 === 0) { var h = mins / 60; return h === 1 ? '1 hour' : h + ' hours'; }
+    return Math.floor(mins / 60) + ' h ' + (mins % 60) + ' min';
+  }
 
   /* ---------- the trackers: one write that every page reads ----------
      Scott, Oct 3 2026: "this should be a centralized form that updates all trackers
@@ -129,6 +212,9 @@ window.PYSafari = (function () {
       '.pysf .r-with .sf-chip.on{background:#c0453b}.pysf .r-when .sf-chip.on{background:#5b8fce}.pysf .r-long .sf-chip.on{background:#2f8f8a}',
       '.pysf .r-felt .sf-chip.on{background:#d9a31f;color:#1f2a44}',
       '.pysf .sf-chip.plus{border-style:dashed}',
+      '.pysf .sf-chip .sf-x{margin-left:6px;font-size:13px;font-weight:700;opacity:.4;line-height:1}',
+      '.pysf .sf-chip .sf-x:hover{opacity:1;color:var(--warn)}.pysf .sf-chip.on .sf-x{color:#fff;opacity:.7}',
+      '.pysf .sf-restore{font-size:11.5px;color:var(--acc);cursor:pointer;text-decoration:underline}',
       '.pysf .sf-sug{margin:-3px 0 9px 72px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}',
       '.pysf .sf-sug small{font-size:11px;color:var(--mut);width:100%}',
       '.pysf input[type=text],.pysf input[type=date],.pysf textarea{font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}',
@@ -156,44 +242,53 @@ window.PYSafari = (function () {
     this.s = { which: o.which === 'National' ? 'National' : 'Local', whichTouched: !!o.which, place: o.place || '', town: o.town || '',
                kind: '', why: '', withs: ['Solo'], when: o.when || today(), mins: null, felt: null, note: '', fav: false, lat: null, lng: null };
     this.sug = [];
+    if (o.edit) {
+      var er = o.edit; this.editId = er.id; this.editSafariId = er.safari_id; this.sugLoaded = true;
+      this.s = { which: er.kind === 'National' ? 'National' : 'Local', whichTouched: true, place: er.place || '', town: er.town || '',
+                 kind: er.place_kind || '', why: er.why || '', withs: (er.with_whom && er.with_whom.length) ? er.with_whom.slice() : ['Solo'],
+                 when: er.happened_on, mins: er.mins || null, felt: er.felt || null, note: er.note || '', fav: !!er.favourite, lat: null, lng: null };
+    }
     if (o.lat) this.s.lat = o.lat; if (o.lng) this.s.lng = o.lng;
     if (o.category) { var kw = String(o.category).toLowerCase(); for (var i = 0; i < KINDS.length; i++) if (kw.indexOf(KINDS[i].toLowerCase()) > -1) { this.s.kind = KINDS[i]; break; } }
     if (o.town && !o.which) this.autoWhich();
   }
   Form.prototype.$ = function(q){ return this.el.querySelector(q); };
   Form.prototype.say = function(t, cls){ var e = this.$('.sf-say'); if (e) { e.textContent = t || ''; e.className = 'sf-say' + (cls ? ' ' + cls : ''); } };
-  Form.prototype.chips = function(group, list, cur, plusKey){
-    var self = this, extra = plusKey ? readVocab(plusKey) : [];
-    var all = list.concat(extra.filter(function(x){ return list.indexOf(x) < 0; }));
-    var h = all.map(function(w){
-      var on = Array.isArray(cur) ? cur.indexOf(w) > -1 : cur === w;
-      return '<button type="button" class="sf-chip' + (on ? ' on' : '') + '" data-g="' + group + '" data-v="' + esc(w) + '">' + esc(w) + '</button>';
+  Form.prototype.chips = function(group, field, cur, extra){
+    var list = items(field).concat(extra || []), isMins = field === 'mins';
+    var h = list.map(function(w){
+      var val = isMins ? w.m : w.v;
+      var on = Array.isArray(cur) ? cur.indexOf(w.v) > -1 : (isMins ? cur === w.m : cur === w.v);
+      var x = w.fixed ? '' : '<span class="sf-x" data-rm="' + field + '" data-rv="' + esc(w.v) + '" role="button" title="Remove this option" aria-label="Remove ' + esc(w.v) + '">&times;</span>';
+      return '<button type="button" class="sf-chip' + (on ? ' on' : '') + '" data-g="' + group + '" data-v="' + esc(val) + '">' + esc(w.v) + x + '</button>';
     }).join('');
-    if (plusKey) h += '<button type="button" class="sf-chip plus" data-plus="' + plusKey + '" title="Add your own word">+</button>';
-    return h;
+    return h + '<button type="button" class="sf-chip plus" data-plus="' + field + '" title="Add your own">+</button>';
   };
   Form.prototype.draw = async function(){
     css();
+    await loadVocab(this.sb);
     var s = this.s, self = this, isNat = s.which === 'National';
-    var longs = LONGS.concat(isNat ? [LONG_NAT] : []);
-    var h = '<div class="pysf pysf-auto"><h3>Log Safari Moment</h3><div class="sf-ver">Safari Log v' + VERSION + '</div>' +
+    var natExtra = isNat ? [{ v: LONG_NAT[1], m: LONG_NAT[0], fixed: true }] : [];
+    var editing = !!this.editId;
+    var h = '<div class="pysf pysf-auto"><h3>' + (editing ? 'Edit Safari Moment' : 'Log Safari Moment') + '</h3><div class="sf-ver">Safari Log v' + VERSION + '</div>' +
       '<div class="sf-row r-which"><span class="sf-lab">Which</span>' + ['Local','National'].map(function(w){ return '<button type="button" class="sf-chip' + (s.which === w ? ' on' : '') + '" data-g="which" data-v="' + w + '">' + w + '</button>'; }).join('') + '</div>' +
       '<div class="sf-hint" style="margin-bottom:8px">National means outside Connecticut and New York.</div>' +
       '<div class="sf-row r-where"><span class="sf-lab">Where</span><input type="text" class="sf-place" placeholder="Place name" value="' + esc(s.place) + '"><input type="text" class="sf-town" placeholder="Town, ST" value="' + esc(s.town) + '"></div>' +
       '<div class="sf-sug" id="sf-sug"></div>' +
-      '<div class="sf-row r-kind"><span class="sf-lab">Kind</span>' + this.chips('kind', KINDS, s.kind, 'kinds') + '</div>' +
-      '<div class="sf-row r-why"><span class="sf-lab">Why</span>' + this.chips('why', WHYS, s.why) + '</div>' +
-      '<div class="sf-row r-with"><span class="sf-lab">With</span>' + this.chips('with', WITHS, s.withs, 'withs') + '</div>' +
+      '<div class="sf-row r-kind"><span class="sf-lab">Kind</span>' + this.chips('kind', 'kind', s.kind) + '</div>' +
+      '<div class="sf-row r-why"><span class="sf-lab">Why</span>' + this.chips('why', 'why', s.why) + '</div>' +
+      '<div class="sf-row r-with"><span class="sf-lab">With</span>' + this.chips('with', 'with', s.withs) + '</div>' +
       '<div class="sf-row r-when"><span class="sf-lab">When</span>' +
         '<button type="button" class="sf-chip' + (s.when === today() ? ' on' : '') + '" data-g="when" data-v="today">Today</button>' +
         '<button type="button" class="sf-chip' + (s.when === shift(today(), -1) ? ' on' : '') + '" data-g="when" data-v="yesterday">Yesterday</button>' +
         '<input type="date" class="sf-date" max="' + today() + '" value="' + esc(s.when) + '"></div>' +
-      '<div class="sf-row r-long"><span class="sf-lab">Long</span>' + longs.map(function(l){ return '<button type="button" class="sf-chip' + (s.mins === l[0] ? ' on' : '') + '" data-g="mins" data-v="' + l[0] + '">' + l[1] + '</button>'; }).join('') + '</div>' +
+      '<div class="sf-row r-long"><span class="sf-lab">Long</span>' + this.chips('mins', 'mins', s.mins, natExtra) + '</div>' +
       '<div class="sf-row r-felt"><span class="sf-lab">Felt</span>' + [1,2,3,4,5,6,7].map(function(n){ return '<button type="button" class="sf-chip' + (s.felt === n ? ' on' : '') + '" data-g="felt" data-v="' + n + '">' + n + '</button>'; }).join('') + '</div>' +
       '<textarea class="sf-note" placeholder="What did you notice? (optional)">' + esc(s.note) + '</textarea>' +
       '<label class="sf-fav"><input type="checkbox" class="sf-favck"' + (s.fav ? ' checked' : '') + '> Keep as a favourite, I would go back</label>' +
-      '<button type="button" class="sf-go">Log It</button><div class="sf-say"></div>' +
-      (this.o.noLink ? '' : '<div class="sf-link"><a href="safari-log.html" target="_blank" rel="noopener">Safari Log</a></div>') + '</div>';
+      '<button type="button" class="sf-go">' + (editing ? 'Save Changes' : 'Log It') + '</button><div class="sf-say"></div>' +
+      (removedCount() ? '<div class="sf-link"><a class="sf-restore">Put back options I removed (' + removedCount() + ')</a></div>' : '') +
+      ((this.o.noLink || editing) ? '' : '<div class="sf-link"><a href="safari-log.html" target="_blank" rel="noopener">Safari Log</a></div>') + '</div>';
     this.el.innerHTML = h;
     this.wire();
     this.drawSug();
@@ -252,18 +347,49 @@ window.PYSafari = (function () {
         self.draw();
       };
     });
+    this.el.querySelectorAll('.sf-x').forEach(function(x){
+      x.onclick = async function(e){
+        e.stopPropagation(); e.preventDefault();
+        self.grab();
+        var field = x.getAttribute('data-rm'), label = x.getAttribute('data-rv');
+        var it = items(field).filter(function(i){ return i.v === label; })[0];
+        var ok = await removeWord(self.sb, field, label);
+        if (!ok) { self.say('Could not remove that. Try again.', 'warn'); return; }
+        if (field === 'kind' && st.kind === label) st.kind = '';
+        if (field === 'why' && st.why === label) st.why = '';
+        if (field === 'with') { st.withs = st.withs.filter(function(w){ return w !== label; }); if (!st.withs.length) st.withs = ['Solo']; }
+        if (field === 'mins' && it && st.mins === it.m && !items('mins').some(function(i){ return i.m === it.m; })) st.mins = null;
+        self.draw();
+      };
+    });
+    var rs = this.$('.sf-restore');
+    if (rs) rs.onclick = async function(){ self.grab(); await restoreAll(self.sb); self.draw(); };
     this.el.querySelectorAll('.sf-chip[data-plus]').forEach(function(b){
       b.onclick = function(){
         self.grab();
-        var key = b.getAttribute('data-plus');
-        var inp = document.createElement('input'); inp.type = 'text'; inp.className = 'sf-add'; inp.placeholder = 'New word, Enter';
+        var field = b.getAttribute('data-plus');
+        var inp = document.createElement('input'); inp.type = 'text'; inp.className = 'sf-add';
+        inp.placeholder = field === 'mins' ? 'e.g. 45 min, 3 hours' : 'New word, Enter';
+        if (field === 'mins') inp.style.width = '150px';
         b.replaceWith(inp); inp.focus();
-        inp.onkeydown = function(e){
+        inp.onkeydown = async function(e){
           if (e.key === 'Escape') { self.draw(); return; }
           if (e.key !== 'Enter') return;
           var w = inp.value.trim(); if (!w) { self.draw(); return; }
-          var arr = readVocab(key); if (arr.indexOf(w) < 0) { arr.push(w); writeVocab(key, arr); }
-          if (key === 'kinds') st.kind = w; else { st.withs = st.withs.filter(function(x){ return x !== 'Solo'; }); if (st.withs.indexOf(w) < 0) st.withs.push(w); }
+          if (field === 'mins') {
+            var mins = parseLong(w);
+            if (!mins) { self.say('Type a length like 45 min or 3 hours.', 'warn'); return; }
+            if (!items('mins').some(function(i){ return i.m === mins; })) {
+              if (!(await addWord(self.sb, 'mins', longLabel(mins), mins))) { self.say('Could not save that. Try again.', 'warn'); return; }
+            }
+            st.mins = mins; self.draw(); return;
+          }
+          var have = items(field).filter(function(i){ return i.v.toLowerCase() === w.toLowerCase(); })[0];
+          if (have) w = have.v;
+          else if (!(await addWord(self.sb, field, w, null))) { self.say('Could not save that. Try again.', 'warn'); return; }
+          if (field === 'kind') st.kind = w;
+          else if (field === 'why') st.why = w;
+          else { st.withs = st.withs.filter(function(x){ return x !== 'Solo'; }); if (st.withs.indexOf(w) < 0) st.withs.push(w); }
           self.draw();
         };
       };
@@ -286,6 +412,18 @@ window.PYSafari = (function () {
                 note: String(st.note || '').trim() || null, favourite: !!st.fav, source: 'logged-by-hand' };
     var res = { place: place, which: st.which, date: st.when, safariId: null, logId: null, habitId: null };
     try {
+      if (self.editId) {
+        var upd = Object.assign({}, row); delete upd.source;
+        var u = await sb.from('safari_log').update(upd).eq('id', self.editId);
+        if (u.error) throw u.error;
+        await dropTrackers(sb, self.editId);
+        await recordTrackers(sb, self.editId, st.which, st.when, st.mins, place);
+        if (st.fav && self.editSafariId) await sb.from('safaris').update({ status: 'favourite', updated_at: new Date().toISOString() }).eq('id', self.editSafariId);
+        res.logId = self.editId; res.edited = true;
+        go.disabled = false;
+        if (typeof o.onSaved === 'function') { try { o.onSaved(res); } catch (e) {} }
+        return;
+      }
       /* the place on the Safari places list: add it, or flip an idea to been */
       var found = await sb.from('safaris').select('id,status,visited_on,tags').ilike('name', place).limit(1);
       var sid = null, now = new Date().toISOString();
@@ -351,5 +489,7 @@ window.PYSafari = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, shortD: shortD, dropTrackers: dropTrackers, version: VERSION };
+  function edit(opts){ return open(Object.assign({}, opts, { edit: opts.row })); }
+
+  return { mount: mount, open: open, edit: edit, shortD: shortD, dropTrackers: dropTrackers, version: VERSION };
 })();

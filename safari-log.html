@@ -31,6 +31,8 @@
   .cx .date{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
   .cx .del{position:absolute;bottom:7px;right:10px;font-size:15px;color:var(--muted);opacity:.5;cursor:pointer;background:none;border:none}
   .cx .del:hover{color:var(--hot);opacity:1}
+  .cx .ed{position:absolute;bottom:7px;right:36px;font-size:11.5px;font-weight:800;color:var(--accent);background:none;border:none;cursor:pointer;font-family:inherit}
+  .cx .ed:hover{text-decoration:underline}
   .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:2px 8px;color:#fff;margin-right:5px;background:var(--accent)}
   .pill.nat{background:var(--sand)}.pill.k{background:#6f5aa8}.pill.fav{background:#d9a31f;color:#1f2a44}
   .empty{color:var(--muted);font-size:14px;padding:16px 2px}
@@ -83,7 +85,7 @@
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 <div class="wrap">
-  <h1>Safari Log <span class="ver">v1.2</span></h1>
+  <h1>Safari Log <span class="ver">v1.3</span></h1>
   <div class="sub2">Oct 3, 2026</div>
   <p class="intro">Every Local and National Safari you have actually been on. Local is Connecticut and New York; National is anywhere else. Logging one adds the place to your Safari list and ticks the habit.</p>
   <div class="formcard" id="formhost"></div>
@@ -104,7 +106,7 @@ const el=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 function fmt(d){const p=String(d).split('-');return MS[+p[1]-1]+' '+(+p[2])+', '+p[0];}
 function toast(t){const e=el('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),2400);}
-function lenWord(m){return ({30:'30 min',60:'1 hour',120:'2 hours',240:'half day',480:'all day',1440:'overnight or more'})[m]||'';}
+function lenWord(m){const k=({30:'30 min',60:'1 hour',120:'2 hours',240:'half day',480:'all day',1440:'overnight or more'})[m];if(k)return k;if(!m)return '';if(m<60)return m+' min';if(m%60===0)return (m/60)+' hours';return Math.floor(m/60)+' h '+(m%60)+' min';}
 function render(){
   const yr=String((window.PY&&PY.today)?PY.today():new Date().toISOString()).slice(0,4);
   const mine=ROWS.filter(r=>r.happened_on.slice(0,4)===yr);
@@ -119,9 +121,13 @@ function render(){
     if(key!==cur){cur=key;html+='<div class="mh">'+key+'</div>';}
     const w=(r.with_whom||[]).filter(x=>x&&x!=='Solo');
     const bits=[r.town,r.why,w.length?'with '+w.join(', '):(r.with_whom&&r.with_whom.indexOf('Solo')>-1?'solo':''),lenWord(r.mins),r.felt?'felt '+r.felt:''].filter(Boolean).map(esc).join(' &middot; ');
-    html+='<div class="cx'+(r.kind==='National'?' nat':'')+'"><div><div class="who">'+esc(r.place)+'</div><div class="meta"><span class="pill'+(r.kind==='National'?' nat':'')+'">'+r.kind+'</span>'+(r.place_kind?'<span class="pill k">'+esc(r.place_kind)+'</span>':'')+(r.favourite?'<span class="pill fav">Favourite</span>':'')+bits+'</div>'+(r.note?'<div class="note">'+esc(r.note)+'</div>':'')+'</div><div class="date">'+fmt(r.happened_on)+'</div><button class="del" title="Remove this entry" data-id="'+r.id+'">&times;</button></div>';
+    html+='<div class="cx'+(r.kind==='National'?' nat':'')+'"><div><div class="who">'+esc(r.place)+'</div><div class="meta"><span class="pill'+(r.kind==='National'?' nat':'')+'">'+r.kind+'</span>'+(r.place_kind?'<span class="pill k">'+esc(r.place_kind)+'</span>':'')+(r.favourite?'<span class="pill fav">Favourite</span>':'')+bits+'</div>'+(r.note?'<div class="note">'+esc(r.note)+'</div>':'')+'</div><div class="date">'+fmt(r.happened_on)+'</div><button class="ed" title="Edit this entry" data-id="'+r.id+'">Edit</button><button class="del" title="Remove this entry" data-id="'+r.id+'">&times;</button></div>';
   });
   el('list').innerHTML=html;
+  el('list').querySelectorAll('.ed').forEach(b=>b.onclick=()=>{
+    const row=ROWS.find(x=>String(x.id)===b.dataset.id);if(!row)return;
+    PYSafari.edit({sb:sb,row:row,onSaved:()=>{toast('Changes saved.');load();}});
+  });
   el('list').querySelectorAll('.del').forEach(b=>b.onclick=async()=>{
     const {error}=await sb.from('safari_log').delete().eq('id',b.dataset.id);
     if(error){toast('Could not remove: '+error.message);return;}
