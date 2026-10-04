@@ -1,6 +1,6 @@
-/* Design G: Solid Steel Plate, Gated Marble Tubes (design file ref 55J). v1.1 Oct 3, 2026.
+/* Design G: Solid Steel Plate, Gated Marble Tubes (design file ref 55J). v1.2 Oct 3, 2026.
    Draws only; every fact comes from the engine state.
-   Scott's notes: shorter tubes (Oct 3 rev 2: steel plate near the bottom, about one marble up; tubes pass through it; finished marbles drop to the bottom, behind its front face), marbles stay the same size; open marbles wait above a THIN steel bar and are
+   Scott's notes: shorter tubes (Oct 3 rev 3: thick steel plate near the bottom, about one marble up, with a hole for each tube; Scott picked option B; finished marbles drop to the bottom, behind its front face), marbles stay the same size; open marbles wait above a THIN steel bar and are
    never covered; finished marbles fall below it and may be slightly tucked under the bar; tube height is worked
    out from the longest stack so every habit fits at the start and the end of the day.
    Built ready for animation: layout() works out every position, the draw step only paints it.
@@ -29,7 +29,7 @@
     render: function (st, size, P) {
       var u = 'st' + (++N), W = P.SIZES[size] || 330, e = P.esc, L = layout(st), M = 0, FL = L.FL, PT = L.PT, yB = L.yB;
       var s = '<defs><linearGradient id="' + u + 'steel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6c747f"/><stop offset=".45" stop-color="#eef1f4"/><stop offset="1" stop-color="#7a828d"/></linearGradient>' +
-        '<linearGradient id="' + u + 'face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9b0b9"/><stop offset="1" stop-color="#6c737d"/></linearGradient><filter id="' + u + 'b2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.4"/></filter></defs>' +
+        '<linearGradient id="' + u + 'face" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a9b0b9"/><stop offset="1" stop-color="#6c737d"/></linearGradient><linearGradient id="' + u + 'rod" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2f4f6"/><stop offset=".45" stop-color="#b4bbc4"/><stop offset="1" stop-color="#5f6670"/></linearGradient><filter id="' + u + 'b2" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="2.4"/></filter></defs>' +
         '<rect x="-300" y="-200" width="960" height="1100" fill="#ece7df"/>';
       function marble(o) {
         var x = +o.x.toFixed(1), y = +o.y.toFixed(1), a = P.art(o.h), g = '<g data-h="' + e(o.h.n) + '">';
@@ -55,25 +55,21 @@
         return o;
       }
       var bx = L.left, bw = L.width, lower = '', upper = '', BY = yB - 6 - 2 * r + 2, hr = w / 2 + 3, hy = 4, CT = BY - 9;
-      /* the steel plate, seen slightly from above. Each tube passes through it inside a steel collar:
-         the back of each collar sits behind the glass, the front wraps in front of it, so the tubes look held, not stuck on */
-      s += '<path d="' + rrect(bx, BY - 7, bw, 9, 3) + '" fill="#c7cdd4"/><line x1="' + (bx + 6) + '" y1="' + (BY - 6) + '" x2="' + (bx + bw - 6) + '" y2="' + (BY - 6) + '" stroke="#fff" stroke-opacity=".65" stroke-width="1"/>';
-      L.tubes.forEach(function (t) { s += '<ellipse cx="' + t.x + '" cy="' + CT + '" rx="' + hr + '" ry="' + hy + '" fill="#3a4048"/>'; });
+      var back = '', front = '';
+        /* B. Thick plate with holes: no rings at all; the tubes drop through holes in a deeper plate, its front face in front of the glass */
+        var TB = BY - 12;
+        back += '<path d="' + rrect(bx, TB, bw, 14, 3) + '" fill="#c7cdd4"/><line x1="' + (bx + 6) + '" y1="' + (TB + 1) + '" x2="' + (bx + bw - 6) + '" y2="' + (TB + 1) + '" stroke="#fff" stroke-opacity=".7" stroke-width="1"/>';
+        L.tubes.forEach(function (t) { back += '<ellipse cx="' + t.x + '" cy="' + (BY - 5) + '" rx="' + (w / 2 + 2) + '" ry="5" fill="#2f353c"/>'; });
+        front += '<path d="' + rrect(bx, BY + 3, bw, 9, 2) + '" fill="#000" opacity=".22" transform="translate(2,6)" filter="url(#' + u + 'b2)"/>';
+        front += '<path d="' + rrect(bx, BY, bw, 10, 2.5) + '" fill="url(#' + u + 'face)"/>';
+        L.tubes.forEach(function (t) { var x = t.x, rx = w / 2 + 2; front += '<path d="M' + (x - rx) + ',' + (BY - 5) + ' A' + rx + ',5 0 0 0 ' + (x + rx) + ',' + (BY - 5) + ' L' + (x + rx) + ',' + BY + ' H' + (x - rx) + ' Z" fill="#c7cdd4"/><path d="M' + (x - rx) + ',' + (BY - 5) + ' A' + rx + ',5 0 0 0 ' + (x + rx) + ',' + (BY - 5) + '" fill="none" stroke="#5d646e" stroke-opacity=".6" stroke-width="1"/>'; });
+        front += '<line x1="' + (bx + 4) + '" y1="' + (BY + .6) + '" x2="' + (bx + bw - 4) + '" y2="' + (BY + .6) + '" stroke="#eef1f4" stroke-opacity=".8" stroke-width="1"/>';
+      
+      s += back;
       L.tubes.forEach(function (t) { s += glassTube(t.x); });
       L.marbles.forEach(function (o) { if (o.lower) lower += marble(o); else upper += marble(o); });
       L.tubes.forEach(function (t) { upper += flap(t.x, FL, t.name); });
-      /* finished marbles drop to the tube bottoms, behind the collars and the plate's front face */
-      s += lower;
-      s += '<path d="' + rrect(bx, BY + 3, bw, 7, 2) + '" fill="#000" opacity=".22" transform="translate(2,5)" filter="url(#' + u + 'b2)"/>';
-      s += '<path d="' + rrect(bx, BY, bw, 8, 2.5) + '" fill="url(#' + u + 'face)"/><line x1="' + (bx + 4) + '" y1="' + (BY + .6) + '" x2="' + (bx + bw - 4) + '" y2="' + (BY + .6) + '" stroke="#e6eaee" stroke-opacity=".8" stroke-width="1"/>';
-      L.tubes.forEach(function (t) {
-        var x = t.x;
-        /* collar: a short steel band around the glass, front half only, with a lit rim on top and a shadow line at the base */
-        s += '<path d="M' + (x - hr) + ',' + CT + ' A' + hr + ',' + hy + ' 0 0 0 ' + (x + hr) + ',' + CT + ' V' + (BY + 4) + ' A' + hr + ',' + hy + ' 0 0 1 ' + (x - hr) + ',' + (BY + 4) + ' Z" fill="url(#' + u + 'steel)"/>' +
-          '<path d="M' + (x - hr) + ',' + CT + ' A' + hr + ',' + hy + ' 0 0 0 ' + (x + hr) + ',' + CT + '" fill="none" stroke="#f4f6f8" stroke-width="1.4"/>' +
-          '<path d="M' + (x - hr) + ',' + (BY + 4) + ' A' + hr + ',' + hy + ' 0 0 0 ' + (x + hr) + ',' + (BY + 4) + '" fill="none" stroke="#4a515a" stroke-opacity=".7" stroke-width="1"/>';
-      });
-      s += upper;
+      s += lower + front + upper;
       L.tubes.forEach(function (t) {
         var full = t.done === t.total;
         s += T(t.x, yB + 30, e(String(t.name).toUpperCase()), 7.5, '#3a3a3a', 800, 'middle', .4) + T(t.x, yB + 50, t.done + '/' + t.total, 16, full ? '#b8862a' : '#8a8478', 700);
