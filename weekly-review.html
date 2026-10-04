@@ -332,6 +332,28 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .wsug .sg{font-family:inherit;font-size:12px;padding:6px 11px;border:1px dashed #cfd3d9;border-radius:999px;color:var(--muted);background:#fff;cursor:pointer;min-height:30px}
 .wsug .sg:hover{border-style:solid;color:var(--ink)}
 .wsuglab{font-size:9px;font-weight:800;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint);margin-top:14px}
+.engbox{margin-top:16px;padding-top:12px;border-top:1px solid var(--line)}
+.engct{font-weight:600;letter-spacing:0;text-transform:none;color:var(--faint);margin-left:6px}
+.englist{display:flex;flex-direction:column;gap:2px;margin-top:8px}
+.engrow{display:flex;align-items:center;gap:8px;padding:3px 0}
+.engstar{flex:none;width:30px;height:30px;border:0;background:none;cursor:pointer;padding:5px;border-radius:6px}
+.engstar svg{width:20px;height:20px;fill:none;stroke:#aab2bd;stroke-width:1.7;stroke-linejoin:round;display:block}
+.engstar:hover svg{stroke:#c6a63f}
+.engstar.on svg{fill:#c6a63f;stroke:#c6a63f}
+.engtxt{flex:1;min-width:0;font-size:13.5px;line-height:1.3}
+.engday{display:block;font-size:11px;color:var(--faint)}
+.engph{flex:none;width:44px;height:44px;border:1px dashed #cfd3d9;border-radius:8px;background:#fff;color:var(--faint);cursor:pointer;font:inherit;font-size:11px;padding:0;overflow:hidden}
+.engph:hover{border-style:solid;color:var(--ink)}
+.engph img{width:100%;height:100%;object-fit:cover;display:block}
+.engdel{flex:none}
+.engpick{margin:4px 0 8px 38px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fafbfc}
+.engpick .engpg{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.engpt{width:78px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:0;cursor:pointer;overflow:hidden;font:inherit}
+.engpt img{width:78px;height:78px;object-fit:cover;display:block}
+.engpt span{display:block;font-size:10px;color:var(--muted);padding:3px 4px;text-align:center}
+.engpt:hover{border-color:#c6a63f}
+.engadd{display:flex;gap:8px;align-items:center;margin-top:10px}
+.engadd input{flex:1;min-width:0;font-family:inherit;font-size:13.5px;padding:7px 4px;border:0;border-bottom:1px solid var(--line);background:transparent;color:var(--ink)}
 .wkey{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:14px;padding-top:10px;border-top:1px solid var(--line)}
 .wkey span{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
 .wkey img{width:18px;height:18px;object-fit:contain}
@@ -732,6 +754,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
           <button class="pbtn wadd" data-k="go">+ Add a goal</button>
         </div>
       </div>
+      <div class="engbox" id="engBox"></div>
       <div class="wkey" id="wKey"></div>
       <div class="tinynote" id="wordsState"></div>
     </div>
@@ -903,7 +926,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.38';
+const VERSION='v5.39';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1125,6 +1148,7 @@ async function load(){
     if(D.row&&D.row.highlights){const h=D.row.highlights;W.hi=(h.hi||[]).map(r=>({t:r.t||'',g:r.g||''}));W.go=(h.go||[]).map(r=>({t:r.t||'',g:r.g||''}));}
     compute(); computeSleep(); render(); saveScores();
     safariLoad(ws,we);
+    engLoad(ws,we);
     status('Live · '+D.qs.filter(r=>r.date>=ws).length+' ticks read for this week');
   }catch(e){status('Could not load: '+e.message,true);console.error(e);}
 }
@@ -1551,6 +1575,111 @@ function renderSleepDrop(S2){
                                           :'The night ribbon, the numbers, and what the colours mean';
     };
   }
+}
+
+/* ---------- What gave me energy. v5.39, Oct 4 2026 ----------
+   Scott's calls: the week's lines from the Energy card get a box of their own inside
+   "Your week, in your words", each with a star; a line can carry one photo picked from
+   his recent photos (so no upload step); tap-to-add suggestions come from the week and
+   only ever offer things that already happened. Reads and writes energy_notes, the
+   Energy card's own table, so nothing is typed twice. */
+const ENG={rows:[],photos:[],pick:null,err:''};
+function engUrl(p){return SUPABASE_URL+'/storage/v1/object/public/meals/'+String(p).split('/').map(encodeURIComponent).join('/');}
+function engNote(t){const st=el('wordsState');if(st)st.textContent=t;}
+async function engLoad(ws,we){
+  try{
+    const a=new Date(ws+'T12:00:00Z');a.setUTCDate(a.getUTCDate()-1);
+    const b=new Date(we+'T12:00:00Z');b.setUTCDate(b.getUTCDate()+2);
+    const [r,p]=await Promise.all([
+      sb.from('energy_notes').select('id,day,text,starred,photo_path,position').gte('day',ws).lte('day',we).order('day').order('position'),
+      sb.from('recent_photos').select('photo_path,taken_at').gte('taken_at',a.toISOString()).lte('taken_at',b.toISOString()).order('taken_at',{ascending:false})]);
+    ENG.err=r.error?r.error.message:'';
+    ENG.rows=r.data||[];
+    ENG.photos=(p.data||[]).map(x=>({path:x.photo_path,day:PY.day(new Date(x.taken_at))})).filter(x=>x.day>=ws&&x.day<=we);
+  }catch(e){ENG.err=e.message;ENG.rows=[];ENG.photos=[];}
+  ENG.pick=null;engRender();
+}
+function engSuggest(){
+  const out=[],mine=ENG.rows.map(r=>({d:r.day,t:(r.text||'').toLowerCase()}));
+  const has=(day,keys)=>mine.some(m=>m.d===day&&keys.some(k=>k&&m.t.indexOf(k)>=0));
+  (D.conns||[]).filter(c=>!c.planned&&!c.superseded&&c.happened_on>=D.ws&&c.happened_on<=D.we&&c.kind==='get together').forEach(c=>{
+    const pl=(c.place||'').replace(/\s*\(.*\)\s*/,'').trim();
+    if(!has(c.happened_on,[(c.person||'').toLowerCase()]))out.push({day:c.happened_on,text:'Time with '+c.person+(pl?', '+pl:'')});
+  });
+  const rides=(D.strava||[]).filter(r=>(r.actual_minutes||0)>=20).sort((x,y)=>(y.actual_minutes||0)-(x.actual_minutes||0)).slice(0,3);
+  rides.forEach(r=>{
+    const m=String(r.task||'').match(/^\S+\s+(\w+)\s+·\s+(.*)$/);
+    const kind=m?m[1]:'Workout',nm=m?m[2]:String(r.task||'');
+    if(!has(r.for_date,[kind.toLowerCase(),nm.toLowerCase().replace(/\s*\(.*\)/,'')]))out.push({day:r.for_date,text:kind+': '+nm});
+  });
+  ((typeof SAF==='object'&&SAF.rows)||[]).filter(r=>!r.is_errand&&r.venue).forEach(r=>{
+    if(!has(r.day,[String(r.venue).toLowerCase().split(' ')[0]]))out.push({day:r.day,text:'Local Safari, '+r.venue});
+  });
+  const seen={};return out.filter(o=>{const k=o.day+'|'+o.text;if(seen[k])return false;seen[k]=1;return true;});
+}
+const ENG_STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.5 6.1 20.7l1.2-6.6L2.5 9.5l6.6-.9z"/></svg>';
+function engRowHtml(r){
+  const ph=r.photo_path?'<img src="'+esc(engUrl(r.photo_path))+'" alt="Photo for this line">':'+ photo';
+  let h='<div class="engrow" data-id="'+r.id+'"><button class="engstar'+(r.starred?' on':'')+'" title="'+(r.starred?'Starred, tap to unstar':'Star this line')+'" aria-label="Star this line">'+ENG_STAR+'</button>'
+    +'<div class="engtxt">'+esc(r.text||'')+'<span class="engday">'+fmt(r.day,true)+'</span></div>'
+    +'<button class="engph" title="Pick a photo from your recent photos" aria-label="Pick a photo">'+ph+'</button>'
+    +'<button class="wdel engdel" title="Remove this line" aria-label="Remove this line">&times;</button></div>';
+  if(ENG.pick===r.id){
+    const same=ENG.photos.filter(p=>p.day===r.day),other=ENG.photos.filter(p=>p.day!==r.day),all=same.concat(other);
+    h+='<div class="engpick"><div class="tinynote">'+(all.length?'Photos from your Mac this week, same day first. Tap one to attach it.':'No photos from your Mac have come across for this week yet. They arrive while your Mac is awake and signed in.')+'</div>';
+    if(all.length)h+='<div class="engpg">'+all.map(p=>'<button class="engpt" data-p="'+esc(p.path)+'"><img loading="lazy" src="'+esc(engUrl(p.path))+'" alt=""><span>'+fmt(p.day)+'</span></button>').join('')+'</div>';
+    h+='<div style="margin-top:8px">'+(r.photo_path?'<button class="pbtn engnone">Remove this photo</button> ':'')+'<button class="pbtn engclose">Close</button></div></div>';
+  }
+  return h;
+}
+function engRender(){
+  const box=el('engBox');if(!box)return;
+  const rows=ENG.rows.slice().sort((x,y)=>((y.starred?1:0)-(x.starred?1:0))||(x.day<y.day?-1:x.day>y.day?1:0)||((x.position||0)-(y.position||0)));
+  const n=rows.filter(r=>r.starred).length;
+  let h='<div class="lab">Gave me energy<span class="engct">'+(rows.length?rows.length+' this week'+(n?', '+n+' starred':''):'')+'</span></div>';
+  if(ENG.err)h+='<div class="tinynote">Could not read your energy lines: '+esc(ENG.err)+'</div>';
+  h+=rows.length?'<div class="englist">'+rows.map(engRowHtml).join('')+'</div>'
+    :'<div class="wempty">Nothing from your Energy card for this week yet. Tap a suggestion below or add a line.</div>';
+  h+='<div class="engadd"><input id="engNew" type="text" placeholder="Add something that gave you energy"><button class="pbtn" id="engAddBtn">+ Add</button></div>';
+  const sug=engSuggest();
+  if(sug.length)h+='<div class="wsuglab">From your week, tap to add</div><div class="wsug">'+sug.map((o,i)=>'<button class="sg engsg" data-i="'+i+'">'+esc(o.text)+'</button>').join('')+'</div>';
+  box.innerHTML=h;
+  box.querySelectorAll('.engrow').forEach(row=>{
+    const id=+row.dataset.id,r=ENG.rows.find(x=>x.id===id);if(!r)return;
+    row.querySelector('.engstar').onclick=async()=>{
+      const was=!!r.starred;r.starred=!was;engRender();
+      const {error}=await sb.from('energy_notes').update({starred:r.starred}).eq('id',id);
+      if(error){r.starred=was;engRender();engNote('Could not save that star: '+error.message);}
+    };
+    row.querySelector('.engph').onclick=()=>{ENG.pick=(ENG.pick===id?null:id);engRender();};
+    row.querySelector('.engdel').onclick=async()=>{
+      const {error}=await sb.from('energy_notes').delete().eq('id',id);
+      if(error){engNote('Could not remove that line: '+error.message);return;}
+      ENG.rows=ENG.rows.filter(x=>x.id!==id);engRender();
+    };
+  });
+  box.querySelectorAll('.engpt').forEach(b=>{b.onclick=async()=>{
+    const id=ENG.pick,r=ENG.rows.find(x=>x.id===id);if(!r)return;
+    const {error}=await sb.from('energy_notes').update({photo_path:b.dataset.p}).eq('id',id);
+    if(error){engNote('Could not attach that photo: '+error.message);return;}
+    r.photo_path=b.dataset.p;ENG.pick=null;engRender();};});
+  const nb=box.querySelector('.engnone');if(nb)nb.onclick=async()=>{
+    const id=ENG.pick,r=ENG.rows.find(x=>x.id===id);if(!r)return;
+    const {error}=await sb.from('energy_notes').update({photo_path:null}).eq('id',id);
+    if(error){engNote('Could not remove that photo: '+error.message);return;}
+    r.photo_path=null;ENG.pick=null;engRender();};
+  const cb=box.querySelector('.engclose');if(cb)cb.onclick=()=>{ENG.pick=null;engRender();};
+  const add=async(day,text)=>{
+    text=(text||'').trim();if(!text)return;
+    const pos=ENG.rows.filter(x=>x.day===day).reduce((m,x)=>Math.max(m,x.position||0),0)+1;
+    const {data,error}=await sb.from('energy_notes').insert({day,text,tag:'',position:pos,status:'sent',sent_at:new Date().toISOString()}).select('id,day,text,starred,photo_path,position').single();
+    if(error){engNote('Could not add that line: '+error.message);return;}
+    ENG.rows.push(data);engRender();};
+  const nbtn=el('engAddBtn'),ninp=el('engNew');
+  const today=()=>{const t=PY.today();return (t>=D.ws&&t<=D.we)?t:D.we;};
+  if(nbtn)nbtn.onclick=()=>add(today(),ninp.value);
+  if(ninp)ninp.onkeydown=e=>{if(e.key==='Enter')add(today(),ninp.value);};
+  box.querySelectorAll('.engsg').forEach(b=>{b.onclick=()=>{const o=sug[+b.dataset.i];if(o)add(o.day,o.text);};});
 }
 
 /* ---------- Your week, in your words. v2.4, Sep 20 2026 ----------
