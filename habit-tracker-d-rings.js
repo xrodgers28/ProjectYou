@@ -1,4 +1,4 @@
-/* Design E: Stack Rings (design file ref 8). v1.0 Oct 3, 2026. Draws only; every fact comes from the engine state. */
+/* Design E: Stack Rings (design file ref 8). v1.1 Oct 3, 2026. Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
 (function () {
   function pt(cx, cy, r, deg) { var t = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; }
   function arc(cx, cy, r1, r2, a1, a2) {
@@ -18,9 +18,9 @@
         s.habits.forEach(function (x, i) {
           var gap = n > 1 ? 3 : 0, a1 = i * 360 / n + gap, a2 = (i + 1) * 360 / n - gap, lit = !x.done;
           if (n === 1) { a1 = 0; a2 = 359.9; }
-          svg += '<path d="' + arc(60, 60, 34, 52, a1, a2) + '" fill="' + (lit ? x.pastel : '#eef1f6') + '"/>';
+          svg += '<g data-h="' + P.esc(x.n) + '"><path d="' + arc(60, 60, 34, 52, a1, a2) + '" fill="' + (lit ? x.pastel : '#eef1f6') + '"/>';
           var p = pt(60, 60, 43, (a1 + a2) / 2);
-          svg += '<image href="' + P.icon(x) + '" x="' + (p[0] - 7) + '" y="' + (p[1] - 7) + '" width="14" height="14" ' + (lit ? '' : 'style="filter:grayscale(1);opacity:.38"') + '/>';
+          svg += '<image href="' + P.icon(x) + '" x="' + (p[0] - 7) + '" y="' + (p[1] - 7) + '" width="14" height="14" ' + (lit ? '' : 'style="filter:grayscale(1);opacity:.38"') + '/></g>';
         });
         svg += '<text x="60" y="68" text-anchor="middle" font-size="22" font-weight="300" fill="' + (full ? '#c68a2e' : '#3f6f8f') + '">' + d + '/' + n + '</text>';
         h += '<div style="text-align:center;border:1px solid ' + (full ? '#c68a2e' : '#e3e7ee') + ';border-radius:12px;padding:8px 4px;background:#fff;' +
