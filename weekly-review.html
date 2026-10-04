@@ -849,7 +849,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 
     <!-- Local Safari (Environmental Health), v2.2 -->
     <div class="card block" id="safari">
-      <div class="h2row hasicon"><img class="h2icon lg" data-ic="safari" alt=""><div class="h2">Local Safari</div><div class="sub" id="safariSub">new places, from your check-ins</div><button type="button" id="safariLogBtn" style="margin-left:auto;font:inherit;font-size:12px;font-weight:800;color:#fff;background:#3f6f8f;border:none;border-radius:999px;padding:7px 14px;cursor:pointer" onclick="PYSafari.open({sb:sb,onSaved:function(){try{safariLoad(SAF.ws,SAF.we);}catch(e){}}})">Log Safari Moment</button></div>
+      <div class="h2row hasicon"><img class="h2icon lg" data-ic="safari" alt=""><div class="h2">Local Safari</div><div class="sub" id="safariSub">new places, from your check-ins and logged visits</div><button type="button" id="safariLogBtn" style="margin-left:auto;font:inherit;font-size:12px;font-weight:800;color:#fff;background:#3f6f8f;border:none;border-radius:999px;padding:7px 14px;cursor:pointer" onclick="PYSafari.open({sb:sb,onSaved:function(){try{safariLoad(SAF.ws,SAF.we);}catch(e){}}})">Log Safari Moment</button></div>
       <div id="safariBody"><div class="sub">Reading your check-ins...</div></div>
     </div>
 
@@ -903,7 +903,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.37';
+const VERSION='v5.38';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1145,9 +1145,17 @@ function safFind(name){const n=(name||'').toLowerCase();return SAF.safaris.find(
 async function safariLoad(ws,we){
   SAF.ws=ws;SAF.we=we;SAF.rows=[];SAF.last=null;
   try{
-    const [wk,notes,saf]=await Promise.all([sb.rpc('safari_week',{ws,we}),sb.from('safari_log').select('place,happened_on').gte('happened_on',ws).lte('happened_on',we),sb.from('safaris').select('id,name,status,tags,visited_on')]);
+    const [wk,notes,saf]=await Promise.all([sb.rpc('safari_week',{ws,we}),sb.from('safari_log').select('place,town,place_kind,happened_on,safari_id').order('happened_on'),sb.from('safaris').select('id,name,status,tags,visited_on,lat,lng')]);
     if(wk.error)throw wk.error;
-    SAF.rows=(wk.data||[]);SAF.logged={};(notes.data||[]).forEach(n=>{SAF.logged[(n.place||'').toLowerCase()]=n.happened_on;});SAF.safaris=saf.data||[];
+    SAF.rows=(wk.data||[]);SAF.logged={};(notes.data||[]).forEach(n=>{if(n.happened_on>=ws&&n.happened_on<=we)SAF.logged[(n.place||'').toLowerCase()]=n.happened_on;});SAF.safaris=saf.data||[];
+    /* v5.38 (Scott, Oct 4 2026): visits logged with Log Safari Moment also show on this card, even with no Swarm check-in. */
+    {const have=new Set(SAF.rows.map(r=>(r.venue||'').toLowerCase()));const all=notes.data||[];
+     all.filter(n=>n.happened_on>=ws&&n.happened_on<=we&&!have.has((n.place||'').toLowerCase())).forEach(n=>{
+       const k=(n.place||'').toLowerCase();if(have.has(k))return;have.add(k);
+       const sp=safFind(n.place)||{};const parts=String(n.town||'').split(',').map(x=>x.trim());
+       const visits=all.filter(x=>(x.place||'').toLowerCase()===k&&x.happened_on<=n.happened_on).length;
+       SAF.rows.push({venue:n.place,day:n.happened_on,city:parts[0]||'',state:parts[1]||'',category:n.place_kind||'',lat:sp.lat==null?null:sp.lat,lng:sp.lng==null?null:sp.lng,photo:null,visit_no:visits||1,venue_id:null,is_errand:false,fromLog:true});});
+     SAF.rows.sort((a,b)=>String(a.day).localeCompare(String(b.day)));}
     const shown=SAF.rows.filter(r=>!r.is_errand);
     if(!shown.length){const l=await sb.rpc('safari_last_new',{before:we});SAF.last=(l.data||[])[0]||null;}
     /* a new place already on the Safaris list as an idea flips to been, once */
@@ -1156,7 +1164,7 @@ async function safariLoad(ws,we){
   safariRender();
   renderWordSug();
 }
-function safMiniMap(id,lat,lng,zoom,hero){if(!window.L)return;const m=L.map(id,{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,touchZoom:false}).setView([lat,lng],zoom);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{detectRetina:true}).addTo(m);L.circleMarker([lat,lng],{radius:hero?8:4,color:'#fff',weight:hero?2:1,fillColor:'#4fa08a',fillOpacity:1}).addTo(m);SAF.maps.push(m);}
+function safMiniMap(id,lat,lng,zoom,hero){if(!window.L||lat==null||lng==null)return;const m=L.map(id,{zoomControl:false,attributionControl:false,dragging:false,scrollWheelZoom:false,doubleClickZoom:false,touchZoom:false}).setView([lat,lng],zoom);L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{detectRetina:true}).addTo(m);L.circleMarker([lat,lng],{radius:hero?8:4,color:'#fff',weight:hero?2:1,fillColor:'#4fa08a',fillOpacity:1}).addTo(m);SAF.maps.push(m);}
 function safNote(p){const lg=SAF.logged[(p.venue||'').toLowerCase()];return lg?'<span class="safsaved on">Logged '+esc(fmt(lg))+'</span>':'<button type="button" class="safbtn" data-venue="'+esc(p.venue)+'" onclick="safariOpenForm(this)">Log Safari Moment</button>';}
 function safariOpenForm(btn){const p=SAF.rows.find(r=>r.venue===btn.dataset.venue);if(!p)return;PYSafari.open({sb:sb,when:p.day,place:p.venue,town:[p.city,p.state].filter(Boolean).join(', '),category:p.category,lat:p.lat,lng:p.lng,onSaved:function(){try{safariLoad(SAF.ws,SAF.we);}catch(e){}}});}
 function safGm(p){
