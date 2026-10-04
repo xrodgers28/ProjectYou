@@ -1,6 +1,6 @@
-/* Design G: Solid Steel Plate, Gated Marble Tubes (design file ref 55J). v1.0 Oct 3, 2026.
+/* Design G: Solid Steel Plate, Gated Marble Tubes (design file ref 55J). v1.1 Oct 3, 2026.
    Draws only; every fact comes from the engine state.
-   Scott's notes: shorter tubes, marbles stay the same size; open marbles wait above a THIN steel bar and are
+   Scott's notes: shorter tubes (Oct 3 rev: steel bar moved near the bottom, about one marble up), marbles stay the same size; open marbles wait above a THIN steel bar and are
    never covered; finished marbles fall below it and may be slightly tucked under the bar; tube height is worked
    out from the longest stack so every habit fits at the start and the end of the day.
    Built ready for animation: layout() works out every position, the draw step only paints it.
@@ -14,15 +14,15 @@
   /* where everything goes: pure numbers, no drawing */
   function layout(st) {
     var tubes = st.stacks, n = Math.max.apply(null, [1].concat(tubes.map(function (t) { return t.total; })));
-    var topC = yT + w / 2 + 2, FL = topC + (n - 1) * pU + 16, PT = FL + 6, yB = PT + 12 + r + 6 + (n - 1) * pL;
+    var topC = yT + w / 2 + 2, FL = topC + (n - 1) * pU + 16, PT = FL + 6, yF = PT + 12 + r + 6 + (n - 1) * pL, yB = yF + 2 * r;
     var x0 = 180 - (tubes.length - 1) * GAP / 2, marbles = [];
     tubes.forEach(function (t, i) {
       t.x = x0 + i * GAP;
       var open = t.habits.filter(function (h) { return !h.done; }), done = t.habits.filter(function (h) { return h.done; });
-      done.forEach(function (h, j) { marbles.push({ h: h, x: t.x, y: yB - 6 - r - j * pL, lower: true }); });
+      done.forEach(function (h, j) { marbles.push({ h: h, x: t.x, y: yF - 6 - r - j * pL, lower: true }); });
       open.forEach(function (h, k) { marbles.push({ h: h, x: t.x, y: FL - 16 - k * pU, lower: false }); });
     });
-    return { tubes: tubes, FL: FL, PT: PT, yB: yB, marbles: marbles, left: x0 - 34, width: (tubes.length - 1) * GAP + 68 };
+    return { tubes: tubes, FL: FL, PT: PT, yB: yB, yF: yF, marbles: marbles, left: x0 - 34, width: (tubes.length - 1) * GAP + 68 };
   }
   PYHT.register({
     id: 'tubes',
@@ -54,15 +54,15 @@
         o += '<rect x="' + (x - w / 2 - 1) + '" y="' + (y - 3.6) + '" width="6.5" height="9" rx="2.2" fill="url(#' + u + 'steel)"/><circle cx="' + (x - w / 2 + 2.2) + '" cy="' + (y + .8) + '" r="1.3" fill="#3d444d"/></g>';
         return o;
       }
-      var bx = L.left, bw = L.width, lower = '', upper = '';
+      var bx = L.left, bw = L.width, lower = '', upper = '', BY = L.yF - 3; /* the steel bar sits about one marble up from the tube bottoms; finished marbles rest on it, nothing covered */
       L.tubes.forEach(function (t) { s += glassTube(t.x); });
       L.marbles.forEach(function (o) { if (o.lower) lower += marble(o); else upper += marble(o); });
       L.tubes.forEach(function (t) { upper += flap(t.x, FL, t.name); });
       /* finished marbles first, then the thin steel bar over them, then the open marbles and flaps on top */
       s += lower;
-      s += '<path d="' + rrect(bx, PT + 1, bw, 7, 3) + '" fill="#000" opacity=".22" transform="translate(2,4)" filter="url(#' + u + 'b2)"/>';
-      s += '<path d="' + rrect(bx, PT - 2, bw, 7, 3) + '" fill="#aeb5be"/>';
-      s += '<path d="' + rrect(bx, PT + 2, bw, 3, 1.5) + '" fill="#868e99"/><line x1="' + (bx + 8) + '" y1="' + (PT - 1) + '" x2="' + (bx + bw - 8) + '" y2="' + (PT - 1) + '" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>';
+      s += '<path d="' + rrect(bx, BY + 1, bw, 7, 3) + '" fill="#000" opacity=".22" transform="translate(2,4)" filter="url(#' + u + 'b2)"/>';
+      s += '<path d="' + rrect(bx, BY - 2, bw, 7, 3) + '" fill="#aeb5be"/>';
+      s += '<path d="' + rrect(bx, BY + 2, bw, 3, 1.5) + '" fill="#868e99"/><line x1="' + (bx + 8) + '" y1="' + (BY - 1) + '" x2="' + (bx + bw - 8) + '" y2="' + (BY - 1) + '" stroke="#fff" stroke-opacity=".55" stroke-width="1"/>';
       s += upper;
       L.tubes.forEach(function (t) {
         var full = t.done === t.total;
