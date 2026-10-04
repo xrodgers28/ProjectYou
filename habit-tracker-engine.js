@@ -12,7 +12,7 @@
    state.habits[i] = {n, ic, sec, core(1/0), st(stack index), stack, pos, done, art, color, pastel, bg, secName}. */
 (function () {
   var TZ = 'America/New_York';
-  var E = window.PYHT = { version: '1.0', SIZES: { card: 330, phone: 262 }, _designs: {} };
+  var E = window.PYHT = { version: '1.1', SIZES: { card: 330, phone: 262 }, _designs: {} };
   var sb = null, userId = null, cfg = [], set = {}, ready = null;
 
   /* Match names between the sorted list and the daily habits: ignore emoji, case, curly quotes. */
@@ -139,6 +139,49 @@
   /* One quiet refresh on a timer. fn() should call getState and redraw. Returns a stop function. */
   E.every = function (fn) { var t = setInterval(fn, E.refreshSeconds() * 1000); return function () { clearInterval(t); }; };
 
+
+  /* Tap to complete (v1.1, Oct 4, 2026). Marks a habit done or open on TODAY's row(s) in Today's Tasks, the same rows the trackers read.
+     It only changes the done flag (and its time stamps). If today has no row for the habit it creates one, as Scott chose.
+     It never edits minutes or counts. Sample modes (start, mid, done) are never saved. */
+  E.reflect = function (state, name, done) {
+    state.habits.forEach(function (h) { if (h.n === name) h.done = !!done; });
+    var s2 = build(state.habits, state.mode, state.day);
+    s2.loadedAt = state.loadedAt;
+    return s2;
+  };
+  E.setDone = function (name, done) {
+    return ready.then(function () {
+      var c = cfg.filter(function (x) { return x.habit === name; })[0];
+      if (!c) throw new Error('Habit not found: ' + name);
+      var day = (window.PY && window.PY.today) ? window.PY.today() : null;
+      if (!day) throw new Error('Could not work out today');
+      var names = (c.db_names && c.db_names.length ? c.db_names : [c.habit]).map(norm);
+      return sb.from('todos').select('id,task,done,skipped').eq('is_habit', true).eq('for_date', day).then(function (r) {
+        if (r.error) throw r.error;
+        var rows = (r.data || []).filter(function (t) { return names.indexOf(norm(t.task)) >= 0; });
+        var now = new Date().toISOString();
+        if (done) {
+          var open = rows.filter(function (t) { return !t.done || t.skipped; });
+          if (!rows.length) {
+            var sc = (set.sections || {})[c.sec] || {};
+            return sb.from('todos').insert({
+              section: 'Core To-Dos', subsection: 'HABIT BANDIT', category: 'HABIT BANDIT', task: (c.db_names && c.db_names[0]) || c.habit,
+              is_habit: true, for_date: day, bucket: 'today', status: 'todo', done: true, skipped: false, done_at: now, completed_at: now,
+              qs_group: sc.name || null
+            }).then(function (x) { if (x.error) throw x.error; return 'created'; });
+          }
+          if (!open.length) return 'already';
+          return sb.from('todos').update({ done: true, skipped: false, done_at: now, completed_at: now })
+            .in('id', open.map(function (t) { return t.id; })).then(function (x) { if (x.error) throw x.error; return 'done'; });
+        }
+        var ticked = rows.filter(function (t) { return t.done; });
+        if (!ticked.length) return 'already';
+        return sb.from('todos').update({ done: false, done_at: null })
+          .in('id', ticked.map(function (t) { return t.id; })).then(function (x) { if (x.error) throw x.error; return 'undone'; });
+      });
+    });
+  };
+
   /* Eastern time, zone named: "Oct 3, 2026 · 1:42pm EDT" */
   E.fmtET = function (ts) {
     var p = {};
@@ -154,7 +197,7 @@
     return m[+p[1] - 1] + ' ' + (+p[2]) + ', ' + p[0];
   };
 
-  /* Comments: the ONLY thing the trackers write. */
+  /* Comments, plus tap to complete above: the only things the trackers write. */
   E.comments = {
     list: function (id) {
       return sb.from('habit_tracker_comments').select('id,design_id,body,created_at')
