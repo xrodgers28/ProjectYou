@@ -1,4 +1,4 @@
-/* Design B: Heap Ring, Soft Matte, tube-style icons (design file ref 42B-B). v1.0 Oct 3, 2026.
+/* Design B: Heap Ring, Soft Matte, tube-style icons (design file ref 42B-B). v1.1 Oct 3, 2026. Animation-ready: each marble is tagged data-h.
    Draws only; every fact comes from the engine state. Open marbles ride the top of the groove and rest
    on one long flap hinged at its left end; finished marbles heap at the bottom in grey. */
 (function () {
@@ -48,7 +48,7 @@
       for (var i = 0; i < 60; i++) { var big = i % 5 === 0, p1 = P(cx, cy, big ? Ri - 15 : Ri - 10, i * 6), p2 = P(cx, cy, Ri - 4, i * 6); s += '<line x1="' + p1[0] + '" y1="' + p1[1] + '" x2="' + p2[0] + '" y2="' + p2[1] + '" stroke="#8d8d97" stroke-width="' + (big ? 1.5 : .7) + '" opacity=".75"/>'; }
       var M = 0;
       function marble(x, y, h, dim) {
-        x = +x.toFixed(1); y = +y.toFixed(1); var id = u + 'm' + (++M), a = PY.art(h), card = a.type === 'svg', base = card ? a.color : null, o = '';
+        x = +x.toFixed(1); y = +y.toFixed(1); var id = u + 'm' + (++M), a = PY.art(h), card = a.type === 'svg', base = card ? a.color : null, o = '<g data-h="' + PY.esc(h.n) + '">';
         var g = dim ? '<stop offset="0" stop-color="#dcdce2"/><stop offset=".3" stop-color="#b0b0ba"/><stop offset=".66" stop-color="#77777f"/><stop offset="1" stop-color="#34343b"/>'
           : base ? '<stop offset="0" stop-color="' + mixc(base, 255, .58) + '"/><stop offset=".3" stop-color="' + mixc(base, 255, .16) + '"/><stop offset=".66" stop-color="' + base + '"/><stop offset="1" stop-color="' + mixc(base, 0, .62) + '"/>'
           : '<stop offset="0" stop-color="#ffffff"/><stop offset=".42" stop-color="#ececf1"/><stop offset=".78" stop-color="#bdbdc8"/><stop offset="1" stop-color="#7c7c8a"/>';
@@ -58,7 +58,7 @@
         else { var sz2 = r * 1.34; o += '<image href="' + a.src + '" x="' + (x - sz2 / 2) + '" y="' + (y - sz2 / 2) + '" width="' + sz2 + '" height="' + sz2 + '" clip-path="url(#' + id + 'c)" preserveAspectRatio="xMidYMid meet" style="mix-blend-mode:multiply' + (dim ? ';filter:grayscale(1) contrast(1.1)' : '') + '"/>'; }
         o += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="url(#' + u + 'vsh)"/>';
         if (dim) o += '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#000" opacity=".12"/>';
-        o += '<ellipse cx="' + (x - r * .2) + '" cy="' + (y - r * .55) + '" rx="' + (r * .36) + '" ry="' + (r * .16) + '" fill="#fff" opacity="' + (dim ? .5 : .7) + '" filter="url(#' + u + 'b1)"/>';
+        o += '<ellipse cx="' + (x - r * .2) + '" cy="' + (y - r * .55) + '" rx="' + (r * .36) + '" ry="' + (r * .16) + '" fill="#fff" opacity="' + (dim ? .5 : .7) + '" filter="url(#' + u + 'b1)"/></g>';
         return o;
       }
       var open = st.habits.filter(function (h) { return !h.done; });
