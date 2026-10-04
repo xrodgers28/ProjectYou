@@ -64,6 +64,8 @@ window.NAV_CONFIG = {
      thing you look up rather than a place you go, so it lives as a card on
      mission.html under "Maps & dashboards". Do not put it back in the bar. */
   "Editors": [
+    /* Oct 4 2026, Scott: Stack Builder goes under Editors, listed first. */
+    { "label": "Stack<br>Builder", "href": "stack-builder.html" },
     { "label": "Daily<br>Habits", "href": "daily-template.html" }
   ],
   "Operating System": [
