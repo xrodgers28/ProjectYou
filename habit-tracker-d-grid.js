@@ -1,4 +1,4 @@
-/* Design F: Icon Grid (design file ref 1). v1.0 Oct 3, 2026. Draws only; every fact comes from the engine state. */
+/* Design F: Icon Grid (design file ref 1). v1.1 Oct 3, 2026. Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
 (function () {
   PYHT.register({
     id: 'grid',
@@ -17,7 +17,7 @@
         '<div style="font-size:12px;font-weight:700;color:#5b6472">' + (coreLeft ? c.cd + ' done' : 'All done') + '</div></div>';
       h += '<div style="display:grid;gap:8px;grid-template-columns:repeat(' + cols + ',1fr)">' + core.map(function (x) {
         var lit = !x.done;
-        return '<div style="position:relative;aspect-ratio:.9;min-width:0;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 1px 3px;' +
+        return '<div data-h="' + e(x.n) + '" style="position:relative;aspect-ratio:.9;min-width:0;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px 1px 3px;' +
           (lit ? 'background:' + x.bg + ';border:1.5px solid ' + x.pastel : 'background:#eef1f6;border:1.5px dashed #e3e7ee') + '">' +
           img(x, lit) +
           '<div style="font-size:' + fs + 'px;line-height:1.05;color:' + LG + ';text-align:center;margin-top:2px;font-weight:600">' + e(x.n) + '</div>' +
@@ -27,7 +27,7 @@
       h += '<div style="font-size:10.5px;font-weight:800;letter-spacing:1.4px;color:#5b6472;margin:10px 0 6px">SECONDARY &middot; ' + secLeft + ' OF ' + c.st + ' LEFT</div>' +
         '<div style="display:flex;gap:' + (phone ? 6 : 10) + 'px;flex-wrap:wrap">' + sec.map(function (x) {
           var d = phone ? 38 : 46, lit = !x.done;
-          return '<div style="width:' + (phone ? 52 : 62) + 'px;text-align:center"><div style="width:' + d + 'px;height:' + d + 'px;margin:0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
+          return '<div data-h="' + e(x.n) + '" style="width:' + (phone ? 52 : 62) + 'px;text-align:center"><div style="width:' + d + 'px;height:' + d + 'px;margin:0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
             (lit ? 'background:' + x.bg + ';border:1.5px solid ' + x.pastel : 'background:#eef1f6;border:1.5px dashed #e3e7ee') + '">' + img(x, lit) + '</div>' +
             '<div style="font-size:' + fs + 'px;line-height:1.05;color:' + LG + ';margin-top:3px;font-weight:600">' + e(x.n) + '</div></div>';
         }).join('') + '</div></div>';
