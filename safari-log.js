@@ -27,6 +27,9 @@
 
    Change the form here and every page gets the change. Do not copy it into a page.
 
+   v1.4, Oct 4 2026, Scott's answers: if the weekly mark fails to save the form retries once, then says so out loud
+   instead of closing quietly. Cause of the Oct 3-4 misses: the database refused the safari-log: source. Also makes today's
+   Local Safari habit row (now on the daily habit tracker) when none exists yet.
    v1.3, Oct 3 2026, Scott's ask: Why and Long (and Kind, With) all take a typed new option with the
    + chip, kept for every future log and shared across his devices (table safari_vocab), and every
    option wears a small x to remove it. A removed built-in is only switched off; "Put back options I
@@ -171,10 +174,19 @@ window.PYSafari = (function () {
         minutes_estimated: false, status: 'done', note: place, source: 'safari-log:' + logId,
         logged_at: date === DAY ? new Date().toISOString() : date + 'T16:00:00Z' };
       var r = await sb.from('qs_log').insert(qs);
-      if (!r.error) out.qs = qs;
+      if (r.error && r.error.code !== '23505') { await new Promise(function(z){ setTimeout(z, 800); }); r = await sb.from('qs_log').insert(qs); }
+      if (!r.error || r.error.code === '23505') out.qs = qs; else out.err = r.error.message || 'save refused';
       if (date === DAY) {
         var h = await sb.from('todos').select('id,done').eq('is_habit', true).eq('task', TASK).limit(1);
         var row = h.data && h.data[0];
+        if (!row) {
+          /* v1.4: no habit row for today yet (Local Safari is on the daily habit tracker now), so make it, already done */
+          var nowI = new Date().toISOString();
+          var ci = await sb.from('todos').insert({ section: 'Core To-Dos', subsection: 'HABIT BANDIT', category: 'HABIT BANDIT', task: TASK,
+            is_habit: true, for_date: DAY, bucket: 'today', status: 'done', done: true, skipped: false, done_at: nowI, completed_at: nowI,
+            qs_group: 'Environmental Health', actual_minutes: minutes || null });
+          if (!ci.error) { out.habitMade = true; await sb.from('qs_log').delete().eq('date', DAY).eq('tracker', TASK).eq('source', 'habit-bandit'); }
+        }
         if (row) {
           out.habitId = row.id;
           if (!row.done) {
@@ -450,12 +462,13 @@ window.PYSafari = (function () {
       go.disabled = false; this.say('That did not save. Try again in a moment.', 'warn'); return;
     }
     go.disabled = false;
-    var said = 'Logged: ' + place + ', ' + shortD(st.when) + '. ' + (st.which === 'National' ? 'National' : 'Local') + ' Safari ticked.' + (res.fixTodo ? ' Added to Claude\'s list under Fixes to make.' : '');
+    var trackerFailed = !(res.qsRow);
+    var said = trackerFailed ? 'Saved to your Safari Log, but the weekly mark did not save. Tell Claude and it will fix it.' : 'Logged: ' + place + ', ' + shortD(st.when) + '. ' + (st.which === 'National' ? 'National' : 'Local') + ' Safari ticked.' + (res.fixTodo ? ' Added to Claude\'s list under Fixes to make.' : '');
     this.s = { which: st.which, whichTouched: false, place: '', town: '', kind: '', why: '', withs: ['Solo'], when: today(), mins: null, felt: null, note: '', fav: false, lat: null, lng: null };
     this.sugLoaded = false;
     if (typeof o.onSaved === 'function') { try { o.onSaved(res); } catch (e) {} }
-    if (o.closeOnSave) return;
-    await this.draw(); this.say(said, '');
+    if (o.closeOnSave && !trackerFailed) return;
+    await this.draw(); this.say(said, trackerFailed ? 'warn' : '');
   };
 
   async function dropTrackers(sb, logId){
