@@ -474,6 +474,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 /* v6.0: three time cards in a row (This Week, Next week, Next month). In the
    Dugout sits below as its own full-width strip, so it is not a grid child
    here any more. */
+.swpast .swadd,.swpast .swaddbox{display:none!important}
 .swpens{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 @media(max-width:900px){.swpens{grid-template-columns:1fr}}
 .swpen{border:1px dashed #cdd5de;border-radius:9px;padding:7px 9px;background:#fbfcfd}
@@ -956,7 +957,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.45';
+const VERSION='v5.46';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1062,7 +1063,7 @@ function loadBirthdays(){
 /* ---------- which week ---------- */
 let WEEK_END; /* a Sunday */
 function defaultWeekEnd(){const t=PY.today();const d=dow(t);return d===0?t:addDays(t,7-d);}
-function initialWeekEnd(){const t=PY.today();return dow(t)===1?addDays(t,-1):defaultWeekEnd();} /* Mondays: the new week has nothing in it yet, open on last week instead */
+function initialWeekEnd(){return defaultWeekEnd();} /* v5.46, Oct 5 2026, Scott: Week in Review always opens on THIS week, Mondays too (it used to open on last week on Mondays). The back arrow still goes to last week. */
 function weekDays(){const a=[];for(let i=6;i>=0;i--)a.push(addDays(WEEK_END,-i));return a;}
 
 /* ---------- state ---------- */
@@ -2271,6 +2272,9 @@ function swWs(r){ return (r&&(r.ws||r.week_start))||null; }
 function swEffKind(r){
   if(!r)return null;
   const w=swWs(r);
+  /* v5.46, Oct 5 2026, Scott: whoever was in "Who's next week" last week carries over
+     and becomes "This Week". Only for the one week gap; older names still slide to the month. */
+  if(r.kind==='week'&&w&&w===addDays(D.ws,-7))return 'now';
   if(r.kind==='now'&&w&&w<D.ws&&r.state!=='confirmed')return 'week';
   return (r.kind==='week'&&w&&w<D.ws&&r.state!=='confirmed')?'month':r.kind;
 }
@@ -2310,6 +2314,7 @@ function swSeenSince(person,since){
    it did not happen, which is why it asks rather than deciding. */
 function swStale(r){
   const w=swWs(r);
+  if(r&&r.kind==='week'&&w&&w===addDays(D.ws,-7))return false; /* v5.46: carried over into this week, still to come */
   return !!(r&&r.state==='confirmed'&&w&&w<D.ws&&!swSeenSince(r.person,w));
 }
 function swSlotState(kind,person){
@@ -2590,6 +2595,24 @@ function swRenderPens(){
   });
   const now=[],week=[],month=[],dugout=[];
   const bucket=k=>k==='now'?now:k==='week'?week:k==='month'?month:dugout;
+  /* v5.46, Oct 5 2026, Scott: when looking back at an earlier week, this section shows
+     ONLY the yellow ones that actually happened that week. No plans, no next week, no dugout. */
+  if(D.ws<addDays(defaultWeekEnd(),-6)){
+    const seenP={};
+    swLive().forEach(c=>{
+      if(!c.happened_on||c.happened_on<D.ws||c.happened_on>D.we||!swCounts(c))return;
+      if(c.person_key==='Åsa'||c.person_key==='Asa')return;
+      const key=c.person_key||c.person;
+      if(!seenP[key]||seenP[key].seen<c.happened_on)seenP[key]={person:c.person,seen:c.happened_on};
+    });
+    Object.keys(seenP).forEach(k=>now.push({person:seenP[k].person,days_since:null,seen:seenP[k].seen,done:true,stale:false,ws:D.ws,day_tag:null}));
+    box.innerHTML='<datalist id="swNames"></datalist><div class="swpens swpast">'+swPenBox('past_title','What happened','now',now)+'</div>';
+    const tEl=el('swComingUpTitle');
+    if(tEl)tEl.innerHTML=swEditableHtml('coming_up_title',"Who's coming up");
+    swWirePens(box);swWireDrag(box);swWireLabels(box);
+    if(tEl)swWireLabels(tEl.parentElement);
+    return;
+  }
   /* the suggestions first, in order of how long it has been */
   const q=(D.quiet||[]).slice().sort((a,b)=>a.days_since-b.days_since)
            .filter(p=>p.days_since>=7&&hidden.indexOf(p.person)<0);
