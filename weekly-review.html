@@ -391,6 +391,13 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
   padding:3px 10px;cursor:pointer;min-height:24px;display:inline-flex;align-items:center;gap:4px}
 .swchg:hover{border-color:var(--accent);color:var(--ink);background:#fff}
 .swchg.busy{color:var(--muted);cursor:default}
+.swrec{position:absolute;top:34px;right:6px;z-index:2;font-family:inherit;font-size:10px;font-weight:700;
+  border:1px solid #cdd5de;background:rgba(255,255,255,.92);color:var(--accent);border-radius:999px;
+  padding:3px 10px;cursor:pointer;min-height:24px;display:inline-flex;align-items:center}
+.swrec:hover{border-color:var(--accent);color:var(--ink);background:#fff}
+.recovl{position:fixed;inset:0;z-index:60;background:rgba(20,26,34,.55);display:flex;align-items:center;justify-content:center;padding:16px}
+.recbox{background:#fff;border-radius:14px;max-width:560px;width:100%;max-height:80vh;overflow:auto;padding:16px}
+.recbox h3{margin:0 0 4px;font-size:16px}
 /* v5.12: Remove sits opposite Change so the two can never overlap. */
 .swrm{position:absolute;top:6px;left:6px;z-index:2;font-family:inherit;font-size:10px;font-weight:700;
   border:1px solid #cdd5de;background:rgba(255,255,255,.92);color:var(--muted);border-radius:999px;
@@ -926,7 +933,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.39';
+const VERSION='v5.40';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1906,6 +1913,7 @@ function swCardHtml(c,i){
                      :'<span class="swsrc">'+esc(ph.lab)+'</span>')+inner+
     '<button class="swchg" type="button" data-swchg="'+i+'">'+
       (ph.kind==='none'?'+ Add photo':'Change')+'</button>'+
+    '<button class="swrec" type="button" data-swrec="'+i+'">From recent</button>'+
     (ph.kind!=='none'?'<button class="swrm" type="button" data-swrm="'+i+'">Remove</button>':'')+
     '<input class="swpick" type="file" accept="image/*" data-swpick="'+i+'">'+
     '</div>'+
@@ -1987,6 +1995,28 @@ function swWireDrop(box){
       }
     });
   }
+}
+/* v5.40: pick a photo your Mac already passed over, same day first. */
+function swOpenRecent(i){
+  const c=SW.cards[i]; if(!c)return;
+  const on=c.on||D.we, all=(ENG.photos||[]).filter(p=>p.day===on).concat((ENG.photos||[]).filter(p=>p.day!==on));
+  const old=document.getElementById('recOvl'); if(old)old.remove();
+  const ov=document.createElement('div'); ov.className='recovl'; ov.id='recOvl';
+  ov.innerHTML='<div class="recbox"><h3>Photo for '+esc(c.n)+'</h3><div class="tinynote">'
+    +(all.length?'Photos from your Mac this week, same day first. Tap one to use it.':'No photos from your Mac have come across for this week yet. They arrive while your Mac is awake and signed in.')
+    +'</div>'+(all.length?'<div class="engpg">'+all.map(p=>'<button class="engpt" data-p="'+esc(p.path)+'"><img loading="lazy" src="'+esc(engUrl(p.path))+'" alt=""><span>'+fmt(p.day)+'</span></button>').join('')+'</div>':'')
+    +'<div style="margin-top:10px"><button class="pbtn" id="recClose">Close</button></div></div>';
+  document.body.appendChild(ov);
+  ov.onclick=e=>{if(e.target===ov)ov.remove();};
+  ov.querySelector('#recClose').onclick=()=>ov.remove();
+  ov.querySelectorAll('.engpt').forEach(b=>b.onclick=async()=>{
+    ov.remove(); swSay('Getting that photo...');
+    try{
+      const r=await fetch(engUrl(b.dataset.p)); if(!r.ok)throw new Error('The photo would not load');
+      const blob=await r.blob();
+      await swTakePhoto(i,new File([blob],'recent.jpg',{type:blob.type||'image/jpeg'}));
+    }catch(err){swSay('Could not use that photo: '+(err.message||err));swRenderCards();}
+  });
 }
 async function swTakePhoto(i,file){
   const c=SW.cards[i]; if(!c)return;
@@ -2078,6 +2108,7 @@ function swRenderCards(){
   box.querySelectorAll('[data-swchg]').forEach(b=>b.onclick=e=>{e.stopPropagation();
     const inp=box.querySelector('[data-swpick="'+b.dataset.swchg+'"]');
     if(inp)inp.click();});
+  box.querySelectorAll('[data-swrec]').forEach(b=>b.onclick=e=>{e.stopPropagation();swOpenRecent(+b.dataset.swrec);});
   box.querySelectorAll('[data-swrm]').forEach(b=>b.onclick=e=>{e.stopPropagation();swRemovePhoto(+b.dataset.swrm);});
   swWireDrop(box);
   box.querySelectorAll('[data-swpick]').forEach(inp=>{
