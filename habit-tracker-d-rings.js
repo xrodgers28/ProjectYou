@@ -1,4 +1,4 @@
-/* Design E: Stack Rings (design file ref 8). v1.1 Oct 3, 2026. Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
+/* Design E: Stack Rings (design file ref 8). v1.2 Oct 5, 2026 (rings stay one per stack; weekly habits get a small This week strip under the grid, never counted in a ring). Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
 (function () {
   function pt(cx, cy, r, deg) { var t = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; }
   function arc(cx, cy, r1, r2, a1, a2) {
@@ -28,6 +28,14 @@
           '<div style="font-weight:800;font-size:12.5px;color:#1f2a44">' + P.esc(s.long) + '</div>' +
           '<div style="font-size:11px;color:#5b6472">' + (full ? 'Complete' : (n - d) + ' to go') + '</div></div>';
       });
+      var wk = st.weekly || [];
+      if (wk.length) {
+        h += '<div style="grid-column:1/-1;text-align:center;border:1px solid #e3e7ee;border-radius:12px;padding:8px 6px;background:#fff"><div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#5b6472;margin-bottom:6px">THIS WEEK &middot; ' + st.counts.wd + ' of ' + st.counts.wt + '</div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">';
+        wk.forEach(function (x) {
+          h += '<span data-h="' + P.esc(x.n) + '" title="' + P.esc(x.n) + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:2px solid ' + (x.done ? '#eef1f6' : x.color) + ';background:' + (x.done ? '#eef1f6' : x.pastel) + '"><img alt="" src="' + P.icon(x) + '" width="16" height="16" ' + (x.done ? 'style="filter:grayscale(1);opacity:.38"' : '') + '></span>';
+        });
+        h += '</div></div>';
+      }
       return h + '</div>';
     }
   });

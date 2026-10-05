@@ -184,13 +184,14 @@ function drawDesigns(){
     m.innerHTML=P.render(STATE,m.getAttribute('data-d'),m.getAttribute('data-size'));
   });
 }
+var LVN={core:'Core',secondary:'Secondary',bonus:'Bonus',weekly:'Weekly'};
 function drawStat(){
   var s=STATE,c=s.counts;
-  $('stat').innerHTML='<b>'+P.fmtDay(s.day)+'</b> &middot; Core <b>'+c.cd+' of '+c.ct+'</b> done &middot; Secondary <b>'+c.sd+' of '+c.st+'</b> done &middot; '+s.left+' to go &middot; updated '+P.esc(P.fmtET(s.loadedAt));
+  $('stat').innerHTML='<b>'+P.fmtDay(s.day)+'</b> &middot; Core <b>'+c.cd+' of '+c.ct+'</b> done &middot; Secondary + Bonus <b>'+c.sd+' of '+c.st+'</b> done &middot; '+(c.wt?'This week <b>'+c.wd+' of '+c.wt+'</b> &middot; ':'')+s.left+' to go today &middot; updated '+P.esc(P.fmtET(s.loadedAt));
   $('sample').classList.toggle('hidden',s.mode==='live');
   var rows='';
-  s.habits.forEach(function(h){
-    rows+='<tr><td><span class="dot" style="background:'+h.color+'"></span>'+P.esc(h.n)+'</td><td>'+(h.core?'Core':'Secondary')+'</td><td>'+P.esc(h.stack)+'</td><td>'+P.esc(h.secName||h.sec)+'</td><td>'+(h.done?'Done':'Open')+'</td></tr>';
+  s.habits.concat(s.weekly||[]).forEach(function(h){
+    rows+='<tr><td><span class="dot" style="background:'+h.color+'"></span>'+P.esc(h.n)+'</td><td>'+(LVN[h.lvl]||(h.core?'Core':'Secondary'))+'</td><td>'+P.esc(h.stack)+'</td><td>'+P.esc(h.secName||h.sec)+'</td><td>'+(h.done?'Done':'Open')+'</td></tr>';
   });
   $('chkbody').innerHTML=rows;
 }
@@ -269,7 +270,7 @@ boot();
     txt.textContent=msg;btn.style.display=withUndo?'':'none';bar.classList.toggle('err',!!err);bar.classList.add('on');
     clearTimeout(barT);barT=setTimeout(function(){bar.classList.remove('on');},withUndo?4000:5000);
   }
-  function find(n){var s=window.STATE;if(!s)return null;for(var i=0;i<s.habits.length;i++)if(s.habits[i].n===n)return s.habits[i];return null;}
+  function find(n){var s=window.STATE;if(!s)return null;var a=s.habits.concat(s.weekly||[]);for(var i=0;i<a.length;i++)if(a[i].n===n)return a[i];return null;}
   async function apply(name,want,viaUndo){
     var s=window.STATE,h=find(name);if(!s||!h)return;
     var prev=h.done;
@@ -289,6 +290,7 @@ boot();
   box.addEventListener('click',function(ev){
     var el=ev.target.closest&&ev.target.closest('[data-h]');if(!el||!box.contains(el))return;
     var n=el.getAttribute('data-h'),h=find(n);if(!h)return;
+    if(h.lvl==='weekly'&&h.done&&!h.doneToday){say(n+' was already done this week'+(h.doneOn?' ('+P.fmtDay(h.doneOn)+')':'')+', nothing to undo today',false);return;}
     apply(n,!h.done,false);
   });
   btn.addEventListener('click',function(){
@@ -300,10 +302,10 @@ boot();
 /* Habit tooltips, v1.4. One handler for all eight designs: every habit shape carries data-h with its habit name. */
 (function(){
   var tip=document.getElementById('htip'),hideT=null;
-  function find(n){var s=window.STATE;if(!s)return null;for(var i=0;i<s.habits.length;i++)if(s.habits[i].n===n)return s.habits[i];return null;}
+  function find(n){var s=window.STATE;if(!s)return null;var a=s.habits.concat(s.weekly||[]);for(var i=0;i<a.length;i++)if(a[i].n===n)return a[i];return null;}
   function show(el,x,y){
     var n=el.getAttribute('data-h'),h=find(n),e=PYHT.esc;
-    tip.innerHTML='<b>'+e(n)+'</b>'+(h?e((h.core?'Core':'Secondary')+' \u00b7 '+(h.stack||'')+' stack')+'<br>'+e(h.secName||h.sec||'')+'<br><span class="st '+(h.done?'y':'n')+'">'+(h.done?'Done today':'Not done yet')+'</span>':'');
+    tip.innerHTML='<b>'+e(n)+'</b>'+(h?e(({core:'Core',secondary:'Secondary',bonus:'Bonus',weekly:'Weekly'}[h.lvl]||(h.core?'Core':'Secondary'))+(h.lvl==='weekly'?' \u00b7 this week':' \u00b7 '+(h.stack||'')+' stack'))+'<br>'+e(h.secName||h.sec||'')+'<br><span class="st '+(h.done?'y':'n')+'">'+(h.lvl==='weekly'?(h.done?(h.doneToday?'Done today':'Done this week'+(h.doneOn?' ('+PYHT.fmtDay(h.doneOn)+')':'')):'Not done this week'):(h.done?'Done today':'Not done yet'))+'</span>':'');
     tip.classList.add('on');
     var w=tip.offsetWidth,hh=tip.offsetHeight,L=x+14,T=y+14;
     if(L+w>innerWidth-8)L=x-w-14; if(T+hh>innerHeight-8)T=y-hh-14;

@@ -175,6 +175,18 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .hab .tier{position:absolute;bottom:-6px;right:-6px;width:18px;height:18px;border-radius:50%;border:1px solid #cfd3d9;background:#fff;color:var(--muted);font-family:inherit;font-size:10px;font-weight:800;line-height:1;padding:0;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .hab .tier.core{background:var(--accent);border-color:var(--accent);color:#fff}
 .hab .tier.secondary{background:#fff;border-color:var(--accent);color:var(--accent)}
+.hab .tier.bonus{background:#fff;border-color:#b8801f;color:#b8801f}
+.hab .tier.weekly{background:#3f7d5f;border-color:#3f7d5f;color:#fff}
+.hab .tier.norow{border-style:dashed}
+.tpop{position:absolute;z-index:40;left:50%;top:100%;transform:translateX(-50%);margin-top:6px;background:#fff;border:1px solid #cfd3d9;border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,.2);padding:6px;display:flex;flex-wrap:wrap;gap:5px;width:178px;justify-content:center}
+.tpop button{width:30px;height:30px;border-radius:50%;border:1.5px solid #cfd3d9;background:#f7f9fb;font-family:inherit;font-size:12px;font-weight:800;line-height:1;cursor:pointer;color:#1f2a44;padding:0}
+.tpop button.core{background:#3f6f8f;border-color:#3f6f8f;color:#fff}
+.tpop button.secondary{background:#fff;border-color:#3f6f8f;color:#3f6f8f}
+.tpop button.bonus{background:#fff;border-color:#b8801f;color:#b8801f}
+.tpop button.weekly{background:#3f7d5f;border-color:#3f7d5f;color:#fff}
+.tpop button.cur{box-shadow:0 0 0 2px #fff,0 0 0 4px #1f2a44}
+.tpop .nrnote{width:100%;font-size:10.5px;line-height:1.3;color:#5b6472;padding:2px 3px 0;text-align:left;font-weight:600}
+.tpop .nrnote b{color:#a9741a}
 @media (hover:none){.hab .undo{display:flex;opacity:1}}
 .hab.mine .blk{border-style:dashed}
 .hab.used .blk{opacity:1;cursor:grab}
@@ -256,7 +268,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>Stack Builder</h1><span class="ver">v2.1</span><span class="date" id="builtOn"></span>
+  <div class="secbar"><h1>Stack Builder</h1><span class="ver">v2.2</span><span class="date" id="builtOn"></span>
     <span class="weeknav"><a class="btn" href="weekly-review.html">The PY Week in Review</a><a class="btn" href="habit-worksheets.html">Habit Worksheets</a><a class="btn" id="signout">sign out</a></span>
   </div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading your habits...</span></div>
@@ -319,7 +331,7 @@ const SUPABASE_URL='https://arnjntspmrhigodlssbn.supabase.co';
 const SUPABASE_KEY='sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
-const VERSION='v2.0';
+const VERSION='v2.2';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const ORDER=['Physical Health','Mental Fitness','Sense of Purpose','Emotional Health','Social Well-Being','Environmental Health','Recreational Health','Project YOU','Not sure yet'];
 const ADDABLE=COMPASS.concat(['Project YOU']);
@@ -349,6 +361,8 @@ let DECKS=[],deckEdit=null,deckMsg='',deckFocus=false;
 let adding=null,newName='',addMsg='',undoAsk=null,focusName=false;
 let mergeMode=false,mergeA=null,mergeB=null,mergeBusy=false;
 let HID=new Set(),killBusy=false;
+let tierPop=null;
+const LVN={core:'Core',secondary:'Secondary',bonus:'Bonus',weekly:'Weekly'},LVL={core:'C',secondary:'S',bonus:'B',weekly:'W'};
 let renameAsk=null,renameVal='',renameMsg='',renameBusy=false,dragPal=false;
 const DAYL=['S','M','T','W','T','F','S'];
 const DAYF=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -450,11 +464,21 @@ function habEl(h,where,i,j){
   if(where==='palette'&&(n||dn))bits+='<i class="cnt" title="in '+n+' stack'+(n===1?'':'s')+(dn?' and '+dn+' mini deck'+(dn===1?'':'s'):'')+'">'+(n+dn)+'</i>';
   if(where==='palette'&&!mergeMode)bits+='<button class="undo" data-undo="'+esc(h.n)+'" title="remove this habit">&times;</button>';
   if(where==='palette'&&!mergeMode)bits+='<button class="ren" data-ren="'+esc(h.n)+'" title="rename this habit">&#9998;</button>';
-  if(h.rowId)bits+='<button class="tier '+(h.tier||'none')+'" data-tier="'+esc(h.n)+'" title="'+(h.tier==='core'?'Core. Tap to make it secondary':h.tier==='secondary'?'Secondary. Tap to make it core':'Not sorted. Tap to make it core')+'">'+(h.tier==='core'?'C':h.tier==='secondary'?'S':'&middot;')+'</button>';
+  {
+    const lv=h.tier||'none',nr=!h.rowId;
+    bits+='<button class="tier '+lv+(nr?' norow':'')+'" data-tier="'+esc(h.n)+'" title="'+(nr?'No worksheet row yet. ':'')+(h.tier?LVN[h.tier]+'. Tap to change':'Not sorted. Tap to choose a level')+'">'+(LVL[h.tier]||'&middot;')+'</button>';
+    if(tierPop===h.n){
+      bits+='<div class="tpop" role="group" aria-label="Choose a level for '+esc(h.n)+'">'
+        +['core','secondary','bonus','weekly'].map(k=>'<button type="button" class="'+k+(h.tier===k?' cur':'')+'" data-tset="'+k+'" data-th="'+esc(h.n)+'" title="'+LVN[k]+'" aria-label="'+LVN[k]+'">'+LVL[k]+'</button>').join('')
+        +'<button type="button" class="'+(h.tier?'':'cur')+'" data-tset="none" data-th="'+esc(h.n)+'" title="Not sorted" aria-label="Not sorted">&middot;</button>'
+        +(nr?'<div class="nrnote"><b>No worksheet row yet.</b> Picking a level creates one on your Habit Worksheets.</div>':'')
+        +'</div>';
+    }
+  }
   if(where==='stack')bits+='<button class="pull" data-pull="'+i+':'+j+'" title="take this habit out of this stack">&times;</button>';
   if(where==='deck')bits+='<button class="pull" data-dpull="'+j+'" title="take this habit out of this mini deck">&times;</button>';
   const extra=where==='stack'?(' data-from="'+i+'" data-idx="'+j+'"'):(where==='deck'?' data-deckfrom="'+j+'"':'');
-  const ttl=(h.ws&&h.ws!==h.n)?' title="On your Habit Worksheets this one is called: '+esc(h.ws)+'"':'';
+  const ttl=(h.ws&&h.ws!==h.n)?' title="On your Habit Worksheets this one is called: '+esc(h.ws)+'"':(!h.rowId?' title="No worksheet row yet. Pick a level to create one."':'');
   if(where==='palette'&&undoAsk===h.n)cls+=' mergeA';
   return '<div class="hab'+cls+(h.mine?' mine':'')+'" data-h="'+esc(h.n)+'" draggable="true"'+extra+ttl+'><div class="bw">'+bits+'</div><span>'+esc(h.n)+'</span></div>';
 }
@@ -540,6 +564,7 @@ function render(){
       +(can?'<button class="addhab" data-add="'+esc(a)+'" title="add a new habit to '+esc(a)+'">+<span>add<br>habit</span></button>':'')
       +'</div>'+(adding===a?addForm(a):'')+'</div>';
   });
+  p+='<div class="tinynote">The small circle on each habit is its level: C Core, S Secondary, B Bonus, W Weekly. A dashed circle means that habit has no row on your Habit Worksheets yet, and picking a level creates one.</div>';
   el('palette').innerHTML=p;
   renderDecks();
   el('mergepanel').innerHTML=mergePanel();
@@ -762,15 +787,39 @@ function moveGhost(x,y){if(ghost){ghost.style.left=(x-27)+'px';ghost.style.top=(
 function stackUnder(x,y){let t=null;document.querySelectorAll('.stack').forEach(s=>{const r=s.getBoundingClientRect();if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom)t=s;});return t;}
 function clearMarks(){document.querySelectorAll('.stack').forEach(s=>s.classList.remove('over','dropabove','dropbelow','dragging'));const ds=el('dstrip');if(ds)ds.classList.remove('over');}
 
-async function flipTier(n){
-  const h=HABITS.find(x=>x.n===n);if(!h||!h.rowId)return;
-  const next=h.tier==='core'?'secondary':'core',prev=h.tier||null;
-  h.tier=next;render();
-  try{const {error}=await sb.from('worksheet_rows').update({tier:next}).eq('id',h.rowId);if(error)throw error;status(n+' is now '+next);}
+async function setTier(n,lv){
+  const h=HABITS.find(x=>x.n===n);tierPop=null;if(!h){render();return;}
+  const val=lv==='none'?null:lv,prev=h.tier||null,wasWeekly=prev==='weekly';
+  if(!h.rowId){
+    if(!val){render();status('"'+n+'" has no worksheet row yet, so there is nothing to clear');return;}
+    h.tier=val;render();status('Creating a worksheet row for "'+n+'"...');
+    const key=n.toLowerCase(),old=RETIRED[key],cad=val==='weekly'?'Weekly':'Daily';
+    try{
+      const area=(COMPASS.indexOf(h.a)>=0||h.a==='Project YOU')?h.a:'Project YOU';
+      if(old){
+        const rv=await sb.from('worksheet_rows').update({retired:false,is_active:true,tier:val,cadence:cad,from_stack_builder:true}).eq('id',old.id).select('id,icon').single();
+        if(rv.error)throw rv.error;h.rowId=rv.data.id;delete RETIRED[key];
+      }else{
+        const pos=(MAXPOS[area]||0)+1;
+        const ins=await sb.from('worksheet_rows').insert({area:area,section:FALLBACK_SECTION,habit:n,qs_tracker:n,is_active:true,is_required:false,retired:false,count_on:false,cadence:cad,minutes:0,position:pos,from_stack_builder:true,tier:val}).select('id').single();
+        if(ins.error)throw ins.error;h.rowId=ins.data.id;MAXPOS[area]=pos;
+      }
+      h.mine=true;h.a=area;ALLNAMES.add(key);render();
+      status('"'+n+'" had no worksheet row, so I created one in '+area+' ('+FALLBACK_SECTION+') and set it to '+LVN[val]+(val==='weekly'?' and Weekly repeat':''));
+    }catch(e){h.tier=prev;render();status('Could not create its worksheet row: '+(e.message||e),true);}
+    return;
+  }
+  h.tier=val;render();
+  const upd={tier:val};
+  if(val==='weekly')upd.cadence='Weekly';else if(wasWeekly)upd.cadence='Daily';
+  try{const {error}=await sb.from('worksheet_rows').update(upd).eq('id',h.rowId);if(error)throw error;
+    status('"'+n+'" is now '+(val?LVN[val]:'not sorted')+(upd.cadence?' · worksheet repeat set to '+upd.cadence:''));}
   catch(e){h.tier=prev;render();status('Could not save that: '+e.message,true);}
 }
 function wire(){
-  document.querySelectorAll('.hab .tier').forEach(b=>{b.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();flipTier(b.dataset.tier);});b.addEventListener('mousedown',e=>e.stopPropagation());b.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});});
+  document.querySelectorAll('.tpop button[data-tset]').forEach(b=>{b.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();setTier(b.dataset.th,b.dataset.tset);});b.addEventListener('mousedown',e=>e.stopPropagation());b.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});});
+  document.querySelectorAll('.tpop').forEach(b=>{b.addEventListener('click',e=>e.stopPropagation());});
+  document.querySelectorAll('.hab .tier').forEach(b=>{b.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();tierPop=(tierPop===b.dataset.tier)?null:b.dataset.tier;render();});b.addEventListener('mousedown',e=>e.stopPropagation());b.addEventListener('touchstart',e=>e.stopPropagation(),{passive:true});});
   /* habit and deck blocks */
   document.querySelectorAll('.hab[draggable],.dbox[data-deck]').forEach(elm=>{
     const inStack=elm.dataset.from!=null,src=inStack?+elm.dataset.from:null,idx=elm.dataset.idx!=null?+elm.dataset.idx:null;
@@ -868,6 +917,7 @@ function wire(){
   /* the palette takes a block back out of a stack. These two live outside the redraw, so they are wired once only */
   if(!WIREDONCE){
     WIREDONCE=true;
+    document.addEventListener('click',()=>{if(tierPop!=null){tierPop=null;render();}});
     const pal=el('palette');
     pal.addEventListener('dragover',e=>e.preventDefault());
     pal.addEventListener('drop',e=>{e.preventDefault();const f=dragFrom,fi=dragIdx;clearMarks();if(f!=null&&fi!=null)removeAt(f,fi);});
