@@ -526,6 +526,28 @@
   .mins{position:absolute;top:16px;left:14px;font-size:10px;font-weight:800;letter-spacing:.4px;color:#9aa6b4;text-transform:uppercase}
   .card.done .mins{color:#8a9aa4}
 
+  /* v6.64 (Oct 5 2026): the minutes stamp on a ticked card is tappable, so Scott can correct the time he really spent */
+  .mins[data-mins]{cursor:pointer;top:9px;left:8px;padding:6px 8px;border-radius:10px;z-index:6;border-bottom:0;transition:background .12s}
+  .mins[data-mins]:hover,.mins[data-mins]:focus-visible{background:rgba(91,143,206,.14);outline:none}
+  .mins[data-mins] .pen{margin-left:4px;font-size:9px;opacity:.7}
+  #minsmask{position:fixed;inset:0;background:rgba(31,42,68,.38);display:none;align-items:flex-end;justify-content:center;z-index:90}
+  #minsmask.on{display:flex}
+  #minssheet{background:#fff;width:100%;max-width:420px;border-radius:22px 22px 0 0;padding:22px 20px 26px;box-shadow:0 -10px 40px rgba(31,42,68,.25)}
+  @media(min-width:640px){#minsmask{align-items:center}#minssheet{border-radius:22px}}
+  #minssheet h3{margin:0 0 4px;font-size:18px;color:#1f2a44}
+  #minssheet .sub{font-size:13px;color:#6b7a8c;margin-bottom:14px}
+  #minssheet .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  #minssheet .chips button{border:1px solid #e1e7ee;background:#fff;border-radius:10px;padding:9px 13px;font:inherit;font-weight:700;font-size:14px;color:#1f2a44;cursor:pointer}
+  #minssheet .chips button.on{background:#5b8fce;border-color:#5b8fce;color:#fff}
+  #minssheet .big{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+  #minssheet input{width:110px;font:inherit;font-size:26px;font-weight:800;text-align:center;padding:8px;border:2px solid #cfd8e3;border-radius:12px;color:#1f2a44}
+  #minssheet input:focus{outline:none;border-color:#5b8fce}
+  #minssheet .big span{font-size:16px;font-weight:700;color:#6b7a8c}
+  #minssheet .acts{display:flex;gap:10px}
+  #minssheet .acts button{flex:1;padding:13px;border-radius:12px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;border:1px solid #cfd8e3;background:#fff;color:#1f2a44}
+  #minssheet .acts button.pri{background:#5b8fce;border-color:#5b8fce;color:#fff}
+  #minssheet .acts button:disabled{opacity:.5}
+
   /* ===== Park / Unpark (v6.43, Sep 21 2026) ================================
      Park takes a live card off the daily board by hand and drops it into the
      Parked tray at the bottom. The pill sits just LEFT of the tick circle,
@@ -827,13 +849,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.63</span>
+    <span class="pn-ver">v6.65</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.63</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.65</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -904,6 +926,12 @@
       <div id="mcbody"></div>
     </div>
   </div>
+  <div id="minsmask"><div id="minssheet" role="dialog" aria-modal="true" aria-labelledby="minst">
+    <h3 id="minst">How long?</h3><div class="sub" id="minssub">Change the time you spent. The wheel updates too.</div>
+    <div class="chips" id="minschips"></div>
+    <div class="big"><input id="minsinp" type="number" inputmode="numeric" min="1" max="600" step="1" aria-label="Minutes"><span>min</span></div>
+    <div class="acts"><button id="minscancel" type="button">Cancel</button><button id="minssave" type="button" class="pri">Save</button></div>
+  </div></div>
   <div class="toast" id="toast"></div>
 
 <script>
@@ -1132,6 +1160,7 @@ let signedIn=false;
    header meter and streak ALWAYS describe real today (see isDoneToday) —
    only the card grid and rail below the pinned date-nav scope to VIEWDATE. */
 var VIEWDATE = null; /* set in boot(), after PY.today() is available */
+var PASTMINS = {};  /* tracker -> minutes logged for the past day being viewed (v6.65) */
 var PASTLOG = {};    /* tracker -> true, for the day VIEWDATE names, when it is not today */
 function isPast(){return VIEWDATE!==todayKey();}
 function fmtShort(d){var dt=new Date(d+"T12:00:00");return dt.toLocaleDateString("en-US",{month:"short",day:"numeric"});}
@@ -1172,8 +1201,14 @@ async function setViewDate(d){
   VIEWDATE=d;
   viewKeep(d);
   renderDayNav();
-  if(VIEWDATE===todayKey()||!sb||!signedIn){ PASTLOG={}; render(); if(sb&&signedIn) RAIL.load(); return; }
+  if(VIEWDATE===todayKey()||!sb||!signedIn){ PASTLOG={}; PASTMINS={}; render(); if(sb&&signedIn) RAIL.load(); return; }
   PASTLOG = await PYBackfill.loggedSet(sb, qsNames(), VIEWDATE);
+  /* v6.65: the minutes logged that day, so a past card can show and edit its time */
+  PASTMINS={};
+  try{
+    var pm=await sb.from('qs_log').select('tracker,minutes').eq('date',VIEWDATE).in('tracker',qsNames());
+    (pm.data||[]).forEach(function(r){ if(r.minutes) PASTMINS[r.tracker]=r.minutes; });
+  }catch(e){}
   render();
   RAIL.load();
 }
@@ -1248,7 +1283,7 @@ function isDone(m){
   return isDoneToday(m);
 }
 function minsOf(m){
-  if(isPast()) return null;
+  if(isPast()) return (PASTLOG[m.qs]&&PASTMINS[m.qs])||null;
   var r=ROWS[m.habit];return (r&&r.for_date===todayKey()&&r.actual_minutes)?r.actual_minutes:null;}
 
 async function loadRows(){
@@ -1293,12 +1328,12 @@ async function toggle(m,el){
       var grp=(AREA[m.habit]&&AREA[m.habit].area)||'Not sure yet';
       var rp=await PYBackfill.log(sb,{tracker:m.qs,date:dstamp,group:grp,minutes:(m.est||DEFAULT_MIN),estimated:true});
       if(rp.error){if(el)el.classList.remove('busy');toast('Did not save: '+rp.error.message);return;}
-      PASTLOG[m.qs]=true;
+      PASTLOG[m.qs]=true; PASTMINS[m.qs]=(m.est||DEFAULT_MIN);
       toast(m.name+' logged for '+fmtShort(dstamp));
     } else {
       var rp2=await PYBackfill.unlog(sb,m.qs,dstamp);
       if(rp2.error){if(el)el.classList.remove('busy');toast('Did not remove: '+rp2.error.message);return;}
-      delete PASTLOG[m.qs];
+      delete PASTLOG[m.qs]; delete PASTMINS[m.qs];
       toast(m.name+' removed from '+fmtShort(dstamp));
     }
     if(el)el.classList.remove('busy');
@@ -3523,6 +3558,67 @@ var EN=(function(){
   return {mount:mount};
 })();
 
+/* ===== Editable minutes (v6.64, Oct 5 2026) =====
+   The "29 min" on a ticked card is a button. Tap it, pick or type the real time,
+   Save. It writes todos.actual_minutes; the habit_to_qs_log trigger refires on a
+   minutes change while the card stays ticked, so the wheel follows by itself.
+   One shared sheet serves every card type (plain, picture, scene). */
+function minsChip(m,mins){
+  return '<span class="mins" data-mins="'+m.id+'" role="button" tabindex="0" title="Tap to change the time you spent">'+mins+' min<span class="pen">\u270E</span></span>';
+}
+var MINSFOR=null;
+function minsOpen(m){
+  var cur=minsOf(m); if(!cur) return;
+  MINSFOR=m;
+  document.getElementById('minst').textContent='How long on '+m.name+'?';
+  var inp=document.getElementById('minsinp'); inp.value=cur;
+  minsChipsDraw();
+  document.getElementById('minsmask').classList.add('on');
+  setTimeout(function(){inp.focus();inp.select();},30);
+}
+function minsChipsDraw(){
+  var v=+document.getElementById('minsinp').value, box=document.getElementById('minschips');
+  box.innerHTML=[5,10,15,20,30,45,60,90].map(function(n){return '<button type="button" data-n="'+n+'" class="'+(v===n?'on':'')+'">'+n+'</button>';}).join('');
+  box.querySelectorAll('button').forEach(function(b){b.onclick=function(){document.getElementById('minsinp').value=b.dataset.n;minsChipsDraw();};});
+}
+function minsClose(){MINSFOR=null;document.getElementById('minsmask').classList.remove('on');}
+async function minsSave(){
+  var m=MINSFOR; if(!m) return;
+  var n=Math.round(+document.getElementById('minsinp').value);
+  if(!(n>=1&&n<=600)){toast('Enter a time between 1 and 600 minutes.');return;}
+  var btn=document.getElementById('minssave');
+  if(isPast()){
+    /* a past day keeps its minutes in the history log, one line per habit per day */
+    if(!sb||!signedIn){toast('Sign in first so the new time reaches history.');return;}
+    btn.disabled=true;
+    var pr=await sb.from('qs_log').update({minutes:n,minutes_estimated:false}).eq('date',VIEWDATE).eq('tracker',m.qs).select('tracker');
+    btn.disabled=false;
+    if(pr.error||!(pr.data&&pr.data.length)){toast('Did not save: '+(pr.error?pr.error.message:'no history line found for that day'));return;}
+    PASTMINS[m.qs]=n; minsClose(); render();
+    toast(m.name+' \u2192 '+n+' min on '+fmtShort(VIEWDATE)+' \u2713');
+    return;
+  }
+  var row=ROWS[m.habit];
+  if(!sb||!signedIn||!row){toast('Sign in first so the new time reaches the wheel.');return;}
+  btn.disabled=true;
+  var now=new Date().toISOString();
+  var res=await sb.from('todos').update({actual_minutes:n,updated_at:now}).eq('id',row.id);
+  btn.disabled=false;
+  if(res.error){toast('Did not save: '+res.error.message);return;}
+  row.actual_minutes=n; row.updated_at=now;
+  minsClose(); render();
+  toast(m.name+' \u2192 '+n+' min, wheel updated \u2713');
+}
+(function(){
+  var mask=document.getElementById('minsmask'); if(!mask) return;
+  document.getElementById('minscancel').onclick=minsClose;
+  document.getElementById('minssave').onclick=minsSave;
+  document.getElementById('minsinp').oninput=minsChipsDraw;
+  document.getElementById('minsinp').onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();minsSave();}};
+  mask.onclick=function(e){if(e.target===mask)minsClose();};
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')minsClose();});
+})();
+
 function render(){
   /* Takeaways used to be a browse-only card rendered outside MODS. Since
      v4.1 it is a full deck like Open Mode \u2014 two tiles a day, its own .chk,
@@ -3548,7 +3644,7 @@ function render(){
         '<span class="nightbg">'+ART[m.scene]+'</span>'+
         '<span class="chk'+(done?' done':'')+'" data-id="'+m.id+'" role="button" tabindex="0" title="'+(done?'Untick \u2014 removes it from the wheel':'Tick \u2014 sends it to the wheel')+'"></span>'+
         parkBtn(m)+
-        (done&&mins?'<span class="mins">'+mins+' min</span>':'')+
+        (done&&mins?minsChip(m,mins):'')+
         '<div class="txt"><div class="kick">'+m.kick+'</div><div class="nm">'+m.name+'</div>'+
         '<div class="ds">'+m.ds+'</div>'+
         pwChip(m)+
@@ -3559,7 +3655,7 @@ function render(){
       return '<a class="card pic'+(done?' done':'')+'" style="--acc:'+m.acc+'" href="#" data-tap="'+m.id+'">'+
         '<span class="chk'+(done?' done':'')+'" data-id="'+m.id+'" role="button" tabindex="0" title="'+(done?'Untick \u2014 removes it from the wheel':'Tick \u2014 sends it to the wheel')+'"></span>'+
         parkBtn(m)+
-        (done&&mins?'<span class="mins">'+mins+' min</span>':'')+
+        (done&&mins?minsChip(m,mins):'')+
         '<span class="pbbg"></span><span class="pbart">'+ART[m.art]+'</span>'+
         '<div class="txt"><div class="kick">'+m.kick+'</div><div class="nm">'+m.name+'</div>'+
         pwChip(m)+
@@ -3579,7 +3675,7 @@ function render(){
     return '<a class="card'+(done?' done':'')+'" style="--acc:'+m.acc+'" href="'+(m.theatre?'#':hrefFor(m))+'"'+(m.theatre?' data-mc="'+m.id+'"':'')+'>'+
       '<span class="chk'+(done?' done':'')+'" data-id="'+m.id+'" role="button" tabindex="0" title="'+(done?'Untick — removes it from the wheel':'Tick — sends it to the wheel')+'"></span>'+
       parkBtn(m)+
-      (done&&mins?'<span class="mins">'+mins+' min</span>':'')+
+      (done&&mins?minsChip(m,mins):'')+
       '<span class="badge">'+IC[m.icon]+'</span>'+
       '<div class="kick">'+m.kick+'</div><div class="nm">'+m.name+'</div>'+
       '<div class="ds">'+m.ds+'</div>'+
@@ -3638,6 +3734,12 @@ function render(){
     var m=MODS.find(function(x){return x.id===el.dataset.id;});
     el.onclick=function(e){e.preventDefault();e.stopPropagation();toggle(m,el);};
     el.onkeydown=function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();e.stopPropagation();toggle(m,el);}};
+  });
+
+  document.querySelectorAll('.mins[data-mins]').forEach(function(el){
+    var m=MODS.find(function(x){return x.id===el.dataset.mins;});
+    el.onclick=function(e){e.preventDefault();e.stopPropagation();minsOpen(m);};
+    el.onkeydown=function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();e.stopPropagation();minsOpen(m);}};
   });
 
   var n=LIVE.filter(isDoneToday).length;
