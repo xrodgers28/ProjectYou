@@ -405,6 +405,28 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
   padding:3px 10px;cursor:pointer;min-height:24px;display:inline-flex;align-items:center;gap:4px}
 .swrm:hover{border-color:#c0453b;color:#c0453b;background:#fff}
 .swrm.busy{color:var(--muted);cursor:default}
+/* v5.43, Scott's call Oct 5 2026: the white Remove / Change pills hid too much of
+   the photo. On a photo they are now small round glass chips (icon only, 24px,
+   tucked in the corners) that spell out their word only when pointed at. The
+   'From Swarm' tag is a tiny quiet label. '+ Add photo' on an empty card keeps
+   the full pill because there is no picture to cover. */
+.swchg.ico,.swrm.ico{top:5px;min-height:0;height:24px;min-width:24px;padding:0;gap:0;justify-content:center;
+  border:1px solid rgba(255,255,255,.45);background:rgba(18,24,32,.42);color:#fff;
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:.78;
+  transition:opacity .15s,background .15s,padding .15s}
+.swchg.ico{right:5px}.swrm.ico{left:5px}
+.swchg.ico::before,.swrm.ico::before{content:"";position:absolute;inset:-8px}
+.swchg.ico svg,.swrm.ico svg{width:15px;height:15px;flex:none;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.swc:hover .swchg.ico,.swc:hover .swrm.ico{opacity:1}
+.swchg.ico .lbl,.swrm.ico .lbl{max-width:0;overflow:hidden;white-space:nowrap;font-size:10px;font-weight:700;transition:max-width .18s,margin .18s}
+.swchg.ico:hover,.swchg.ico:focus-visible,.swrm.ico:hover,.swrm.ico:focus-visible{padding:0 9px}
+.swchg.ico:hover .lbl,.swchg.ico:focus-visible .lbl,.swrm.ico:hover .lbl,.swrm.ico:focus-visible .lbl{max-width:56px;margin-left:5px}
+.swchg.ico.busy,.swrm.ico.busy{opacity:.45;color:#fff}
+.swchg.ico:hover,.swchg.ico:focus-visible,.swrm.ico:hover,.swrm.ico:focus-visible{background:rgba(18,24,32,.82);color:#fff;border-color:rgba(255,255,255,.7);opacity:1}
+.swrm.ico:hover,.swrm.ico:focus-visible{background:rgba(160,40,32,.9);border-color:rgba(255,255,255,.7)}
+@media (hover:none){.swchg.ico,.swrm.ico{opacity:.9}}
+.swsrc.q{left:5px;bottom:5px;font-size:7.5px;padding:1px 6px;background:rgba(18,24,32,.42);color:rgba(255,255,255,.92);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);opacity:.8}
 .swpick{display:none}
 /* v4.1: the two ways that actually work on a Mac, said in the empty state. */
 .swdrop{position:absolute;left:0;right:0;bottom:5px;z-index:2;text-align:center;
@@ -934,7 +956,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.42';
+const VERSION='v5.45';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1913,6 +1935,8 @@ function swPhotoFor(c,i){
   if(def)return {kind:'default',url:def,lab:c.n+"\u2019s photo"};
   return {kind:'none'};
 }
+const SW_ICO_CHG='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8.5a1.5 1.5 0 0 1 1.5-1.5h2.7l1.3-2h7l1.3 2h2.7A1.5 1.5 0 0 1 21 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 17.5z"/><circle cx="12" cy="12.8" r="3.6"/></svg>';
+const SW_ICO_RM='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
 function swCardHtml(c,i){
   const ph=swPhotoFor(c,i);
   const inner=(ph.kind==='none')
@@ -1938,10 +1962,11 @@ function swCardHtml(c,i){
     '<div class="swgbar" style="background:'+(c.grp?SWGC[c.grp]:'#edeff4')+'"></div>'+
     '<div class="swph" data-swdrop="'+i+'">'+
     (ph.kind==='none'?'<span class="swdrop">drag one here, or paste</span>'
-                     :'<span class="swsrc">'+esc(ph.lab)+'</span>')+inner+
-    '<button class="swchg" type="button" data-swchg="'+i+'">'+
-      (ph.kind==='none'?'+ Add photo':'Change')+'</button>'+
-    (ph.kind!=='none'?'<button class="swrm" type="button" data-swrm="'+i+'">Remove</button>':'')+
+                     :'<span class="swsrc q">'+esc(ph.lab)+'</span>')+inner+
+    (ph.kind==='none'
+      ? '<button class="swchg" type="button" data-swchg="'+i+'">+ Add photo</button>'
+      : '<button class="swchg ico" type="button" data-swchg="'+i+'" title="Change photo" aria-label="Change photo">'+SW_ICO_CHG+'<span class="lbl">Change</span></button>')+
+    (ph.kind!=='none'?'<button class="swrm ico" type="button" data-swrm="'+i+'" title="Remove photo" aria-label="Remove photo">'+SW_ICO_RM+'<span class="lbl">Remove</span></button>':'')+
     '<input class="swpick" type="file" accept="image/*" data-swpick="'+i+'">'+
     '</div>'+
     '<div class="swbd"><div class="swnm">'+esc(c.n)+'</div>'+
@@ -2049,7 +2074,7 @@ function swOpenRecent(i){
 async function swTakePhoto(i,file){
   const c=SW.cards[i]; if(!c)return;
   const btn=document.querySelector('.swc[data-i="'+i+'"] .swchg');
-  if(btn){btn.textContent='Adding...';btn.classList.add('busy');}
+  if(btn){if(!btn.classList.contains('ico'))btn.textContent='Adding...';btn.classList.add('busy');}
   let url;
   try{ url=await swShrink(file,420,0.78); }
   catch(err){ swSay(err.message||'Could not use that picture'); swRenderCards(); return; }
@@ -2082,7 +2107,7 @@ async function swRemovePhoto(i){
   const row=swMine(c);
   const hadMine=row&&row.data_url&&row.data_url!==PBLANK;
   const btn=document.querySelector('.swc[data-i="'+i+'"] .swrm');
-  if(btn){btn.textContent='Removing...';btn.classList.add('busy');}
+  if(btn){if(!btn.classList.contains('ico'))btn.textContent='Removing...';btn.classList.add('busy');}
   let error;
   if(hadMine){
     D.pphotos=(D.pphotos||[]).filter(x=>!(x.person_key===c.key&&x.happened_on===on));
