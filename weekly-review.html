@@ -736,6 +736,14 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .undoBtn{font:inherit;font-weight:700;background:#fff;color:#1f2a44;border:0;border-radius:999px;padding:6px 16px;cursor:pointer}
 .undoBtn:disabled{opacity:.5}
 .undoX{font:inherit;font-size:18px;line-height:1;background:none;border:0;color:#aab4c8;cursor:pointer;padding:0 6px}
+
+/* v5.47: drag-to-reorder sections */
+.secdrag{position:relative}
+.secgrip{position:absolute;top:0;left:50%;transform:translateX(-50%);width:56px;height:14px;display:flex;align-items:center;justify-content:center;cursor:grab;color:var(--muted,#9aa4b2);opacity:.35;font-size:13px;line-height:1;letter-spacing:2px;touch-action:none;user-select:none;z-index:5}
+.secgrip:hover,.secdrag:hover>.secgrip{opacity:.9}
+.secgrip:active{cursor:grabbing}
+.sec-ghost{opacity:.4}
+.sec-chosen{outline:2px dashed #5b8fce;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -803,15 +811,15 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
         </div>
         <p class="swcreed">&ldquo;Every person you meet is holding an idea you have not had yet.&rdquo;</p>
       </div>
-      <div class="swcards" id="swCards"></div>
-      <div class="swsub" id="swStripTitle"><span>Social Well-Being progress</span></div>
-      <div id="swStrip"></div>
       <div id="swPenWrap">
         <div class="swpenhead"><span class="lab" id="swComingUpTitle"></span></div>
         <div class="swpenswrap" id="swPens"></div>
         <div id="swSweep"></div>
         <div id="swBeam"></div>
       </div>
+      <div class="swsub" id="swStripTitle"><span>Social Well-Being</span></div>
+      <div id="swStrip"></div>
+      <div class="swcards" id="swCards"></div>
       <div class="swkey" id="swKey"></div>
       <!-- v3.9: the Year View link moved up into the pill row, at Scott's ask. -->
       <div class="swfoot"><span class="tinynote" id="swState"></span></div>
@@ -957,7 +965,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.46';
+const VERSION='v5.47';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -2214,7 +2222,7 @@ function swRenderStrip(){
     el('swDadd').onclick=()=>{SW.dates.unshift({id:null,on:null,what:'',note:''});swRenderStrip();};
     return;
   }
-  t.innerHTML='<span>Social Well-Being progress</span>';
+  t.innerHTML='<span>Social Well-Being</span>';
   const live=swLive(), cells=[];
   for(let k=5;k>=0;k--){
     const s=addDays(D.ws,-7*k), e2=addDays(s,6);
@@ -2608,7 +2616,7 @@ function swRenderPens(){
     Object.keys(seenP).forEach(k=>now.push({person:seenP[k].person,days_since:null,seen:seenP[k].seen,done:true,stale:false,ws:D.ws,day_tag:null}));
     box.innerHTML='<datalist id="swNames"></datalist><div class="swpens swpast">'+swPenBox('past_title','What happened','now',now)+'</div>';
     const tEl=el('swComingUpTitle');
-    if(tEl)tEl.innerHTML=swEditableHtml('coming_up_title',"Who's coming up");
+    if(tEl)tEl.innerHTML=swEditableHtml('coming_up_title',"Upcoming Meet Ups");
     swWirePens(box);swWireDrag(box);swWireLabels(box);
     if(tEl)swWireLabels(tEl.parentElement);
     return;
@@ -2676,7 +2684,7 @@ function swRenderPens(){
         ((D.never||[]).length?', '+(D.never||[]).length+' for good':'')+'</span>'+
       '<button class="swundo" type="button" id="swUndo">bring them back</button></div>':'');
   const titleEl=el('swComingUpTitle');
-  if(titleEl)titleEl.innerHTML=swEditableHtml('coming_up_title',"Who's coming up");
+  if(titleEl)titleEl.innerHTML=swEditableHtml('coming_up_title',"Upcoming Meet Ups");
   swWirePens(box);
   swWireDrag(box);
   swWireLabels(box);
@@ -3853,6 +3861,61 @@ function hkToggleStar(btn){
 }
 hkRenderStars();
 
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+<script>
+/* v5.47, Oct 5 2026, Scott: every section on this page can be dragged into a new order.
+   The order is saved centrally (app_meta.weekly_review_order, same pattern as the Cue Cards
+   rail), with this browser as a fallback. A section that is new simply appears where it is. */
+(function(){
+  function boot(){
+    var page=document.getElementById('page');
+    if(!page||!window.Sortable||typeof sb==='undefined'){return false;}
+    var units=[].filter.call(page.children,function(c){return c.matches('.card.block,.wheels,.hdrnums');});
+    if(!units.length)return false;
+    units.forEach(function(u){
+      var h=u.querySelector('.h2,.swh2');
+      var key=u.id||(u.classList.contains('wheels')?'wheels':u.classList.contains('hdrnums')?'hdrnums':(h?h.textContent.trim().slice(0,32):'sec'));
+      u.setAttribute('data-sec',key);
+      u.classList.add('secdrag');
+      var g=document.createElement('div');g.className='secgrip';g.title='Drag to move this section';g.textContent='\u2807\u2807\u2807';
+      u.insertBefore(g,u.firstChild);
+    });
+    function order(){return [].filter.call(page.children,function(c){return c.hasAttribute&&c.hasAttribute('data-sec');}).map(function(c){return c.getAttribute('data-sec');});}
+    function apply(saved){
+      if(!saved||!saved.length)return;
+      var by={};units.forEach(function(u){by[u.getAttribute('data-sec')]=u;});
+      var anchor=units[0];
+      var first=anchor.previousElementSibling;
+      var frag=[];
+      saved.forEach(function(k){if(by[k]){frag.push(by[k]);delete by[k];}});
+      Object.keys(by).forEach(function(k){frag.push(by[k]);});
+      /* put them back, in the new order, where the first section was */
+      var ref=document.createComment('secs');page.insertBefore(ref,anchor);
+      frag.forEach(function(u){page.insertBefore(u,ref);});
+      ref.remove();
+    }
+    function save(){
+      var o=order();
+      try{localStorage.setItem('wr_section_order',JSON.stringify(o));}catch(e){}
+      try{sb.from('app_meta').upsert({key:'weekly_review_order',value:JSON.stringify(o),updated_at:new Date().toISOString()}).then(function(){},function(){});}catch(e){}
+    }
+    (async function(){
+      var saved=null;
+      try{var r=await sb.from('app_meta').select('value').eq('key','weekly_review_order').maybeSingle();if(r&&r.data&&r.data.value)saved=JSON.parse(r.data.value);}catch(e){}
+      if(!saved){try{saved=JSON.parse(localStorage.getItem('wr_section_order')||'null');}catch(e){}}
+      apply(saved);
+    })();
+    Sortable.create(page,{draggable:'.secdrag',handle:'.secgrip',animation:150,ghostClass:'sec-ghost',chosenClass:'sec-chosen',onEnd:save});
+    return true;
+  }
+  /* wait until the app is showing (after sign in) */
+  var tries=0,t=setInterval(function(){
+    var app=document.getElementById('app');
+    if(app&&!app.classList.contains('hidden')){if(boot()||++tries>40)clearInterval(t);}
+  },500);
+})();
 </script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
