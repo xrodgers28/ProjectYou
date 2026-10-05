@@ -1,4 +1,4 @@
-/* Design H: Remote Lights, Grid (design file ref 61). v1.2 Oct 5, 2026 (four separate sections: CORE large keys in a 3 by 3 grid, then SECONDARY, BONUS and WEEKLY as smaller key rows, each with its own label and count. Bonus counts toward lights out like secondary; weekly never counts toward today's lights). Core habits are big round keys in a 3 by 3 grid, secondary habits a smaller row of keys. An open habit has its LED lit in its section colour and its key backlit; a finished habit has its LED off and its key grey. "Lights out" means all of them dark.
+/* Design H: Remote Lights, Grid (design file ref 61). v1.3 Oct 5, 2026 (a section with no habits now still shows its label and a hint; four separate sections: CORE large keys in a 3 by 3 grid, then SECONDARY, BONUS and WEEKLY as smaller key rows, each with its own label and count. Bonus counts toward lights out like secondary; weekly never counts toward today's lights). Core habits are big round keys in a 3 by 3 grid, secondary habits a smaller row of keys. An open habit has its LED lit in its section colour and its key backlit; a finished habit has its LED off and its key grey. "Lights out" means all of them dark.
    Animation-ready: every key is tagged data-h, every LED data-led, every key face data-key. Draws only; every fact comes from the engine state. */
 (function () {
   PYHT.register({
@@ -29,7 +29,7 @@
       }
       /* a smaller section: its own label and count, then a left-aligned row of smaller keys that wraps */
       function small(label, list, note) {
-        if (!list.length) return '';
+        if (!list.length) return '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:' + MUTE + ';margin:16px 0 6px">' + label + ' &middot; none yet</div><div style="font-size:10.5px;color:#6b7280;padding-left:3px">' + (label === 'WEEKLY' ? 'No weekly habits yet. Tag one W in Stack Builder.' : 'No ' + label.toLowerCase() + ' habits yet. Tag one in Stack Builder.') + '</div>';
         return '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:' + MUTE + ';margin:16px 0 10px">' + label + ' &middot; ' + note + '</div>' +
           '<div style="display:flex;flex-wrap:wrap;gap:' + (phone ? 8 : 10) + 'px;padding-left:3px">' + list.map(function (x) { return key(x, ks, Math.round(ks * .24)); }).join('') + '</div>';
       }
