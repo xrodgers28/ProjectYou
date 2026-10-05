@@ -324,6 +324,9 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
   font-size:18px;line-height:1;color:var(--ink-3);padding:5px}
 .heart.on{color:var(--ember)}
 .heart:hover{color:var(--ember-deep)}
+.nohide{display:block;margin:12px 0 0;font:700 12px/1 inherit;font-family:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--ink-3);background:transparent;color:var(--ink-3);cursor:pointer}
+.nohide:hover{color:var(--ink);border-color:var(--ink)}
+#nhtoast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1f2a44;color:#fff;font:13px Arial,sans-serif;padding:10px 16px;border-radius:10px;z-index:99999}
 .heart:focus-visible{outline:2px solid var(--peri);outline-offset:2px;border-radius:6px}
 .boxlab{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.16em;
   text-transform:uppercase;color:var(--ink-3);margin:0 0 5px}
@@ -671,7 +674,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.24</span>
+    <span id="ver" class="ver">v2.25</span>
   </div>
 </div>
 
@@ -1040,6 +1043,7 @@ async function loadCloud(){
     await loadProjects();
     await loadEnergyTags();
     await loadEnergyIn();
+    await loadHidG();
     return true;
   }catch(e){ return false; }
 }
@@ -1526,19 +1530,52 @@ function newNight(){
 /* Tonight's pair. Rebuilt once a day. The deck holds each card once,
    plus a second time if he has hearted it, so hearted ones come round
    about twice as often and the rest drift to the back. */
-function gdeck(list,marks){
+/* Don't show again (v2.25, Oct 5 2026). Hidden gratitude cards are remembered here by kind and title ('i|title'),
+   kept in this browser (S.hg) and in public.tile_hidden, which the Cue Card Library lists with Bring it back. */
+var HIDG={};
+function gKey(w,i){ var L=(w==='i'?GRAT_I:GRAT_R)[i]; return w+'|'+(L?L.t:i); }
+function gHid(w,i){ return !!HIDG[gKey(w,i)]; }
+function nhToast(m){ var t=document.getElementById('nhtoast'); if(!t){ t=document.createElement('div'); t.id='nhtoast'; t.setAttribute('role','status'); document.body.appendChild(t); } t.textContent=m; t.style.display='block'; clearTimeout(t._x); t._x=setTimeout(function(){ t.style.display='none'; },2600); }
+function gdeck(list,marks,w){
   var d=[],i,j,t;
-  for(i=0;i<list.length;i++){ d.push(i); if(marks.indexOf(i)>-1) d.push(i); }
+  for(i=0;i<list.length;i++){ if(w&&gHid(w,i)) continue; d.push(i); if(marks.indexOf(i)>-1) d.push(i); }
+  if(!d.length){ for(i=0;i<list.length;i++) d.push(i); }
   for(i=d.length-1;i>0;i--){ j=Math.floor(Math.random()*(i+1)); t=d[i]; d[i]=d[j]; d[j]=t; }
   return d;
 }
+function nextG(w){
+  var k=(w==='i'?'di':'dr'), list=(w==='i'?GRAT_I:GRAT_R), marks=(w==='i'?S.hi:S.hr), v;
+  for(var n=0;n<list.length*2+2;n++){
+    if(!S[k]||!S[k].length) S[k]=gdeck(list,marks,w);
+    v=S[k].pop();
+    if(!gHid(w,v)) return v;
+  }
+  return 0;
+}
+function hideGrat(w){
+  var v=(w==='i'?S.gi:S.gr), L=(w==='i'?GRAT_I:GRAT_R)[v]; if(!L) return;
+  var key=w+'|'+L.t; HIDG[key]=1; S.hg=Object.keys(HIDG); S.hx=S.hx||{}; 
+  if(w==='i') S.gi=nextG('i'); else S.gr=nextG('r');
+  save(); render();
+  nhToast('Hidden. It will not come back.');
+  try{ if(sb&&signedIn) sb.from('tile_hidden').upsert({module:'three-new-things',tile_key:key,title:L.t.slice(0,140)},{onConflict:'module,tile_key'}).then(function(){},function(){}); }catch(e){}
+}
+async function loadHidG(){
+  try{
+    var r=await sb.from('tile_hidden').select('tile_key').eq('module','three-new-things').limit(500);
+    if(r.error) return;
+    HIDG={}; (r.data||[]).forEach(function(x){ HIDG[x.tile_key]=1; });
+    S.hg=Object.keys(HIDG); save();
+  }catch(e){}
+}
 function tonight(){
+  if(!HIDG||!Object.keys(HIDG).length){ HIDG={}; (S.hg||[]).forEach(function(k){ HIDG[k]=1; }); }
   if(!S.hi) S.hi=[];
   if(!S.hr) S.hr=[];
   if(S.gday!==DAY()){
-    if(!S.di||!S.di.length) S.di=gdeck(GRAT_I,S.hi);
-    if(!S.dr||!S.dr.length) S.dr=gdeck(GRAT_R,S.hr);
-    S.gi=S.di.pop(); S.gr=S.dr.pop(); S.gday=DAY(); save();
+    if(!S.di||!S.di.length) S.di=gdeck(GRAT_I,S.hi,'i');
+    if(!S.dr||!S.dr.length) S.dr=gdeck(GRAT_R,S.hr,'r');
+    S.gi=nextG('i'); S.gr=nextG('r'); S.gday=DAY(); save();
   }
   if(typeof S.gi!=='number') S.gi=0;
   if(typeof S.gr!=='number') S.gr=0;
@@ -1837,7 +1874,7 @@ function render(){
     h+='<p class="tiny" style="text-align:center;margin-top:-8px">'+(S.mode==='quick'?'Quick goes straight to the good things and the dials.':'Guided walks the whole night, skip any step you like.')+'</p>';
     h+='<div class="h2ico">'+BULB+'<h2>Tonight&rsquo;s thing worth knowing.</h2></div>';
     h+='<div class="qcard"><button class="heart'+(hearted('i')?' on':'')+'" data-heart="i" title="Bring this one round more often" aria-label="Bring this one round more often">&#9829;</button>';
-    h+='<p class="lab">Worth knowing</p><h4>'+G.i.t+'</h4><p>'+G.i.b+'</p></div>';
+    h+='<p class="lab">Worth knowing</p><h4>'+G.i.t+'</h4><p>'+G.i.b+'</p><button type="button" class="nohide" data-nohide="i">Don&rsquo;t show again</button></div>';
     h+='<div class="foot"><button class="btn" data-go="words">Continue</button>';
     h+='<button class="skiplink" data-go="skipinsight">Skip this one tonight</button></div>';
   }
@@ -1935,7 +1972,7 @@ function render(){
     h+='<p class="kick">Two minutes on gratitude</p>';
     h+='<div class="tonight">';
     h+='<div class="qcard res"><button class="heart'+(hearted('r')?' on':'')+'" data-heart="r" title="Bring this one round more often" aria-label="Bring this one round more often">&#9829;</button>';
-    h+='<p class="lab">What you get out of it</p><h4>'+G.r.t+'</h4><p>'+G.r.b+'</p></div>';
+    h+='<p class="lab">What you get out of it</p><h4>'+G.r.t+'</h4><p>'+G.r.b+'</p><button type="button" class="nohide" data-nohide="r">Don&rsquo;t show again</button></div>';
     h+='</div>';
     h+='<div class="h2ico">'+STARS+'<h2>Write down three moments that felt genuinely good today.</h2></div>';
     /* v2.15: the nudges, out in the open. Tap one and it opens the next empty box. */
@@ -2581,6 +2618,9 @@ function bind(){
       ul.innerHTML=picked.map(function(p){ return '<li>'+p+'</li>'; }).join('');
       ul.hidden=false;
     }
+  });
+  stage.querySelectorAll('[data-nohide]').forEach(function(b){
+    b.addEventListener('click',function(){ hideGrat(b.getAttribute('data-nohide')); });
   });
   stage.querySelectorAll('[data-heart]').forEach(function(b){
     b.addEventListener('click',function(){

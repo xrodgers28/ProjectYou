@@ -1,4 +1,5 @@
-/* Cue Fav v1.2 (Oct 5, 2026): adds Don't show again. It saves the tile to public.tile_hidden (the Cue Card Library lists them with Bring it back),
+/* Cue Fav v1.3 (Oct 5, 2026): a page can pass hideInfo(c) to say which real tile to hide ({key,title}), or {error:'message'} to refuse.
+   Cue Fav v1.2 (Oct 5, 2026): adds Don't show again. It saves the tile to public.tile_hidden (the Cue Card Library lists them with Bring it back),
    then skips to the next tile with the page's own Next button (M.next selector, or a list of common ones, or M.onHide). Hidden tiles are skipped automatically whenever they come up again.
    Cue Fav v1.1 (Sep 29, 2026). v1.1 adds doOnly mode (a Do this! button for modules that keep their own stars) and mountItems (one Do this! pill per item).
    v1.0: Adds a small Keep star and a Do this! button to any cue card page,
@@ -54,6 +55,11 @@
   async function hide(){
     if(!cur||busy)return; busy=true; var s=db(), c=cur;
     try{
+      if(typeof M.hideInfo==='function'){
+        var hi=null; try{ hi=M.hideInfo(c); }catch(e){ hi=null; }
+        if(hi&&hi.error){ say(hi.error); busy=false; return; }
+        if(hi&&hi.key){ c={key:hi.key,title:hi.title||c.title}; }
+      }
       var r=await s.from('tile_hidden').upsert({module:M.module,tile_key:c.key,title:normT(c.title).slice(0,140)},{onConflict:'module,tile_key'}); if(r.error)throw r.error;
       HID[c.key]=1; skips=0;
       var moved=false;

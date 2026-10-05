@@ -157,7 +157,7 @@
     <div class="bar"><span id="barfill"></span></div>
     <div id="deck"></div>
   </div>
-  <div class="badge">Annual Reflections v2.1</div>
+  <div class="badge">Annual Reflections v2.2</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -227,12 +227,23 @@ async function load(){
     sb.from('compass_log').select('*')
   ]);
   QS=q||[]; LOG={}; (l||[]).forEach(r=>LOG[r.question_id]=r);
+  await loadHid();
   render();
+}
+/* Don't show again (v2.2, Oct 5 2026): the button lives on the shared bar (cue-fav.js). Hidden questions are listed in
+   public.tile_hidden by their wording, skipped here, and counted as finished so the reflection can still complete. */
+let HID={};
+function hid(q){return !!HID[String(q.question||'').trim()];}
+function doneCount(){return QS.filter(q=>(LOG[q.id]&&LOG[q.id].status==='answered')||hid(q)).length;}
+async function loadHid(){
+  try{ const r=await sb.from('tile_hidden').select('tile_key').eq('module','compass').limit(500);
+       if(!r.error){HID={};(r.data||[]).forEach(x=>{HID[x.tile_key]=1;});} }catch(e){}
 }
 function answered(){return QS.filter(q=>LOG[q.id]&&LOG[q.id].status==='answered').length;}
 function eligible(){
   const t=today();
   return QS.find(q=>{const r=LOG[q.id];
+    if(hid(q)&&!(r&&r.status==='answered'))return false;
     if(!r||r.status==='pending')return true;
     if(r.status==='parked'&&r.resurface_on&&r.resurface_on<=t)return true;
     return false;});
@@ -267,7 +278,7 @@ async function finishCompass(){
 }
 function render(){
   progress();
-  if(answered()===QS.length && QS.length){setChrome(false);renderDone();return;}
+  if(doneCount()===QS.length && QS.length){setChrome(false);renderDone();return;}
   if(answeredToday()>=1 && !more){setChrome(false);renderToday();return;}
   cur=eligible();
   if(!cur){
@@ -398,6 +409,6 @@ boot();
 </script>
 <script>(function(){var e=document.querySelector('.secbar .date');if(e){var d=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];e.textContent=M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();}})();</script>
 <script src="cue-fav.js"></script>
-<script>CueFav.mount({module:'compass',label:'Annual Reflections',current:function(){if(!document.getElementById('ans'))return null;var h=document.querySelector('#deck .mc-h2');if(!h)return null;var t=h.textContent.trim();var k=document.querySelector('#deck .mc-kick');var cat=(k&&k.firstChild)?k.firstChild.textContent.trim():'';return {key:t,title:t,body:'',type:'question',source:'Annual Reflections'+(cat?' \u00b7 '+cat:'')};}});</script>
+<script>CueFav.mount({module:'compass',label:'Annual Reflections',onHide:function(c){HID[c.key]=1;render();return true;},current:function(){if(!document.getElementById('ans'))return null;var h=document.querySelector('#deck .mc-h2');if(!h)return null;var t=h.textContent.trim();var k=document.querySelector('#deck .mc-kick');var cat=(k&&k.firstChild)?k.firstChild.textContent.trim():'';return {key:t,title:t,body:'',type:'question',source:'Annual Reflections'+(cat?' \u00b7 '+cat:'')};}});</script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>

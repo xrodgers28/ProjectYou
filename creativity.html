@@ -5,7 +5,7 @@
 <script src="py-day.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Creativity</title>
-<meta name="pn-ver" content="v1.2">
+<meta name="pn-ver" content="v1.4">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -202,7 +202,7 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
   <div class="head">
     <h1>Creativity</h1>
     <!-- The ONLY place this page's version is written. The publish guard reads class="ver" and navpatch reads #ver, so both see this one literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v1.3</span>
+    <span id="ver" class="ver">v1.4</span>
     <span class="date" id="date"></span>
   </div>
 
@@ -521,11 +521,29 @@ function renderCircles(){
 /* ==========================================================
    NEW USES  -  and the push that is the whole point of it
    ========================================================== */
+var HIDOBJ={}, RECENT=[];  /* objects the person tapped Don't show again on (public.tile_hidden, module creativity) */
 function pickObject(recent){
-  var avail=OBJECTS.filter(function(o){ return recent.indexOf(o.n)===-1; });
-  if(!avail.length) avail=OBJECTS.slice();
+  RECENT=recent||[];
+  var ok=OBJECTS.filter(function(o){ return !HIDOBJ['obj:'+o.n]; });
+  if(!ok.length) ok=OBJECTS.slice();
+  var avail=ok.filter(function(o){ return RECENT.indexOf(o.n)===-1; });
+  if(!avail.length) avail=ok;
   return avail[hash(DAY)%avail.length];
 }
+/* Hooks for the shared Don't show again button (cue-fav.js) */
+window.CRE={
+  hideInfo:function(){
+    if(S.mode!=='uses'||!S.object) return {error:'Nothing to hide here. Only the Find a new use object can be hidden.'};
+    if(S.ideas.length) return {error:'You already started today. Hide it tomorrow.'};
+    return {key:'obj:'+S.object.n,title:S.object.n};
+  },
+  onHide:function(c){
+    HIDOBJ[c.key]=1;
+    S.object=pickObject(RECENT.concat([c.key.slice(4)]));
+    stash(); renderUses(); drawFoot();
+    return true;
+  }
+};
 function bonusCount(){ return S.ideas.filter(function(x){return x.bonus;}).length; }
 function ideaList(){
   return S.ideas.map(function(x,i){
@@ -842,6 +860,11 @@ el('pass').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preven
 async function hydrate(){
   if(!sb||!signedIn) return;
   try{
+    try{
+      var hq=await sb.from('tile_hidden').select('tile_key').eq('module','creativity').limit(500);
+      HIDOBJ={}; ((hq&&hq.data)||[]).forEach(function(x){HIDOBJ[x.tile_key]=1;});
+    }catch(e){}
+    if(S.object&&HIDOBJ['obj:'+S.object.n]&&!S.ideas.length) S.object=null;
     var recent=await sb.from('creativity_log').select('for_date,object')
       .eq('mode','uses').order('for_date',{ascending:false}).limit(20);
     var names=((recent.data)||[]).filter(function(x){return x.for_date!==DAY;})
@@ -894,6 +917,6 @@ async function hydrate(){
 })();
 </script>
 <script src="cue-fav.js"></script>
-<script>CueFav.mount({module:'creativity',label:'Creativity',current:function(){var h=document.querySelector('#mount .card h2');if(!h)return null;var t=h.textContent.trim();var p=document.querySelector('#mount .card .txt');var d=(typeof DAY!=='undefined')?DAY:'';return {key:t+'|'+d,title:t,body:p?p.textContent.trim().slice(0,500):'',type:'exercise',source:'Creativity'+(d?' \u00b7 '+d:'')};}});</script>
+<script>CueFav.mount({module:'creativity',label:'Creativity',hideInfo:function(c){return window.CRE?window.CRE.hideInfo(c):null;},onHide:function(c){return window.CRE?window.CRE.onHide(c):false;},current:function(){var h=document.querySelector('#mount .card h2');if(!h)return null;var t=h.textContent.trim();var p=document.querySelector('#mount .card .txt');var d=(typeof DAY!=='undefined')?DAY:'';return {key:t+'|'+d,title:t,body:p?p.textContent.trim().slice(0,500):'',type:'exercise',source:'Creativity'+(d?' \u00b7 '+d:'')};}});</script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>

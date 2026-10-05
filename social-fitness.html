@@ -286,7 +286,7 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v3.1</span>
+    <span id="ver" class="ver">v3.2</span>
   </div>
 </div>
 
@@ -459,7 +459,6 @@ function render(c){
       '<div class="acts">'+
         '<button class="b did" id="did">'+(c.kind==='dare'?'I did it':'Read and taken in')+'</button>'+
         '<button class="b another" id="another">Try another</button>'+
-        '<button class="b kill" id="kill">Not my style</button>'+
       '</div>'+
       '<div class="state muted" id="state"></div>'+
     '</div>';
@@ -467,7 +466,6 @@ function render(c){
   if(el('star')) el('star').addEventListener('click',toggleStar);
   el('did').addEventListener('click',finish);
   el('another').addEventListener('click',tryAnother);
-  el('kill').addEventListener('click',notMyStyle);
   el('mins').addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); finish(); } });
   drawFoot();
 }
@@ -549,7 +547,6 @@ async function tryAnother(){
 async function notMyStyle(){
   if(!current) return;
   var gone=current;
-  el('kill').disabled=true;
   say('Retiring that one...','muted');
   try{
     var r=await sb.from('sf_cards').update({killed:true,killed_on:DAY}).eq('id',gone.id);
@@ -560,11 +557,15 @@ async function notMyStyle(){
     render(await todaysCard());
     say('Gone for good. Here is another.','');
   }catch(e){
-    el('kill').disabled=false;
     say('Could not retire that one. Try again in a moment.','warn');
   }
 }
 
+/* Hooks for the shared Don't show again button (cue-fav.js): it saves the card id to tile_hidden, then this retires the card and deals another */
+window.SFX={
+  hideInfo:function(){ return current?{key:String(current.id),title:current.title}:{error:'No card to hide.'}; },
+  onHide:function(){ notMyStyle(); return true; }
+};
 /* ---------- footer ---------- */
 async function drawFoot(){
   try{
@@ -1153,6 +1154,6 @@ async function start(){
 })();
 </script>
 <script src="cue-fav.js"></script>
-<script>CueFav.mount({module:'social-fitness',label:'Social Fitness',doOnly:true,current:function(){var s=document.getElementById('star');if(!s)return null;var p=s;while(p&&!p.querySelector('h2'))p=p.parentElement;var h=p&&p.querySelector('h2');if(!h)return null;var t=h.textContent.trim();return {key:t,title:t};}});</script>
+<script>CueFav.mount({module:'social-fitness',label:'Social Fitness',doOnly:true,hideInfo:function(c){return window.SFX?window.SFX.hideInfo(c):null;},onHide:function(c){return window.SFX?window.SFX.onHide(c):false;},current:function(){var s=document.getElementById('star');if(!s)return null;var p=s;while(p&&!p.querySelector('h2'))p=p.parentElement;var h=p&&p.querySelector('h2');if(!h)return null;var t=h.textContent.trim();return {key:t,title:t};}});</script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>

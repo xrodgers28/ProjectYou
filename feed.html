@@ -63,6 +63,8 @@
   .picrow{display:flex;gap:12px;align-items:center;margin-top:7px}
   .picbtn{font-size:11px;font-weight:800;color:var(--accent);background:none;border:none;padding:0;cursor:pointer;letter-spacing:.2px}
   .picbtn.sub{color:#a8b0bb;font-weight:700}
+  .picbtn.hide{margin-left:auto;font-size:12px;font-weight:700;color:#5b6472;border:1px solid #c3c9d2;border-radius:10px;padding:8px 12px;background:transparent}
+  .picbtn.hide:hover{color:#1f2a44;border-color:#1f2a44}
   .picbtn[disabled]{opacity:.45;cursor:default}
   .feedlist{margin-top:10px}
   .empty{font-size:13.5px;color:var(--muted);padding:16px 0}
@@ -119,7 +121,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.7</span>
+    <span class="pn-ver">v1.8</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -311,6 +313,7 @@ function itemHTML(it){
     '<div class="picrow">'+
       '<button class="picbtn" data-pick="'+it.id+'">'+(it.image_url?'Change the picture':'Add a picture')+'</button>'+
       (it.image_url?'<button class="picbtn sub" data-drop="'+it.id+'">Remove it</button>':'')+
+      '<button class="picbtn hide" data-hide="'+it.id+'">Don&rsquo;t show again</button>'+
     '</div>'+
   '</div>';
 }
@@ -359,6 +362,16 @@ async function savePic(it,dataUrl,credit){
   return true;
 }
 
+/* Don't show again (v1.8, Oct 5, 2026): status 'hidden' is already skipped by the deal, so hiding an item
+   makes the deal pull the next unseen one. tile_hidden feeds the Cue Card Library's Bring it back list. */
+async function hideItem(id){
+  var it=findItem(id); if(!it)return;
+  var r=await sb.from('news_queue').update({status:'hidden'}).eq('id',it.id);
+  if(r.error){toast('Could not hide it: '+r.error.message);return;}
+  try{ await sb.from('tile_hidden').upsert({module:'feed',tile_key:String(it.id),title:String(it.title||'').slice(0,140)},{onConflict:'module,tile_key'}); }catch(e){}
+  await loadAll();
+  toast('Hidden. It will not come back.');
+}
 function pickPic(id){
   var it=findItem(id); if(!it)return;
   if(!signedIn){toast('Sign in first.');return;}
@@ -471,6 +484,7 @@ function render(){
   });
   document.querySelectorAll('.picbtn[data-pick]').forEach(function(b){b.onclick=function(){pickPic(b.dataset.pick);};});
   document.querySelectorAll('.picbtn[data-drop]').forEach(function(b){b.onclick=function(){dropPic(b.dataset.drop);};});
+  document.querySelectorAll('.picbtn[data-hide]').forEach(function(b){b.onclick=function(){hideItem(b.dataset.hide);};});
 }
 
 async function toggleStar(it){
@@ -543,7 +557,7 @@ async function signIn(){
 
 async function boot(){
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  document.getElementById('stamp').textContent='The Feed v1.7 · '+f+' · all times EST';
+  document.getElementById('stamp').textContent='The Feed v1.8 · '+f+' · all times EST';
   if(!sb){document.getElementById('stage').innerHTML='<div class="done"><h3>Could not reach the database</h3><p>Reload to try again.</p></div>';return;}
   var s=await sb.auth.getSession();
   if(s.data.session){signedIn=true;document.getElementById('gate').classList.add('hidden');await loadAll();}
