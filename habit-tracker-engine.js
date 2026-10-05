@@ -9,10 +9,11 @@
 
    A design is a small plug-in: PYHT.register({id, name, render(state, size, PYHT) -> html string}).
    size is 'card' (cue card page) or 'phone' (one-tap iPhone view).
-   state.habits[i] = {n, ic, sec, core(1/0), st(stack index), stack, pos, done, art, color, pastel, bg, secName}. */
+   v1.3 (Oct 5, 2026): four levels. core, secondary, bonus, weekly. Bonus counts like secondary. Weekly habits are NOT in state.habits (so no design counts them in today's lights); they are in state.weekly, done if ticked any day this week (Monday to Sunday, 2am days), counts.wt and counts.wd.
+   state.habits[i] = {lvl, n, ic, sec, core(1/0), st(stack index), stack, pos, done, art, color, pastel, bg, secName}. */
 (function () {
   var TZ = 'America/New_York';
-  var E = window.PYHT = { version: '1.2', SIZES: { card: 330, phone: 262 }, _designs: {} };
+  var E = window.PYHT = { version: '1.3', SIZES: { card: 330, phone: 262 }, _designs: {} };
   var sb = null, userId = null, cfg = [], set = {}, ready = null;
 
   /* Match names between the sorted list and the daily habits: ignore emoji, case, curly quotes. */
@@ -51,18 +52,22 @@
     mode = mode || 'live';
     return ready.then(function () {
       var day = (window.PY && window.PY.today) ? window.PY.today() : null;
+      var dow0 = day ? new Date(day + 'T12:00:00Z').getUTCDay() : 1;
+      var weekStart = day ? new Date(new Date(day + 'T12:00:00Z').getTime() - ((dow0 + 6) % 7) * 86400000).toISOString().slice(0, 10) : day;
       var q = mode === 'live'
-        ? sb.from('todos').select('task,done,skipped,for_date').eq('is_habit', true).eq('for_date', day)
+        ? sb.from('todos').select('task,done,skipped,for_date').eq('is_habit', true).gte('for_date', weekStart).lte('for_date', day)
         : Promise.resolve({ data: [] });
       return q.then(function (r) {
         if (r.error) throw r.error;
-        var doneSet = {};
-        (r.data || []).forEach(function (t) { if (t.done && !t.skipped) doneSet[norm(t.task)] = 1; });
+        var doneSet = {}, weekSet = {};
+        (r.data || []).forEach(function (t) {
+          if (t.done && !t.skipped) { var k = norm(t.task); weekSet[k] = t.for_date; if (t.for_date === day) doneSet[k] = 1; }
+        });
         var mid = (set.sample_mid || []).map(norm), secs = set.sections || {};
         /* Weekday-only stacks: Train (stack 1) is hidden on Saturdays and Sundays (the 2am-to-2am day). */
         var dow = day ? new Date(day + 'T12:00:00Z').getUTCDay() : -1;
         var weekend = dow === 0 || dow === 6;
-        var H = cfg.filter(function (c) { return !(weekend && c.stack_idx === 1); }).map(function (c) {
+        var H = cfg.filter(function (c) { return c.level !== 'weekly' && !(weekend && c.stack_idx === 1); }).map(function (c) {
           var d;
           if (mode === 'done') d = true;
           else if (mode === 'start') d = false;
@@ -70,18 +75,31 @@
           else d = (c.db_names || []).some(function (n) { return doneSet[norm(n)]; });
           var sc = secs[c.sec] || {};
           return {
-            n: c.habit, ic: c.icon_key, sec: c.sec, core: c.level === 'core' ? 1 : 0,
+            n: c.habit, lvl: c.level, ic: c.icon_key, sec: c.sec, core: c.level === 'core' ? 1 : 0,
             st: c.stack_idx, stack: c.stack, pos: c.stack_pos, done: d,
             art: { kind: c.art_kind, key: c.art_key, color: c.art_color, color2: c.art_color2 },
             color: sc.color, pastel: sc.pastel, bg: sc.bg, secName: sc.name
           };
         });
-        return build(H, mode, day);
+        var W = cfg.filter(function (c) { return c.level === 'weekly'; }).map(function (c) {
+          var nm = (c.db_names && c.db_names.length ? c.db_names : [c.habit]).map(norm), d = false, on = null;
+          if (mode === 'done') d = true;
+          else if (mode === 'live') nm.forEach(function (k) { if (weekSet[k]) { d = true; on = weekSet[k]; } });
+          var sc = secs[c.sec] || {};
+          return {
+            n: c.habit, lvl: 'weekly', ic: c.icon_key, sec: c.sec, core: 0, st: c.stack_idx, stack: c.stack, pos: c.stack_pos,
+            done: d, doneOn: on, doneToday: mode === 'done' || (mode === 'live' && nm.some(function (k) { return doneSet[k]; })),
+            art: { kind: c.art_kind, key: c.art_key, color: c.art_color, color2: c.art_color2 },
+            color: sc.color, pastel: sc.pastel, bg: sc.bg, secName: sc.name
+          };
+        });
+        return build(H, mode, day, W);
       });
     });
   };
 
-  function build(H, mode, day) {
+  function build(H, mode, day, W) {
+    W = W || [];
     var c = { ct: 0, cd: 0, st: 0, sd: 0 };
     H.forEach(function (h) {
       if (h.core) { c.ct++; if (h.done) c.cd++; } else { c.st++; if (h.done) c.sd++; }
@@ -98,7 +116,7 @@
     var next = null;
     open.forEach(function (h) { if (!next && h.core) next = h; });
     return {
-      mode: mode, day: day, habits: H, counts: c,
+      mode: mode, day: day, habits: H, weekly: W, counts: Object.assign(c, { wt: W.length, wd: W.filter(function (x) { return x.done; }).length }),
       total: H.length, doneCount: done.length, left: open.length,
       open: open, done: done, next: next, stacks: stacks,
       sections: set.sections || {}, loadedAt: new Date()
@@ -148,7 +166,8 @@
      It never edits minutes or counts. Sample modes (start, mid, done) are never saved. */
   E.reflect = function (state, name, done) {
     state.habits.forEach(function (h) { if (h.n === name) h.done = !!done; });
-    var s2 = build(state.habits, state.mode, state.day);
+    (state.weekly || []).forEach(function (h) { if (h.n === name) { h.done = !!done; h.doneToday = !!done; h.doneOn = done ? state.day : null; } });
+    var s2 = build(state.habits, state.mode, state.day, state.weekly);
     s2.loadedAt = state.loadedAt;
     return s2;
   };
