@@ -933,7 +933,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.41';
+const VERSION='v5.42';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1591,7 +1591,7 @@ function renderSleepDrop(S2){
    only ever offer things that already happened. Reads and writes energy_notes, the
    Energy card's own table, so nothing is typed twice. */
 const ENG={rows:[],photos:[],pick:null,err:''};
-function engUrl(p){return SUPABASE_URL+'/storage/v1/object/public/meals/'+String(p).split('/').map(encodeURIComponent).join('/');}
+function engUrl(p){if(/^data:/.test(String(p)))return p;return SUPABASE_URL+'/storage/v1/object/public/meals/'+String(p).split('/').map(encodeURIComponent).join('/');}
 function engNote(t){const st=el('wordsState');if(st)st.textContent=t;}
 async function engLoad(ws,we){
   try{
@@ -1639,6 +1639,33 @@ function engRowHtml(r){
   }
   return h;
 }
+/* v5.42: same popup as the Social cards: recent photos to tap, plus Browse all my photos. */
+function engOpenPhoto(id){
+  const r=ENG.rows.find(x=>x.id===id); if(!r)return;
+  const all=ENG.photos.filter(p=>p.day===r.day).concat(ENG.photos.filter(p=>p.day!==r.day));
+  const old=document.getElementById('recOvl'); if(old)old.remove();
+  const ov=document.createElement('div'); ov.className='recovl'; ov.id='recOvl';
+  ov.innerHTML='<div class="recbox"><h3>Add a photo for this line</h3><div class="tinynote">'
+    +(all.length?'Recent photos from this week, same day first. Tap one to use it, or browse all your photos.':'No recent photos have come across for this week yet. Browse all your photos instead.')
+    +'</div>'+(all.length?'<div class="engpg">'+all.map(p=>'<button class="engpt" data-p="'+esc(p.path)+'"><img loading="lazy" src="'+esc(engUrl(p.path))+'" alt=""><span>'+fmt(p.day)+'</span></button>').join('')+'</div>':'')
+    +'<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="pbtn" id="recBrowse">Browse all my photos</button>'+(r.photo_path?'<button class="pbtn" id="recNone">Remove this photo</button>':'')+'<button class="pbtn" id="recClose">Close</button></div></div>';
+  document.body.appendChild(ov);
+  const save=async val=>{
+    const {error}=await sb.from('energy_notes').update({photo_path:val}).eq('id',id);
+    if(error){engNote('Could not save that photo: '+error.message);return false;}
+    r.photo_path=val; engRender(); return true;};
+  ov.onclick=e=>{if(e.target===ov)ov.remove();};
+  ov.querySelector('#recClose').onclick=()=>ov.remove();
+  const nn=ov.querySelector('#recNone'); if(nn)nn.onclick=()=>{ov.remove();save(null);};
+  ov.querySelectorAll('.engpt').forEach(b=>b.onclick=()=>{ov.remove();save(b.dataset.p);});
+  ov.querySelector('#recBrowse').onclick=()=>{
+    ov.remove();
+    const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.style.display='none';
+    inp.onchange=async()=>{const f=inp.files&&inp.files[0]; inp.remove(); if(!f)return;
+      try{engNote('Saving photo...'); if(await save(await swShrink(f,420,0.78)))engNote('Photo saved');}
+      catch(e){engNote('Could not use that photo: '+(e.message||e));}};
+    document.body.appendChild(inp); inp.click();};
+}
 function engRender(){
   const box=el('engBox');if(!box)return;
   const rows=ENG.rows.slice().sort((x,y)=>((y.starred?1:0)-(x.starred?1:0))||(x.day<y.day?-1:x.day>y.day?1:0)||((x.position||0)-(y.position||0)));
@@ -1658,7 +1685,7 @@ function engRender(){
       const {error}=await sb.from('energy_notes').update({starred:r.starred}).eq('id',id);
       if(error){r.starred=was;engRender();engNote('Could not save that star: '+error.message);}
     };
-    row.querySelector('.engph').onclick=()=>{ENG.pick=(ENG.pick===id?null:id);engRender();};
+    row.querySelector('.engph').onclick=()=>engOpenPhoto(id);
     row.querySelector('.engdel').onclick=async()=>{
       const {error}=await sb.from('energy_notes').delete().eq('id',id);
       if(error){engNote('Could not remove that line: '+error.message);return;}
