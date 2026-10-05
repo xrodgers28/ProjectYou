@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f4f2ec; --panel:#ffffff; --ink:#23262b; --soft:#5a6069; --faint:#8a9099;
+  --line:#e3e0d8; --rule:#ecebe4; --shadow:0 1px 2px rgba(20,24,30,.06);
+  --pin:#fbfaf6; --pinline:#ddd9cf;
+  --green:#2f8f5b; --amber:#c07f10; --red:#c0392b;
+  --b-do:#3f6f8f; --b-tell:#c07f10; --b-did:#2f8f5b; --b-read:#6f7b8a; --b-kill:#a8724a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a; --panel:#1e2125; --ink:#e9eaec; --soft:#aab0b8; --faint:#7d848d;
+    --line:#2c3036; --rule:#262a2f; --shadow:0 1px 2px rgba(0,0,0,.4);
+    --pin:#191c1f; --pinline:#2f343a;
+    --green:#4bbf80; --amber:#e0a63a; --red:#e2645a;
+    --b-do:#5a90b2; --b-tell:#d79a2a; --b-did:#43b377; --b-read:#8b97a6; --b-kill:#c48a60;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a; --panel:#1e2125; --ink:#e9eaec; --soft:#aab0b8; --faint:#7d848d;
+  --line:#2c3036; --rule:#262a2f; --shadow:0 1px 2px rgba(0,0,0,.4);
+  --pin:#191c1f; --pinline:#2f343a;
+  --green:#4bbf80; --amber:#e0a63a; --red:#e2645a;
+  --b-do:#5a90b2; --b-tell:#d79a2a; --b-did:#43b377; --b-read:#8b97a6; --b-kill:#c48a60;
+}
+*{box-sizing:border-box}
+body{
+  font-family:Arial, Helvetica, sans-serif;
+  background:var(--bg); color:var(--ink);
+  margin:0; line-height:1.5; font-size:16px;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:820px; margin:0 auto; padding:22px 18px 60px}
+.titlerow{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+h1{font-size:25px; margin:0; letter-spacing:.2px}
+.chip{font-size:12px; font-weight:bold; color:var(--soft); border:1px solid var(--line); border-radius:999px; padding:2px 9px}
+.daystamp{color:var(--soft); font-size:14px; margin:4px 0 16px}
+.lead{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 18px; box-shadow:var(--shadow); margin-bottom:16px}
+.lead p{margin:0 0 10px}
+.lead p:last-child{margin-bottom:0}
+.lead .big{font-size:17px; color:var(--ink)}
+.habit{border-left:3px solid var(--b-tell); padding:8px 0 8px 12px; color:var(--soft); font-size:14.5px; margin-top:4px}
+
+/* button key */
+.key{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 18px; box-shadow:var(--shadow); margin-bottom:16px}
+.key h2{font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--faint); margin:0 0 10px}
+.key ul{margin:0; padding:0; list-style:none}
+.key li{display:flex; gap:9px; align-items:baseline; padding:3px 0; font-size:14px}
+.key .kname{font-weight:bold; min-width:108px; display:inline-block}
+.kd{color:var(--b-do)} .kt{color:var(--b-tell)} .ki{color:var(--b-did)} .kr{color:var(--b-read)} .kk{color:var(--b-kill)}
+.key .note{color:var(--faint); font-size:12.5px; margin-top:8px}
+
+/* pinned answers box */
+.pinwrap{position:sticky; top:0; z-index:20; background:var(--bg); padding:8px 0 10px; margin-bottom:14px; border-bottom:1px solid var(--rule)}
+.pinwrap .lbl{display:flex; justify-content:space-between; align-items:center; margin-bottom:6px}
+.pinwrap .lbl span{font-size:12px; text-transform:uppercase; letter-spacing:.6px; color:var(--faint)}
+#answers{width:100%; min-height:74px; max-height:150px; resize:vertical; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:1.45; color:var(--ink); background:var(--pin); border:1px solid var(--pinline); border-radius:10px; padding:10px 12px}
+.copybtn{font-family:inherit; font-size:12px; font-weight:bold; color:#fff; background:var(--b-read); border:1px solid var(--b-read); border-radius:7px; padding:5px 11px; cursor:pointer}
+.hint{color:var(--faint); font-size:12px; margin-top:6px}
+
+.sec{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--faint); margin:22px 2px 10px}
+
+/* rows */
+.row{background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--line); border-radius:12px; padding:15px 17px; margin-bottom:12px; box-shadow:var(--shadow)}
+.row.open{border-left-width:5px}
+.rhead{display:flex; gap:10px; align-items:flex-start}
+.dot{flex:0 0 auto; width:12px; height:12px; border-radius:50%; margin-top:6px}
+.dot.green{background:var(--green)} .dot.amber{background:var(--amber)} .dot.red{background:var(--red)}
+.htext{font-size:17px; font-weight:bold; margin:0}
+.body{color:var(--soft); font-size:14.5px; margin:9px 0 0; padding-left:22px}
+.next{font-size:14px; margin:11px 0 0; padding-left:22px}
+.next b{color:var(--ink)}
+.btns{display:flex; flex-wrap:wrap; gap:7px; margin:13px 0 0; padding-left:22px}
+.btn{font-family:inherit; font-size:12.5px; font-weight:bold; color:#fff; border:none; border-radius:7px; padding:7px 12px; cursor:pointer; opacity:.92}
+.btn:hover{opacity:1}
+.b-do{background:var(--b-do)} .b-tell{background:var(--b-tell)} .b-did{background:var(--b-did)} .b-read{background:var(--b-read)} .b-kill{background:var(--b-kill)}
+.btn.sel{outline:2px solid var(--ink); outline-offset:1px}
+.state{font-size:12.5px; font-weight:bold; margin:10px 0 0; padding-left:22px; display:none}
+.row.chosen .state{display:block}
+.cmt{width:100%; margin:11px 0 0; font-family:inherit; font-size:13px; color:var(--ink); background:transparent; border:1px solid var(--line); border-radius:8px; padding:8px 10px; resize:vertical; min-height:34px}
+.proof{margin-top:26px; padding-top:14px; border-top:1px solid var(--rule); color:var(--faint); font-size:12px}
+.proof code{font-family:ui-monospace, Menlo, Consolas, monospace; font-size:11.5px}
+.themeflip{position:fixed; bottom:12px; right:12px; font-size:11px; color:var(--faint); background:var(--panel); border:1px solid var(--line); border-radius:7px; padding:5px 9px; cursor:pointer; opacity:.7}
+.themeflip:hover{opacity:1}
+@media (max-width:560px){ h1{font-size:22px} .htext{font-size:16px} .key .kname{min-width:92px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="titlerow">
+    <h1>Morning Report</h1>
+    <span class="chip">v1.0</span>
+  </div>
+  <div class="daystamp">Monday, Oct 5, 2026 &middot; 5:20am EST</div>
+
+  <div class="lead">
+    <p class="big"><b>A wide-open day.</b> Your calendar holds only your usual morning run of blocks, the walk, breakfast, the ride to the train, and nothing booked after that. No meetings today or tomorrow. The whole day is yours to spend on one thing.</p>
+    <p>The watching this morning found a few feeds that went quiet while still looking healthy, and a cleanup from last month that has quietly undone itself. None of it is on fire. Most of it is one small switch each.</p>
+    <p class="habit">One from Atomic Habits: you do not rise to the level of your goals, you fall to the level of your systems. Three items below are the same lesson, a job that stopped running while its light stayed green, because nothing was built to make the silence show. The fix is never willpower. It is making the alarm automatic.</p>
+  </div>
+
+  <div class="key">
+    <h2>What each button means</h2>
+    <ul>
+      <li><span class="kname kd">Do this</span><span>Go and build it, run it, ship it. An instruction, not an answer. The item stays open until the work is done.</span></li>
+      <li><span class="kname kt">Tell me more</span><span>You lean yes, but want the cost, the risk, or the reasoning first. Your question goes in the note and the item stays open.</span></li>
+      <li><span class="kname ki">I did it</span><span>You handled it yourself. The item settles.</span></li>
+      <li><span class="kname kr">I read this</span><span>Just a statement of what happened. Nothing is owed. The item settles, marked noted.</span></li>
+      <li><span class="kname kk">Kill this task</span><span>Dead, and it never comes back as a question. The item settles.</span></li>
+    </ul>
+    <div class="note">Two of the five keep an item open, the two where work is owed: Do this and Tell me more. The other three close it.</div>
+  </div>
+
+  <div class="pinwrap">
+    <div class="lbl"><span>Your answers (select all and copy back into the chat)</span><button class="copybtn" id="copy">Copy</button></div>
+    <textarea id="answers" readonly></textarea>
+    <div class="hint">This box fills in as you tap. Select the text and copy it into the chat. Nothing here is saved on its own, so copy it before you close the page.</div>
+  </div>
+
+  <div class="sec">Needs you</div>
+  <div id="rows"></div>
+
+  <div class="proof" id="proof"></div>
+
+</div>
+
+<button class="themeflip" id="themeflip">Flip light / dark</button>
+
+<script>
+/* ---- row content ---- */
+var ROWS = [
+ {id:1, light:"red", title:"Last night's queued work never ran",
+  body:"The 4am job that clears your overnight list left no sign it started, and there was nothing waiting in the queue for it to pick up either. The last time it logged any run at all was October 2, and the last batch it marked finished was back on September 4. So the list you meant it to work has sat untouched for several nights. This is the same pattern we have been caught by before, where a job quietly stops firing and the silence looks like everything is fine.",
+  next:"Point me at the scheduled job so it clocks in and reports every night, or leave it off for now."},
+
+ {id:2, light:"red", title:"Your spoken notes have not reached the system in 28 days",
+  body:"The pipe that turns the notes you speak into your phone into tasks has been silent since September 5. Your tracker still shows a green light on it and the every-two-hours check still reports success, so from the outside it looks healthy while nothing is actually arriving. This is the capture habit the whole system leans on, so a month of quiet is a real gap. The likely fix is on your phone, not in the system, so it needs a minute from you.",
+  next:"Tap Tell me more and I will write you the exact tap-by-tap check for your phone, or I did it if you have already sorted it."},
+
+ {id:3, light:"amber", title:"Apple Health stopped sending about a day ago",
+  body:"Your health readings last landed just after midnight and nothing has come in for about 29 hours, against a feed that is meant to post every hour. Your phone has still been posting other things this week, so the connection is alive, the readings themselves just stopped. The watchdog you asked for, the one meant to shout the moment a feed goes quiet, is one of the jobs still sitting unbuilt. Until it exists, outages like this only surface when something like this brief happens to catch them.",
+  next:"Tap Tell me more for the phone-side check, or I read this to leave it for now."},
+
+ {id:4, light:"amber", title:"Your maps are weeks behind, and one of them is lying",
+  body:"The overnight reconciliation found the live system has grown well past what your map pages show. Around fifteen whole areas, among them the food log, train tracking and the weekly review, are missing from the maps entirely. The worst one paints a part of itself green and sending when it has sent nothing for a month, because that light is hard-wired on rather than actually checking. The good news is none of them describes something that no longer exists, so nothing is broken, they are just stale.",
+  next:"Tap Do this to have me bring the maps back in line and kill the fake green light, or Tell me more for what each one needs."},
+
+ {id:5, light:"amber", title:"A cleanup from last month has quietly undone itself",
+  body:"The morning map check is opening a fresh pile of one-off cleanup items every single day, eleven to sixteen of them, most recently on October 3. There are now 283 of them and more than 200 still sitting open on your list. That is exactly the clutter we cleared in early September, growing back. It is one setting in that morning job writing to the wrong place. Left alone it keeps breeding and makes your list read far worse than it really is.",
+  next:"Tap Do this and I will point that morning check at the one standing row instead, so it stops making new ones."},
+
+ {id:6, light:"amber", title:"Carson asked you to look at his fridge-monitor document",
+  body:"Your son shared a document on Saturday night and invited you to comment on it, the engineer questionnaire for his solar fridge project. It is sitting unanswered in your inbox. This is the Conrad Challenge work he has been pushing on, so a quick read and a comment would keep him moving. I cannot comment as you, so this one needs your hand.",
+  next:"Open it from your inbox and leave him a comment."},
+
+ {id:7, light:"amber", title:"Eleven decisions on your list are waiting on your word",
+  body:"Eleven items in Project YOU are parked because they need a yes from you, not because of any technical block. Several are automation ideas I wrote build plans for but held off switching on, like logging a connection the instant a calendar event matches someone you know. One is already authorized by you, dropping three unused columns you told me to kill, and just needs doing. They have been sitting since early to mid September.",
+  next:"Tap Tell me more and I will lay the eleven out as a quick tick-through so you can clear them in one pass."},
+
+ {id:8, light:"amber", title:"Two of your learning feeds have gone quiet",
+  body:"The Atomic Habits and Farnam Street feeds, the ones behind your cue cards and Things Worth Knowing, failed on their last few runs. Each time the overnight run was blocked from reading the source page, because fetching it needed an approval nobody was awake to give. So there have been no new James Clear issues and no new Farnam Street issues since mid September. Your daily AI scan, by contrast, is running fine and dealt today's cards at 3am.",
+  next:"Tap Do this and I will set these to pull when you are around to approve the fetch, or Tell me more for options."},
+
+ {id:9, light:"amber", title:"TreadWell is waiting on one recording you have not opened",
+  body:"The only open item on TreadWell is Mike Cann's feedback from the August 7 call, still sitting unplayed in your folder. I could not reach your computer on this run, so I could not open it for you. Everything else on TreadWell is quiet right now.",
+  next:"Play the recording when you are at your computer, then tell me what is in it and I will turn it into next steps."},
+
+ {id:10, light:"amber", title:"Your calendar shortcut is still sending every meeting a dozen times",
+  body:"The phone shortcut that feeds your calendar into the system is copying each meeting about thirteen times over. It is on your list as look-only because I cannot touch your phone, so the fix has to be something you tap through in a minute. I have not drafted that fix yet.",
+  next:"Tap Do this and I will write you the exact tap-by-tap fix for the shortcut."},
+
+ {id:11, light:"green", title:"Your Antigua Christmas dinner is confirmed",
+  body:"The Admiral's Inn wrote back confirming your table for four at the Pillars Restaurant on December 24 at 6pm. Nothing is needed from you unless you want to change it.",
+  next:"Nothing."},
+
+ {id:12, light:"amber", title:"I could not read your Claude weekly usage",
+  body:"There is no reading I can take from here that tells me how much of your weekly Claude allowance is left. It is not something the system stores, and no connected tool reports it. You can see it in the Claude app under Settings. Worth knowing, your automated daily jobs plus this morning brief each draw a little from that weekly pool, so a run of heavy days adds up.",
+  next:"Glance at Settings in the Claude app if you want the number."}
+];
+
+var ACTIONS = [
+  {key:"do",   cls:"b-do",   label:"Do this",        word:"DO THIS",        open:true},
+  {key:"tell", cls:"b-tell", label:"Tell me more",   word:"TELL ME MORE",   open:true},
+  {key:"did",  cls:"b-did",  label:"I did it",        word:"I DID IT",       open:false},
+  {key:"read", cls:"b-read", label:"I read this",     word:"NOTED",          open:false},
+  {key:"kill", cls:"b-kill", label:"Kill this task",  word:"KILLED",         open:false}
+];
+var BORDER = {do:"var(--b-do)", tell:"var(--b-tell)", did:"var(--b-did)", read:"var(--b-read)", kill:"var(--b-kill)"};
+
+var state = {}; /* id -> {action, comment} */
+
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function render(){
+  var host = document.getElementById("rows");
+  host.innerHTML = "";
+  ROWS.forEach(function(r){
+    var el = document.createElement("div");
+    el.className = "row";
+    el.id = "row-"+r.id;
+    var btns = ACTIONS.map(function(a){
+      return '<button class="btn '+a.cls+'" data-id="'+r.id+'" data-act="'+a.key+'">'+a.label+'</button>';
+    }).join("");
+    el.innerHTML =
+      '<div class="rhead"><span class="dot '+r.light+'"></span><p class="htext">'+r.id+'. '+esc(r.title)+'</p></div>'+
+      '<p class="body">'+esc(r.body)+'</p>'+
+      '<p class="next"><b>Next:</b> '+esc(r.next)+'</p>'+
+      '<div class="btns">'+btns+'</div>'+
+      '<p class="state" id="state-'+r.id+'"></p>'+
+      '<textarea class="cmt" id="cmt-'+r.id+'" placeholder="Add a comment (optional)"></textarea>';
+    host.appendChild(el);
+  });
+
+  host.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".btn") : null;
+    if(!b) return;
+    var id = +b.getAttribute("data-id");
+    var act = b.getAttribute("data-act");
+    if(!state[id]) state[id] = {};
+    state[id].action = act;
+    paint(id);
+    compile();
+  });
+  host.addEventListener("input", function(e){
+    if(e.target && e.target.classList.contains("cmt")){
+      var id = +e.target.id.split("-")[1];
+      if(!state[id]) state[id] = {};
+      state[id].comment = e.target.value;
+      compile();
+    }
+  });
+}
+
+function paint(id){
+  var row = document.getElementById("row-"+id);
+  var st = state[id] || {};
+  var a = ACTIONS.filter(function(x){return x.key===st.action;})[0];
+  row.classList.remove("open");
+  row.classList.toggle("chosen", !!a);
+  var btns = row.querySelectorAll(".btn");
+  btns.forEach(function(x){ x.classList.toggle("sel", x.getAttribute("data-act")===st.action); });
+  if(a){
+    row.style.borderLeftColor = BORDER[a.key];
+    if(a.open) row.classList.add("open");
+    var sEl = document.getElementById("state-"+id);
+    if(a.key==="do") sEl.textContent = "Open. Work owed. " + a.word;
+    else if(a.key==="tell") sEl.textContent = "Open. Waiting on me. " + a.word;
+    else sEl.textContent = "Settled. " + a.word;
+    sEl.style.color = BORDER[a.key];
+  }
+}
+
+function compile(){
+  var out = "MORNING REPORT, Mon Oct 5, 2026, my answers\n";
+  var any = false;
+  ROWS.forEach(function(r){
+    var st = state[r.id];
+    if(!st || (!st.action && !(st.comment && st.comment.trim()))) return;
+    any = true;
+    var a = ACTIONS.filter(function(x){return x.key===st.action;})[0];
+    var word = a ? a.word : "(comment only)";
+    out += "\n" + r.id + ". " + r.title + " → " + word;
+    if(st.comment && st.comment.trim()){ out += "\n   note: " + st.comment.trim(); }
+  });
+  if(!any) out += "\n(no answers yet, tap a button on any item)";
+  document.getElementById("answers").value = out;
+}
+
+document.getElementById("copy").addEventListener("click", function(){
+  var ta = document.getElementById("answers");
+  ta.removeAttribute("readonly"); ta.focus(); ta.select();
+  try{ document.execCommand("copy"); }catch(e){}
+  ta.setAttribute("readonly","readonly");
+  this.textContent = "Copied";
+  var self = this; setTimeout(function(){ self.textContent = "Copy"; }, 1600);
+});
+
+document.getElementById("themeflip").addEventListener("click", function(){
+  var r = document.documentElement;
+  var cur = r.getAttribute("data-theme");
+  r.setAttribute("data-theme", cur==="dark" ? "light" : "dark");
+});
+
+document.getElementById("proof").innerHTML =
+  "Technical proof, for the record. Last night's queue worker (lane queue_run, run_status overnight) wrote no row to run_log; newest run_log row is Oct 2 (atomic ingest, failed), last done-marked queue item Sep 4; zero items currently carry run_status overnight. A separate nightly System Map freshness check did run and appended its findings; its counts verified against the live database within a few: it reported 194 tables / 47 views / 243 stored pages, the database now holds 199 / 48 / 252, consistent with a few arriving after the check ran. Apple Health latest reading ts 2026-10-04 00:00 ET, 0 readings in the last 24h. Published to <code>pages</code> as <code>morning-report-2026-10-05.html</code> via the gzpage function; live at xrodgers28.github.io/ProjectYou/.";
+
+render();
+compile();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
