@@ -94,7 +94,8 @@
 #deck .sstar.on svg{fill:var(--acc)}
 #deck .sdo{position:absolute;right:51px;top:62px;height:24px;padding:0 10px;border-radius:12px;border:1px solid #c3c9d2;background:#fff;color:#5b6472;font:700 11px/22px Arial,Helvetica,sans-serif;letter-spacing:.2px;white-space:nowrap;cursor:pointer;z-index:3}
 #deck .retire{margin-top:10px}
-#deck .retire span{font-size:12px;color:#8a93a1;text-decoration:underline;cursor:pointer}
+#deck .retire span{display:inline-block;font:700 12px/1 Arial,Helvetica,sans-serif;padding:10px 14px;border-radius:10px;border:1px solid #c3c9d2;color:#5b6472;background:transparent;cursor:pointer}
+#deck .retire span:hover{color:#1f2a44;border-color:#1f2a44}
 #deck .sdo.on{background:#c0453b;border-color:#c0453b;color:#fff}
 #deck .bd{padding:29px 19px 5px;flex:1;display:flex;flex-direction:column}
 #deck .step{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--acc);font-weight:800}
@@ -140,7 +141,7 @@
 
 <div id="app" class="hidden">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.13</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
-  <div class="secbar-wrap"><div class="secbar"><h1>Atomic Habits</h1><span class="ver">v1.20</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>Atomic Habits</h1><span class="ver">v1.21</span><span class="date"></span></div></div>
 
   <div class="toggle">
     <button id="tgToday" class="on" onclick="showView('deck')">Today's mix</button>
@@ -171,7 +172,7 @@
     </div>
   </div>
 
-  <div class="badge">Atomic Habits v1.20</div>
+  <div class="badge">Atomic Habits v1.21</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -263,18 +264,20 @@ async function toggleRetire(id){
   if(c.retired){
     const r=await sb.from('jc_321').update({retired:false,retired_at:null}).eq('id',id);
     if(r.error){toast('Could not restore: '+r.error.message);return;}
-    c.retired=false; toast('Back in the rotation.'); drawBrowse(); return;
+    c.retired=false; try{ sb.from('tile_hidden').delete().eq('module','james-clear').eq('tile_key',id).then(function(){},function(){}); }catch(e){}
+    toast('Back in the rotation.'); drawBrowse(); return;
   }
   const r=await sb.from('jc_321').update({retired:true,retired_at:new Date().toISOString()}).eq('id',id);
   if(r.error){toast('Could not retire: '+r.error.message);return;}
   c.retired=true;
+  try{ sb.from('tile_hidden').upsert({module:'james-clear',tile_key:id,title:(c.title||c.body||'').slice(0,140)},{onConflict:'module,tile_key'}).then(function(){},function(){}); }catch(e){}
   const i=MIX.findIndex(x=>x.id===id);
   if(i>-1){
     const rep=pickFresh(c.card_type,MIX.map(x=>x.id));
     if(rep){markShown(rep);MIX[i]=rep;} else {MIX.splice(i,1);}
     if(idx>MIX.length)idx=MIX.length;
   }
-  toast('Retired. It lives under Retired in Browse if you change your mind.');
+  toast('Hidden. It lives under Retired in Browse, and in the Cue Card Library, if you change your mind.');
   render();
   if(!document.getElementById('browse').classList.contains('hidden'))drawBrowse();
 }
@@ -339,7 +342,7 @@ function render(){
   document.getElementById('dots').innerHTML=MIX.map((_,i)=>'<div class="dot '+(i===idx?'on':'')+'"></div>').join('')+'<div class="dot '+(idx===total?'on':'')+'"></div>';
   if(idx>=total){renderSave();return;}
   const c=MIX[idx];
-  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div>'+CUEDIAL+'<span class="ver">v1.20</span></div>';
+  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div>'+CUEDIAL+'<span class="ver">v1.21</span></div>';
   const star='<span class="sstar'+(c.saved?' on':'')+'" title="Save to favorites" onclick="toggleFav(\''+c.id+'\')"><svg viewBox="0 0 24 24">'+STARP+'</svg></span>';
   const doBtn='<span class="sdo'+(c.do_this?' on':'')+'" role="button" title="Do this!" onclick="event.stopPropagation();toggleDo(\''+c.id+'\')">Do this</span>';
   let bd='<div class="step">'+esc(KICK[c.card_type]||c.card_type)+'</div>';
@@ -358,7 +361,7 @@ function render(){
     var mb=noEcho(t,c.body); if(mb) bd+='<div class="mean">'+esc(mb)+'</div>';
   }
   bd+=jcSrc(c);
-  bd+='<div class="retire"><span role="button" onclick="event.stopPropagation();toggleRetire(\''+c.id+'\')">Retire this card</span></div>';
+  bd+='<div class="retire"><span role="button" onclick="event.stopPropagation();toggleRetire(\''+c.id+'\')">Don&rsquo;t show again</span></div>';
   bd+='<div class="date bottom">'+dstamp()+'</div>';
   const backCls=idx===0?'back off':'back';
   const backOn=idx===0?'':'onclick="go(-1)"';
@@ -371,7 +374,7 @@ function renderSave(){
     const lbl=c.card_type.charAt(0).toUpperCase()+c.card_type.slice(1)+' · '+fmtDate(c.issue_date);
     return '<div class="ck"><input type="checkbox" id="sv'+i+'" '+(c.saved?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(lbl)+'</div><div class="d">'+esc((c.title||'').slice(0,95))+'</div></label></div>';
   }).join('');
-  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div>'+CUEDIAL+'<span class="ver">v1.20</span></div>';
+  const hd='<div class="hd"><span class="ic">'+ATOM+'</span><div><div class="nm">Atomic Habits</div><div class="kd">Habit Module</div></div>'+CUEDIAL+'<span class="ver">v1.21</span></div>';
   document.getElementById('deck').innerHTML='<div class="card" style="--acc:#3f8f7a;--tint:#e4f1ec">'+hd+
     '<div class="bd"><div class="step">End of mix</div><div class="big">Keep what mattered.</div><div class="cklist">'+rows+'</div>'+
     '<div class="howlong">Time on this: <input id="tmin" type="number" min="1" placeholder="min" class="in"> min <span class="autonote">(keeps time until you tap Done, or type your own)</span></div>'+

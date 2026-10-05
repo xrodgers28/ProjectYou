@@ -51,6 +51,10 @@
   #fin:disabled{opacity:.55;pointer-events:none}
   .dt{position:absolute;top:15px;left:54px;height:26px;padding:0 11px;border-radius:13px;border:0;cursor:pointer;background:rgba(255,255,255,.92);color:#1f2a44;font:700 11px/26px Arial,Helvetica,sans-serif;letter-spacing:.2px;box-shadow:0 1px 4px rgba(0,0,0,.25);z-index:2}
   .dt[aria-pressed="true"]{background:#c0453b;color:#fff}
+  .nx{margin-top:14px;font:700 12px/1 Arial,Helvetica,sans-serif;padding:10px 14px;border-radius:10px;border:1px solid var(--key);background:transparent;color:var(--muted);cursor:pointer}
+  .nx:hover{color:var(--ink);border-color:var(--ink)}
+  .nx:disabled{opacity:.5;cursor:default}
+  .toast button{margin-left:12px;font:700 12px Arial,sans-serif;color:#fff;background:transparent;border:1px solid rgba(255,255,255,.6);border-radius:8px;padding:4px 10px;cursor:pointer}
   .st svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9}
   .st[aria-pressed="true"]{background:var(--star);color:#fff}
   .st[aria-pressed="true"] svg{fill:currentColor}
@@ -86,7 +90,7 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; your daily AI workout</div>
-  <h1>AI Workout <span class="ver">v2.3</span></h1>
+  <h1>AI Workout <span class="ver">v2.4</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
@@ -151,6 +155,15 @@ var __cueTickId=setInterval(__cueHandTick,250);
 var ORDER={"tip":0,"insight":1,"platform":2,"AI Training":3,"Roundtable":4,"Workflow of the Day":5};
 var KICKS={"tip":"Working with AI","insight":"Industry insight","platform":"New platform","AI Training":"AI Training · weekly guide","Roundtable":"Roundtable · weekly","Workflow of the Day":"Workflow of the Day"};
 var STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
+var HID={};
+function hidQ(){ var ids=Object.keys(HID).filter(function(k){ return k.charAt(0)==="r"; }).map(function(k){ return k.slice(1); }); return ids.length?"&id=not.in.("+ids.join(",")+")":""; }
+function loadHidden(){
+  if(!sb) return Promise.resolve();
+  return sb.auth.getSession().then(function(s){
+    if(!(s&&s.data&&s.data.session)) return;
+    return sb.from("tile_hidden").select("tile_key").eq("module","ai-workout").then(function(r){ (r.data||[]).forEach(function(x){ HID[x.tile_key]=true; }); });
+  }).catch(function(){});
+}
 var TILES=[], idx=0, sb=null, habitRow=null, ticked=false;
 try{ if(window.supabase && window.supabase.createClient) sb=window.supabase.createClient(SB,KEY); }catch(e){ sb=null; }
 
@@ -195,10 +208,10 @@ var WEEKLY=[{sec:"AI Training",from:0},{sec:"Roundtable",from:4}];   /* from = w
 function dealOne(q,t){
   var S=encodeURIComponent(q.sec);
   return api("rundown_items?select=*&section=eq."+S+"&seen_on=eq."+t+"&order=issue_date.asc").then(function(rows){
-    rows=rows||[];
+    rows=(rows||[]).filter(function(r){ return !HID["r"+r.id]; });
     var need=q.n-rows.length;
     if(need<=0) return rows;
-    return api("rundown_items?select=id&section=eq."+S+"&seen_on=is.null&order=issue_date.asc&limit="+need).then(function(nx){
+    return api("rundown_items?select=id&section=eq."+S+"&seen_on=is.null"+hidQ()+"&order=issue_date.asc&limit="+need).then(function(nx){
       if(!nx || !nx.length) return rows;
       var ids=nx.map(function(r){ return r.id; }).join(",");
       return api("rundown_items?id=in.("+ids+")",{method:"PATCH",prefer:"return=representation",
@@ -211,7 +224,7 @@ function weekStart(iso){ var p=iso.split("-"), d=new Date(Date.UTC(+p[0],+p[1]-1
 function dealWeekly(w,t){
   var S=encodeURIComponent(w.sec);
   return api("rundown_items?select=*&section=eq."+S+"&seen_on=eq."+t+"&order=issue_date.asc").then(function(rows){
-    rows=rows||[];
+    rows=(rows||[]).filter(function(r){ return !HID["r"+r.id]; });
     if(rows.length) return rows;                    /* already dealt today, keep showing it */
     if(monIdx(t)<w.from) return [];                 /* not this section's day yet */
     return api("rundown_items?select=id&section=eq."+S+"&seen_on=gte."+weekStart(t)+"&seen_on=lte."+t+"&limit=1").then(function(done){
@@ -233,7 +246,7 @@ function dealAi(){
   }).then(function(rows){ return rows||[]; });
 }
 function pickAi(rows){
-  var main=rows.filter(function(r){ return (r.deck_position||0)<=50; }), out=[];
+  var main=rows.filter(function(r){ return (r.deck_position||0)<=50 && !HID["p:"+r.title]; }), out=[];
   var tip=main.filter(function(r){ return r.card_type==="tip"; })[0];
   var ins=main.filter(function(r){ return r.card_type==="insight"; })[0];
   var pl=main.filter(function(r){ return r.card_type==="platform"; }).slice(0,2);
@@ -311,6 +324,7 @@ function tileHTML(t,i,n){
     '<button class="st" type="button" data-save="'+esc(t.key)+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
     ((t.kind==="rd"&&r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.shot)?'<div class="pic wfpic"><div style="height:44px"></div><img data-enl="1" src="'+esc(r.ai_summary.shot)+'" alt="Screenshot from the reader\u2019s project" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>':(t.kind==="rd"&&r.img)?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
     '<div class="top"><div class="k">'+esc(kick)+'</div><h2'+(big?' class="bigq"':'')+'>'+esc(title)+'</h2>'+body+link+srcLine(t)+
+    '<button class="nx" type="button" data-nx="'+esc(t.key)+'">Don&rsquo;t show again</button>'+
     '</div>'+
     (last?'<div class="mintotal" id="mintotalLine"></div>':'')+
     '<div class="prac">'+
@@ -432,6 +446,59 @@ document.addEventListener("click",function(e){
   }).catch(function(err){ d.setAttribute("aria-pressed",on?"false":"true"); toast("Could not save: "+err.message); });
 });
 
+/* ---- Don't show again (v2.4, Oct 5, 2026): retire a tile, deal a replacement, offer Undo ---- */
+function toastUndo(msg,fn){
+  var t=document.createElement("div"); t.className="toast"; t.appendChild(document.createTextNode(msg));
+  var b=document.createElement("button"); b.type="button"; b.textContent="Undo"; b.onclick=function(){ t.remove(); fn(); }; t.appendChild(b);
+  document.body.appendChild(t); setTimeout(function(){ t.remove(); },7000);
+}
+function hidKey(t){ return t.kind==="ai" ? "p:"+t.row.title : "r"+t.row.id; }
+function refill(){
+  return Promise.all([dealAi().catch(function(){ return []; }), dealRundown().catch(function(){ return []; })]).then(function(res){
+    var have={}; TILES.forEach(function(t){ have[t.key]=1; });
+    var add=pickAi(res[0]).map(function(r){ return asTile("ai",r); }).concat(res[1].map(function(r){ return asTile("rd",r); }))
+      .filter(function(t){ return !have[t.key]; });
+    TILES=TILES.concat(add); TILES.sort(function(a,b){ return a.sort-b.sort; });
+    if(idx>=TILES.length) idx=Math.max(0,TILES.length-1);
+  });
+}
+function hideTile(t){
+  var r=t.row, key=hidKey(t), title=(t.kind==="ai")?r.title:((r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.headline)||r.title);
+  return needSession().then(function(){
+    return sb.from("tile_hidden").upsert({module:"ai-workout",tile_key:key,title:title},{onConflict:"module,tile_key"});
+  }).then(function(x){
+    if(x&&x.error) throw x.error;
+    if(t.kind!=="ai") return null;
+    return sb.from("ai_deck_pool").update({active:false,retired_at:new Date().toISOString()}).eq("title",r.title).then(function(y){
+      if(y&&y.error) throw y.error;
+      return sb.from("ai_cards").delete().eq("id",r.id);
+    });
+  }).then(function(z){
+    if(z&&z.error) throw z.error;
+    HID[key]=true;
+    TILES=TILES.filter(function(x){ return x.key!==t.key; });
+    return refill();
+  });
+}
+function unhideTile(key,title){
+  return needSession().then(function(){
+    var jobs=[sb.from("tile_hidden").delete().eq("module","ai-workout").eq("tile_key",key)];
+    if(key.indexOf("p:")===0) jobs.push(sb.from("ai_deck_pool").update({active:true,retired_at:null}).eq("title",title));
+    return Promise.all(jobs);
+  }).then(function(){ delete HID[key]; location.reload(); }).catch(function(err){ toast("Could not undo: "+err.message); });
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest("[data-nx]"); if(!b) return;
+  var t=tileByKey(b.getAttribute("data-nx")); if(!t) return;
+  var key=hidKey(t), title=(t.kind==="ai")?t.row.title:((t.row.ai_summary&&t.row.ai_summary.headline)||t.row.title);
+  b.disabled=true;
+  hideTile(t).then(function(){
+    render(); window.scrollTo(0,0);
+    document.getElementById("sub").textContent=TILES.length+" tiles · about 10 minutes";
+    toastUndo("Hidden. It will not come back.",function(){ unhideTile(key,t.row.title); });
+  }).catch(function(err){ b.disabled=false; toast("Could not hide it: "+err.message); });
+});
+
 /* ---- build the day ---- */
 function topUp(aiRows,rdRows){
   /* empty-tile fix: if a workflow is missing, deal extra tips so the deck never has a hole */
@@ -441,7 +508,7 @@ function topUp(aiRows,rdRows){
   if(need<=0) return Promise.resolve(extras);
   return api("rpc/ai_fill_tips",{method:"POST",body:JSON.stringify({p_n:need})}).then(function(got){ return extras.concat(got||[]); }).catch(function(){ return extras; });
 }
-Promise.all([dealAi().catch(function(){ return []; }), dealRundown().catch(function(){ return []; }), loadHabit()]).then(function(res){
+loadHidden().then(function(){ return Promise.all([dealAi().catch(function(){ return []; }), dealRundown().catch(function(){ return []; }), loadHabit()]); }).then(function(res){
   var aiRows=res[0], rdRows=res[1];
   return topUp(aiRows,rdRows).then(function(extras){
     var tiles=pickAi(aiRows).map(function(r){ return asTile("ai",r); })
@@ -452,7 +519,7 @@ Promise.all([dealAi().catch(function(){ return []; }), dealRundown().catch(funct
     var wf=rdRows.filter(function(r){ return r.section==="Workflow of the Day"; }).length;
     var plats=tiles.filter(function(t){ return t.type==="platform"; }).length;
     document.getElementById("sub").textContent=tiles.length+" tiles · about 10 minutes"+(plats?" · "+plats+" new platforms":"")+(wf?" · "+wf+" workflows":"");
-    document.getElementById("stamp").textContent="v2.3 · "+nice(today());
+    document.getElementById("stamp").textContent="v2.4 · "+nice(today());
     render();
   });
 }).catch(function(e){

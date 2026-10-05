@@ -165,7 +165,7 @@
 <div id="app" class="hidden">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.13</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
 
-  <div class="secbar-wrap"><div class="secbar"><h1>Cue Card Library</h1><span class="ver">v1.1</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>Cue Card Library</h1><span class="ver">v1.2</span><span class="date"></span></div></div>
   <div class="lib">
     <div class="libtabs" role="navigation" aria-label="Cue cards"><a href="habit-modules.html">Cue Cards</a><a href="habit-modules.html#projects">Projects</a><a class="on" href="cue-card-library.html" aria-current="page">Cue Card Library</a></div>
     <div class="tools"><input id="q" placeholder="Search every star you have kept…" oninput="draw()" aria-label="Search the library"></div>
@@ -173,7 +173,7 @@
     <div class="count" id="bcount"></div>
     <div class="grid" id="grid"></div>
   </div>
-  <div class="badge">Cue Card Library v1.1</div>
+  <div class="badge">Cue Card Library v1.2</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -190,7 +190,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
 const MODS=[
  ['james-clear','Atomic Habits','james-clear.html','#3f8f7a'],
  ['ai-deck','AI Insights','ai.html','#3f6f8f'],
- ['rundown','AI Workout','rundown.html','#2f6f6a'],
+ ['rundown','AI Workout','rundown.html','#2f6f6a']
  ['twk','Things Worth Knowing','quotes.html#today','#7a4f9c'],
  ['manual','Clever Phrases','quotes.html','#7a4f9c'],
  ['feed','The Feed','feed.html','#6b7f9c'],
@@ -203,10 +203,11 @@ const MODS=[
  ['environmental','Environmental Health','environmental.html','#4fa08a'],
  ['recreational','Recreational Health','recreational.html','#e0975a'],
  ['creativity','Creativity','creativity.html','#6a8f3f'],
- ['three-new-things',"It's a wrap",'three-new-things.html','#14110f']
+ ['three-new-things',"It's a wrap",'three-new-things.html','#14110f'],
+ ['ai-workout','AI Workout','rundown.html','#2f6f6a']
 ];
 const MOD={}; MODS.forEach(function(m){MOD[m[0]]={label:m[1],href:m[2],acc:m[3]};});
-let FAVS=[], filter='all';
+let FAVS=[], HIDDEN=[], filter='all';
 (function(){try{var p=new URLSearchParams(location.search);if(p.get('module'))filter=p.get('module');else if(p.get('filter'))filter=p.get('filter');}catch(e){}})();
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -228,7 +229,9 @@ async function onLogin(session){try{await sb.realtime.setAuth(session.access_tok
 async function load(){
   const {data,error}=await sb.from('favorites').select('*').order('created_at',{ascending:false}).limit(3000);
   if(error){document.getElementById('grid').innerHTML='<div class="empty">Could not load your library: '+esc(error.message)+'</div>';return;}
-  FAVS=data||[]; if(filter!=='all'&&filter!=='doit'&&!FAVS.some(function(f){return f.source_module===filter;}))filter='all';
+  FAVS=data||[];
+  try{ const h=await sb.from('tile_hidden').select('*').order('hidden_at',{ascending:false}).limit(3000); HIDDEN=h.data||[]; }catch(e){ HIDDEN=[]; }
+  if(filter!=='all'&&filter!=='doit'&&filter!=='hidden'&&!FAVS.some(function(f){return f.source_module===filter;}))filter='all';
   drawChips(); draw();
 }
 function setFilter(f){filter=f;try{var u=new URL(location.href);u.search='';if(f!=='all')u.searchParams.set(f==='doit'?'filter':'module',f);history.replaceState(null,'',u.toString());}catch(e){}drawChips();draw();}
@@ -237,12 +240,45 @@ function drawChips(){
   const doit=FAVS.filter(function(f){return f.do_this;}).length;
   var h='<button class="chip'+(filter==='all'?' on':'')+'" onclick="setFilter(\'all\')">All<span class="n">'+FAVS.length+'</span></button>';
   h+='<button class="chip'+(filter==='doit'?' on':'')+'" onclick="setFilter(\'doit\')">&#10003; Do this!<span class="n">'+doit+'</span></button>';
+  h+='<button class="chip'+(filter==='hidden'?' on':'')+'" onclick="setFilter(\'hidden\')">Don&rsquo;t show again<span class="n">'+HIDDEN.length+'</span></button>';
   const seen={};
   MODS.forEach(function(m){ if(cnt[m[0]]){seen[m[0]]=1;h+='<button class="chip'+(filter===m[0]?' on':'')+'" onclick="setFilter(\''+m[0]+'\')">'+esc(m[1])+'<span class="n">'+cnt[m[0]]+'</span></button>';} });
   Object.keys(cnt).forEach(function(k){ if(!seen[k]) h+='<button class="chip'+(filter===k?' on':'')+'" onclick="setFilter(\''+esc(k)+'\')">'+esc(k)+'<span class="n">'+cnt[k]+'</span></button>'; });
   document.getElementById('chips').innerHTML=h;
 }
+function hidLabel(mod){ const m=MOD[mod]; return m?m.label:mod; }
+function drawHidden(){
+  const q=(document.getElementById('q').value||'').toLowerCase().trim();
+  const rows=HIDDEN.filter(function(x){ return !q||((x.title||'')+' '+hidLabel(x.module)).toLowerCase().indexOf(q)>=0; });
+  document.getElementById('bcount').textContent=rows.length+(rows.length===1?' hidden tile':' hidden tiles');
+  document.getElementById('grid').innerHTML=rows.map(function(x,i){
+    const m=MOD[x.module]||{acc:'#3f6f8f'};
+    return '<div class="pcard" style="--acc:'+m.acc+'">'+
+      '<div class="ptag">'+esc(hidLabel(x.module))+'</div>'+
+      '<div class="ttl">'+esc(x.title||x.tile_key)+'</div>'+
+      '<div class="meta">Hidden '+fmtDate(x.hidden_at)+'</div>'+
+      '<div class="acts"><button class="doit" onclick="bringBack('+i+')">Bring it back</button></div></div>';
+  }).join('')||'<div class="empty">Nothing hidden. Tap Don&rsquo;t show again on any cue card tile and it will wait here.</div>';
+}
+async function bringBack(i){
+  const q=(document.getElementById('q').value||'').toLowerCase().trim();
+  const rows=HIDDEN.filter(function(x){ return !q||((x.title||'')+' '+hidLabel(x.module)).toLowerCase().indexOf(q)>=0; });
+  const x=rows[i]; if(!x)return;
+  if(x.module==='ai-workout'&&String(x.tile_key).indexOf('p:')===0){
+    const r=await sb.from('ai_deck_pool').update({active:true,retired_at:null}).eq('title',x.tile_key.slice(2));
+    if(r.error){toast('Could not bring it back: '+r.error.message);return;}
+  }
+  if(x.module==='james-clear'){
+    const r2=await sb.from('jc_321').update({retired:false,retired_at:null}).eq('id',x.tile_key);
+    if(r2.error){toast('Could not bring it back: '+r2.error.message);return;}
+  }
+  const d=await sb.from('tile_hidden').delete().eq('module',x.module).eq('tile_key',x.tile_key);
+  if(d.error){toast('Could not bring it back: '+d.error.message);return;}
+  HIDDEN=HIDDEN.filter(function(y){ return !(y.module===x.module&&y.tile_key===x.tile_key); });
+  drawChips(); draw(); toast('Back in the rotation.');
+}
 function draw(){
+  if(filter==='hidden'){ drawHidden(); return; }
   const q=(document.getElementById('q').value||'').toLowerCase().trim();
   const rows=FAVS.filter(function(f){
     if(filter==='doit'&&!f.do_this)return false;

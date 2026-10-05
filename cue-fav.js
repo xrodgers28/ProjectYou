@@ -1,4 +1,6 @@
-/* Cue Fav v1.1 (Sep 29, 2026). v1.1 adds doOnly mode (a Do this! button for modules that keep their own stars) and mountItems (one Do this! pill per item).
+/* Cue Fav v1.2 (Oct 5, 2026): adds Don't show again. It saves the tile to public.tile_hidden (the Cue Card Library lists them with Bring it back),
+   then skips to the next tile with the page's own Next button (M.next selector, or a list of common ones, or M.onHide). Hidden tiles are skipped automatically whenever they come up again.
+   Cue Fav v1.1 (Sep 29, 2026). v1.1 adds doOnly mode (a Do this! button for modules that keep their own stars) and mountItems (one Do this! pill per item).
    v1.0: Adds a small Keep star and a Do this! button to any cue card page,
    so every module can put a card into the shared Cue Card Library (cue-card-library.html).
    A page calls CueFav.mount({module, label, current}) once. `current()` returns the card on screen as
@@ -13,11 +15,11 @@
   var css='#cuefav{position:fixed;left:12px;bottom:12px;z-index:40;display:none;gap:8px;align-items:center;font-family:Arial,Helvetica,sans-serif}'+
    '#cuefav button{font:700 12.5px/1 Arial,Helvetica,sans-serif;height:32px;padding:0 12px;border-radius:16px;border:1px solid #d3d9e2;background:#fff;color:#5b6472;cursor:pointer;box-shadow:0 2px 8px rgba(31,42,68,.14)}'+
    '#cuefav button.on{color:#fff;border-color:transparent}'+
-   '#cuefav .kp.on{background:#d9a400}#cuefav .dt.on{background:#c0453b}'+
+   '#cuefav .kp.on{background:#d9a400}#cuefav .dt.on{background:#c0453b}#cuefav .nx{color:#5b6472}'+
    '#cuefav a{font-size:11.5px;font-weight:700;color:#3f6f8f;text-decoration:none;background:#fff;border:1px solid #d3d9e2;border-radius:16px;padding:9px 11px;box-shadow:0 2px 8px rgba(31,42,68,.14)}'+
    '#cuefav .tst{position:absolute;left:0;bottom:40px;background:#1f2a44;color:#fff;font-size:12px;padding:7px 11px;border-radius:9px;white-space:nowrap;opacity:0;transition:opacity .2s;pointer-events:none}'+
    '#cuefav .tst.show{opacity:1}';
-  var M=null, cur=null, row=null, bar=null, busy=false, lastKey=null, timer=null;
+  var M=null, cur=null, row=null, bar=null, busy=false, lastKey=null, timer=null, HID={}, skips=0, hidLoaded=false;
   function say(t){var e=bar&&bar.querySelector('.tst');if(!e)return;e.textContent=t;e.classList.add('show');clearTimeout(e._x);e._x=setTimeout(function(){e.classList.remove('show');},2400);}
   function normT(t){return String(t||'').replace(/\s+/g,' ').trim();}
   async function lookup(title){
@@ -27,6 +29,40 @@
   }
   function payload(c){return {content_type:c.type||'card',title:c.title,body:c.body||null,url:c.url||null,source:c.source||M.label,
     source_module:M.module,ref_table:TIP+M.module,ref_id:idFor(M.module+'|'+c.key)};}
+  var NEXTS=['#nx','#next','#btnNext','.next','.stx-next a','[data-next]'];
+  function findNext(){
+    var list=M.next?[M.next].concat(NEXTS):NEXTS;
+    for(var i=0;i<list.length;i++){
+      var e=null; try{ e=document.querySelector(list[i]); }catch(x){ e=null; }
+      if(e&&!e.disabled&&e.offsetParent) return e;
+    }
+    return null;
+  }
+  async function loadHidden(){
+    var s=db(); if(!s||!M||hidLoaded)return;
+    try{
+      var ses=await s.auth.getSession(); if(!(ses&&ses.data&&ses.data.session))return;
+      var r=await s.from('tile_hidden').select('tile_key').eq('module',M.module).limit(3000);
+      HID={}; (r.data||[]).forEach(function(x){HID[x.tile_key]=1;}); hidLoaded=true;
+    }catch(e){}
+  }
+  function skipHidden(){
+    if(!cur||!HID[cur.key]||skips>60)return false;
+    var n=findNext(); if(!n)return false;
+    skips++; setTimeout(function(){ try{ n.click(); }catch(e){} },80); return true;
+  }
+  async function hide(){
+    if(!cur||busy)return; busy=true; var s=db(), c=cur;
+    try{
+      var r=await s.from('tile_hidden').upsert({module:M.module,tile_key:c.key,title:normT(c.title).slice(0,140)},{onConflict:'module,tile_key'}); if(r.error)throw r.error;
+      HID[c.key]=1; skips=0;
+      var moved=false;
+      if(typeof M.onHide==='function'){ try{ moved=M.onHide(c)!==false; }catch(e){ moved=false; } }
+      else{ var n=findNext(); if(n){ moved=true; setTimeout(function(){ try{ n.click(); }catch(e){} },80); } }
+      say(moved?'Hidden. It will not come back.':'Saved to Don\u2019t show again, but this page cannot skip it yet.');
+    }catch(e){ say('Could not hide it: '+(e.message||e)); }
+    busy=false;
+  }
   function paint(){
     if(!bar)return;
     if(!cur){bar.style.display='none';return;}
@@ -55,6 +91,7 @@
       }catch(e){ row=null; }
     }
     paint();
+    await loadHidden(); skipHidden();
   }
   async function keep(){
     if(!cur||busy)return; busy=true; var s=db();
@@ -90,9 +127,9 @@
   function build(){
     var st=document.createElement('style'); st.textContent=css; document.head.appendChild(st);
     bar=document.createElement('div'); bar.id='cuefav';
-    bar.innerHTML='<span class="tst" role="status"></span><button class="kp" type="button"></button><button class="dt" type="button"></button><a href="cue-card-library.html?module='+encodeURIComponent(M.module)+'">Library</a>';
+    bar.innerHTML='<span class="tst" role="status"></span><button class="kp" type="button"></button><button class="dt" type="button"></button><button class="nx" type="button">Don\u2019t show again</button><a href="cue-card-library.html?module='+encodeURIComponent(M.module)+'">Library</a>';
     document.body.appendChild(bar);
-    bar.querySelector('.kp').onclick=keep; bar.querySelector('.dt').onclick=doit;
+    bar.querySelector('.kp').onclick=keep; bar.querySelector('.dt').onclick=doit; bar.querySelector('.nx').onclick=hide;
   }
   function later(){ clearTimeout(timer); timer=setTimeout(refresh,300); }
   /* One Do this! pill per item, for pages that list several starred-able items on one card.
