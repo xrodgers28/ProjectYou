@@ -27,6 +27,11 @@
 
    Change the form here and every page gets the change. Do not copy it into a page.
 
+   v1.5, Oct 5 2026, Scott's answers: a third Which, Cultural Moment (a concert, show, museum or gallery visit). It ticks the
+   Cultural Moments habit, which stays off the daily list until it happens. It does not go on the Safari places list.
+   If someone was with you it also counts as Social Fitness, so Long is required then: under 60 minutes ticks Social
+   Fitness, 60 minutes or more counts on Social Fitness 60mins+.
+
    v1.4, Oct 4 2026, Scott's answers: if the weekly mark fails to save the form retries once, then says so out loud
    instead of closing quietly. Cause of the Oct 3-4 misses: the database refused the safari-log: source. Also makes today's
    Local Safari habit row (now on the daily habit tracker) when none exists yet.
@@ -47,9 +52,9 @@
    v1.0, Oct 3 2026. First version. Custom words added with + are kept in this browser. */
 window.PYSafari = (function () {
   'use strict';
-  var VERSION = '1.3';
+  var VERSION = '1.5';
   var HOME_STATES = ['ct', 'connecticut', 'ny', 'new york'];
-  var KINDS = ['Library','Park','Museum','Cafe','Gallery','Hotel lobby','Waterfront','Trail','Town','Landmark','Other'];
+  var KINDS = ['Library','Park','Museum','Cafe','Gallery','Concert','Show','Festival','Hotel lobby','Waterfront','Trail','Town','Landmark','Other'];
   var WHYS = ['Work from here','Explore','Both'];
   var WITHS = ['Solo','Åsa','Family','Friend','Colleague'];
   var LONGS = [[30,'30 min'],[60,'1 hour'],[120,'2 hours'],[240,'Half day'],[480,'All day']];
@@ -167,7 +172,7 @@ window.PYSafari = (function () {
      Review rollover reads that note), plus, for today, the habit row on Todays
      Tasks. The habit's own automatic row is removed so the day counts once. */
   async function recordTrackers(sb, logId, which, date, minutes, place){
-    var TASK = which === 'National' ? 'National Safari' : 'Local Safari', DAY = today();
+    var TASK = which === 'Cultural' ? 'Cultural Moments' : (which === 'National' ? 'National Safari' : 'Local Safari'), DAY = today();
     var out = { habitId: null, qs: null };
     try {
       var qs = { date: date, group: 'Environmental Health', tracker: TASK, value: 1, unit: 'done', minutes: minutes || 0,
@@ -251,12 +256,12 @@ window.PYSafari = (function () {
   /* ---------- the form ---------- */
   function Form(el, o){
     this.el = el; this.o = o || {}; this.sb = o.sb;
-    this.s = { which: o.which === 'National' ? 'National' : 'Local', whichTouched: !!o.which, place: o.place || '', town: o.town || '',
+    this.s = { which: (o.which === 'National' || o.which === 'Cultural') ? o.which : 'Local', whichTouched: !!o.which, place: o.place || '', town: o.town || '',
                kind: '', why: '', withs: ['Solo'], when: o.when || today(), mins: null, felt: null, note: '', fav: false, lat: null, lng: null };
     this.sug = [];
     if (o.edit) {
       var er = o.edit; this.editId = er.id; this.editSafariId = er.safari_id; this.sugLoaded = true;
-      this.s = { which: er.kind === 'National' ? 'National' : 'Local', whichTouched: true, place: er.place || '', town: er.town || '',
+      this.s = { which: (er.kind === 'National' || er.kind === 'Cultural') ? er.kind : 'Local', whichTouched: true, place: er.place || '', town: er.town || '',
                  kind: er.place_kind || '', why: er.why || '', withs: (er.with_whom && er.with_whom.length) ? er.with_whom.slice() : ['Solo'],
                  when: er.happened_on, mins: er.mins || null, felt: er.felt || null, note: er.note || '', fav: !!er.favourite, lat: null, lng: null };
     }
@@ -283,8 +288,8 @@ window.PYSafari = (function () {
     var natExtra = isNat ? [{ v: LONG_NAT[1], m: LONG_NAT[0], fixed: true }] : [];
     var editing = !!this.editId;
     var h = '<div class="pysf pysf-auto"><h3>' + (editing ? 'Edit Safari Moment' : 'Log Safari Moment') + '</h3><div class="sf-ver">Safari Log v' + VERSION + '</div>' +
-      '<div class="sf-row r-which"><span class="sf-lab">Which</span>' + ['Local','National'].map(function(w){ return '<button type="button" class="sf-chip' + (s.which === w ? ' on' : '') + '" data-g="which" data-v="' + w + '">' + w + '</button>'; }).join('') + '</div>' +
-      '<div class="sf-hint" style="margin-bottom:8px">National means outside Connecticut and New York.</div>' +
+      '<div class="sf-row r-which"><span class="sf-lab">Which</span>' + ['Local','National','Cultural'].map(function(w){ return '<button type="button" class="sf-chip' + (s.which === w ? ' on' : '') + '" data-g="which" data-v="' + w + '">' + (w === 'Cultural' ? 'Cultural Moment' : w) + '</button>'; }).join('') + '</div>' +
+      '<div class="sf-hint" style="margin-bottom:8px">National means outside Connecticut and New York. Cultural Moment is a concert, show, museum or gallery.</div>' +
       '<div class="sf-row r-where"><span class="sf-lab">Where</span><input type="text" class="sf-place" placeholder="Place name" value="' + esc(s.place) + '"><input type="text" class="sf-town" placeholder="Town, ST" value="' + esc(s.town) + '"></div>' +
       '<div class="sf-sug" id="sf-sug"></div>' +
       '<div class="sf-row r-kind"><span class="sf-lab">Kind</span>' + this.chips('kind', 'kind', s.kind) + '</div>' +
@@ -349,7 +354,7 @@ window.PYSafari = (function () {
       b.onclick = function(){
         self.grab();
         var g = b.getAttribute('data-g'), v = b.getAttribute('data-v');
-        if (g === 'which') { st.which = v; st.whichTouched = true; if (v === 'Local' && st.mins === 1440) st.mins = null; }
+        if (g === 'which') { st.which = v; st.whichTouched = true; if (v !== 'National' && st.mins === 1440) st.mins = null; }
         else if (g === 'kind') st.kind = st.kind === v ? '' : v;
         else if (g === 'why') st.why = st.why === v ? '' : v;
         else if (g === 'with') { var i = st.withs.indexOf(v); if (v === 'Solo') st.withs = ['Solo']; else { st.withs = st.withs.filter(function(x){ return x !== 'Solo'; }); if (i > -1) st.withs = st.withs.filter(function(x){ return x !== v; }); else st.withs.push(v); if (!st.withs.length) st.withs = ['Solo']; } }
@@ -417,8 +422,10 @@ window.PYSafari = (function () {
     var place = String(st.place || '').trim(), town = String(st.town || '').trim();
     if (!place) { this.say('Type or tap a place first.', 'warn'); return; }
     if (st.when > today()) { this.say('Only things that already happened. Pick today or earlier.', 'warn'); return; }
-    var go = this.$('.sf-go'); go.disabled = true; this.say('Saving...');
     var withs = st.withs.slice();
+    var hasCo = st.which === 'Cultural' && withs.some(function(w){ return w && w !== 'Solo'; });
+    if (hasCo && !st.mins) { this.say('Tap how long it was. It also counts as Social Fitness, and the length decides which row.', 'warn'); return; }
+    var go = this.$('.sf-go'); go.disabled = true; this.say('Saving...');
     var row = { kind: st.which, place: place, town: town || null, place_kind: st.kind || null, why: st.why || null,
                 with_whom: withs, happened_on: st.when, mins: st.mins || null, felt: st.felt || null,
                 note: String(st.note || '').trim() || null, favourite: !!st.fav, source: 'logged-by-hand' };
@@ -430,6 +437,7 @@ window.PYSafari = (function () {
         if (u.error) throw u.error;
         await dropTrackers(sb, self.editId);
         await recordTrackers(sb, self.editId, st.which, st.when, st.mins, place);
+        if (hasCo) await recordSocial(sb, self.editId, st.when, st.mins, withs, place);
         if (st.fav && self.editSafariId) await sb.from('safaris').update({ status: 'favourite', updated_at: new Date().toISOString() }).eq('id', self.editSafariId);
         res.logId = self.editId; res.edited = true;
         go.disabled = false;
@@ -437,9 +445,10 @@ window.PYSafari = (function () {
         return;
       }
       /* the place on the Safari places list: add it, or flip an idea to been */
-      var found = await sb.from('safaris').select('id,status,visited_on,tags').ilike('name', place).limit(1);
+      var found = st.which === 'Cultural' ? { data: null } : await sb.from('safaris').select('id,status,visited_on,tags').ilike('name', place).limit(1);
       var sid = null, now = new Date().toISOString();
-      if (found.data && found.data[0]) {
+      if (st.which === 'Cultural') { /* not a safari place */ }
+      else if (found.data && found.data[0]) {
         var f = found.data[0], patch = { updated_at: now };
         if (f.status === 'idea' || st.fav) patch.status = st.fav ? 'favourite' : 'been';
         if (!f.visited_on || f.visited_on < st.when) patch.visited_on = st.when;
@@ -454,16 +463,17 @@ window.PYSafari = (function () {
       if (r.error) throw r.error;
       res.logId = r.data.id;
       var tr = await recordTrackers(sb, res.logId, st.which, st.when, st.mins, place);
+      if (hasCo) { var so = await recordSocial(sb, res.logId, st.when, st.mins, withs, place); res.social = so.ok; }
       if (/^fix\b/i.test(row.note || '')) {
         try { await sb.from('session_todos').insert({ cat: 'Fixes to make', txt: 'Safari, ' + place + ': ' + row.note.replace(/^fix[:\s]*/i, ''), own: 'Claude', project: 'Project YOU', page: 'safari-log.html' }); res.fixTodo = true; } catch (e) {}
       }
-      res.habitId = tr.habitId; res.qsRow = tr.qs; res.mins = st.mins || 0; res.tracker = st.which === 'National' ? 'National Safari' : 'Local Safari';
+      res.habitId = tr.habitId; res.qsRow = tr.qs; res.mins = st.mins || 0; res.tracker = st.which === 'Cultural' ? 'Cultural Moments' : (st.which === 'National' ? 'National Safari' : 'Local Safari');
     } catch (e) {
       go.disabled = false; this.say('That did not save. Try again in a moment.', 'warn'); return;
     }
     go.disabled = false;
     var trackerFailed = !(res.qsRow);
-    var said = trackerFailed ? 'Saved to your Safari Log, but the weekly mark did not save. Tell Claude and it will fix it.' : 'Logged: ' + place + ', ' + shortD(st.when) + '. ' + (st.which === 'National' ? 'National' : 'Local') + ' Safari ticked.' + (res.fixTodo ? ' Added to Claude\'s list under Fixes to make.' : '');
+    var said = trackerFailed ? 'Saved to your Safari Log, but the weekly mark did not save. Tell Claude and it will fix it.' : 'Logged: ' + place + ', ' + shortD(st.when) + '. ' + (st.which === 'Cultural' ? 'Cultural Moment ticked.' + (hasCo ? (res.social === false ? ' The Social Fitness count did not save, tell Claude.' : ' Counted as Social Fitness' + ((st.mins || 0) >= 60 ? ' 60mins+.' : '.')) : '') : (st.which === 'National' ? 'National' : 'Local') + ' Safari ticked.') + (res.fixTodo ? ' Added to Claude\'s list under Fixes to make.' : '');
     this.s = { which: st.which, whichTouched: false, place: '', town: '', kind: '', why: '', withs: ['Solo'], when: today(), mins: null, felt: null, note: '', fav: false, lat: null, lng: null };
     this.sugLoaded = false;
     if (typeof o.onSaved === 'function') { try { o.onSaved(res); } catch (e) {} }
@@ -471,8 +481,37 @@ window.PYSafari = (function () {
     await this.draw(); this.say(said, trackerFailed ? 'warn' : '');
   };
 
+  /* v1.5. Someone came along to a Cultural Moment: it is also a social meet-up. Same write the Log Social Moment form
+     makes (a row in connections, which the database turns into the Social Fitness mark), plus the Social Fitness habit
+     tick when it was under 60 minutes. The row carries [safari:ID] in its note so deleting the entry removes it. */
+  async function recordSocial(sb, logId, date, minutes, withs, place){
+    var names = (withs || []).filter(function(w){ return w && w !== 'Solo'; });
+    if (!names.length) return { ok: true, none: true };
+    var DAY = today(), out = { ok: false };
+    try {
+      var r = await sb.from('connections').insert({ person: names[0], person_key: names[0], entity_type: 'person', kind: 'other', channel: 'in person',
+        happened_on: date, planned: false, notes: 'Cultural Moment: ' + place + ' [safari:' + logId + ']', place: place, labels: [], others: names.slice(1),
+        mins: minutes || null, source: 'logged-by-hand', superseded: false });
+      if (r.error) return out;
+      out.ok = true;
+      if ((minutes || 0) < 60) {
+        if (date === DAY) {
+          var h = await sb.from('todos').select('id,done').eq('is_habit', true).eq('tracker', 'Social').limit(1);
+          var row = h.data && h.data[0];
+          if (row && !row.done) { var now = new Date().toISOString();
+            await sb.from('todos').update({ done: true, status: 'done', done_at: now, completed_at: now, actual_minutes: minutes || null, for_date: DAY, updated_at: now }).eq('id', row.id); }
+        } else if (date < DAY) {
+          await sb.from('qs_log').upsert([{ date: date, group: 'Social Well-Being', tracker: 'Social', value: 1, unit: 'done', minutes: minutes || null,
+            minutes_estimated: !minutes, status: 'done', source: 'habit-bandit', logged_at: new Date().toISOString(), note: 'Logged from a Cultural Moment on ' + DAY }],
+            { onConflict: 'date,tracker,source' });
+        }
+      }
+    } catch (e) { out.ok = false; }
+    return out;
+  }
   async function dropTrackers(sb, logId){
     try { await sb.from('qs_log').delete().eq('source', 'safari-log:' + logId); } catch (e) {}
+    try { await sb.from('connections').delete().like('notes', '%[safari:' + logId + ']%'); } catch (e) {}
   }
 
   function mount(el, opts){

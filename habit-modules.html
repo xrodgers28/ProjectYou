@@ -849,13 +849,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.65</span>
+    <span class="pn-ver">v6.66</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.65</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.66</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -1419,7 +1419,7 @@ var RAIL = (function(){
            addPhotoName:'', addLabelName:'', addSay:'', cups:[], cofOpen:false, cofJustOpened:false, cofLastId:null, glasses:0, mf:{}, flags:{}, ex:null, photo:false, meals:{}, soc:{}, plans:[], quiet:[], ready:false,
            chocTaps:[], wineTaps:[], chocQty:0, wineQty:0, viceWhy:'', viceOpen:false, viceJustOpened:false,
            mh:[], mhWeek:{}, bdays:[], mhOpen:null, mhStep:null, mhName:null, mhMins:null,
-           wi:[], railOrder:null, wiAddOpen:false, wiText:'', wiLabel:'', wiSection:'', wiLabelTouched:false};
+           wi:[], mo:[], moCount:{}, railOrder:null, wiAddOpen:false, wiText:'', wiLabel:'', wiSection:'', wiLabelTouched:false};
   var el = null;
 
   /* ---- the day's latte pattern: same for every cup, worked out from the date ---- */
@@ -1641,6 +1641,16 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
       if(trackers.indexOf(trk)<0) trackers.push(trk);
       RAILDEF[trk] = {task:x.tracker_label, group:x.section, est:1, pos:20+x.id};
     });
+    /* THIS MONTH (v6.66, Oct 5 2026): the monthly twin of Weekly Items. Lists every worksheet habit whose cadence is
+       Monthly and that has a tracker, and counts how many times it happened this calendar month from the log. */
+    try{
+      var moRes = await sb.from('worksheet_rows').select('id,habit,qs_tracker').eq('cadence','Monthly').eq('retired',false).not('qs_tracker','is',null).order('id',{ascending:true});
+      R.mo = moRes.data||[]; R.moCount={};
+      if(R.mo.length){
+        var moLog = await sb.from('qs_log').select('tracker,date').in('tracker',R.mo.map(function(x){return x.qs_tracker;})).gte('date',wd.slice(0,8)+'01').lte('date',wd).eq('status','done');
+        (moLog.data||[]).forEach(function(r){ R.moCount[r.tracker]=(R.moCount[r.tracker]||0)+1; });
+      }
+    }catch(e){ R.mo=[]; }
     /* the rail's own saved drag order, same app_meta table the Todays Tasks
        page uses for its section order, so it sticks on every device. */
     var railOrderRes = await sb.from('app_meta').select('value').eq('key','habit_rail_order').maybeSingle();
@@ -3107,6 +3117,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
        stays a tick - it does not clear at the nightly reset like the rest
        of this rail - it only changes when he taps it again. */
     push('weekly', wiCard());
+    push('monthly', moCard());
     /* Exercise — double height */
     push('exercise','<div class="rt rex2" data-tile="exercise" style="--ra:#e07b39"><span class="rgrip" title="Drag to reorder"></span><div class="rhd"><span class="rn">Exercise</span>'+
        '<span class="rv2"></span></div><div class="rrow">'+
@@ -3207,6 +3218,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     var sc=el.querySelector('[data-soc]'); if(sc) sc.onclick=socOpen;
     el.querySelectorAll('[data-mh]').forEach(function(b){b.onclick=function(){mhTap(b.dataset.mh);};});
 
+    el.querySelectorAll('[data-molog]').forEach(function(b){b.onclick=function(){ moLog(b.dataset.molog); };});
     /* Weekly Items bindings */
     el.querySelectorAll('[data-witog]').forEach(function(b){b.onclick=function(){ wiToggle(+b.dataset.witog); };});
     el.querySelectorAll('[data-wikill]').forEach(function(b){b.onclick=function(){ wiDelete(+b.dataset.wikill); };});
@@ -3271,6 +3283,26 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
       '<div class="rv">'+(items.length?doneN+' of '+items.length:'')+'</div></div>'+
       (rows?'<div class="rwilist">'+rows+'</div>':'')+
       addUi+'</div>';
+  }
+  /* ---------- This month (v6.66): the monthly habits and how many times each happened this month ---------- */
+  function moCard(){
+    var items=R.mo||[]; if(!items.length) return '';
+    var hit=items.filter(function(x){ return (R.moCount[x.qs_tracker]||0)>0; }).length;
+    var rows=items.map(function(x){
+      var n=R.moCount[x.qs_tracker]||0;
+      return '<div class="wirow'+(n?' on':'')+'"><button class="wichk'+(n?' on':'')+'" data-molog="'+esc(x.qs_tracker)+'" title="Log one"></button>'+
+        '<span class="witext" data-molog="'+esc(x.qs_tracker)+'" title="'+esc(x.habit)+'">'+esc(x.habit)+'</span>'+(n>1?'<span class="rv">'+n+'x</span>':'')+'</div>';
+    }).join('');
+    return '<div class="rt rwi" data-tile="monthly" style="--ra:#8a6bb0"><span class="rgrip" title="Drag to reorder"></span>'+
+      '<div class="rwihd"><div class="rn">This<br>Month</div><div class="rv">'+hit+' of '+items.length+'</div></div>'+
+      '<div class="rwilist">'+rows+'</div></div>';
+  }
+  function moLog(tracker){
+    if(tracker==='Cultural Moments' && window.PYSafari){
+      PYSafari.open({sb:sb, which:'Cultural', when:viewDay(), onSaved:function(){ R.moCount[tracker]=(R.moCount[tracker]||0)+1; draw(); }});
+      return;
+    }
+    if(typeof toast==='function') toast('That monthly habit does not have a log form yet.');
   }
   function focusWiText(){ requestAnimationFrame(function(){ var i=document.getElementById('wiInpText'); if(i) i.focus(); }); }
   async function wiSave(){

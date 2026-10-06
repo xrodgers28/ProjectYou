@@ -59,6 +59,9 @@
    has its own tint (Is lilac, Circle slate, Source amber, What warm, When blue,
    Where green) and the chosen pill goes solid; Group keeps its year-grid colours.
 
+   v2.6, Oct 5 2026, Scott's answers: a new meet-up must say how long it was (Long is now required). Under 60 minutes
+   ticks the Social Fitness habit; 60 minutes or more counts on the Social Fitness 60mins+ row instead and does not tick it.
+
    v2.4, Sep 21 2026, the four taps. Scott picked six measures for the Year view
    and three of them were undercounting, because a room with six friends in it
    counted as one person seen. These four taps are what stop that:
@@ -860,6 +863,7 @@ window.PYSocial = (function () {
     var tn = tidyName(raw), who = tn.name;
     if (!who) { this.say('Put a name in first. A first name is enough.', 'warn'); this.$('.sl-who').focus(); return; }
     if (!this.kind) { this.say('Pick what it was.', 'warn'); return; }
+    if (!this.isFuture() && !this.mins) { this.say('Tap how long it was. 60 minutes or more counts as Social Fitness 60mins+.', 'warn'); return; }
     var fut = this.isFuture(), carry = this.carry(who) || {};
     var others = String(this.$('.sl-with').value || '').trim();
     /* v2.4. One field, many people. Commas, "and", & and + all split, the same way
@@ -897,7 +901,7 @@ window.PYSocial = (function () {
       if (!r.error && r.data) {
         res.connectionId = r.data.id;
         res.others = othersList.slice(); res.mins = this.mins || null; res.felt = this.felt || null;
-        res.habitId = await tickHabit(sb, this.when, this.mins || o.mins || null);
+        res.habitId = (this.mins || 0) < 60 ? await tickHabit(sb, this.when, this.mins || o.mins || null) : null;
       }
     }
     if (!r.error && keep && typed) { try { await this.keepNote(who, typed, res.connectionId); } catch (e) {} }
@@ -907,7 +911,7 @@ window.PYSocial = (function () {
        whole reason the Else row exists, so it should be visible at the save. */
     var head = 1 + othersList.length;
     var said = fut ? ('On your board under Social Well-Being: ' + title + ', ' + shortD(this.when) + '.')
-                   : ('Logged: ' + title + ', ' + shortD(this.when) + '. Social habit ticked.' +
+                   : ('Logged: ' + title + ', ' + shortD(this.when) + '. ' + ((this.mins || 0) < 60 ? 'Social Fitness ticked.' : 'Counted on Social Fitness 60mins+.') +
                       (head > 1 ? ' ' + head + ' people counted for today.' : ''));
     this.kind = ''; this.place = ''; this.labels = []; this.labelsTouched = false; this.source = ''; this.who0 = ''; this.with0 = '';
     this.mins = null; this.felt = null;
