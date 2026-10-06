@@ -27,6 +27,9 @@
 
    Change the form here and every page gets the change. Do not copy it into a page.
 
+   v1.6, Oct 5 2026, Scott's answer: with company, the Log Social Moment form opens after the save (length carried over) instead of a quiet
+   background write. Pages without that form fall back to the quiet write.
+
    v1.5, Oct 5 2026, Scott's answers: a third Which, Cultural Moment (a concert, show, museum or gallery visit). It ticks the
    Cultural Moments habit, which stays off the daily list until it happens. It does not go on the Safari places list.
    If someone was with you it also counts as Social Fitness, so Long is required then: under 60 minutes ticks Social
@@ -52,7 +55,7 @@
    v1.0, Oct 3 2026. First version. Custom words added with + are kept in this browser. */
 window.PYSafari = (function () {
   'use strict';
-  var VERSION = '1.5';
+  var VERSION = '1.6';
   var HOME_STATES = ['ct', 'connecticut', 'ny', 'new york'];
   var KINDS = ['Library','Park','Museum','Cafe','Gallery','Concert','Show','Festival','Hotel lobby','Waterfront','Trail','Town','Landmark','Other'];
   var WHYS = ['Work from here','Explore','Both'];
@@ -463,7 +466,15 @@ window.PYSafari = (function () {
       if (r.error) throw r.error;
       res.logId = r.data.id;
       var tr = await recordTrackers(sb, res.logId, st.which, st.when, st.mins, place);
-      if (hasCo) { var so = await recordSocial(sb, res.logId, st.when, st.mins, withs, place); res.social = so.ok; }
+      if (hasCo) {
+        if (window.PYSocial && typeof PYSocial.open === 'function') {
+          /* v1.6: Scott's answer, Oct 5 2026: open the Log Social Moment form after a Cultural Moment with company, so the
+             meet-up is recorded the same way as every other one. Opened after this sheet has closed. */
+          var socWhen = st.when, socMins = st.mins, socTitle = 'Time with ' + withs.filter(function(w){ return w && w !== 'Solo'; }).join(' and ');
+          setTimeout(function(){ try { PYSocial.open({ sb: sb, when: socWhen, mins: socMins, title: socTitle }); } catch (e) {} }, 120);
+          res.social = 'form';
+        } else { var so = await recordSocial(sb, res.logId, st.when, st.mins, withs, place); res.social = so.ok; }
+      }
       if (/^fix\b/i.test(row.note || '')) {
         try { await sb.from('session_todos').insert({ cat: 'Fixes to make', txt: 'Safari, ' + place + ': ' + row.note.replace(/^fix[:\s]*/i, ''), own: 'Claude', project: 'Project YOU', page: 'safari-log.html' }); res.fixTodo = true; } catch (e) {}
       }
@@ -473,7 +484,7 @@ window.PYSafari = (function () {
     }
     go.disabled = false;
     var trackerFailed = !(res.qsRow);
-    var said = trackerFailed ? 'Saved to your Safari Log, but the weekly mark did not save. Tell Claude and it will fix it.' : 'Logged: ' + place + ', ' + shortD(st.when) + '. ' + (st.which === 'Cultural' ? 'Cultural Moment ticked.' + (hasCo ? (res.social === false ? ' The Social Fitness count did not save, tell Claude.' : ' Counted as Social Fitness' + ((st.mins || 0) >= 60 ? ' 60mins+.' : '.')) : '') : (st.which === 'National' ? 'National' : 'Local') + ' Safari ticked.') + (res.fixTodo ? ' Added to Claude\'s list under Fixes to make.' : '');
+    var said = trackerFailed ? 'Saved to your Safari Log, but the weekly mark did not save. Tell Claude and it will fix it.' : 'Logged: ' + place + ', ' + shortD(st.when) + '. ' + (st.which === 'Cultural' ? 'Cultural Moment ticked.' + (hasCo ? (res.social === false ? ' The Social Fitness count did not save, tell Claude.' : (res.social === 'form' ? ' Log Social Moment is opening so you can count who came.' : ' Counted as Social Fitness' + ((st.mins || 0) >= 60 ? ' 60mins+.' : '.'))) : '') : (st.which === 'National' ? 'National' : 'Local') + ' Safari ticked.') + (res.fixTodo ? ' Added to Claude\'s list under Fixes to make.' : '');
     this.s = { which: st.which, whichTouched: false, place: '', town: '', kind: '', why: '', withs: ['Solo'], when: today(), mins: null, felt: null, note: '', fav: false, lat: null, lng: null };
     this.sugLoaded = false;
     if (typeof o.onSaved === 'function') { try { o.onSaved(res); } catch (e) {} }
