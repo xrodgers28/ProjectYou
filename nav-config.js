@@ -47,7 +47,9 @@ window.NAV_CONFIG = {
     /* Sep 6 2026, Scott. The end-of-week review: three scores, the habit grid,
        the quiz built from the week's dealt cards, and next week's goals. */
     { "label": "The PY Week<br>in Review", "href": "weekly-review.html" },
-    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" }
+    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
+    /* Oct 6 2026, Scott: v2 of the wheel at its own URL, wheel left and Core habits right. */
+    { "label": "Time Bandit<br>Wheel v2", "href": "time-bandit-wheel-v2.html" }
   ],
   /* Displayed as LISTS - see NAV_GROUP_RENAME below. The key stays "Parking Lot"
      because that string is baked into every page's markup and is what navpatch
