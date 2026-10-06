@@ -75,7 +75,10 @@ window.NAV_CONFIG = {
     { "label": "Cheat<br>Sheet", "href": "cheat-sheet.html" },
     { "label": "Maps &amp;<br>Diagrams", "href": "maps.html" },
     { "label": "Mission<br>Control", "href": "mission.html" },
-    { "label": "Docs<br>Library", "href": "library.html" }
+    { "label": "Docs<br>Library", "href": "library.html" },
+    /* Oct 6 2026, Scott: Presentation Mode goes in the main nav. Builds and
+       presents the Project YOU talk from live pages plus classic slides. */
+    { "label": "Presentation<br>Mode", "href": "presentation-mode.html" }
   ]
 };
 
