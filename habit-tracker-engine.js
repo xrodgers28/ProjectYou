@@ -9,11 +9,11 @@
 
    A design is a small plug-in: PYHT.register({id, name, render(state, size, PYHT) -> html string}).
    size is 'card' (cue card page) or 'phone' (one-tap iPhone view).
-   v1.3 (Oct 5, 2026): four levels. core, secondary, bonus, weekly. Bonus counts like secondary. Weekly habits are NOT in state.habits (so no design counts them in today's lights); they are in state.weekly, done if ticked any day this week (Monday to Sunday, 2am days), counts.wt and counts.wd.
+   v1.4 (Oct 6, 2026): E.art(h, true) prefers the latest Stack Builder icon (worksheet_rows.icon through wsicons-v2.js). v1.3 (Oct 5, 2026): four levels. core, secondary, bonus, weekly. Bonus counts like secondary. Weekly habits are NOT in state.habits (so no design counts them in today's lights); they are in state.weekly, done if ticked any day this week (Monday to Sunday, 2am days), counts.wt and counts.wd.
    state.habits[i] = {lvl, n, ic, sec, core(1/0), st(stack index), stack, pos, done, art, color, pastel, bg, secName}. */
 (function () {
   var TZ = 'America/New_York';
-  var E = window.PYHT = { version: '1.3', SIZES: { card: 330, phone: 262 }, _designs: {} };
+  var E = window.PYHT = { version: '1.4', SIZES: { card: 330, phone: 262 }, _designs: {} };
   var sb = null, userId = null, cfg = [], set = {}, ready = null;
 
   /* Match names between the sorted list and the daily habits: ignore emoji, case, curly quotes. */
@@ -27,8 +27,12 @@
     sb = client; userId = uid || null;
     ready = Promise.all([
       sb.from('habit_tracker_config').select('*').eq('enabled', true).order('stack_idx').order('stack_pos'),
-      sb.from('habit_tracker_settings').select('*')
+      sb.from('habit_tracker_settings').select('*'),
+      sb.from('worksheet_rows').select('habit,icon').not('icon', 'is', null)
     ]).then(function (r) {
+      /* v1.4: the latest icon picks live on the worksheet rows (set in Stack Builder). Not fatal if unreadable. */
+      E.wsIcons = {};
+      ((r[2] && r[2].data) || []).forEach(function (w) { if (w.icon) E.wsIcons[norm(w.habit)] = w.icon; });
       if (r[0].error) throw r[0].error;
       if (r[1].error) throw r[1].error;
       var rows = r[0].data || [];
@@ -124,7 +128,13 @@
   }
 
   /* Art for a habit: {type:'img', src} for board and row art; {type:'svg', svg, color, color2} for cue card art. */
-  E.art = function (h) {
+  /* latest = true (Remote Lights only so far): use the newest picked icon from Stack Builder when there is one. */
+  var ALIAS = { 'inspiration wall': 'sparkboard', 'the wall': 'sparkboard' };
+  E.art = function (h, latest) {
+    if (latest && window.WSV2 && E.wsIcons) {
+      var k = E.wsIcons[norm(h.n)] || E.wsIcons[ALIAS[norm(h.n)]];
+      if (k && window.WSV2[k]) return { type: 'img', src: window.WSV2[k] };
+    }
     var A = window.PYHT_ART || {}, a = h.art || {};
     if (a.kind === 'card' && A.ICB && A.ICB[a.key]) return { type: 'svg', svg: A.ICB[a.key], color: a.color, color2: a.color2 };
     if (a.kind === 'board' && A.BIMG && A.BIMG[a.key]) return { type: 'img', src: A.BIMG[a.key] };
