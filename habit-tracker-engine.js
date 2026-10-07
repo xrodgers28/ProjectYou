@@ -25,11 +25,16 @@
 
   E.init = function (client, uid) {
     sb = client; userId = uid || null;
-    ready = Promise.all([
+    var wsLoad = new Promise(function (ok) {
+      if (window.WSV2) return ok();
+      var s = document.createElement('script'); s.src = 'wsicons-v2.js'; s.onload = ok; s.onerror = ok; document.head.appendChild(s);
+    });
+    ready = Promise.all([wsLoad,
       sb.from('habit_tracker_config').select('*').eq('enabled', true).order('stack_idx').order('stack_pos'),
       sb.from('habit_tracker_settings').select('*'),
       sb.from('worksheet_rows').select('habit,icon').not('icon', 'is', null)
-    ]).then(function (r) {
+    ]).then(function (r0) {
+      var r = r0.slice(1);
       /* v1.4: the latest icon picks live on the worksheet rows (set in Stack Builder). Not fatal if unreadable. */
       E.wsIcons = {};
       ((r[2] && r[2].data) || []).forEach(function (w) { if (w.icon) E.wsIcons[norm(w.habit)] = w.icon; });
