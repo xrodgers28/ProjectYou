@@ -1,4 +1,4 @@
-/* Design H: Remote Lights, Grid (design file ref 61). v1.5 Oct 6, 2026 (a lit button is now one full disc with a coloured rim, no dark ring around it; v1.4: lights now use a soft glow: each light is a bright centre fading to nothing with a wide, gentle halo, like the green SIG light, instead of a hard-edged dot; v1.3: a section with no habits now still shows its label and a hint; four separate sections: CORE large keys in a 3 by 3 grid, then SECONDARY, BONUS and WEEKLY as smaller key rows, each with its own label and count. Bonus counts toward lights out like secondary; weekly never counts toward today's lights). Core habits are big round keys in a 3 by 3 grid, secondary habits a smaller row of keys. An open habit has its LED lit in its section colour and its key backlit; a finished habit has its LED off and its key grey. "Lights out" means all of them dark.
+/* Design H: Remote Lights, Grid (design file ref 61). v1.7 Oct 6, 2026 (uses the latest picked icons; v1.6: glow dimmed to 30% of v1.5; v1.5: a lit button is now one full disc with a coloured rim, no dark ring around it; v1.4: lights now use a soft glow: each light is a bright centre fading to nothing with a wide, gentle halo, like the green SIG light, instead of a hard-edged dot; v1.3: a section with no habits now still shows its label and a hint; four separate sections: CORE large keys in a 3 by 3 grid, then SECONDARY, BONUS and WEEKLY as smaller key rows, each with its own label and count. Bonus counts toward lights out like secondary; weekly never counts toward today's lights). Core habits are big round keys in a 3 by 3 grid, secondary habits a smaller row of keys. An open habit has its LED lit in its section colour and its key backlit; a finished habit has its LED off and its key grey. "Lights out" means all of them dark.
    Animation-ready: every key is tagged data-h, every LED data-led, every key face data-key. Draws only; every fact comes from the engine state. */
 (function () {
   PYHT.register({
@@ -14,7 +14,7 @@
       var GOLD = '#f4c95d', MUTE = '#9aa3c0';
       var KEYBG = 'radial-gradient(circle at 35% 30%,#42454f,#1e2026)';
       function art(x, s) {
-        var a = P.art(x), inner;
+        var a = P.art(x, true), inner;
         if (a.type === 'svg') inner = '<span style="display:flex;width:66%;height:66%;color:' + (a.color || x.color) + '">' + a.svg + '</span>';
         else inner = '<img alt="" src="' + a.src + '" style="width:74%;height:74%;object-fit:contain">';
         return inner;
@@ -26,14 +26,14 @@
         if (!lit) return '<i data-led style="position:absolute;left:' + Math.round(off + led * .35) + 'px;top:' + Math.round(off + led * .45) + 'px;width:' + Math.round(L * .8) + 'px;height:' + Math.round(L * .8) + 'px;border-radius:50%;background:radial-gradient(circle at 50% 50%,#1c1e24 0,#24272e 45%,#2b2e3500 100%);pointer-events:none"></i>';
         return '<i data-led style="position:absolute;left:' + Math.round(off + led * .1) + 'px;top:' + Math.round(off + led * .2) + 'px;width:' + L + 'px;height:' + L + 'px;border-radius:50%;pointer-events:none;' +
           'background:radial-gradient(circle at 50% 46%,#ffffff 0,' + a(c, 255) + ' 28%,' + a(c, 215) + ' 52%,' + a(c, 90) + ' 78%,' + a(c, 0) + ' 100%);' +
-          'box-shadow:0 0 ' + Math.round(led * .9) + 'px ' + Math.round(led * .2) + 'px ' + a(c, 190) + ',0 0 ' + Math.round(led * 2.4) + 'px ' + Math.round(led * .5) + 'px ' + a(c, 95) + ',0 0 ' + Math.round(led * 4.5) + 'px ' + Math.round(led * 1) + 'px ' + a(c, 45) + '"></i>';
+          'box-shadow:0 0 ' + Math.round(led * .9) + 'px ' + Math.round(led * .2) + 'px ' + a(c, 57) + ',0 0 ' + Math.round(led * 2.4) + 'px ' + Math.round(led * .5) + 'px ' + a(c, 29) + ',0 0 ' + Math.round(led * 4.5) + 'px ' + Math.round(led * 1) + 'px ' + a(c, 14) + '"></i>';
       }
       function key(x, d, led) {
         var lit = !x.done, c = x.color;
         if (lit) {
           /* v1.5: a lit key is one full disc, light face and a coloured rim, with no dark bezel around it */
           var rim = Math.max(2, Math.round(d * .045));
-          return '<div data-h="' + e(x.n) + '" style="position:relative;width:' + d + 'px;height:' + d + 'px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:radial-gradient(circle at 40% 35%,#f1f1f3,#dcdce0);border:' + rim + 'px ' + (x.lvl === 'bonus' ? 'dashed ' : 'solid ') + a(c, 255) + ';box-shadow:0 4px 8px #000b,0 0 16px 2px ' + a(c, 85) + ',0 0 34px 6px ' + a(c, 40) + '">' +
+          return '<div data-h="' + e(x.n) + '" style="position:relative;width:' + d + 'px;height:' + d + 'px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:radial-gradient(circle at 40% 35%,#f1f1f3,#dcdce0);border:' + rim + 'px ' + (x.lvl === 'bonus' ? 'dashed ' : 'solid ') + a(c, 255) + ';box-shadow:0 4px 8px #000b,0 0 16px 2px ' + a(c, 26) + ',0 0 34px 6px ' + a(c, 12) + '">' +
             '<span data-key style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;border-radius:50%">' + art(x, d) + '</span>' + ledHtml(x, led, lit) + '</div>';
         }
         var face = '<span data-key style="display:flex;align-items:center;justify-content:center;width:' + Math.round(d * .66) + 'px;height:' + Math.round(d * .66) + 'px;border-radius:50%;background:#2c2f38;opacity:.5;filter:grayscale(1)">' + art(x, d) + '</span>';
