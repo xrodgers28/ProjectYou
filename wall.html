@@ -647,6 +647,10 @@
   .w2read h3{font-family:Georgia,"Times New Roman",serif;font-size:23px;line-height:1.15;margin:0;text-wrap:balance}
   .w2read p{margin:0;font-size:14px;line-height:1.55;color:#3a3a3a}
   .w2read .w2btn{align-self:flex-start;margin-top:auto}
+  .w2door .acts{margin-top:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .w2door .acts .w2btn{margin-top:0;text-decoration:none}
+  .w2door .acts small{font-size:12px;color:#6b6b6b}
+  .w2door .hero a{position:absolute;inset:0;display:block}
   .w2board{max-width:620px;margin:0 auto;background:#141922;color:#f3f4f6;border-radius:12px;padding:22px}
   .w2board .k{font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:#e9a08f}
   .w2board h3{font-size:22px;margin:6px 0 8px}
@@ -659,7 +663,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.14</span></h1>
+      <h1>Sparkboard <span class="ver">v2.15</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -761,7 +765,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.14</div>
+  <div class="stamp" id="stamp">v2.15</div>
 </div>
 
 <aside class="stx-col">
@@ -959,6 +963,8 @@ var W2B = {
            i:'<svg viewBox="0 0 16 16" fill="currentColor"><path d="M5 3l8 5-8 5z"/></svg>'},
   read:   {n:"Read card", d:"The cover picture, the headline and the article's own opening lines. Star keeps it for later.",
            i:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 3h5v10H2zM9 3h5v10H9z"/></svg>'},
+  door:   {n:"Daily door", d:"One surprising website a day. Open it, or swap it up to three times.",
+           i:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3.5" y="1.5" width="9" height="13" rx="1"/><circle cx="10" cy="8" r=".9" fill="currentColor"/></svg>'},
   deck:   {n:"One slide a day", d:"A deck dealt one slide a day. It counts down, then asks what next.",
            i:'<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="3" width="13" height="8" rx="1"/><path d="M8 11v3M5 14h6"/></svg>'}
 };
@@ -983,6 +989,7 @@ function w2count(g){
     return word+Math.min(pile.total,pile.seen)+" of "+pile.total;
   }
   if(b==="deck") return "Today's slide";
+  if(b==="door") return "Today's door";
   if(b==="read") return n===1?"1 article":n+" articles";
   if(b==="story"){
     var pics=0; g.items.forEach(function(i){ pics+=(i.gallery&&i.gallery.length)||1; });
@@ -1099,6 +1106,15 @@ function fillTray(n){
       h+='<div class="mi">'+starBtn(it)+zo(it,'<img src="'+esc(it.img)+'" alt="'+esc(it.title)+'" decoding="async">')+'</div>';
     });
     h+='</div>';
+  } else if(b==="door"){
+    g.items.forEach(function(it){
+      h+='<div class="w2read w2door"><div class="hero">'+starBtn(it)+
+         '<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer" aria-label="Open '+esc(it.title)+'"><img src="'+esc(it.img)+'" alt="" decoding="async"></a></div>'+
+         '<div class="tx"><span class="k">'+esc(it.source)+'</span><h3>'+esc(it.title)+'</h3>'+(it.blurb?'<p>'+esc(it.blurb)+'</p>':'')+
+         '<div class="acts"><a class="w2btn pri" href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">Open it</a>'+
+         '<button class="w2btn" type="button" data-w2swap="'+esc(g.key)+'">Swap it</button>'+
+         '<small data-swl="'+esc(g.key)+'"></small></div></div></div>';
+    });
   } else if(b==="talk"){
     g.items.forEach(function(it){
       var d=it.seconds?wlDur(it.seconds):"";
@@ -1138,6 +1154,28 @@ function fillTray(n){
   return head+h;
 }
 
+/* v2.15 (Oct 7, 2026): the two daily doors (Weird door, Random Daily URL). Swap shows the next checked spare, up to 3 a day, and the database keeps a record of each one passed. */
+function doorRefresh(tr){
+  Array.prototype.forEach.call(tr.querySelectorAll("[data-swl]"), function(el){
+    var k=el.getAttribute("data-swl");
+    api("v_door_state?source_key=eq."+encodeURIComponent(k)+"&order=for_day.desc&limit=1").then(function(r){
+      var st=r&&r[0]; if(!st) return;
+      var left=st.swaps_left, sp=st.spares, n=Math.min(left,sp);
+      el.textContent = n>0 ? (n===1?"1 swap left":n+" swaps left") : "No swaps left today";
+      var b=tr.querySelector('[data-w2swap="'+k+'"]'); if(b && n<=0){ b.disabled=true; b.style.opacity=".5"; }
+    }).catch(function(){});
+  });
+}
+function doorSwap(k){
+  api("rpc/door_swap",{method:"POST",body:JSON.stringify({p_source:k})}).then(function(r){
+    ITEMS.forEach(function(i){ if(i.source_key===k){ i.item_id=r.item_id; i.title=r.title; i.link=r.link; i.img=r.img; i.blurb=r.blurb; i.saved=false; } });
+    paint();
+    toast("Swapped. "+(r.swaps_left===1?"1 swap left.":r.swaps_left+" swaps left."));
+  }).catch(function(e){
+    var m=String(e&&e.message||"");
+    toast(/No swaps left/.test(m)?"No swaps left today.":/No spare/.test(m)?"No spare doors left today.":"Could not swap: "+m.slice(0,80));
+  });
+}
 function closeAllTrays(){
   Array.prototype.forEach.call(document.querySelectorAll("[data-tray]"), function(o){ o.hidden=true; });
   Array.prototype.forEach.call(document.querySelectorAll("[data-src]"), function(b){
@@ -1162,6 +1200,7 @@ function openTrayFor(n){
     }
   }
   tr.hidden=false;
+  doorRefresh(tr);
 }
 function toggleTray(n){
   var tr=document.querySelector('[data-tray="'+n+'"]');
@@ -1398,6 +1437,7 @@ document.addEventListener("click",function(e){
   var sy=t.closest("[data-w2story]"); if(sy){ e.preventDefault(); w2story(+sy.getAttribute("data-w2story")); return; }
   var fl=t.closest(".w2flip");
   if(fl && !t.closest("a,button,[data-item],[data-open]")){ fl.classList.toggle("on"); return; }
+  var dsw=t.closest("[data-w2swap]"); if(dsw){ e.preventDefault(); if(!dsw.disabled) doorSwap(dsw.getAttribute("data-w2swap")); return; }
   var wa=t.closest("[data-w2watch]"); if(wa){ e.preventDefault(); w2watch(+wa.getAttribute("data-w2watch")); return; }
   var dk=t.closest("[data-w2deck]"); if(dk){ e.preventDefault(); w2deck(dk.getAttribute("data-k"),dk.getAttribute("data-w2deck")); return; }
   if(!document.getElementById("w2sh").hidden){
@@ -2418,7 +2458,7 @@ function renderDateLine(){
   document.getElementById("sub").textContent=
     days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
   document.getElementById("stamp").textContent=
-    "v2.14 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+    "v2.15 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
   var lbl=document.getElementById("daylabel");
   if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
   var ds=document.getElementById("daystep");
