@@ -79,8 +79,10 @@ window.NAV_CONFIG = {
     { "label": "Mission<br>Control", "href": "mission.html" },
     { "label": "Docs<br>Library", "href": "library.html" },
     /* Oct 6 2026, Scott: Presentation Mode goes in the main nav. Builds and
-       presents the Project YOU talk from live pages plus classic slides. */
-    { "label": "Presentation<br>Mode", "href": "presentation-mode.html" }
+       presents the Project YOU talk from live pages plus classic slides.
+       Oct 8 2026, Scott: show it as a small projector-screen icon, no words.
+       The name stays as the hover tooltip and the screen-reader label. */
+    { "label": "<svg class=\"pn-ico\" viewBox=\"0 0 24 24\" width=\"22\" height=\"22\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" role=\"img\" aria-label=\"Presentation Mode\"><title>Presentation Mode</title><path d=\"M3 4h18\"/><rect x=\"4.5\" y=\"4\" width=\"15\" height=\"10\" rx=\"1\"/><path d=\"M12 14v4\"/><path d=\"M8.5 21l3.5-3 3.5 3\"/><path d=\"M8 11l2.5-3 2 2 3-3.5\"/></svg>", "href": "presentation-mode.html" }
   ]
 };
 
