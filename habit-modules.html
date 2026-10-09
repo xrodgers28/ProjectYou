@@ -930,13 +930,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.79</span>
+    <span class="pn-ver">v6.80</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.79</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.80</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -4005,7 +4005,7 @@ async function signIn(){
    face up as it arrives. Only the cards on screen are dealt. Runs once per page open,
    after the database has answered, with a safety timer so cards can never stay hidden. */
 var PYCARDS=(function(){
-  var FIT_MIN=0.55, ran=false, holdT=null, TH=11, D=750, STEP=150;
+  var FIT_MIN=0.55, ran=false, queued=false, holdT=null, TH=11, D=1050, STEP=230;
   var reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
   var SEL='#board > .card, #sections .board > .card';
 
@@ -4040,11 +4040,11 @@ var PYCARDS=(function(){
 
   function hold(){
     document.documentElement.classList.add('py-predeal');
-    holdT=setTimeout(run,4500);
+    holdT=setTimeout(deal,9000);   /* safety: cards are never hidden longer than this */
   }
   function reveal(){document.documentElement.classList.remove('py-predeal');}
 
-  function run(){
+  function deal(){
     if(ran) return; ran=true; clearTimeout(holdT);
     var all=[].slice.call(document.querySelectorAll(SEL));
     var vh=window.innerHeight;
@@ -4086,6 +4086,28 @@ var PYCARDS=(function(){
       if(pack.parentNode)pack.parentNode.removeChild(pack);
       lock.forEach(function(b){b.style.pointerEvents='';});
     },(n-1)*STEP+D+150);
+  }
+  /* v6.80: wait for everything else first. The deal starts only after the page, its
+     pictures and fonts have loaded, your data has come back, and the layout has held
+     still for over half a second (the Photo Booth bar and counters arrive late and
+     move things). */
+  function settled(cb){
+    var last='',since=Date.now(),start=Date.now();
+    (function tick(){
+      var b=document.getElementById('board'),r=b?b.getBoundingClientRect():null;
+      var sig=r?Math.round(r.top)+'|'+Math.round(r.height)+'|'+document.documentElement.scrollHeight:'';
+      if(sig!==last){last=sig;since=Date.now();}
+      if(Date.now()-since>=650||Date.now()-start>6000) return cb();
+      requestAnimationFrame(tick);
+    })();
+  }
+  function run(){
+    if(ran||queued) return; queued=true;
+    function go(){
+      var f=(document.fonts&&document.fonts.ready)||Promise.resolve();
+      f.then(function(){settled(deal);},function(){settled(deal);});
+    }
+    if(document.readyState==='complete') go(); else window.addEventListener('load',go,{once:true});
   }
   return {fit:fit,hold:hold,run:run};
 })();
