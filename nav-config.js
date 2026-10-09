@@ -13,8 +13,9 @@ window.NAV_CONFIG = {
      grey CALENDAR label could go. */
   "To Do List": [
     { "label": "Todays<br>Tasks", "href": "index.html" },
-    { "label": "Staging<br>Area", "href": "scotts-call.html" },
-    { "label": "Claude's<br>List", "href": "claudes-list.html" },
+    /* Oct 9 2026, Scott, nav simplification: Staging Area (scotts-call.html) and Claude's List
+       (claudes-list.html) came off the bar. Both pages still work and nothing behind them was
+       switched off. They now sit on Mission Control, Launch tab, Tools & pages, next to All ToDos. */
     { "label": "Calendar", "href": "calendar.html" }
   ],
   /* Calendar (Aug 29 2026, Scott). ONE slot in the top bar, in line with the
