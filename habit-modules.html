@@ -737,10 +737,12 @@
   }
   /* the dealer deal: hidden until the deal starts, then the pack and the card backs */
   .py-predeal #board > .card,.py-predeal #sections .board > .card{visibility:hidden}
-  .py-pack{position:fixed;z-index:60;box-sizing:border-box;border:3px solid #fff;border-radius:16px;pointer-events:none;
-           background:repeating-linear-gradient(45deg,var(--accent,#2f6fed) 0 6px,color-mix(in srgb,var(--accent,#2f6fed) 75%,#000) 6px 12px)}
-  .py-back{position:absolute;inset:0;z-index:30;border-radius:inherit;pointer-events:none;box-shadow:inset 0 0 0 3px #fff;
-           background:repeating-linear-gradient(45deg,var(--accent,#2f6fed) 0 6px,color-mix(in srgb,var(--accent,#2f6fed) 75%,#000) 6px 12px)}
+  .py-pack{position:fixed;z-index:60;box-sizing:border-box;border-radius:16px;pointer-events:none;background:#fff;overflow:hidden}
+  .py-back{position:absolute;inset:0;z-index:30;border-radius:inherit;pointer-events:none;background:#fff;overflow:hidden}
+  .py-back .fc,.py-pack .fc{position:absolute;inset:5px;border-radius:9px;overflow:hidden;display:grid;place-items:center;border:1px solid rgba(31,42,68,.22);background:color-mix(in srgb,var(--acc,#3f6f8f) 7%,#fff)}
+  .py-pack .fc{background:#f7f8fb}
+  .py-back .fc svg,.py-pack .fc svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .py-back .fc img,.py-pack .fc img{position:relative;width:54%;height:auto;display:block;filter:drop-shadow(0 0 7px rgba(255,255,255,.95)) drop-shadow(0 0 3px #fff)}
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:#1f2a44;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(31,42,68,.28);opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
   .toast.on{opacity:1}
   .hidden{display:none!important}
@@ -930,13 +932,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.82</span>
+    <span class="pn-ver">v6.83</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.82</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.83</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -4031,6 +4033,16 @@ var PYCARDS=(function(){
   var rt=null;
   window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(fit,150);});
 
+  /* v6.83: the card back. Soft facets (triangles echoing the logo letters) with the Project YOU logo.
+     Each flying card is tinted with its own section color; the pack itself uses the mixed section colors. */
+  var FAC=[[0,0,60,0,0,50,.17,'#5b8fce'],[60,0,100,0,100,40,.12,'#7d81c2'],[0,50,60,0,45,60,.10,'#4fa08a'],[60,0,100,40,45,60,.22,'#e0975a'],[0,50,45,60,0,110,.20,'#c05f7a'],[100,40,45,60,100,105,.13,'#c6a63f'],[45,60,0,110,40,140,.24,'#cf9088'],[45,60,100,105,70,140,.16,'#5b8fce'],[0,110,40,140,0,140,.12,'#7d81c2'],[70,140,100,105,100,140,.20,'#4fa08a'],[40,140,45,60,70,140,.10,'#e0975a']];
+  function backHTML(multi){
+    var o=FAC.map(function(q){
+      return '<polygon points="'+q[0]+','+q[1]+' '+q[2]+','+q[3]+' '+q[4]+','+q[5]+'" style="fill:'+(multi?q[7]:'var(--acc,#3f6f8f)')+';fill-opacity:'+(multi?Math.min(.2,q[6]):q[6])+'"/>';
+    }).join('');
+    return '<div class="fc"><svg viewBox="0 0 100 140" preserveAspectRatio="none" aria-hidden="true">'+o+'</svg><img src="project-you-logo.png" alt=""></div>';
+  }
+
   function thick(p,n){
     var sh=[];
     for(var i=1;i<=n;i++) sh.push((i*0.8).toFixed(1)+'px '+(i*0.8).toFixed(1)+'px 0 '+(i%2?'#f4f6fb':'#aab4c8'));
@@ -4056,13 +4068,13 @@ var PYCARDS=(function(){
     var pack=document.createElement('div');
     pack.className='py-pack';
     pack.style.cssText='left:'+L+'px;top:'+T+'px;width:'+w+'px;height:'+h+'px';
-    document.body.appendChild(pack); thick(pack,TH);
+    pack.innerHTML=backHTML(true); document.body.appendChild(pack); thick(pack,TH);
     var n=vis.length, backs=[], tms=[];
     var P='perspective(900px) rotateY(';
     vis.forEach(function(c,i){
       var r=c.getBoundingClientRect(), dx=L-r.left, dy=T-r.top, delay=i*STEP;
       var tilt=(dx>0?-1:1)*(6+(i%3)*2), z=100+n-i;
-      var back=document.createElement('span'); back.className='py-back'; c.appendChild(back); backs.push(back);
+      var back=document.createElement('span'); back.className='py-back'; back.innerHTML=backHTML(false); c.appendChild(back); backs.push(back);
       /* slide off the top of the pack: quick start, long smooth glide to a stop */
       c.animate([{translate:dx+'px '+dy+'px',zIndex:z},{translate:'0px 0px',zIndex:z}],{duration:D,delay:delay,easing:'cubic-bezier(.16,.84,.3,1)',fill:'backwards'});
       /* the flick: a small turn that straightens out as it settles */
