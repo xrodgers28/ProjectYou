@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!-- navpatch.js: test page, no Project YOU menu bar -->
+<title>Slide Page Picker (test)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=DM+Sans:wght@400;500;700&display=swap">
+<style>
+/* Layout: masthead, sticky three-slot tray (Measure, See, Change), grouped page list with tap-to-pick, note, copy block. */
+:root{
+  --bg:#f6f6f4; --card:#ffffff; --ink:#26262a; --mute:#6c6c72; --line:#dcdcd6;
+  --accent:#1f6f78; --accent-soft:#dcecee; --pick-ink:#ffffff;
+  --amber-bg:#fbf0d9; --amber-ink:#5a3e05;
+  --serif:'Source Serif 4',Georgia,'Times New Roman',serif;
+  --sans:'DM Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#16171a; --card:#1f2024; --ink:#ececee; --mute:#9a9aa2; --line:#33343a;
+  --accent:#6fc0c8; --accent-soft:#1f3a3e; --pick-ink:#10282b;
+  --amber-bg:#3a2f14; --amber-ink:#f3dca6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#16171a; --card:#1f2024; --ink:#ececee; --mute:#9a9aa2; --line:#33343a;
+  --accent:#6fc0c8; --accent-soft:#1f3a3e; --pick-ink:#10282b;
+  --amber-bg:#3a2f14; --amber-ink:#f3dca6; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:16px;line-height:1.5;margin:0;padding-inline:16px;padding-block:0 48px}
+.wrap{max-width:860px;margin-inline:auto}
+.mast{padding-block:28px 8px}
+.eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);font-weight:700}
+h1{font-family:var(--serif);font-size:clamp(25px,5vw,34px);line-height:1.15;margin:8px 0 10px;text-wrap:balance}
+.stand{color:var(--mute);margin:0;max-width:62ch}
+.got{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-block:16px;font-size:14px}
+.got b{display:block;margin-bottom:4px}
+.got ul{margin:0;padding-left:18px}
+.tray{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:10px;border-bottom:1px solid var(--line)}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slot{background:var(--card);border:1.5px dashed var(--line);border-radius:8px;padding:8px 10px;min-width:0;min-height:58px}
+.slot.full{border-style:solid;border-color:var(--accent)}
+.slot .lab{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+.slot .val{font-size:14px;overflow-wrap:anywhere}
+.slot .val.empty{color:var(--mute)}
+.count{font-size:13px;color:var(--mute);margin-top:6px}
+h2{font-family:var(--serif);font-size:21px;margin:26px 0 2px;text-wrap:balance}
+.sub{color:var(--mute);font-size:14px;margin:0 0 8px}
+.list{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.pg{display:flex;flex-direction:column;background:var(--card);border:1.5px solid var(--line);border-radius:8px;min-width:0;overflow:hidden}
+.pr{display:flex;align-items:stretch;min-width:0;flex:1}
+.th{display:block;aspect-ratio:16/10;background:var(--bg);border-bottom:1px solid var(--line);position:relative;overflow:hidden;text-decoration:none;color:var(--mute)}
+.th img{display:block;width:100%;height:100%;object-fit:cover;object-position:top left}
+.th .none{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:12px;font-size:13px;line-height:1.3;background:repeating-linear-gradient(135deg,transparent 0 10px,var(--line) 10px 11px)}
+.th .none b{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink)}
+.th .tag{position:absolute;right:6px;bottom:6px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--card);color:var(--mute);border:1px solid var(--line);border-radius:99px;padding:1px 7px}
+.legend{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin-block:12px;font-size:14px}
+.legend b{display:block;margin-bottom:2px}
+.pg:has(.pick[aria-pressed="true"]){border-color:var(--accent);background:var(--accent-soft)}
+.pick{flex:1;min-width:0;font:inherit;text-align:left;background:transparent;color:var(--ink);border:0;padding:9px 10px;cursor:pointer;min-height:48px;border-radius:0;display:flex;gap:10px;align-items:center}
+.pick .badge{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
+.pick[aria-pressed="true"] .badge{background:var(--accent);border-color:var(--accent);color:var(--pick-ink)}
+.pick .nm{display:block;font-weight:500;line-height:1.25}
+.pick .ds{display:block;font-size:12.5px;color:var(--mute);line-height:1.3;margin-top:2px}
+.pick .sug{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-left:4px}
+.look{flex:none;display:grid;place-items:center;padding-inline:12px;font-size:13px;font-weight:700;color:var(--accent);text-decoration:none;border-left:1px solid var(--line);min-width:52px}
+.pick:focus-visible,.look:focus-visible,.btn:focus-visible,.note:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+details{margin-block:14px}
+summary{cursor:pointer;font-family:var(--serif);font-size:19px;font-weight:700;padding-block:6px}
+.note{width:100%;font:inherit;font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px;padding:8px 10px;resize:vertical;min-height:56px}
+.skip{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-block:18px;font-size:14px}
+.skip h3{margin:0 0 6px;font-family:var(--serif);font-size:17px}
+.skip ul{margin:0;padding-left:18px}
+.skip li{margin-block:3px}
+.tasks{background:var(--amber-bg);color:var(--amber-ink);border-radius:10px;padding:14px 16px;margin-block:18px}
+.tasks h3{margin:0 0 6px;font-family:var(--serif);font-size:18px}
+.tasks ol{margin:0;padding-left:20px}
+.send{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-block:18px}
+.btn{font:inherit;font-weight:700;background:var(--accent);color:var(--pick-ink);border:0;border-radius:8px;padding:12px 18px;cursor:pointer;min-height:44px}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+textarea#out{width:100%;margin-top:12px;font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px;min-height:150px;resize:vertical}
+#msg{font-size:14px;color:var(--mute)}
+@media (max-width:520px){.slots{grid-template-columns:1fr}.list{grid-template-columns:1fr}}
+
+.th iframe{position:absolute;left:0;top:0;width:1280px;height:800px;border:0;transform-origin:0 0;pointer-events:none;background:#fff}
+.th .tag.live{color:var(--accent)}
+.auth{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-block:14px}
+.auth h3{margin:0 0 4px;font-family:var(--serif);font-size:18px}
+.auth p{margin:0 0 10px;font-size:14px;color:var(--mute)}
+.auth .f{display:flex;flex-wrap:wrap;gap:8px}
+.auth input{flex:1 1 200px;min-width:0;font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1.5px solid var(--line);border-radius:8px;padding:10px 12px;min-height:44px}
+.auth input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#amsg{font-size:14px;margin-top:8px;min-height:20px}
+.auth.ok{border-color:var(--accent);background:var(--accent-soft)}
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+<header class="mast">
+  <div class="eyebrow">Project YOU · Presentation · Oct 8, 2026</div>
+  <h1>Pick the three pages that go on the Measurement reactivity slide.</h1>
+  <p class="stand">Every page on your site that could work as a chart, map or picture is below. Tap three, in the order you want them: the first is Measure, the second is See, the third is Change. Tap a picture or Look to open the page.</p>
+</header>
+
+<div class="got">
+  <b>Already settled from your last answers</b>
+  <ul>
+    <li>Draft B: the Measure, See, Change loop</li>
+    <li>No Hawthorne name on the slide</li>
+    <li>Live pages, so the slide stays current</li>
+    <li>New slide goes right after the old Hawthorne slide</li>
+  </ul>
+</div>
+
+<div class="auth" id="auth">
+  <h3 id="ah">Sign in once to fill in every picture</h3>
+  <p id="ap">Every thumbnail below is the live page. Pages behind your sign-in stay empty until you sign in here. One sign-in covers them all.</p>
+  <form class="f" id="af" autocomplete="on">
+    <input id="aem" type="email" placeholder="email" autocomplete="username" aria-label="Email">
+    <input id="apw" type="password" placeholder="password" autocomplete="current-password" aria-label="Password">
+    <button class="btn" id="asi" type="submit">Sign in to all pages</button>
+  </form>
+  <div class="row" id="aok" hidden>
+    <button class="btn" id="arf" type="button">Refresh pictures</button>
+    <button class="btn ghost" id="aso" type="button">Sign out</button>
+  </div>
+  <div id="amsg" role="status"></div>
+</div>
+
+<div class="tray" aria-live="polite">
+  <div class="slots">
+    <div class="slot" id="s0"><div class="lab">1 · Measure</div><div class="val empty">Tap a page below</div></div>
+    <div class="slot" id="s1"><div class="lab">2 · See</div><div class="val empty">Tap a page below</div></div>
+    <div class="slot" id="s2"><div class="lab">3 · Change</div><div class="val empty">Tap a page below</div></div>
+  </div>
+  <div class="count"><b id="n">0</b> of 3 chosen. Tap a chosen page again to remove it.</div>
+</div>
+
+<div id="groups"></div>
+
+<h2>Anything else?</h2>
+<p class="sub">Optional. Name a page that is not listed, or tell me why you chose these.</p>
+<textarea class="note" id="note" aria-label="Optional note"></textarea>
+
+<div class="skip">
+  <h3>What I left out of the list</h3>
+  <ul>
+    <li>Morning reports, session trackers, decision reviews and old copies, because they are daily logs, not pictures of your patterns.</li>
+    <li>Future Travel, because you only want things that already happened.</li>
+    <li>Code and image files that are not pages.</li>
+    <li>I named each page from its file name and my notes. I have not opened every one, so use Look before you commit.</li>
+  </ul>
+</div>
+
+<div class="tasks">
+  <h3>Your part</h3>
+  <ol>
+    <li><b>Tap three pages</b> in the order Measure, See, Change.</li>
+    <li><b>Press Copy my answer</b> and paste it into the chat.</li>
+  </ol>
+</div>
+
+<div class="send">
+  <div class="row">
+    <button class="btn" id="copy" type="button">Copy my answer</button>
+    <button class="btn ghost" id="clear" type="button">Clear all</button>
+    <span id="msg" role="status"></span>
+  </div>
+  <textarea id="out" readonly aria-label="Your answer, ready to copy"></textarea>
+</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  var BASE='';
+  var G=[
+   {t:'Maps',s:'Places and movement',open:1,i:[
+    ['where-ive-been.html','Where I’ve been','Map of the places you have been.'],
+    ['moving-through-2026.html','Moving through 2026','How you have moved through the year.'],
+    ['sunday-map.html','Sunday map','A map built from your Sundays.'],
+    ['maps.html','Maps','Your set of maps in one place.'],
+    ['travel-log.html','Travel log','Trips you have taken.'],
+    ['safari-log.html','Safari log','Local and National Safari moments.'],
+    ['social-sky.html','Social sky','Your connections drawn as a sky.']
+   ]},
+   {t:'Charts, wheels and patterns',s:'Where your time and habits show up as a picture',open:1,i:[
+    ['coffee-days.html','Coffee days','Which days had coffee, as a chart.'],
+    ['weekly-review.html','The PY Week in Review','Your week summarized.'],
+    ['time-bandit-wheel-v2.html','Time Bandit Wheel','Where the day went, as a wheel.'],
+    ['qs-log.html','Master Habit Tracker','Every habit, row by row.'],
+    ['daily-habit-tracker.html','Daily Habit Tracker','Today’s habits and how they fill in.'],
+    ['qs-wheel.html','Quantified Self wheel','Wheel view of your tracked areas.'],
+    ['qs-dashboard.html','Quantified Self dashboard','Your tracked numbers on one screen.'],
+    ['ym-dashboard.html','Youmatics dashboard','Your numbers on one screen.'],
+    ['nightly-scorecard.html','Nightly scorecard','How each day scored.'],
+    ['life-snapshot.html','Life snapshot','A one-page picture of your life.'],
+    ['winners-losers.html','Winners and losers','What went up and what went down.'],
+    ['compass.html','Clarity Compass','The seven sections of well-being.'],
+    ['compass-time.html','Compass time','Time spent across the compass.'],
+    ['decade.html','Decade','The long view.'],
+    ['intrinsic-capacity.html','Intrinsic capacity','Capacity measures over time.']
+   ]},
+   {t:'Social',s:'People and connection',open:0,i:[
+    ['connections.html','Connections','Who you connect with.'],
+    ['social-orbit.html','Social orbit','Your people as an orbit.'],
+    ['social-rings.html','Social rings','Your people as rings.'],
+    ['social-fitness.html','Social fitness','How social you have been.'],
+    ['asa-activities.html','Time with Åsa','Things you have done together.']
+   ]},
+   {t:'Calendar and daily life',s:'What your days looked like',open:0,i:[
+    ['calendar-week.html','Calendar week','One week laid out.'],
+    ['calendar.html','Calendar','Your calendar.'],
+    ['food-log.html','Food log','What you ate.'],
+    ['movies.html','Movies','Movies you have seen.'],
+    ['photo-booth.html','Photo booth','Your recent photos.'],
+    ['nightly-checkin.html','Nightly check-in','The end-of-day check-in.'],
+    ['bucket-list.html','Bucket list','Things you have done and want to do.']
+   ]},
+   {t:'The system itself',s:'Diagrams of how Project YOU is built',open:0,i:[
+    ['data-flow-map.html','Data flow map','How information moves through the system.'],
+    ['architecture-map.html','Architecture map','The parts of the system.'],
+    ['knowledge-graph.html','Knowledge graph','How ideas connect.'],
+    ['site-map.html','Site map','Every page and how they link.'],
+    ['mission.html','Mission Control','Home base for tools and pages.'],
+    ['habit-modules.html','Cue Cards board','The Habit Building Cue Cards.'],
+    ['stack-builder.html','Stack Builder','Drag and drop habit stacks.'],
+    ['habit-worksheets.html','Habit Worksheets','The definitive habit list.'],
+    ['cue-card-library.html','Cue Card Library','All your cue cards.']
+   ]},
+   {t:'Reading and inspiration',s:'Mostly words and images',open:0,i:[
+    ['wall.html','Sparkboard','Your image inspiration board.'],
+    ['quotes.html','Quotes','Quotes you have saved.'],
+    ['takeaways.html','Takeaways','What you took from reading.'],
+    ['three-new-things.html','Three new things','What you learned each day.'],
+    ['james-clear.html','James Clear 3-2-1','Atomic Habits cards.'],
+    ['creativity.html','Creativity','Creative habits.'],
+    ['environmental.html','Environmental Health','That section of the compass.'],
+    ['recreational.html','Recreational Health','That section of the compass.'],
+    ['feed.html','The Feed','Your daily feed.'],
+    ['ai.html','AI','AI insights.'],
+    ['rundown.html','AI rundown','Daily AI rundown.'],
+    ['library.html','Library','Your reference library.'],
+    ['treadwell.html','TreadWell','The give-back travel platform.']
+   ]}
+  ];
+  var SUG={'qs-log.html':1,'coffee-days.html':1,'weekly-review.html':1};
+  var LAB={};
+  var KEY='slide-page-picker-2026-10-08';
+  var state={pick:[],note:''};
+  try{var s=localStorage.getItem(KEY);if(s){var o=JSON.parse(s);if(o&&o.pick)state=o;}}catch(e){}
+  var host=document.getElementById('groups');
+  function esc(x){return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');}
+  G.forEach(function(g){
+    var d=document.createElement('details');if(g.open)d.open=true;
+    var h='<summary>'+esc(g.t)+' <span style="font-weight:400;font-size:14px;color:var(--mute)">· '+g.i.length+'</span></summary><p class="sub">'+esc(g.s)+'</p><div class="list">';
+    g.i.forEach(function(p){
+      LAB[p[0]]=p[1];
+      var thumb='<iframe data-src="'+esc(p[0])+'" title="Live view of '+esc(p[1])+'" tabindex="-1" scrolling="no"></iframe><span class="tag live">Live</span>';
+      h+='<div class="pg"><a class="th" href="'+BASE+esc(p[0])+'" target="_blank" rel="noopener" aria-label="Open '+esc(p[1])+'">'+thumb+'</a><div class="pr"><button type="button" class="pick" aria-pressed="false" data-p="'+esc(p[0])+'"><span class="badge"></span><span><span class="nm">'+esc(p[1])+(SUG[p[0]]?'<span class="sug">suggested</span>':'')+'</span><span class="ds">'+esc(p[2])+'</span></span></button><a class="look" href="'+BASE+esc(p[0])+'" target="_blank" rel="noopener">Look</a></div></div>';
+    });
+    h+='</div>';d.innerHTML=h;host.appendChild(d);
+  });
+  var NAMES=['Measure','See','Change'];
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+  function out(){
+    var L=['Measurement reactivity slide, step 4 (Oct 8, 2026):',''];
+    for(var i=0;i<3;i++){var p=state.pick[i];L.push((i+1)+'. '+NAMES[i]+': '+(p?LAB[p]+' ('+p+')':'(not chosen, leave this one)'));}
+    if(state.note&&state.note.trim()){L.push('');L.push('Note: '+state.note.trim());}
+    return L.join('\n');
+  }
+  function render(){
+    [].forEach.call(document.querySelectorAll('.pick'),function(b){
+      var k=state.pick.indexOf(b.getAttribute('data-p'));
+      b.setAttribute('aria-pressed',k>=0?'true':'false');
+      b.querySelector('.badge').textContent=k>=0?(k+1):'';
+    });
+    for(var i=0;i<3;i++){
+      var p=state.pick[i],el=document.getElementById('s'+i),v=el.querySelector('.val');
+      el.className='slot'+(p?' full':'');
+      v.className='val'+(p?'':' empty');
+      v.textContent=p?LAB[p]:'Tap a page below';
+    }
+    document.getElementById('n').textContent=state.pick.length;
+    document.getElementById('out').value=out();
+  }
+  host.addEventListener('click',function(e){
+    var b=e.target.closest('.pick');if(!b)return;
+    var p=b.getAttribute('data-p'),k=state.pick.indexOf(p);
+    if(k>=0)state.pick.splice(k,1);else if(state.pick.length<3)state.pick.push(p);else{document.getElementById('msg').textContent='Three is the limit. Tap a chosen page to remove it first.';return;}
+    document.getElementById('msg').textContent='';
+    save();render();
+  });
+  var note=document.getElementById('note');note.value=state.note||'';
+  note.addEventListener('input',function(){state.note=note.value;save();document.getElementById('out').value=out();});
+  var msg=document.getElementById('msg');
+  document.getElementById('copy').addEventListener('click',function(){
+    var o=document.getElementById('out');
+    function fb(){o.focus();o.select();msg.textContent='Text selected below. Press copy on your keyboard.';}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(o.value).then(function(){msg.textContent='Copied. Paste it into the chat.';},fb);}else{fb();}
+  });
+  document.getElementById('clear').addEventListener('click',function(){state={pick:[],note:''};note.value='';save();msg.textContent='Cleared.';render();});
+  state.pick=state.pick.filter(function(p){return LAB[p];});
+  render();
+
+  /* live thumbnails */
+  var frames=[].slice.call(document.querySelectorAll('.th iframe'));
+  var rev=0;
+  function fit(f){var w=f.parentNode.clientWidth;if(w)f.style.transform='scale('+(w/1280)+')';}
+  function load(f){var u=f.getAttribute('data-src');if(!u)return;f.src=u+(rev?('?r='+rev):'');f.setAttribute('data-on','1');}
+  var io=('IntersectionObserver' in window)?new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){var f=e.target;if(!f.getAttribute('data-on'))load(f);}});},{rootMargin:'300px'}):null;
+  frames.forEach(function(f){fit(f);if(io)io.observe(f);else load(f);});
+  window.addEventListener('resize',function(){frames.forEach(fit);});
+  document.addEventListener('toggle',function(){frames.forEach(fit);},true);
+  function reloadAll(){rev=Date.now();frames.forEach(function(f){if(f.getAttribute('data-on'))load(f);});}
+
+  /* one sign-in for every page (same browser storage as the site's own pages) */
+  var SB=null;
+  try{SB=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM');}catch(e){}
+  var A=document.getElementById('auth'),AM=document.getElementById('amsg'),signed=false,firstShow=true;
+  function show(sess){
+    var was=signed;signed=!!(sess&&sess.user);
+    A.className='auth'+(signed?' ok':'');
+    document.getElementById('af').hidden=signed;
+    document.getElementById('aok').hidden=!signed;
+    document.getElementById('ah').textContent=signed?'Signed in':'Sign in once to fill in every picture';
+    document.getElementById('ap').textContent=signed?('Signed in as '+sess.user.email+'. Pictures reload when you sign in. Use Refresh if one looks stale.'):'Every thumbnail below is the live page. Pages behind your sign-in stay empty until you sign in here. One sign-in covers them all.';
+    var firstTime=firstShow;firstShow=false;
+    if(!firstTime&&signed!==was&&frames.some(function(f){return f.getAttribute('data-on');}))reloadAll();
+  }
+  if(!SB){AM.textContent='Sign-in could not load. Open any page on your site and sign in there, then reload this one.';}
+  else{
+    SB.auth.getSession().then(function(r){show(r&&r.data&&r.data.session);}).catch(function(){});
+    SB.auth.onAuthStateChange(function(ev,s){show(s);});
+    document.getElementById('af').addEventListener('submit',function(e){
+      e.preventDefault();AM.textContent='Signing in...';
+      var em=document.getElementById('aem').value.trim(),pw=document.getElementById('apw').value;
+      SB.auth.signInWithPassword({email:em,password:pw}).then(function(r){
+        if(r.error){AM.textContent='That did not work: '+r.error.message;}
+        else{document.getElementById('apw').value='';AM.textContent='';}
+      }).catch(function(){AM.textContent='Could not reach the sign-in service. Try again.';});
+    });
+    document.getElementById('arf').addEventListener('click',function(){reloadAll();AM.textContent='Reloading pictures.';});
+    document.getElementById('aso').addEventListener('click',function(){SB.auth.signOut().then(function(){AM.textContent='Signed out.';});});
+  }
+})();
+</script>
+</body>
+</html>
