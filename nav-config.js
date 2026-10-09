@@ -47,9 +47,9 @@ window.NAV_CONFIG = {
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
     /* Oct 8 2026, Scott: the end-of-week review (now "Habit Dashboard") moved to Habit Modules, right after the Daily Habit Tracker. */
-    { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
-    /* Oct 6 2026, Scott: v2 of the wheel at its own URL, wheel left and Core habits right. */
-    { "label": "Time Bandit<br>Wheel v2", "href": "time-bandit-wheel-v2.html" }
+    /* Oct 8 2026, Scott: the old wheel (index.html#wheel) came off this bar and now sits under Maps & Diagrams
+       (see MAPS_NAV) and on Mission Control. The v2 page took over the name "Time Bandit Wheel" here. */
+    { "label": "Time Bandit<br>Wheel", "href": "time-bandit-wheel-v2.html" }
   ],
   /* Displayed as LISTS - see NAV_GROUP_RENAME below. The key stays "Parking Lot"
      because that string is baked into every page's markup and is what navpatch
@@ -123,7 +123,8 @@ window.MAPS_NAV = {
     { "label": "Data Flow Chart", "href": "dfd.html" },
     { "label": "Data Flow Map", "href": "data-flow-map.html" },
     { "label": "Spider Diagram", "href": "knowledge-graph.html" },
-    { "label": "Adding to Knowledge Graph", "href": "kg-ingest-process.html" }
+    { "label": "Adding to Knowledge Graph", "href": "kg-ingest-process.html" },
+    { "label": "Time Bandit Wheel (original)", "href": "index.html#wheel" }
   ]
 };
 
