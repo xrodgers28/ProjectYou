@@ -965,7 +965,7 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.47';
+const VERSION='v5.48';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1117,7 +1117,7 @@ async function load(){
          the same visit, since a fresh page load never actually fetched it;
          note is new, holding the typed location for Local/National Safari. */
       q('qs_log','date,"group",tracker,minutes,logged_at,value,note',r=>r.gte('date',from28).lte('date',we).limit(5000)),
-      q('worksheet_rows','id,habit,area,icon,identity,insight,outcome,qs_tracker,count_on,is_active,retired,position',r=>r.eq('is_active',true)),
+      q('worksheet_rows','id,habit,area,icon,identity,insight,outcome,qs_tracker,count_on,count_time,is_active,retired,position',r=>r.eq('is_active',true)),
       q('todos','for_date,actual_minutes,task',r=>r.eq('category','Strava').gte('for_date',ws).lte('for_date',we)),
       q('session_trackers','day,created_at,updated_at,project,title',r=>r.gte('day',from14).lte('day',we)),
       q('calendar_events','date,start_time,end_time,is_work,hidden,dismissed,title',r=>r.gte('date',from14).lte('date',we).eq('is_work',true)),
@@ -1333,7 +1333,8 @@ function compute(){
   /* v5.20, Sep 29 2026: walking and biking count ONCE. Every Strava/watch outing already
      sits in the log with its minutes on one line per day, so adding the Strava to-dos on
      top counted each walk two or three times (Sep 22 read 250 min for 87 real). */
-  const habitMin=wk.reduce((a,r)=>a+(r.minutes||0),0);
+  /* v5.48, Oct 8 2026: a habit set to NOT COUNTED on the Habit Worksheets (count_time off, Medicine today) stays on the day but its minutes are left out of Habit hours. */
+  const habitMin=wk.reduce((a,r)=>{const w=wsOf[r.tracker];return (w&&w.count_time===false)?a:a+(r.minutes||0);},0);
   const pyMin=D.chatreg.filter(r=>r.project==='Project YOU').reduce((a,r)=>a+(r.active_minutes||0),0);
   const sessWk=D.sess.filter(s=>s.day>=ws&&s.day<=we);
   /* order of the day */
