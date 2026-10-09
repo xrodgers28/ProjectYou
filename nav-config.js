@@ -32,7 +32,7 @@ window.NAV_CONFIG = {
     { "label": "Daily Habit<br>Tracker", "href": "daily-habit-tracker.html" },
     { "label": "Habit<br>Dashboard", "href": "weekly-review.html" },
     { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
-    /* Oct 8 2026, Scott: Compass Time folded into Habit Worksheets (counts-toward-totals tick, minutes, Compass point = the sheet). The page stays only as a redirect. */
+    { "label": "Compass<br>Time", "href": "compass-time.html" },
     /* Oct 3 2026, Scott: Safari Log goes "under Environmental Health". There was no
        Environmental Health slot in the bar, so this adds one as a dropdown: the
        section page, then its log. */
@@ -281,7 +281,7 @@ window.PAGE_VERSIONS = {
   "feed.html": "v1.5",
   "habit-modules.html": "v6.49",
   "creativity.html": "v1.1",
-  "habit-worksheets.html": "v3.4",
+  "habit-worksheets.html": "v2.9",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
   "qs-dashboard.html": "v3.2",
