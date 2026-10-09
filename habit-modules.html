@@ -535,13 +535,12 @@
      counters; open it and drag a tile back up (or tap it) to restore. Nothing
      is visible at rest except that line, and only when something is parked. ===== */
   .rail .rt{cursor:grab}
-  .rparked{margin-top:2px}
-  .rparked[hidden],.rp-list[hidden]{display:none}
-  .rp-line{appearance:none;border:none;background:none;width:100%;text-align:center;font:inherit;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#a8afba;cursor:pointer;padding:4px 0}
-  .rp-line:hover,.rp-line:focus-visible{color:#8b93a1}
-  .rp-list{display:flex;flex-direction:column;gap:5px;margin-top:4px}
-  .rp-chip{border:1px dashed #cfd6e0;border-radius:8px;background:#fafbfd;color:#6b7686;font-size:10.5px;font-weight:700;padding:7px 8px;cursor:grab;text-align:center;user-select:none;-webkit-user-select:none}
-  .rp-chip:hover{border-color:#8fa6c0;color:#1f2a44}
+  /* v6.78: a parked counter sits in the Parked area at HALF the size of a parked cue card
+     (cue card strip 52px tall, 268px min wide -> counter 26px tall, 134px wide, the same width as the counter column) */
+  .rp-minis{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+  .rp-minis[hidden]{display:none}
+  .rp-mini{width:134px;height:26px;box-sizing:border-box;display:flex;align-items:center;padding:0 9px;border:1px solid #e1e6ee;border-left:2px solid var(--ra,#9aa6b4);border-radius:7px;background:#fff;color:var(--ink);font-size:10.5px;font-weight:800;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.6;cursor:grab;user-select:none;-webkit-user-select:none;box-shadow:0 2px 6px rgba(31,42,68,.05);transition:opacity .14s,transform .14s}
+  .rp-mini:hover{opacity:1;transform:translateY(-1px)}
   .rpark-strip{position:fixed;z-index:60;bottom:16px;height:34px;border-radius:10px;border:1.5px dashed #b9c3d1;background:rgba(255,255,255,.94);color:#8b93a1;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .16s,transform .16s,border-color .12s,color .12s,background .12s}
   .rpark-strip.show{opacity:1;pointer-events:auto;transform:none}
   .rpark-strip.over{border-color:var(--accent);color:var(--accent);background:#fff}
@@ -897,13 +896,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.77</span>
+    <span class="pn-ver">v6.78</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.77</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.78</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -928,10 +927,6 @@
         </div>
         <div class="rail-label">Counter cards</div>
         <div class="rail" id="rail"></div>
-        <div class="rparked" id="rparked" hidden>
-          <button type="button" class="rp-line" id="rpLine" aria-expanded="false">Parked <b id="rpN">0</b></button>
-          <div class="rp-list" id="rpList" hidden></div>
-        </div>
         <div class="rpark-strip" id="rparkStrip" aria-hidden="true">Parking</div>
       </div>
       <div class="board" id="board"></div>
@@ -941,6 +936,7 @@
       <div class="shelfhead"><h2>Parked</h2><span class="cnt" id="readcnt"></span></div>
       <div class="shelfsub">Off the daily board and out of today&rsquo;s count. Tap one to see what it is, then put it back whenever you want.</div>
       <div class="board" id="readboard"></div>
+      <div class="rp-minis" id="rpMini" hidden></div>
     </div>
     <div class="wheelnote">Ticking a card logs it to the <a href="index.html#wheel">Time Bandit Wheel</a> &mdash; 10 min unless you logged a different time inside the card.</div>
 
@@ -3247,7 +3243,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     var h=finalOrder.map(function(k){ return byKey[k].html; }).join('');
 
     el.innerHTML=h;
-    paintParked(parkedKeys);
+    paintParked(parkedKeys, byKey);
     el.querySelectorAll('[data-app]').forEach(function(b){b.onclick=function(){toggleApp(b.dataset.app);};});
     el.querySelectorAll('[data-phys]').forEach(function(b){b.onclick=function(){togglePhys(b.dataset.phys);};});
     el.querySelectorAll('[data-env]').forEach(function(b){b.onclick=function(){toggleEnv(b.dataset.env);};});
@@ -3475,27 +3471,27 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     setTimeout(draw,0);
     saveRailParked().then(function(ok){ if(typeof toast==='function') toast((RPNAMES[k]||k)+(ok?' is back':' is back here, but it did not save')); });
   }
-  function paintParked(keys){
-    var box=document.getElementById('rparked'), n=document.getElementById('rpN'), list=document.getElementById('rpList'), line=document.getElementById('rpLine');
-    if(!box) return;
-    box.hidden=!keys.length;
-    if(n) n.textContent=keys.length;
-    if(list){
-      list.innerHTML=keys.map(function(k){ return '<div class="rp-chip" data-pk="'+k+'" title="Drag up to the counters to put it back">'+(RPNAMES[k]||k)+'</div>'; }).join('');
-      if(!keys.length) list.hidden=true;
+  function paintParked(keys, byKey){
+    var mini=document.getElementById('rpMini'), sh=document.getElementById('readshelf'), rb=document.getElementById('readboard'), rc=document.getElementById('readcnt');
+    window.__railParkedN=keys.length;
+    if(mini){
+      mini.hidden=!keys.length;
+      mini.innerHTML=keys.map(function(k){
+        var m=(byKey && byKey[k]) ? /--ra:(#[0-9a-fA-F]{3,8})/.exec(byKey[k].html) : null;
+        return '<div class="rp-mini" data-pk="'+k+'" style="--ra:'+(m?m[1]:'#9aa6b4')+'" title="Counter card. Tap to put it back, or drag it up to the counters.">'+(RPNAMES[k]||k)+'</div>';
+      }).join('');
+      if(!mini._pkTap){ mini._pkTap=1; mini.addEventListener('click',function(e){ var c=e.target.closest ? e.target.closest('.rp-mini') : null; if(c) unparkTile(c.dataset.pk); }); }
     }
-    if(line){
-      line.setAttribute('aria-expanded', (list && !list.hidden) ? 'true' : 'false');
-      if(!line._pk){ line._pk=1; line.addEventListener('click',function(){ if(!list) return; list.hidden=!list.hidden; line.setAttribute('aria-expanded', list.hidden?'false':'true'); }); }
-    }
-    if(list && !list._pkTap){ list._pkTap=1; list.addEventListener('click',function(e){ var c=e.target.closest ? e.target.closest('.rp-chip') : null; if(c) unparkTile(c.dataset.pk); }); }
+    if(sh){ var nCards=rb?rb.children.length:0; sh.classList.toggle('hidden', !(nCards||keys.length)); }
+    if(rc && rb && !rb.children.length) rc.textContent=keys.length?keys.length+(keys.length===1?' counter':' counters'):'';
     initParkSortables();
   }
   function initParkSortables(){
     if(typeof Sortable==='undefined') return;
-    var st=document.getElementById('rparkStrip'), list=document.getElementById('rpList');
+    var st=document.getElementById('rparkStrip'), list=document.getElementById('rpMini');
     if(st && !st._pkS){
       /* light up while a tile is held over the strip (mouse); touch uses onMove on the rail */
+      st.addEventListener('dragenter',function(){ st.classList.add('over'); });
       st.addEventListener('dragover',function(){ st.classList.add('over'); });
       st.addEventListener('dragleave',function(e){ if(!st.contains(e.relatedTarget)) st.classList.remove('over'); });
       st._pkS=new Sortable(st,{group:{name:'railtiles',pull:false,put:true},sort:false,animation:0,
@@ -3507,10 +3503,8 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
         }});
     }
     if(list && !list._pkS){
-      list._pkS=new Sortable(list,{group:{name:'railtiles',pull:true,put:false},sort:false,draggable:'.rp-chip',animation:130,
-        ghostClass:'sortable-ghost',delay:150,delayOnTouchOnly:true,fallbackTolerance:6,
-        onStart:function(){ var l=document.getElementById('rail'); if(l) l.classList.add('rp-dropping'); },
-        onEnd:function(){ var l=document.getElementById('rail'); if(l) l.classList.remove('rp-dropping'); }});
+      list._pkS=new Sortable(list,{group:{name:'railtiles',pull:true,put:false},sort:false,draggable:'.rp-mini',animation:130,
+        ghostClass:'sortable-ghost',delay:150,delayOnTouchOnly:true,fallbackTolerance:6});
     }
   }
 
@@ -3880,8 +3874,9 @@ function render(){
 
   var shelfEl=document.getElementById('readshelf');
   document.getElementById('readboard').innerHTML=DONEDECKS.map(function(m){return cardHtml(m,true);}).join('');
-  document.getElementById('readcnt').textContent=DONEDECKS.length?DONEDECKS.length+(DONEDECKS.length===1?' card':' cards'):'';
-  shelfEl.classList.toggle('hidden',!DONEDECKS.length);
+  var rpN=window.__railParkedN||0;  /* v6.78: parked counters live in this same area */
+  document.getElementById('readcnt').textContent=DONEDECKS.length?DONEDECKS.length+(DONEDECKS.length===1?' card':' cards'):(rpN?rpN+(rpN===1?' counter':' counters'):'');
+  shelfEl.classList.toggle('hidden',!DONEDECKS.length&&!rpN);
 
   /* the main grid holds every live card with no section; sections draw after it */
   var MAIN=LIVE.filter(function(m){return !m.sect;});
