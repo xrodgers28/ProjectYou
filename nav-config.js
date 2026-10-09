@@ -32,7 +32,7 @@ window.NAV_CONFIG = {
     { "label": "Daily Habit<br>Tracker", "href": "daily-habit-tracker.html" },
     { "label": "Habit<br>Dashboard", "href": "weekly-review.html" },
     { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
-    { "label": "Compass<br>Time", "href": "compass-time.html" },
+    /* Oct 8 2026, Scott: Compass Time folded into Habit Worksheets (counts-toward-totals tick, minutes, Compass point = the sheet). The page stays only as a redirect. */
     /* Oct 3 2026, Scott: Safari Log goes "under Environmental Health". There was no
        Environmental Health slot in the bar, so this adds one as a dropdown: the
        section page, then its log. */
@@ -71,13 +71,14 @@ window.NAV_CONFIG = {
     { "label": "Daily<br>Habits", "href": "daily-template.html" }
   ],
   "Operating System": [
-    { "label": "Automated<br>Tracking", "href": "automated-tracking.html" },
+    /* Oct 8 2026, Scott: Automated Tracking came off the bar and now sits on Mission Control (Launch tab, Tools & pages). */
     /* Sep 3 2026, Scott. Import moved to Mission Control and Guardrails moved to
        the Docs Library, so neither needs a slot in the bar any more. */
-    { "label": "Cheat<br>Sheet", "href": "cheat-sheet.html" },
+    /* Oct 8 2026, Scott: Cheat Sheet and Docs Library folded into Mission Control
+       as tabs, so neither has a slot in the bar any more. Their old addresses
+       (cheat-sheet.html, library.html) are stand-ins that redirect to the tab. */
     { "label": "Maps &amp;<br>Diagrams", "href": "maps.html" },
     { "label": "Mission<br>Control", "href": "mission.html" },
-    { "label": "Docs<br>Library", "href": "library.html" },
     /* Oct 6 2026, Scott: Presentation Mode goes in the main nav. Builds and
        presents the Project YOU talk from live pages plus classic slides.
        Oct 8 2026, Scott: show it as a small projector-screen icon, no words.
@@ -281,7 +282,7 @@ window.PAGE_VERSIONS = {
   "feed.html": "v1.5",
   "habit-modules.html": "v6.49",
   "creativity.html": "v1.1",
-  "habit-worksheets.html": "v2.9",
+  "habit-worksheets.html": "v3.4",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
   "qs-dashboard.html": "v3.2",
