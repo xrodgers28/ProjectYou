@@ -528,6 +528,24 @@
   .mhsh .mhmins button{border:1px solid #e1e7ee;background:#fff;border-radius:8px;font-family:inherit;
       font-size:12px;font-weight:800;color:#1f2a44;padding:6px 11px;cursor:pointer}
   .mhsh .mhmins button.on{background:#5b8fce;border-color:#5b8fce;color:#fff}
+
+  /* ===== Park a counter (v6.77, Oct 8 2026): drag a counter tile down onto the
+     thin Parking strip that fades in at the bottom of the screen while you are
+     dragging. Parked tiles collapse into one quiet "Parked N" line under the
+     counters; open it and drag a tile back up (or tap it) to restore. Nothing
+     is visible at rest except that line, and only when something is parked. ===== */
+  .rail .rt{cursor:grab}
+  .rparked{margin-top:2px}
+  .rparked[hidden],.rp-list[hidden]{display:none}
+  .rp-line{appearance:none;border:none;background:none;width:100%;text-align:center;font:inherit;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#a8afba;cursor:pointer;padding:4px 0}
+  .rp-line:hover,.rp-line:focus-visible{color:#8b93a1}
+  .rp-list{display:flex;flex-direction:column;gap:5px;margin-top:4px}
+  .rp-chip{border:1px dashed #cfd6e0;border-radius:8px;background:#fafbfd;color:#6b7686;font-size:10.5px;font-weight:700;padding:7px 8px;cursor:grab;text-align:center;user-select:none;-webkit-user-select:none}
+  .rp-chip:hover{border-color:#8fa6c0;color:#1f2a44}
+  .rpark-strip{position:fixed;z-index:60;bottom:16px;height:34px;border-radius:10px;border:1.5px dashed #b9c3d1;background:rgba(255,255,255,.94);color:#8b93a1;font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .16s,transform .16s,border-color .12s,color .12s,background .12s}
+  .rpark-strip.show{opacity:1;pointer-events:auto;transform:none}
+  .rpark-strip.over{border-color:var(--accent);color:var(--accent);background:#fff}
+  .rpark-strip .rt{position:absolute;opacity:0;pointer-events:none}
   @media(max-width:640px){.boardwrap{flex-direction:column}.rail-col{width:auto}.rail{flex-direction:row;width:auto;flex-wrap:wrap}.pastbanner{padding:0 22px}}
   @media(max-width:640px){.board{grid-template-columns:1fr}.pagehead h1{font-size:26px}}
 
@@ -879,15 +897,15 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.74</span>
+    <span class="pn-ver">v6.77</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.74</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.77</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
-        <button type="button" data-view="cards" class="on">Habit Cue Cards</button>
+        <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
         <button type="button" data-view="library" data-href="cue-card-library.html">Cue Card Library</button>
       </div>
@@ -910,6 +928,11 @@
         </div>
         <div class="rail-label">Counter cards</div>
         <div class="rail" id="rail"></div>
+        <div class="rparked" id="rparked" hidden>
+          <button type="button" class="rp-line" id="rpLine" aria-expanded="false">Parked <b id="rpN">0</b></button>
+          <div class="rp-list" id="rpList" hidden></div>
+        </div>
+        <div class="rpark-strip" id="rparkStrip" aria-hidden="true">Parking</div>
       </div>
       <div class="board" id="board"></div>
     </div>
@@ -1450,7 +1473,7 @@ var RAIL = (function(){
            addPhotoName:'', addLabelName:'', addSay:'', cups:[], cofOpen:false, cofJustOpened:false, cofLastId:null, glasses:0, mf:{}, flags:{}, ex:null, photo:false, meals:{}, soc:{}, plans:[], quiet:[], ready:false,
            chocTaps:[], wineTaps:[], chocQty:0, wineQty:0, viceWhy:'', viceOpen:false, viceJustOpened:false,
            mh:[], mhWeek:{}, bdays:[], mhOpen:null, mhStep:null, mhName:null, mhMins:null,
-           wi:[], mo:[], moCount:{}, railOrder:null, wiAddOpen:false, wiText:'', wiLabel:'', wiSection:'', wiLabelTouched:false};
+           wi:[], mo:[], moCount:{}, railOrder:null, railParked:[], wiAddOpen:false, wiText:'', wiLabel:'', wiSection:'', wiLabelTouched:false};
   var el = null;
 
   /* ---- the day's latte pattern: same for every cup, worked out from the date ---- */
@@ -1585,7 +1608,7 @@ var RAIL = (function(){
   var APPS=[{k:'elevate',n:'Elevate'},{k:'imprint',n:'Imprint'},{k:'impulse',n:'Impulse'}];
   var PHYS=[{k:'meditation',n:'Meditation'},{k:'stretch',n:'Stretching'},{k:'balance',n:'Balance'}];
   var ENVICON={"safari":"data:image/png;base64,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","wiwut":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHAAAABwCAMAAADxPgR5AAABgFBMVEUAAAAVFRUmJiYEBAQ6OjoAAACXl5dISEgQEBCIiIhZWVlRUVEAAAAkJCRiYmKFhYWLi4t4eHgAAABOTk5DQ0NTU1N2dnZHR0c5OTkDAwMWFhYXFxdaWlpUVFSGhoYWFhZlZWUZGRlHR0dnZ2eEhIQKCgooKCg4ODg1NTU2NjZLS0toaGh1dXWWlpYJCQkcHBwqKipFRUVZWVlWVlZmZmYlJSUlJSU0NDRiYmJ+fn51dXWXl5ejo6OxsbEVFRUuLi4lJSU0NDRSUlJ3d3eTk5OUlJSoqKirq6u6uroAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACnvC0vAAAAgHRSTlMA/P78+y///i2t/qRNCP7Om3rDxzY9/hsbcQxxSMj91I6rSXhzpD1Mbq2kRIaygl52d3STxpWrx6ZBxY7/zINe2TwatX/Hr8z/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOQcT/8AAAKnSURBVHja7Zppc9owEIa9KxmBwOYIMTHmCvcdIGmSNul9/v9fVDnFpjMxwTJO0pnu+wFsxtrHq5UZVi+GQSKRSCQSKRQHzCyeJ3TOAZCPPgXGoO1dWinDvtyt3bYKLSKA0gbAZaHbSA/XGE2kCmpzxh8D4bY/dhFBSLNeTSFRq1o3BWfA3XV/yiIyRFO9lm4HFcYw0zPqx+HqxqaFjFXOv5bUmQkRGWJ2e2eOupBx+zigfAjS2s7Uk0B1cxO1gtTNvZslrNyVP00M8+E0PQ00jDzwjK2ek7a7/qZZTUsthDYw0XKA58JPDwPfvG0MzXNVcrkadk9jqzv0JAK/Nj/P3nOMD5xiwX+rbj5wv5oaUpVzvU7NX346wPwfoCrnzyu/+PFVuelsYyQDKvUEk5mY4swMxyUG9iUUrZhqQgrAsoBi3CX64sATAhKQgAQkIAEJSMD/DgjpAnOHM9xdfPk3UCYD3gm+OJDhx7NATXDD4xzXAXrhuAXHYnhyEdVy+y3WVpyhHRxLhho/hDEY5gjGhLMLGLWpsE+okeG+GNG7GPdBUyIYtoJjRy/DsLGxgdmZXcAIIIxqgZrghceaNQzHqRp+D08ia5jyKi2Jf+85pO9SAhKQgAQkIAEJSMBXAaaz5y1ffJOdNeMCb1IAdoTvt8SUuvKkkwS49Z5qHc9VzZOMLwEArjfX954Cdw1QetluNbZGWU8giGtzpOeu7fzDcV/XPyyv3AowruMf7hzShH5346oNGg6pZcPRHvDZL99JZOhYh3Yx5tNBhakJPdbltupG78HlHuTne/vDfO/CRQBpm/XTlHx8tWwR3XF5EtFyq1mUAHxZaMyM1NToFpYqB4ERLbefv7uap/1fDMPqeJ8gahdDoNwYz6Mf94iOQSKRSCQS6fX0G9qIXjB8v0exAAAAAElFTkSuQmCC","travel":"data:image/png;base64,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"};
-  var ENV=[{k:'safari',n:'Local Safari'},{k:'wiwut',n:'WIWUT'},{k:'travel',n:'Travel Research'}];
+  var ENV=[{k:'wiwut',n:'WIWUT',t:'What I Woke Up To'},{k:'safari',n:'Local Safari'},{k:'travel',n:'Travel Research'}];  /* v6.76: order is WIWUT, Local Safari, Travel Research */
   /* Scott, Sep 17 2026: his morning routine runs at fixed times, so a tick files
      at those times, not at the moment he tapped. Meditation 6:10-6:20 (10 min),
      Stretching 6:20-6:35 (15 min). Eastern, on the day being viewed. */
@@ -1650,7 +1673,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     var trackers=['Mental Fitness','Coffee','Water','Photo Booth',"Today's Plan",'Exercise','Medicine','Elevate','Imprint','Impulse','Social','Meditation','Stretching','Balance','Vices',
       /* v6.63, Oct 4 2026: the Environmental tiles (Local Safari helmet, WIWUT, Travel Research) were never in this list,
          so the page could not see a habit row that was already done and showed the helmet un-greyed after a log. */
-      'Local Safari','WIWUT','Travel Research'];
+      'Local Safari','What I Woke Up To','Travel Research'];
     /* MINI HABITS, Sep 18 2026. The tile is whatever the worksheet says it is, so
        its rows have to come back before the to-do query knows which trackers to
        ask for. One small query, then they join the list. */
@@ -1687,7 +1710,13 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     var railOrderRes = await sb.from('app_meta').select('value').eq('key','habit_rail_order').maybeSingle();
     try{ R.railOrder = (railOrderRes.data && railOrderRes.data.value) ? JSON.parse(railOrderRes.data.value) : null; }
     catch(e){ R.railOrder=null; }
-    var pastTrackers=['Photo Booth','Medicine','Meditation','Stretching','Balance','Local Safari','WIWUT','Travel Research'];  /* v6.63: past days read the Environmental tiles from the log too */
+    /* v6.77: counters he has parked, saved in the same place as the order */
+    try{
+      var railParkRes = await sb.from('app_meta').select('value').eq('key','habit_rail_parked').maybeSingle();
+      var rpv = (railParkRes.data && railParkRes.data.value) ? JSON.parse(railParkRes.data.value) : [];
+      R.railParked = Array.isArray(rpv) ? rpv : [];
+    }catch(e){ R.railParked=[]; }
+    var pastTrackers=['Photo Booth','Medicine','Meditation','Stretching','Balance','Local Safari','What I Woke Up To','Travel Research'];  /* v6.63: past days read the Environmental tiles from the log too */
     var pastReq = (d!==wd) ? PYBackfill.loggedSet(sb,pastTrackers,d) : Promise.resolve({});
     /* EXERCISE WEEKLY TICKS, Sep 25 2026. The 7 Mon-Sun marks and the
        same-day walk auto-dim both read the SAME rows the Strava bridge and
@@ -1746,13 +1775,13 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
       return arr.length>=3 || mi>=3;
     });
     R.exWalkToday=!!(R.exByDay[d]||[]).length;
-    (res[0].data||[]).forEach(function(r){ if(r.tracker) R.rows[r.tracker]=r; });
+    (res[0].data||[]).forEach(function(r){ /* v6.75: Water, Social and Photo Booth each have two lines on the day; a done one must win so the tile never shows the unticked twin */ if(r.tracker && !(R.rows[r.tracker] && R.rows[r.tracker].done && !r.done)) R.rows[r.tracker]=r; });
     R.cups=(res[1].data||[]).map(function(r){return r.strength;});
     R.cofOpen=false; R.cofJustOpened=false; R.cofLastId=null; R.cofType=null; R.cofMilk=null;
     R.glasses=(res[2].data||[]).length;
     R.mf={}; (res[3].data||[]).forEach(function(r){R.mf[r.app]=1;});
     R.physOn={}; PHYS.forEach(function(a){var pr=row(a.n); R.physOn[a.k]=isPast()?!!R.pastDone[a.n]:!!(pr&&pr.done);});
-    R.envOn={}; ENV.forEach(function(a){var pr=row(a.n); R.envOn[a.k]=isPast()?!!R.pastDone[a.n]:!!(pr&&pr.done);});
+    R.envOn={}; ENV.forEach(function(a){var pr=row(a.t||a.n); R.envOn[a.k]=isPast()?!!R.pastDone[a.t||a.n]:!!(pr&&pr.done);});
     R.flags=res[4].data||{};
     R.ex=res[5].data||null;
     R.plist=(res[6].data||[]).slice();
@@ -1831,7 +1860,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     'Stretching':   {task:'Stretching',        group:'Physical Health',   est:15, pos:17},
     'Balance':      {task:'Balance',           group:'Physical Health',   est:10, pos:18},
     'Local Safari':     {task:'Local Safari',     group:'Environmental Health', est:1, pos:20},
-    'WIWUT':            {task:'WIWUT',            group:'Environmental Health', est:1, pos:21},
+    'What I Woke Up To':{task:'WIWUT',            group:'Environmental Health', est:1, pos:21},
     'Travel Research':  {task:'Travel Research',  group:'Environmental Health', est:1, pos:22},
     'Mental Fitness':{task:'\ud83e\udde0 Mental Fitness', group:'Mental Fitness', est:15, pos:19}
   };
@@ -2100,16 +2129,17 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
   }
   async function toggleEnv(k){
     var m=ENV.filter(function(a){return a.k===k;})[0]; if(!m) return;
-    var r=row(m.n);
+    var trk=m.t||m.n;  /* v6.75: WIWUT's tracker is 'What I Woke Up To' */
+    var r=row(trk);
     var on=!R.envOn[k];
     if(k==='safari' && on && window.PYSafari){
       /* Oct 3 2026: the Local Safari tile opens the one Log Safari Moment form, which writes the trackers itself */
-      PYSafari.open({sb:sb, when:viewDay(), onSaved:function(res){ R.envOn[k]=true; try{ if(isPast()) R.pastDone[m.n]=true; }catch(e){} draw(); }});
+      PYSafari.open({sb:sb, when:viewDay(), onSaved:function(res){ R.envOn[k]=true; try{ if(isPast()) R.pastDone[trk]=true; }catch(e){} draw(); }});
       return;
     }
     R.envOn[k]=on;
     draw();
-    var ok=await tick(m.n, on, {mins:((r&&r.est_minutes)||1)});
+    var ok=await tick(trk, on, {mins:((r&&r.est_minutes)||1)});
     if(!ok){ R.envOn[k]=!on; draw(); }
   }
   async function togglePhoto(){
@@ -3206,8 +3236,9 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     /* apply the saved order, if any, then fall back to the order above for
        anything not in it - never drops a tile, never paints one twice. */
     var byKey={}; tiles.forEach(function(t){ byKey[t.key]=t; });
-    var defaultOrder=tiles.map(function(t){ return t.key; });
-    var saved=(R.railOrder||[]).filter(function(k){ return byKey[k]; });
+    var parkedKeys=(R.railParked||[]).filter(function(k){ return byKey[k]; });
+    var defaultOrder=tiles.map(function(t){ return t.key; }).filter(function(k){ return parkedKeys.indexOf(k)<0; });
+    var saved=(R.railOrder||[]).filter(function(k){ return byKey[k] && parkedKeys.indexOf(k)<0; });
     var rest=defaultOrder.filter(function(k){ return saved.indexOf(k)<0; });
     /* v6.67: a tile added after he saved a drag order would land at the very bottom of the rail; slot This Month in right after Weekly Items instead */
     var wkAt=saved.indexOf('weekly'), moAt=rest.indexOf('monthly');
@@ -3216,6 +3247,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     var h=finalOrder.map(function(k){ return byKey[k].html; }).join('');
 
     el.innerHTML=h;
+    paintParked(parkedKeys);
     el.querySelectorAll('[data-app]').forEach(function(b){b.onclick=function(){toggleApp(b.dataset.app);};});
     el.querySelectorAll('[data-phys]').forEach(function(b){b.onclick=function(){togglePhys(b.dataset.phys);};});
     el.querySelectorAll('[data-env]').forEach(function(b){b.onclick=function(){toggleEnv(b.dataset.env);};});
@@ -3244,7 +3276,8 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
       if(vd0){ requestAnimationFrame(function(){ vd0.style.maxHeight=vd0.scrollHeight+'px'; }); }
       R.viceJustOpened=false;
     }
-    el.querySelector('#relchk-container').addEventListener('change', function(e){
+    var rcc=el.querySelector('#relchk-container');
+    if(rcc) rcc.addEventListener('change', function(e){
       if(e.target.classList.contains('relchk-slider')) relChkSave(e.target);
       if(e.target.classList.contains('relchk-done')) relChkDone();
     });
@@ -3376,16 +3409,109 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
   function initRailSortable(){
     if(!el || el._railSortable || typeof Sortable==='undefined') return;
     el._railSortable = new Sortable(el, {
-      animation:130, handle:'.rgrip', draggable:'.rt',
+      group:{name:'railtiles',pull:true,put:true},
+      animation:130, handle:'.rt', draggable:'.rt',
+      /* v6.77: the whole tile can be picked up, not just the thin edge grip. Taps on buttons,
+         inputs, links and the open drawers still work exactly as before. */
+      filter:'button,input,textarea,select,a,label,.rvicedrawer,.rcofdrawer,.wirow,[contenteditable]',
+      preventOnFilter:false,
       ghostClass:'sortable-ghost', dragClass:'dragging',
       delay:150, delayOnTouchOnly:true, touchStartThreshold:6, fallbackTolerance:6,
-      onEnd: onRailReorder
+      onStart: showParkStrip,
+      onMove: function(evt){ var s=document.getElementById('rparkStrip'); if(s) s.classList.toggle('over', evt.to===s); },
+      onAdd: function(evt){
+        /* a parked chip dragged back up into the counters */
+        var k=evt.item && evt.item.dataset ? evt.item.dataset.pk : null;
+        var at=evt.newIndex;
+        if(evt.item && evt.item.parentNode) evt.item.parentNode.removeChild(evt.item);
+        if(k) unparkTile(k, at);
+      },
+      onEnd: function(){ hideParkStrip(); onRailReorder(); }
     });
   }
   async function onRailReorder(){
     var order=Array.prototype.slice.call(el.querySelectorAll('[data-tile]')).map(function(n){return n.dataset.tile;});
+    /* parked tiles are not on screen, so keep their keys at the end of the saved order */
+    (R.railParked||[]).forEach(function(k){ if(order.indexOf(k)<0) order.push(k); });
     R.railOrder=order;
     if(sb) await sb.from('app_meta').upsert({key:'habit_rail_order',value:JSON.stringify(order),updated_at:new Date().toISOString()});
+  }
+
+  /* ---------- Park a counter (v6.77) ---------- */
+  var RPNAMES={mental:'Mental Fitness',physical:'Physical',environmental:'Environmental',plan:'Today\'s Plan',coffee:'Coffee',photo:'Photo Booth',diet:'Diet',water:'Water',weekly:'Weekly Items',monthly:'This Month',exercise:'Exercise',minihabits:'Mini Habits',relationship:'Relationship',social:'Social',vices:'Vices'};
+  function showParkStrip(){
+    var st=document.getElementById('rparkStrip'), col=document.querySelector('.rail-col');
+    if(!st||!col) return;
+    var r=col.getBoundingClientRect();
+    if(window.innerWidth<=640){ st.style.left='16px'; st.style.width=(window.innerWidth-32)+'px'; }
+    else { st.style.left=r.left+'px'; st.style.width=r.width+'px'; }
+    st.classList.add('show');
+  }
+  function hideParkStrip(){
+    var st=document.getElementById('rparkStrip');
+    if(st){ st.classList.remove('show'); st.classList.remove('over'); }
+  }
+  async function saveRailParked(){
+    if(!sb) return true;
+    var r=await sb.from('app_meta').upsert({key:'habit_rail_parked',value:JSON.stringify(R.railParked||[]),updated_at:new Date().toISOString()});
+    return !r.error;
+  }
+  function parkTile(k){
+    if(!k) return;
+    R.railParked=R.railParked||[];
+    if(R.railParked.indexOf(k)<0) R.railParked.push(k);
+    setTimeout(draw,0);  /* after Sortable has finished with the dragged tile */
+    saveRailParked().then(function(ok){ if(typeof toast==='function') toast((RPNAMES[k]||k)+(ok?' is parked':' is parked here, but it did not save')); });
+  }
+  function unparkTile(k, at){
+    R.railParked=(R.railParked||[]).filter(function(x){ return x!==k; });
+    if(typeof at==='number'){
+      var order=Array.prototype.slice.call(el.querySelectorAll('[data-tile]')).map(function(n){return n.dataset.tile;});
+      order=order.filter(function(x){ return x!==k; });
+      order.splice(Math.min(at,order.length),0,k);
+      R.railOrder=order;
+      if(sb) sb.from('app_meta').upsert({key:'habit_rail_order',value:JSON.stringify(order),updated_at:new Date().toISOString()});
+    }
+    setTimeout(draw,0);
+    saveRailParked().then(function(ok){ if(typeof toast==='function') toast((RPNAMES[k]||k)+(ok?' is back':' is back here, but it did not save')); });
+  }
+  function paintParked(keys){
+    var box=document.getElementById('rparked'), n=document.getElementById('rpN'), list=document.getElementById('rpList'), line=document.getElementById('rpLine');
+    if(!box) return;
+    box.hidden=!keys.length;
+    if(n) n.textContent=keys.length;
+    if(list){
+      list.innerHTML=keys.map(function(k){ return '<div class="rp-chip" data-pk="'+k+'" title="Drag up to the counters to put it back">'+(RPNAMES[k]||k)+'</div>'; }).join('');
+      if(!keys.length) list.hidden=true;
+    }
+    if(line){
+      line.setAttribute('aria-expanded', (list && !list.hidden) ? 'true' : 'false');
+      if(!line._pk){ line._pk=1; line.addEventListener('click',function(){ if(!list) return; list.hidden=!list.hidden; line.setAttribute('aria-expanded', list.hidden?'false':'true'); }); }
+    }
+    if(list && !list._pkTap){ list._pkTap=1; list.addEventListener('click',function(e){ var c=e.target.closest ? e.target.closest('.rp-chip') : null; if(c) unparkTile(c.dataset.pk); }); }
+    initParkSortables();
+  }
+  function initParkSortables(){
+    if(typeof Sortable==='undefined') return;
+    var st=document.getElementById('rparkStrip'), list=document.getElementById('rpList');
+    if(st && !st._pkS){
+      /* light up while a tile is held over the strip (mouse); touch uses onMove on the rail */
+      st.addEventListener('dragover',function(){ st.classList.add('over'); });
+      st.addEventListener('dragleave',function(e){ if(!st.contains(e.relatedTarget)) st.classList.remove('over'); });
+      st._pkS=new Sortable(st,{group:{name:'railtiles',pull:false,put:true},sort:false,animation:0,
+        onAdd:function(evt){
+          var k=evt.item && evt.item.dataset ? evt.item.dataset.tile : null;
+          if(evt.item && evt.item.parentNode) evt.item.parentNode.removeChild(evt.item);
+          hideParkStrip();
+          if(k) parkTile(k);
+        }});
+    }
+    if(list && !list._pkS){
+      list._pkS=new Sortable(list,{group:{name:'railtiles',pull:true,put:false},sort:false,draggable:'.rp-chip',animation:130,
+        ghostClass:'sortable-ghost',delay:150,delayOnTouchOnly:true,fallbackTolerance:6,
+        onStart:function(){ var l=document.getElementById('rail'); if(l) l.classList.add('rp-dropping'); },
+        onEnd:function(){ var l=document.getElementById('rail'); if(l) l.classList.remove('rp-dropping'); }});
+    }
   }
 
 
@@ -3403,6 +3529,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
   function relChkRender(){
     if(!R.relQuestions || !R.relQuestions.length) return;
     const container=document.getElementById('relchk-container');
+    if(!container) return;
     let html='';
     R.relQuestions.forEach(function(q){
       const resp=R.relResponses[q.n]||0;
@@ -3464,6 +3591,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     relChkUpdateSummary();
     // Show summary instead of questions
     const container=document.getElementById('relchk-container');
+    if(!container) return;
     const gottman=R.relQuestions.filter(q=>q.s==='gottman').map(q=>R.relResponses[q.n]||0).filter(r=>r>0);
     const positivity=R.relQuestions.filter(q=>q.s==='positivity').map(q=>R.relResponses[q.n]||0).filter(r=>r>0);
     const gottAvg=gottman.length?Math.round(gottman.reduce((a,b)=>a+b,0)/gottman.length*10)/10:0;
