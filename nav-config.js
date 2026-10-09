@@ -25,10 +25,12 @@ window.NAV_CONFIG = {
      hidden by the tidy-up at the bottom of this file. */
   "Calendar": [],
   "Habit Modules": [
-    { "label": "Cue Cards", "href": "habit-modules.html" },
-    { "label": "Cue Card<br>Library", "href": "cue-card-library.html" },
-    /* Oct 3 2026, Scott: the Daily Habit Tracker page goes in the main nav right after Cue Card Library. */
+    /* Oct 8 2026, Scott, nav clean-up: "Cue Cards" renamed Habit Cue Cards; Cue Card Library came off the bar
+       (cue-card-library.html still exists, just not linked here); the Week in Review, now called Habit Dashboard,
+       moved here to sit right after the Daily Habit Tracker. */
+    { "label": "Habit Cue<br>Cards", "href": "habit-modules.html" },
     { "label": "Daily Habit<br>Tracker", "href": "daily-habit-tracker.html" },
+    { "label": "Habit<br>Dashboard", "href": "weekly-review.html" },
     { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
     { "label": "Compass<br>Time", "href": "compass-time.html" },
     /* Oct 3 2026, Scott: Safari Log goes "under Environmental Health". There was no
@@ -44,9 +46,7 @@ window.NAV_CONFIG = {
      reached from Mission Control. What is left is the hub and the wheel. */
   "Quantified Self": [
     { "label": "YouMatics", "href": "qs-dashboard.html" },
-    /* Sep 6 2026, Scott. The end-of-week review: three scores, the habit grid,
-       the quiz built from the week's dealt cards, and next week's goals. */
-    { "label": "The PY Week<br>in Review", "href": "weekly-review.html" },
+    /* Oct 8 2026, Scott: the end-of-week review (now "Habit Dashboard") moved to Habit Modules, right after the Daily Habit Tracker. */
     { "label": "Time Bandit<br>Wheel", "href": "index.html#wheel" },
     /* Oct 6 2026, Scott: v2 of the wheel at its own URL, wheel left and Core habits right. */
     { "label": "Time Bandit<br>Wheel v2", "href": "time-bandit-wheel-v2.html" }
