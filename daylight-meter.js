@@ -1,5 +1,7 @@
-/* daylight-meter.js v1.0 (Oct 10, 2026)
-   The little daylight meter at the top of the Cue Cards board (habit-modules.html).
+/* daylight-meter.js v1.1 (Oct 10, 2026)
+   The daylight meter on the Cue Cards board (habit-modules.html). A small Hours of Daylight
+   tile sits at the right end of the page header. Rolling over it, or tapping it, opens the
+   full meter as a pop-up with an X to close it.
 
    What it draws: one year of daylight for a place. Yellow is daylight, the three
    tan bands above it are twilight, grey is night. A blue line marks a date (it
@@ -10,9 +12,10 @@
    The only outside call is the optional zip code lookup (zippopotam.us, free,
    no key).
 
-   Mount point: <div id="daylightmeter"></div>. Today comes from PY.today() so the
+   It finds its own place: the end of the .meter row in the page header (or an optional
+   <div id="daylightmeter"></div>). Today comes from PY.today() so the
    2am to 2am day rule is respected; it falls back to the device date if that is
-   missing. Settings (zip, compare on or off, collapsed) are saved on this device. */
+   missing. Settings (zip, compare on or off) are saved on this device. */
 (function () {
   'use strict';
 
@@ -191,17 +194,18 @@
     loc: null,            /* the place being shown */
     custom: !!(saved.loc && typeof saved.loc.lat === 'number'),
     compare: !!saved.compare,
-    collapsed: !!saved.collapsed,
+    open: false,          /* the pop-up is showing */
+    pinned: false,        /* it stays open until closed (clicked, dragged, or tapped open) */
     sel: null,            /* day picked with the blue line; null means today */
     drag: false,
-    W: 0, H: 190,
+    W: 0, H: 160,
     M: { l: 36, r: 40, t: 8, b: 22 },
     t: null, n: 365, todayIdx: 0
   };
 
   function defaultLoc() { return CLOCKS[deviceTz()] || HOME; }
   function pickLoc() { return S.custom ? saved.loc : defaultLoc(); }
-  function persist() { lsSet({ loc: S.custom ? S.loc : null, compare: S.compare, collapsed: S.collapsed }); }
+  function persist() { lsSet({ loc: S.custom ? S.loc : null, compare: S.compare }); }
 
   function readClock() {
     S.t = todayParts();
@@ -210,16 +214,23 @@
   }
 
   /* ---------- page pieces ---------- */
-  var mount = null, card, wrap, svg, tip, locBtn, backBtn, statsEl, legendEl, pop, msgEl, zipIn, cmpBox, toggleBtn;
+  var host = null, tile, tileNum, float, card, wrap, svg, tip, locBtn, backBtn, statsEl, legendEl, pop, msgEl, zipIn, cmpBox, xBtn, hoverT = null;
 
   function injectCss() {
     if (document.getElementById('dl-css')) return;
     var s = document.createElement('style');
     s.id = 'dl-css';
     s.textContent =
-      '#daylightmeter{max-width:960px;margin:14px auto 6px}' +
-      '#daylightmeter.pj-off{display:none}' +
-      '.dl-card{position:relative;background:#fff;border:1px solid #e3e7ee;border-radius:14px;box-shadow:0 4px 12px rgba(31,42,68,.06);padding:10px 14px 8px;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
+      '.dl-tile{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:76px;height:76px;padding:6px;background:#fff;border:1px solid #e3e7ee;border-radius:12px;box-shadow:0 4px 12px rgba(31,42,68,.06);cursor:pointer;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
+      '.dl-tile:hover,.dl-tile[aria-expanded="true"]{border-color:#2f80ed}' +
+      '.dl-tile:focus-visible{outline:2px solid #2f80ed;outline-offset:2px}' +
+      '.dl-tl{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1.15;color:#5b6472;text-align:center}' +
+      '.dl-tn{font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}' +
+      '.dl-float{position:absolute;z-index:45;left:0;top:0;display:none}' +
+      '.dl-float.on{display:block;animation:dlin .12s ease-out}' +
+      '@keyframes dlin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}' +
+      '@media(prefers-reduced-motion:reduce){.dl-float.on{animation:none}}' +
+      '.dl-card{position:relative;background:#fff;border:1px solid #e3e7ee;border-radius:14px;box-shadow:0 16px 44px rgba(31,42,68,.26);padding:10px 12px 8px;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
       '.dl-head{display:flex;justify-content:space-between;align-items:flex-start;gap:6px 16px;flex-wrap:wrap}' +
       '.dl-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}' +
       '.dl-loc{font:700 13px Arial,Helvetica,sans-serif;color:#5b6472;background:none;border:0;border-bottom:1px dotted #9aa6b4;padding:2px 0;cursor:pointer}' +
@@ -229,7 +240,6 @@
       '.dl-back[hidden]{display:none}' +
       '.dl-legend{display:flex;gap:4px 14px;flex-wrap:wrap;margin-top:6px;font-size:11px;font-weight:700;color:#5b6472}' +
       '.dl-legend:empty{display:none}' +
-      '.dl-card.dl-off .dl-legend{display:none}' +
       '.dl-legend em{font-style:normal;font-weight:800;color:#1f2a44;font-variant-numeric:tabular-nums;margin-left:2px}' +
       '.dl-legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}' +
       '.dl-right{display:flex;align-items:flex-start;gap:12px}' +
@@ -237,10 +247,9 @@
       '.dl-stat{font-size:12px;color:#8a93a0;line-height:1.35;white-space:nowrap}' +
       '.dl-stat b{font-size:16px;font-weight:800;margin-left:7px;color:#8a93a0;font-variant-numeric:tabular-nums}' +
       '.dl-stat.dl-blue b{color:#2f80ed}' +
-      '.dl-tog{background:none;border:0;color:#9aa6b4;cursor:pointer;font-size:14px;line-height:1;padding:2px 4px;border-radius:6px}' +
-      '.dl-tog:hover,.dl-tog:focus-visible{background:#eef2f8;color:#3f6f8f;outline:none}' +
+      '.dl-x{flex:none;width:28px;height:28px;margin:-3px -3px 0 0;display:flex;align-items:center;justify-content:center;background:none;border:0;border-radius:8px;color:#8a93a0;font-size:20px;line-height:1;cursor:pointer}' +
+      '.dl-x:hover,.dl-x:focus-visible{background:#eef2f8;color:#1f2a44;outline:none}' +
       '.dl-chart{position:relative;margin-top:2px}' +
-      '.dl-card.dl-off .dl-chart{display:none}' +
       '.dl-chart svg{display:block;width:100%;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:ew-resize;outline:none}' +
       '.dl-chart svg:focus-visible{outline:2px solid #2f80ed;outline-offset:2px;border-radius:4px}' +
       '.dl-chart .maxhit{cursor:help}' +
@@ -268,11 +277,24 @@
       '.dl-msg{margin-top:8px;font-size:12px;font-weight:700;color:#5b6472;min-height:0}' +
       '.dl-msg:empty{display:none}' +
       '.dl-msg.bad{color:#c0392b}' +
-      '@media(max-width:600px){.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}}';
+      '@media(max-width:600px){.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}.dl-tile{width:64px;height:64px}.dl-tn{font-size:24px}}';
     document.head.appendChild(s);
   }
 
   function build() {
+    tile = document.createElement('button');
+    tile.type = 'button';
+    tile.className = 'dl-tile';
+    tile.setAttribute('aria-haspopup', 'dialog');
+    tile.setAttribute('aria-expanded', 'false');
+    tile.innerHTML = '<span class="dl-tl">Hours of<br>daylight</span><span class="dl-tn"></span>';
+    tileNum = tile.querySelector('.dl-tn');
+    host.appendChild(tile);
+
+    float = document.createElement('div');
+    float.className = 'dl-float';
+    float.setAttribute('role', 'dialog');
+    float.setAttribute('aria-label', 'Daylight meter');
     card = document.createElement('div');
     card.className = 'dl-card';
     card.innerHTML =
@@ -283,7 +305,7 @@
         '</div>' +
         '<div class="dl-right">' +
           '<div class="dl-stats" aria-live="polite"></div>' +
-          '<button type="button" class="dl-tog" aria-label="Hide the daylight meter" title="Hide or show"></button>' +
+          '<button type="button" class="dl-x" aria-label="Close the daylight meter" title="Close">&times;</button>' +
         '</div>' +
       '</div>' +
       '<div class="dl-legend"></div>' +
@@ -303,7 +325,8 @@
         '<svg role="slider" tabindex="0" aria-label="Date on the daylight chart. Use the left and right arrow keys to move it." aria-valuemin="1"></svg>' +
         '<div class="dl-tip" hidden></div>' +
       '</div>';
-    mount.appendChild(card);
+    float.appendChild(card);
+    document.body.appendChild(float);
 
     wrap = card.querySelector('.dl-chart');
     svg = card.querySelector('svg');
@@ -316,7 +339,7 @@
     msgEl = card.querySelector('.dl-msg');
     zipIn = card.querySelector('.dl-zipf input');
     cmpBox = card.querySelector('.dl-cmp');
-    toggleBtn = card.querySelector('.dl-tog');
+    xBtn = card.querySelector('.dl-x');
   }
 
   /* ---------- header ---------- */
@@ -347,9 +370,9 @@
     if (ls) html += '<div class="dl-stat dl-blue">' + ls.label + '<b>' + ls.days + '</b></div>';
     statsEl.innerHTML = html;
 
-    toggleBtn.innerHTML = S.collapsed ? '&#9656;' : '&#9662;';
-    toggleBtn.setAttribute('aria-label', S.collapsed ? 'Show the daylight meter' : 'Hide the daylight meter');
-    card.classList.toggle('dl-off', S.collapsed);
+    var th = series(S.loc.lat, S.loc.lon, S.t.y, S.n).day[S.todayIdx];
+    tileNum.textContent = Math.floor(Math.round(th * 60) / 60);
+    tile.setAttribute('aria-label', 'Hours of daylight today in ' + S.loc.name + ': ' + fmtLong(th) + '. Open the daylight meter.');
     backBtn.hidden = (S.sel == null || S.sel === S.todayIdx);
   }
 
@@ -467,9 +490,9 @@
 
   function drawAll() {
     var W = Math.floor(wrap.clientWidth);
-    if (S.collapsed || W < 60) return;
+    if (!S.open || W < 60) return;
     S.W = W;
-    S.H = W < 520 ? 170 : 190;
+    S.H = W < 520 ? 150 : 160;
     svg.setAttribute('viewBox', '0 0 ' + W + ' ' + S.H);
     svg.setAttribute('height', S.H);
     drawStatic();
@@ -604,24 +627,79 @@
       drawAll();
     });
     backBtn.addEventListener('click', function () { S.sel = null; drawDyn(); });
-    toggleBtn.addEventListener('click', function () {
-      S.collapsed = !S.collapsed;
-      persist();
-      closePop();
-      drawHeader();
-      if (!S.collapsed) setTimeout(drawAll, 0);
-    });
     document.addEventListener('click', function (ev) {
       if (!pop.hidden && !pop.contains(ev.target) && !locBtn.contains(ev.target)) closePop();
     });
-    document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && !pop.hidden) { closePop(); try { locBtn.focus(); } catch (e) {} } });
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key !== 'Escape') return;
+      if (!pop.hidden) { closePop(); try { locBtn.focus(); } catch (e) {} return; }
+      if (S.open) { closeFloat(); try { tile.focus(); } catch (e) {} }
+    });
+  }
+
+  /* ---------- the pop-up: opens on rollover or tap, closes with the X ---------- */
+  function place() {
+    var r = tile.getBoundingClientRect(), root = document.documentElement;
+    var vw = root.clientWidth, w = Math.min(760, vw - 24);
+    var sx = window.pageXOffset || 0, sy = window.pageYOffset || 0;
+    var left = r.right + sx - w;
+    if (left < sx + 12) left = sx + 12;
+    if (left > sx + vw - 12 - w) left = sx + vw - 12 - w;
+    float.style.width = w + 'px';
+    float.style.left = left + 'px';
+    float.style.top = (r.bottom + sy + 8) + 'px';
+  }
+  function openFloat(pin) {
+    if (tile.offsetParent === null) return;
+    if (pin) S.pinned = true;
+    clearTimeout(hoverT);
+    if (S.open) return;
+    S.open = true;
+    place();
+    float.classList.add('on');
+    tile.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(drawAll);
+  }
+  function closeFloat() {
+    clearTimeout(hoverT);
+    S.open = false;
+    S.pinned = false;
+    S.drag = false;
+    float.classList.remove('on');
+    tile.setAttribute('aria-expanded', 'false');
+    tip.hidden = true;
+    closePop();
+  }
+  function maybeClose() {
+    clearTimeout(hoverT);
+    if (S.pinned) return;
+    hoverT = setTimeout(function () { if (!S.pinned) closeFloat(); }, 350);
+  }
+  function wireFloat() {
+    tile.addEventListener('pointerenter', function (ev) { if (ev.pointerType !== 'touch') openFloat(false); });
+    tile.addEventListener('pointerleave', function (ev) { if (ev.pointerType !== 'touch') maybeClose(); });
+    float.addEventListener('pointerenter', function () { clearTimeout(hoverT); });
+    float.addEventListener('pointerleave', function (ev) { if (ev.pointerType !== 'touch') maybeClose(); });
+    /* touching or dragging anything inside keeps it open until the X */
+    float.addEventListener('pointerdown', function () { S.pinned = true; clearTimeout(hoverT); });
+    float.addEventListener('focusin', function () { S.pinned = true; clearTimeout(hoverT); });
+    tile.addEventListener('click', function () {
+      if (S.open && S.pinned) closeFloat(); else openFloat(true);
+    });
+    xBtn.addEventListener('click', closeFloat);
+    document.addEventListener('pointerdown', function (ev) {
+      if (S.open && S.pinned && !float.contains(ev.target) && !tile.contains(ev.target)) closeFloat();
+    });
+    /* if the tile is hidden (the Projects board), the pop-up goes with it */
+    document.addEventListener('click', function () { if (S.open && tile.offsetParent === null) closeFloat(); });
+    window.addEventListener('resize', function () { if (S.open) place(); });
   }
 
   /* ---------- start ---------- */
   function init() {
-    mount = document.getElementById('daylightmeter');
-    if (!mount || mount.getAttribute('data-ready')) return;
-    mount.setAttribute('data-ready', '1');
+    host = document.querySelector('.pagehead .meter') || document.getElementById('daylightmeter');
+    if (!host || host.getAttribute('data-dl')) return;
+    host.setAttribute('data-dl', '1');
     injectCss();
     readClock();
     S.loc = pickLoc();
@@ -634,8 +712,8 @@
 
     wireChart();
     wirePop();
+    wireFloat();
     drawHeader();
-    drawAll();
 
     if (window.ResizeObserver) {
       var last = 0;
@@ -652,7 +730,7 @@
       if (document.visibilityState !== 'visible') return;
       var before = S.todayIdx + '/' + S.t.y;
       readClock();
-      if (before !== S.todayIdx + '/' + S.t.y) { S.sel = null; drawHeader(); drawAll(); }
+      if (before !== S.todayIdx + '/' + S.t.y) { S.sel = null; drawHeader(); drawAll(); if (S.open) place(); }
     });
   }
 
