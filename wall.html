@@ -538,6 +538,46 @@
     .w2cap{font-size:12px}
   }
 
+
+  /* ---- v2.20 (Oct 9, 2026): a calmer board ----------------------------------
+     Scott's answers to the Sparkboard calm-down review.
+     1  The count line under each name shows only when you point at the tile
+        (every device; the count is also in the opened tray).
+     2  On a Mac the dots and the corner mark go quiet until you point at a tile.
+        A phone cannot hover, so there the dots and the mark stay as they were.
+     3  Spotlight (Mac only): point at a tile and every other tile steps back.
+     4  A tile you have opened today goes quiet; pointing at it brings it back.
+     5  The two daily doors sit on their own wide row under a small label.
+        Everything else keeps the daily shuffle.
+     6  The top: one Add button, one menu, one question mark. */
+  .w2cap small{transition:opacity .15s}
+  .w2t:not(.done):not(:hover):not(:focus-within) .w2cap small{opacity:0}
+  .w2t.opened{opacity:.42;filter:grayscale(.8);transition:opacity .25s ease,filter .25s ease}
+  .w2t.opened:hover,.w2t.opened:focus-within,.w2t.opened:has(.w2hit[aria-expanded="true"]){opacity:1;filter:none}
+  @media (hover:hover) and (pointer:fine){
+    .w2more{opacity:0;transition:opacity .15s,background .15s}
+    .w2t:hover .w2more,.w2t:focus-within .w2more{opacity:1}
+    .w2mark{background:rgba(10,13,20,.38);color:#fff;box-shadow:none;transition:background .15s,color .15s}
+    .w2t:hover .w2mark,.w2t:focus-within .w2mark{background:rgba(255,255,255,.94);color:#1f2a44;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+    .sbwall .w2t,.sbwall .stile{transition:opacity .2s ease,filter .2s ease}
+    .sbwall.spoton .w2t:not(.lit),.sbwall.spoton .stile:not(.lit){opacity:.28;filter:grayscale(.8)}
+  }
+  .w2shelf{font-size:10px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--onbg);opacity:.6;margin:16px 2px 0}
+  .w2shelf + .feed.w2,.w2shelf + .w2doors{margin-top:8px}
+  .w2doors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .w2doors > *{min-width:0}
+  .w2doors .w2t{aspect-ratio:auto;height:190px}
+  .w2doors .w2cap{font-size:15px}
+  .tmenu{position:relative}
+  .tpop{position:absolute;right:0;top:calc(100% + 6px);z-index:60;background:var(--card);border:1px solid var(--key);
+        border-radius:10px;box-shadow:var(--shadow);padding:6px;min-width:210px;display:flex;flex-direction:column;gap:2px}
+  .tpop[hidden]{display:none}
+  .tpop .tool{display:block;width:100%;text-align:left;border:0;background:none;border-radius:6px;padding:10px 12px;white-space:nowrap}
+  .tpop .tool[hidden]{display:none}
+  .tpop .tool:hover{background:var(--sunk)}
+  .tool.tq{padding:8px 11px}
+  .hint[hidden]{display:none}
+
   /* trays for each behaviour */
   .tray.w2tr{background:var(--card);border:1px solid var(--key);border-radius:14px;padding:12px}
   .w2th{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:0 2px 10px;font-size:12px;color:var(--muted)}
@@ -669,21 +709,27 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.19</span></h1>
+      <h1>Sparkboard <span class="ver">v2.20</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
         <span class="daylabel" id="daylabel"></span>
         <button class="daybtn" type="button" id="dayfwd" aria-label="Forward a day, toward today" disabled>&#8250;</button>
       </div>
-      <div class="hint">Tap a tile. The mark in its corner says what it does. The dots change how it behaves. Use the arrows above to look back on a past day.</div>
+      <div class="hint" id="hintline" hidden>Tap a tile. The mark in its corner says what it does. The dots change how it behaves. Use the arrows above to look back on a past day.</div>
     </div>
     <div class="tools">
       <button class="tool add" type="button" data-w2add="1">+ Add to Sparkboard</button>
-      <button class="tool" type="button" id="sizebtn">Bigger pictures</button>
-      <a class="tool" href="wall-saved.html" id="savedlink">Saved</a>
-      <a class="tool" href="wall-humor.html">Six more to pick from</a>
-      <button class="tool" type="button" id="rmbtn" hidden>Removed</button>
+      <div class="tmenu" id="tmenu">
+        <button class="tool" type="button" id="tmenubtn" aria-haspopup="true" aria-expanded="false" aria-label="More: bigger pictures, saved, more to pick from, removed">&middot;&middot;&middot;</button>
+        <div class="tpop" id="tpop" hidden>
+          <button class="tool" type="button" id="sizebtn">Bigger pictures</button>
+          <a class="tool" href="wall-saved.html" id="savedlink">Saved</a>
+          <a class="tool" href="wall-humor.html">Six more to pick from</a>
+          <button class="tool" type="button" id="rmbtn" hidden>Removed</button>
+        </div>
+      </div>
+      <button class="tool tq" type="button" id="hintbtn" aria-expanded="false" aria-label="How this page works">?</button>
     </div>
   </div>
   <div id="rmpanel" class="rmpanel" hidden></div>
@@ -771,7 +817,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.19</div>
+  <div class="stamp" id="stamp">v2.20</div>
 </div>
 
 <aside class="stx-col">
@@ -1045,18 +1091,26 @@ function drawGrouped(){
   GROUPS = bySource().sort(function(a,b){
     return seedFrom(DAY+"|"+a.name) - seedFrom(DAY+"|"+b.name);
   });
-  var h='<div class="feed w2" id="feed">';
+  /* v2.20 (Oct 9, 2026): the daily doors get their own wide row. Everything else keeps the daily shuffle. */
   var live = GROUPS.length ? (seedFrom("live"+(DAY||"")) % Math.min(4,GROUPS.length)) : 0;
+  var doorTiles="", doorTrays="", rest="";
   GROUPS.forEach(function(g,n){
-    if(n===live && igOn()) h+=liveTile();
-    h+=w2tile(g,n);
+    if(n===live && igOn()) rest+=liveTile();
+    var t=w2tile(g,n);
+    if(w2beh(g.items[0].behavior)==="door"){
+      var k=t.indexOf('<div class="tray w2tr"');
+      doorTiles+=t.slice(0,k); doorTrays+=t.slice(k);
+    } else rest+=t;
   });
-  if(live>=GROUPS.length && igOn()) h+=liveTile();
+  if(live>=GROUPS.length && igOn()) rest+=liveTile();
+  var h='<div class="sbwall" id="sbwall">';
+  if(doorTiles) h+='<div class="w2shelf">Today\u2019s doors</div><div class="w2doors">'+doorTiles+doorTrays+'</div><div class="w2shelf">Everything else</div>';
+  h+='<div class="feed w2" id="feed">'+rest;
   Object.keys(DECKS).forEach(function(k){ var d=DECKS[k]; if(d.deck_done_on) h+=w2doneTile(d); });
   h+=hiTileHtml();
   h+='<button class="w2add" type="button" data-w2add="1"><span><b>+</b>Add to Sparkboard</span></button>';
   h+='</div><div class="w2legend">'+Object.keys(W2B).map(function(k){
-    return '<span>'+W2B[k].i+W2B[k].n+'</span>'; }).join("")+'</div>';
+    return '<span>'+W2B[k].i+W2B[k].n+'</span>'; }).join("")+'</div></div>';
   return h;
 }
 
@@ -1258,6 +1312,91 @@ if(HOVERABLE){
     },180);
   });
 }
+
+
+/* ---- v2.20 (Oct 9, 2026): a calmer board ---------------------------------------
+   Opened tiles: a tile you tap open today fades back so what is left is what you
+   have not looked at. Remembered in this browser for the board's day. Pointing at
+   a faded tile brings it back. It only fades; Done never waits on it. */
+function openedKey(){ return "wallopen:"+(DAY||today()); }
+function openedList(){ try{ return JSON.parse(localStorage.getItem(openedKey())||"[]")||[]; }catch(e){ return []; } }
+function applyOpened(){
+  var l=openedList();
+  Array.prototype.forEach.call(document.querySelectorAll(".w2t[data-k]"),function(t){
+    t.classList.toggle("opened", !t.classList.contains("done") && l.indexOf(t.getAttribute("data-k"))>=0);
+  });
+}
+function markOpened(k){
+  if(!k) return;
+  var l=openedList();
+  if(l.indexOf(k)<0){ l.push(k); try{ localStorage.setItem(openedKey(),JSON.stringify(l)); }catch(e){} }
+  applyOpened();
+}
+document.addEventListener("click",function(e){
+  var h=e.target.closest(".sbwall .w2hit"); if(!h) return;
+  var t=h.closest(".w2t"); if(!t || t.classList.contains("done")) return;
+  markOpened(t.getAttribute("data-k"));
+},true);
+
+/* Spotlight, Mac only: point at a tile and every other tile steps back. */
+(function(){
+  if(!HOVERABLE) return;
+  var spotT=null;
+  function board(){ return document.getElementById("sbwall"); }
+  function on(t){
+    clearTimeout(spotT);
+    var b=board(); if(!b) return;
+    if(!t.classList.contains("lit")){
+      Array.prototype.forEach.call(b.querySelectorAll(".lit"),function(x){ x.classList.remove("lit"); });
+      t.classList.add("lit");
+    }
+    b.classList.add("spoton");
+  }
+  function off(){
+    clearTimeout(spotT);
+    spotT=setTimeout(function(){
+      var b=board(); if(!b) return;
+      b.classList.remove("spoton");
+      Array.prototype.forEach.call(b.querySelectorAll(".lit"),function(x){ x.classList.remove("lit"); });
+    },150);
+  }
+  document.addEventListener("mouseover",function(e){
+    var b=board(); if(!b || !b.contains(e.target)) return;
+    var t=e.target.closest(".w2t,.stile");
+    if(t && !t.classList.contains("done")) { on(t); return; }
+    if(e.target.closest(".tray")) { clearTimeout(spotT); return; }
+    off();
+  });
+  document.addEventListener("mouseout",function(e){
+    var b=board(); if(!b || !b.contains(e.target)) return;
+    if(!e.relatedTarget || !b.contains(e.relatedTarget)) off();
+  });
+  document.addEventListener("focusin",function(e){
+    var t=e.target.closest && e.target.closest("#sbwall .w2t,#sbwall .stile");
+    if(t && !t.classList.contains("done")) on(t);
+  });
+  document.addEventListener("focusout",function(e){
+    if(e.target.closest && e.target.closest("#sbwall")) off();
+  });
+})();
+
+/* The top menu and the small question mark. */
+(function(){
+  var mb=document.getElementById("tmenubtn"), pop=document.getElementById("tpop");
+  var hb=document.getElementById("hintbtn"), hl=document.getElementById("hintline");
+  function closeMenu(){ if(pop && !pop.hidden){ pop.hidden=true; mb.setAttribute("aria-expanded","false"); } }
+  if(mb && pop){
+    mb.addEventListener("click",function(e){
+      e.stopPropagation();
+      pop.hidden=!pop.hidden; mb.setAttribute("aria-expanded",String(!pop.hidden));
+    });
+    document.addEventListener("click",function(e){ if(!e.target.closest("#tmenubtn")) closeMenu(); });
+    document.addEventListener("keydown",function(e){ if(e.key==="Escape"){ closeMenu(); if(mb) mb.focus(); } });
+  }
+  if(hb && hl){
+    hb.addEventListener("click",function(){ hl.hidden=!hl.hidden; hb.setAttribute("aria-expanded",String(!hl.hidden)); });
+  }
+})();
 
 /* ---- Story ------------------------------------------------------------------ */
 var W2S={frames:[],at:0,name:""}, W2TAP=0;
@@ -1615,6 +1754,7 @@ function paintRemoved(){
 function paint(){
   paintRemoved();
   document.getElementById("stage").innerHTML=drawFeed();
+  applyOpened();
   paintSize();
   var sb=document.getElementById("sizebtn"); if(sb) sb.onclick=toggleSize;
   var saved=ITEMS.filter(function(i){return i.saved;}).length;
@@ -2491,7 +2631,7 @@ function renderDateLine(){
   document.getElementById("sub").textContent=
     days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
   document.getElementById("stamp").textContent=
-    "v2.15 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+    "v2.20 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
   var lbl=document.getElementById("daylabel");
   if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
   var ds=document.getElementById("daystep");
