@@ -80,6 +80,8 @@ window.NAV_CONFIG = {
        (cheat-sheet.html, library.html) are stand-ins that redirect to the tab. */
     { "label": "Maps &amp;<br>Diagrams", "href": "maps.html" },
     { "label": "Mission<br>Control", "href": "mission.html" },
+    /* Oct 10 2026, Scott: Chat Dashboard sits next to Mission Control. */
+    { "label": "Chat<br>Dashboard", "href": "chat-dashboard.html" },
     /* Oct 6 2026, Scott: Presentation Mode goes in the main nav. Builds and
        presents the Project YOU talk from live pages plus classic slides.
        Oct 8 2026, Scott: show it as a small projector-screen icon, no words.
