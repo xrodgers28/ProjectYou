@@ -564,10 +564,21 @@
   }
   .w2shelf{font-size:10px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:var(--onbg);opacity:.6;margin:16px 2px 0}
   .w2shelf + .feed.w2,.w2shelf + .w2doors{margin-top:8px}
-  .w2doors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  /* v2.22 (Oct 9, 2026): every tile is about 80% of its old size (156px), with wider gaps so the board breathes.
+     The daily doors are two tiles wide and a third of their old height (63px). */
+  .feed.w2{grid-template-columns:repeat(auto-fill,156px);gap:22px;justify-content:start}
+  .w2doors{display:grid;grid-template-columns:repeat(2,minmax(0,334px));gap:22px;justify-content:start}
   .w2doors > *{min-width:0}
-  .w2doors .w2t{aspect-ratio:auto;height:190px}
-  .w2doors .w2cap{font-size:15px}
+  .w2doors .w2t{aspect-ratio:auto;height:63px}
+  .w2doors .w2cap{font-size:13px;padding-top:24px}
+  .w2doors .w2cap small{display:none}
+  .w2doors .w2art img{filter:blur(2.5px) brightness(.62);transform:scale(1.08)}
+  .w2doors .w2hit:hover .w2art img{transform:scale(1.08)}
+  @media (max-width:640px){
+    .feed.w2{grid-template-columns:repeat(2,minmax(0,136px));gap:18px;justify-content:space-between}
+    .w2doors{grid-template-columns:repeat(2,minmax(0,136px));gap:18px;justify-content:space-between}
+    .w2doors .w2cap{font-size:11.5px}
+  }
   .tmenu{position:relative}
   .tpop{position:absolute;right:0;top:calc(100% + 6px);z-index:60;background:var(--card);border:1px solid var(--key);
         border-radius:10px;box-shadow:var(--shadow);padding:6px;min-width:210px;display:flex;flex-direction:column;gap:2px}
@@ -709,7 +720,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.21</span></h1>
+      <h1>Sparkboard <span class="ver">v2.22</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -817,7 +828,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.21</div>
+  <div class="stamp" id="stamp">v2.22</div>
 </div>
 
 <aside class="stx-col">
@@ -1270,50 +1281,11 @@ function toggleTray(n){
   if(wasOpen) return;
   openTrayFor(n);
 }
-/* Desktop only: hovering a picture tile peeks its tray, like a shade coming
-   down, without needing a click. Leaving the tile (and its peeked tray)
-   brings the shade back up. Clicking always jumps straight to the big
-   picture (see the data-src click handler above), hover is just a look. */
+/* v2.22 (Oct 9, 2026): the hover peek (a tray of pictures sliding open under a tile when you point at it) is removed. A tile now opens only when you tap or click it. HOVERABLE stays because the Mac-only spotlight uses it. */
 var HOVERABLE=false;
 try{ HOVERABLE=window.matchMedia("(hover:hover) and (pointer:fine)").matches; }catch(e){}
 var peekT=null, peekN=null;
 function w2behOf(n){ var g=GROUPS[n]; return g ? w2beh(g.items[0].behavior) : null; }
-if(HOVERABLE){
-  document.addEventListener("mouseover",function(e){
-    var b=e.target.closest("[data-src]");
-    if(b){
-      if(e.relatedTarget && b.contains(e.relatedTarget)) return;
-      var n=b.getAttribute("data-src"), beh=w2behOf(n);
-      if(beh!=="strip" && beh!=="mosaic") return;
-      clearTimeout(peekT); peekT=null;
-      var tr=document.querySelector('[data-tray="'+n+'"]');
-      if(tr && !tr.hidden){ peekN=n; return; }
-      closeAllTrays(); openTrayFor(n); peekN=n;
-      return;
-    }
-    var tw=e.target.closest("[data-tray]");
-    if(tw && tw.getAttribute("data-tray")===peekN){ clearTimeout(peekT); peekT=null; }
-  });
-  document.addEventListener("mouseout",function(e){
-    var b=e.target.closest("[data-src]");
-    var tw=e.target.closest("[data-tray]");
-    var zone=b||tw; if(!zone) return;
-    var n=b?b.getAttribute("data-src"):tw.getAttribute("data-tray");
-    if(n!==peekN) return;
-    var to=e.relatedTarget;
-    var btn=document.querySelector('[data-src="'+n+'"]');
-    var tr=document.querySelector('[data-tray="'+n+'"]');
-    if(to && ((btn&&btn.contains(to)) || (tr&&tr.contains(to)))) return;
-    clearTimeout(peekT);
-    peekT=setTimeout(function(){
-      if(tr) tr.hidden=true;
-      if(btn) btn.setAttribute("aria-expanded","false");
-      peekN=null;
-    },180);
-  });
-}
-
-
 /* ---- v2.20 (Oct 9, 2026): a calmer board ---------------------------------------
    Opened tiles: a tile you tap open today fades back so what is left is what you
    have not looked at. Remembered in this browser for the board's day. Pointing at
@@ -2631,7 +2603,7 @@ function renderDateLine(){
   document.getElementById("sub").textContent=
     days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
   document.getElementById("stamp").textContent=
-    "v2.21 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+    "v2.22 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
   var lbl=document.getElementById("daylabel");
   if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
   var ds=document.getElementById("daystep");
