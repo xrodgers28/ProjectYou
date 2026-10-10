@@ -153,6 +153,19 @@
 #deck .howlongtotal.show{display:block}
 #deck .foot .next.spent{opacity:.55;pointer-events:none}
 #deck .howlong .in{margin-left:auto;width:62px;border:1px solid #e3e7ee;border-radius:8px;padding:6px 8px;font-size:13px;text-align:center;font-family:inherit}
+#deck .card.wk{max-width:360px}
+#deck .hero{position:relative;width:100%;height:178px;background:#e9edf2;overflow:hidden}
+#deck .hero img{width:100%;height:100%;object-fit:cover;object-position:center 25%;display:block}
+#deck .hero.bad{background:linear-gradient(135deg,var(--acc),#333)}
+#deck .hero.bad img{display:none}
+#deck .poster{min-height:178px;display:flex;align-items:center;padding:26px 24px}
+#deck .poster .ptxt{color:#fff;font-size:23px;line-height:1.22;font-weight:800;letter-spacing:-.01em}
+#deck .poster .big.ptxt{margin-top:0;color:#fff}
+#deck .card.wk .sstar{top:70px;width:34px;height:34px;padding:5px;background:rgba(255,255,255,.93);border-radius:50%;box-shadow:0 1px 5px rgba(31,42,68,.25)}
+#deck .card.wk .bd{padding:16px 19px 5px}
+#deck .card.wk .big{font-size:19px}
+#deck .card.wk .mean{font-size:14.5px;line-height:1.45;margin-top:10px;color:#4a5361}
+#deck .credit{font-size:10.5px;color:#a7afba;margin-top:6px}
 </style>
 </head>
 <body>
@@ -189,7 +202,7 @@
 
   <div id="browse" class="hidden">
     <div class="wrap">
-    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v2.4</span><span class="date"></span></div>
+    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v3.0</span><span class="date"></span></div>
       <div class="add">
         <b>Add a phrase</b>
         <div class="r">
@@ -209,7 +222,7 @@
       <div class="grid" id="grid"></div>
     </div>
   </div>
-  <div class="badge">Things Worth Knowing v2.4</div>
+  <div class="badge">Things Worth Knowing v3.0</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -269,7 +282,7 @@ async function load(){
   await loadSeen();
   await loadFun();
   buildDaily(); renderDaily(); draw();
-  stampSeen();
+  stampSeen(); stampNews();
   hydrateFavs();
 }
 let SEEN={};
@@ -292,85 +305,87 @@ async function stampSeen(){
     ids.forEach(i=>{ SEEN[i]=t; });
   }catch(e){}
 }
-/* ===== CLEVER PHRASES IS ALWAYS THE FIRST TILE =====
-   Sep 3 2026, Scott. It used to be one of three groups drawn at random, so it
-   surfaced about one day in three, while a second copy of the same library was
-   being dealt every day on the AI Insights card. It now leads this deck every
-   day and appears on no other cue card. Only change PIN_CAT if the group is
-   renamed in the library itself. */
+/* ===== THE DAILY DEAL (v3.0, Oct 9 2026) =====
+   Scott: "Fully random, no fixed first tile ... lets try 3 a day to start."
+   Nine categories. Each day shows DEAL_PER_DAY of them. The nine are shuffled
+   into a fixed order for each 3-day cycle, so every category is dealt once
+   before any comes round again, and the same day always gives the same deal.
+   Inside a category the item shown is the one seen longest ago (never seen
+   first), with a date hash as the tie-break. Clever Phrases is no longer pinned.
+   Change DEAL_PER_DAY here and nowhere else. */
 const PIN_CAT='Clever Phrases';
-function buildDaily(){
-  const seed=etToday();
-  const byCat={};
-  ALL.forEach(q=>{const c=(q.tags&&q.tags[0])?q.tags[0]:PIN_CAT;(byCat[c]=byCat[c]||[]).push(q);});
-  const rest=Object.keys(byCat).filter(c=>c!==PIN_CAT).sort((a,b)=>hstr(seed+a)-hstr(seed+b)).slice(0,2);
-  const cats=(byCat[PIN_CAT]&&byCat[PIN_CAT].length?[PIN_CAT]:[]).concat(rest);
-  const lastSeen=q=>SEEN[q.id]||'0000-00-00';
-  DAILY=cats.map(c=>{
-    const list=byCat[c].slice().sort((a,b)=>{
-      const s=lastSeen(a).localeCompare(lastSeen(b));
-      return s!==0 ? s : hstr(seed+a.id)-hstr(seed+b.id);
-    });
-    return {kind:'phrase', cat:c, q:list[0]};
-  }).filter(x=>x.q);
-  DAILY=DAILY.concat(FUN.map(f=>({kind:'fun', fact:f})));
-  dIdx=0;
+const DEAL_PER_DAY=3;
+const CATS=[
+ {key:'Clever Phrases',label:'Clever Phrases',from:'quotes',tag:'Clever Phrases',acc:'#7a4f9c',tint:'#efeaf4',dark:'#4a2d66'},
+ {key:'Self-Deprecating Jokes',label:'Self-deprecating jokes and one-liners',from:'quotes',tag:'Self-Deprecating Jokes',acc:'#c2410c',tint:'#fdeee3',dark:'#7c2a08'},
+ {key:'Little Known Facts',label:'Little Known Facts',from:'news',source:'Fun Facts',acc:'#d08c2e',tint:'#f9efdd',dark:'#7a4f12'},
+ {key:'Sayings with a story behind them',label:'Sayings with a story behind them',from:'news',section:'Sayings with a story behind them',acc:'#a0522d',tint:'#f6ebe3',dark:'#5e2f19'},
+ {key:'Ideas worth chewing on',label:'Ideas worth chewing on',from:'news',section:'Ideas worth chewing on',acc:'#2f6f8f',tint:'#e4f0f6',dark:'#183f54'},
+ {key:'Design and creativity',label:'Design and creativity',from:'news',section:'Design and creativity',acc:'#c0392b',tint:'#fbe9e6',dark:'#6e1f16'},
+ {key:'Wellbeing research',label:'Wellbeing research',from:'news',section:'Wellbeing research',acc:'#2e8b57',tint:'#e3f3ea',dark:'#17482c'},
+ {key:'Hidden places and strange culture',label:'Hidden places and strange culture',from:'news',section:'Hidden places and strange culture',acc:'#6b5ca5',tint:'#ece9f6',dark:'#38305e'},
+ {key:'Why people do what they do',label:'Why people do what they do',from:'news',section:'Why people do what they do',acc:'#b8860b',tint:'#faf1d6',dark:'#6b4d06'}
+];
+function catOf(k){return CATS.find(function(c){return c.key===k;})||CATS[0];}
+function dayNum(){var p=etToday().split('-').map(Number);return Math.floor(Date.UTC(p[0],p[1]-1,p[2])/86400000);}
+function cycleOrder(cy){return CATS.map(function(c){return c.key;}).sort(function(a,b){return hstr('cyc'+cy+a)-hstr('cyc'+cy+b);});}
+let WK=[], FUN_KEPT={};
+function poolFor(c){
+  if(c.from==='quotes') return ALL.filter(function(q){return (q.tags&&q.tags[0])===c.tag;}).map(function(q){return {kind:'phrase',cat:c.key,q:q,id:q.id};});
+  return WK.filter(function(r){return c.source?r.source===c.source:(r.source==='Worth Knowing'&&r.section===c.section);}).map(function(r){return {kind:'news',cat:c.key,item:r,id:r.id};});
 }
-
-/* ===== FUN FACTS =====
-   Sep 3 2026, Scott: "fun facts should be moved from farnum street into things
-   worth knowing and should be one fact on screen at a time." They used to sit on
-   The Feed as a second well with both facts stacked in one tile. They are now
-   their own tiles at the end of this deck, one fact per screen. The well itself
-   is unchanged, so nothing already dealt comes round again.
-   FUN_PER_DAY is the only number to change if he wants more or fewer. */
-const FUN_PER_DAY=2;
-const FUNSRC='Fun Facts';
-let FUN=[], FUN_LEFT=0, FUN_KEPT={};
-
-async function loadFun(){
-  FUN=[]; FUN_LEFT=0;
+function seenOf(e){return e.kind==='phrase'?(SEEN[e.q.id]||''):(e.item.seen_on||'');}
+function buildDaily(){
+  const seed=etToday(), n=dayNum(), cy=Math.floor(n/3), pos=((n%3)+3)%3;
+  const order=cycleOrder(cy).slice(pos*3,pos*3+3).concat(cycleOrder(cy+1));
+  const out=[];
+  for(const k of order){
+    if(out.length>=DEAL_PER_DAY) break;
+    if(out.some(function(e){return e.cat===k;})) continue;
+    const list=poolFor(catOf(k));
+    if(!list.length) continue;
+    list.sort(function(a,b){
+      const ta=seenOf(a)===seed?0:1, tb=seenOf(b)===seed?0:1;
+      if(ta!==tb) return ta-tb;
+      const s2=(seenOf(a)||'0000').localeCompare(seenOf(b)||'0000');
+      return s2!==0?s2:hstr(seed+a.id)-hstr(seed+b.id);
+    });
+    out.push(list[0]);
+  }
+  DAILY=out; dIdx=0;
+}
+/* Mark today's news tiles as seen. If this fails the deal is still stable,
+   because the pick is deterministic. */
+async function stampNews(){
   try{
-    const today=etToday();
+    const t=etToday();
+    const ids=DAILY.filter(function(d){return d.kind==='news'&&d.item.seen_on!==t;}).map(function(d){return d.item.id;});
+    if(!ids.length) return;
+    const up=await sb.from('news_queue').update({status:'seen',seen_on:t}).in('id',ids);
+    if(!up.error) DAILY.forEach(function(d){if(d.kind==='news'){d.item.seen_on=t;d.item.status='seen';}});
+  }catch(e){}
+}
+async function loadFun(){
+  WK=[];
+  try{
     const r=await sb.from('news_queue')
       .select('id,source,section,title,body,url,published_on,status,seen_on,image_url,image_credit')
-      .eq('source',FUNSRC).neq('status','hidden')
-      .order('published_on',{ascending:false}).order('id');
-    const all=r.data||[];
-    let dealt=all.filter(x=>x.seen_on===today);
-    let pool =all.filter(x=>!x.seen_on);
-    if(dealt.length<FUN_PER_DAY && pool.length){
-      const take=pool.slice(0,FUN_PER_DAY-dealt.length);
-      const ids=take.map(x=>x.id);
-      const up=await sb.from('news_queue').update({status:'seen',seen_on:today}).in('id',ids);
-      /* If the stamp fails the deal is not stable, so show nothing rather than
-         something that changes on the next reload. */
-      if(!up.error){
-        take.forEach(x=>{x.seen_on=today;x.status='seen';});
-        dealt=dealt.concat(take);
-        pool=pool.slice(take.length);
-      }
-    }
-    dealt.sort((a,b)=>{
-      if(a.published_on!==b.published_on) return a.published_on<b.published_on?1:-1;
-      return a.id-b.id;
-    });
-    FUN=dealt; FUN_LEFT=pool.length;
-  }catch(e){ FUN=[]; FUN_LEFT=0; }
+      .in('source',['Fun Facts','Worth Knowing']).neq('status','hidden').order('id');
+    WK=r.data||[];
+  }catch(e){ WK=[]; }
   try{
     const k=await sb.from('fun_facts').select('id,title');
-    FUN_KEPT={}; (k.data||[]).forEach(r=>{ FUN_KEPT[r.title]=r.id; });
+    FUN_KEPT={}; (k.data||[]).forEach(function(r){ FUN_KEPT[r.title]=r.id; });
   }catch(e){ FUN_KEPT={}; }
 }
-
-async function favFun(i){
-  const f=FUN[i]; if(!f) return;
+async function favNews(id){
+  const f=WK.find(function(x){return x.id===id;}); if(!f) return;
   const had=FUN_KEPT[f.title];
   try{
     if(had){
       const d=await sb.from('fun_facts').delete().eq('id',had);
       if(d.error) throw d.error;
-      delete FUN_KEPT[f.title]; toast('Out of your fun facts');
+      delete FUN_KEPT[f.title]; toast('Out of your kept list');
     }else{
       const ins=await sb.from('fun_facts').insert({
         title:f.title, body:f.body, url:f.url, published_on:f.published_on,
@@ -382,6 +397,7 @@ async function favFun(i){
   }catch(e){ toast('Could not reach the server. Try again.'); }
   renderDaily();
 }
+function hostOf(u){try{return new URL(u).hostname.replace(/^www\./,'');}catch(e){return '';}}
 const TWK_ICON='<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M4 4h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
 const TWK_STARP='<path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.7l6.1-.9z"/>';
 /* Sep 4 2026, Scott: "It should only be clever phrases, remove untranslatable words."
@@ -440,7 +456,9 @@ function __cueHandTick(){
   line.style.transform='rotate('+deg+'deg)';
 }
 var __cueTickId=setInterval(__cueHandTick,250);
-function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+'<span class="ver">v2.4</span></div>';}
+function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+'<span class="ver">v3.0</span></div>';}
+function paras(t){return (t||'').split(/\n\s*\n/).map(function(p){return '<div class="mean">'+esc(p.trim())+'</div>';}).join('');}
+function posterHtml(c,text,big){return '<div class="poster" style="background:linear-gradient(135deg,'+c.acc+','+c.dark+')"><div class="'+(big?'big ':'')+'ptxt">'+esc(text)+'</div></div>';}
 function renderDaily(){
   const total=DAILY.length;
   const ds=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
@@ -454,12 +472,13 @@ function renderDaily(){
     return;
   }
   if(dIdx>=total){
-    let rows=DAILY.map((d,i)=>{
-      if(d.kind==='fun'){
-        const kept=!!FUN_KEPT[d.fact.title];
-        return '<div class="ck"><input type="checkbox" id="sv'+i+'" '+(kept?'checked':'')+' disabled><label for="sv'+i+'"><div class="t">Fun Fact</div><div class="d">'+esc((d.fact.title||'').slice(0,95))+'</div></label></div>';
+    let rows=DAILY.map(function(d,i){
+      const c=catOf(d.cat);
+      if(d.kind==='news'){
+        const kept=!!FUN_KEPT[d.item.title];
+        return '<div class="ck"><input type="checkbox" id="sv'+i+'" '+(kept?'checked':'')+' disabled><label for="sv'+i+'"><div class="t">'+esc(c.label)+'</div><div class="d">'+esc((d.item.title||'').slice(0,95))+'</div></label></div>';
       }
-      return '<div class="ck"><input type="checkbox" id="sv'+i+'" '+(d.q.favorite?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(catLabel(d.cat))+'</div><div class="d">'+esc((d.q.text||'').slice(0,95))+'</div></label></div>';
+      return '<div class="ck"><input type="checkbox" id="sv'+i+'" '+(d.q.favorite?'checked':'')+'><label for="sv'+i+'"><div class="t">'+esc(c.label)+'</div><div class="d">'+esc((d.q.text||'').slice(0,95))+'</div></label></div>';
     }).join('');
     deck.innerHTML='<div class="card" style="--acc:#7a4f9c;--tint:#efeaf4">'+twkHd()+
       '<div class="bd"><div class="step">End of set</div><div class="big">Keep what mattered.</div><div class="cklist">'+rows+'</div>'+
@@ -470,37 +489,40 @@ function renderDaily(){
     __cueHandTick();
     return;
   }
-  const d=DAILY[dIdx];
-  if(d.kind==='fun'){
-    const f=d.fact, kept=!!FUN_KEPT[f.title];
-    const fstar='<span class="sstar'+(kept?' on':'')+'" title="Keep this fact" onclick="favFun('+FUN.indexOf(f)+')"><svg viewBox="0 0 24 24">'+TWK_STARP+'</svg></span>';
-    const fback=dIdx===0?'back off':'back';
-    const fbackOn=dIdx===0?'':'onclick="dgo(-1)"';
-    const fnext=(dIdx===total-1?'Review':'Next');
-    let fbd='<div class="step">Fun Fact</div><div class="big">'+esc(f.title)+'</div>';
-    if(f.body) fbd+='<div class="mean">'+esc(f.body)+'</div>';
-    fbd+='<div class="date bottom">'+ds+'</div>';
-    deck.innerHTML='<div class="card" style="--acc:#d08c2e;--tint:#f9efdd">'+twkHd()+fstar+'<div class="bd">'+fbd+'</div>'+
-      '<div class="foot"><span class="'+fback+'" '+fbackOn+'>Back</span><span class="next" onclick="dgo(1)">'+fnext+'</span></div></div>';
-    __cueHandTick();
-    return;
-  }
-  const q=d.q;
-  const star='<span class="sstar'+(q.favorite?' on':'')+'" title="Save to favorites" onclick="favD(\''+q.id+'\','+(!q.favorite)+')"><svg viewBox="0 0 24 24">'+TWK_STARP+'</svg></span>';
+  const d=DAILY[dIdx], c=catOf(d.cat);
   const backCls=dIdx===0?'back off':'back';
   const backOn=dIdx===0?'':'onclick="dgo(-1)"';
   const nextLabel=(dIdx===total-1?'Review':'Next');
-  let bd='<div class="step">'+esc(catLabel(d.cat))+'</div><div class="big">'+esc(q.text)+'</div>';
-  if(q.meaning) bd+='<div class="mean">'+esc(q.meaning)+'</div>';
-  bd+=twkSrc(q);
+  const foot='<div class="foot"><span class="'+backCls+'" '+backOn+'>Back</span><span class="next" onclick="dgo(1)">'+nextLabel+'</span></div>';
+  const style='--acc:'+c.acc+';--tint:'+c.tint;
+  let star, hero, bd;
+  if(d.kind==='news'){
+    const f=d.item, kept=!!FUN_KEPT[f.title];
+    star='<span class="sstar'+(kept?' on':'')+'" title="Keep this" onclick="favNews('+f.id+')"><svg viewBox="0 0 24 24">'+TWK_STARP+'</svg></span>';
+    if(f.image_url){
+      hero='<div class="hero"><img src="'+esc(f.image_url)+'" alt="" referrerpolicy="no-referrer" onerror="this.parentNode.classList.add(\'bad\')"></div>';
+      bd='<div class="step">'+esc(c.label)+'</div><div class="big">'+esc(f.title)+'</div>'+paras(f.body);
+    }else{
+      hero=posterHtml(c,f.title,true);
+      bd='<div class="step">'+esc(c.label)+'</div>'+paras(f.body);
+    }
+    if(f.url) bd+='<div class="src">Source &middot; <a href="'+esc(f.url)+'" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">'+esc(hostOf(f.url))+'</a></div>';
+    if(f.image_url&&f.image_credit) bd+='<div class="credit">'+esc(f.image_credit)+'</div>';
+  }else{
+    const q=d.q;
+    star='<span class="sstar'+(q.favorite?' on':'')+'" title="Save to favorites" onclick="favD(\''+q.id+'\','+(!q.favorite)+')"><svg viewBox="0 0 24 24">'+TWK_STARP+'</svg></span>';
+    hero=posterHtml(c,q.text,true);
+    bd='<div class="step">'+esc(c.label)+'</div>';
+    if(q.meaning) bd+=paras(q.meaning);
+    bd+=twkSrc(q);
+  }
   bd+='<div class="date bottom">'+ds+'</div>';
-  deck.innerHTML='<div class="card" style="--acc:#7a4f9c;--tint:#efeaf4">'+twkHd()+star+'<div class="bd">'+bd+'</div>'+
-    '<div class="foot"><span class="'+backCls+'" '+backOn+'>Back</span><span class="next" onclick="dgo(1)">'+nextLabel+'</span></div></div>';
+  deck.innerHTML='<div class="card wk" style="'+style+'">'+twkHd()+star+hero+'<div class="bd">'+bd+'</div>'+foot+'</div>';
   __cueHandTick();
 }
 async function saveDaily(){
   for(let i=0;i<DAILY.length;i++){
-    if(DAILY[i].kind==='fun') continue;
+    if(DAILY[i].kind==='news') continue;
     const cb=document.getElementById('sv'+i); if(!cb)continue;
     const q=DAILY[i].q; const val=cb.checked; q.favorite=val;
     try{ await cueSetTWK(q,val); }catch(e){}
