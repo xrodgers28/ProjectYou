@@ -71,6 +71,13 @@
   .tile .wflog{font-style:italic;color:var(--muted);font-size:15px;margin:0 0 12px}
   .tile .wfl{display:block;font-size:10.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:16px 0 4px}
   .tile .wfsw{font-size:13px;color:var(--muted);margin-top:14px}
+  .tile .rtc{margin-top:18px;padding-top:6px;border-top:2px solid var(--line)}
+  .tile .rtc:first-of-type{margin-top:6px;border-top:0;padding-top:0}
+  .tile .rtn{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--acc);margin-top:10px}
+  .tile h3.rth{font-size:18px;font-weight:700;line-height:1.25;margin:4px 0 8px;color:var(--ink);text-wrap:balance}
+  .tile .rtpic{margin:0 0 12px}
+  .tile .rtpic img{width:100%;max-height:230px;object-fit:contain;display:block;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;background:#fff}
+  .tile .rtpic .hint{font-size:11px;color:var(--muted);margin:5px 0 0;text-align:center}
   #lbx{position:fixed;inset:0;background:rgba(10,15,20,.9);z-index:200;display:none;overflow:auto;padding:16px;cursor:zoom-out}
   #lbx img{display:block;max-width:100%;height:auto;margin:0 auto;border-radius:8px;background:#fff}
   #lbx span{position:fixed;top:10px;right:18px;color:#fff;font-size:32px;line-height:1}
@@ -90,12 +97,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; your daily AI workout</div>
-  <h1>AI Workout <span class="ver">v2.5</span></h1>
+  <h1>AI Workout <span class="ver">v2.6</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
   <div class="note">Each day: one tip, one insight, two new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That.</div>
-  <div class="stamp" id="stamp">v2.3</div>
+  <div class="stamp" id="stamp">v2.6</div>
 </div>
 
 <script>
@@ -281,6 +288,18 @@ function rundownBody(r){
     if(sm.software) h+='<p class="wfsw">'+esc(sm.software)+'</p>';
     return h;
   }
+  if(r.section==="Roundtable" && sm && sm.v===2 && sm.items && sm.items.length){
+    sm.items.forEach(function(it,k){
+      h+='<div class="rtc"><span class="rtn">Use '+(k+1)+'</span><h3 class="rth">'+esc(it.headline)+'</h3>';
+      if(it.shot) h+='<div class="rtpic"><img data-enl="1" src="'+esc(it.shot)+'" alt="Screenshot from the story" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>';
+      h+='<p class="wflog">'+esc(it.log)+'</p>';
+      h+='<span class="wfl">Why it works</span><p>'+esc(it.why)+'</p>';
+      h+='<span class="wfl">How AI does it</span><ol>'+(it.steps||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>';
+      if(it.software) h+='<p class="wfsw">'+esc(it.software)+'</p>';
+      h+='</div>';
+    });
+    return h;
+  }
   body.forEach(function(b){
     if(norm(b.x)===norm(r.title)) return;
     if(/How do you use AI\?|Tell us for a chance|^See .{0,40}full workflow/i.test(b.x)) return;
@@ -322,7 +341,7 @@ function tileHTML(t,i,n){
   return '<div class="tile">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+
     '<button class="dt" type="button" data-do="'+esc(t.key)+'" aria-pressed="'+(r.do_this?"true":"false")+'" title="Do this!">Do this</button>'+
     '<button class="st" type="button" data-save="'+esc(t.key)+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
-    ((t.kind==="rd"&&r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.shot)?'<div class="pic wfpic"><div style="height:44px"></div><img data-enl="1" src="'+esc(r.ai_summary.shot)+'" alt="Screenshot from the reader\u2019s project" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>':(t.kind==="rd"&&r.img)?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
+    ((t.kind==="rd"&&r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.shot)?'<div class="pic wfpic"><div style="height:44px"></div><img data-enl="1" src="'+esc(r.ai_summary.shot)+'" alt="Screenshot from the reader\u2019s project" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>':(t.kind==="rd"&&r.img&&!(r.section==="Roundtable"&&r.ai_summary&&r.ai_summary.items))?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
     '<div class="top"><div class="k">'+esc(kick)+'</div><h2'+(big?' class="bigq"':'')+'>'+esc(title)+'</h2>'+body+link+srcLine(t)+
     '<button class="nx" type="button" data-nx="'+esc(t.key)+'">Don&rsquo;t show again</button>'+
     '</div>'+
@@ -519,7 +538,7 @@ loadHidden().then(function(){ return Promise.all([dealAi().catch(function(){ ret
     var wf=rdRows.filter(function(r){ return r.section==="Workflow of the Day"; }).length;
     var plats=tiles.filter(function(t){ return t.type==="platform"; }).length;
     document.getElementById("sub").textContent=tiles.length+" tiles · about 10 minutes"+(plats?" · "+plats+" new platforms":"")+(wf?" · "+wf+" workflows":"");
-    document.getElementById("stamp").textContent="v2.5 · "+nice(today());
+    document.getElementById("stamp").textContent="v2.6 · "+nice(today());
     render();
   });
 }).catch(function(e){
