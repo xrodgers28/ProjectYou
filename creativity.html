@@ -5,7 +5,7 @@
 <script src="py-day.js"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Creativity</title>
-<meta name="pn-ver" content="v1.4">
+<meta name="pn-ver" content="v1.6">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
@@ -202,7 +202,7 @@ h2{font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;font-weight:700;
   <div class="head">
     <h1>Creativity</h1>
     <!-- The ONLY place this page's version is written. The publish guard reads class="ver" and navpatch reads #ver, so both see this one literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v1.5</span>
+    <span id="ver" class="ver">v1.6</span>
     <span class="date" id="date"></span>
   </div>
 
@@ -342,22 +342,58 @@ var S={
   saved:false
 };
 var LKEY='creativity-'+DAY;
+function liveTyping(){ var a=document.getElementById('idea'), m=document.getElementById('mins'); return {typing:a?a.value:'', mins:m?m.value:''}; }
+var draftApplied=false;
+var CARD_DRAFT=null; /* typed-but-not-added line and minutes, restored on render */
+function draftPayload(){
+  var t=liveTyping();
+  if(!document.getElementById('idea')&&CARD_DRAFT) t=CARD_DRAFT;
+  return {mode:S.mode,strokes:S.strokes,object:S.object,ideas:S.ideas,phase:S.phase,typing:t.typing||'',mins:t.mins||'',at:Date.now()};
+}
+function draftBlank(p){
+  var drew=(p.strokes||[]).some(function(c){return c&&c.length;});
+  return !drew&&!(p.ideas&&p.ideas.length)&&!p.typing&&!p.mins;
+}
 function stash(){
+  try{ localStorage.setItem(LKEY,JSON.stringify(draftPayload())); }catch(e){}
+  cloudDraftSoon();
+}
+/* v1.6: account copy of the draft, so leaving and coming back never starts over.
+   Never written until the saved copy has been read back, never written blank. */
+var draftReady=false, cloudT=null, allowBlank=false;
+function cloudDraftSoon(){
+  clearTimeout(cloudT);
+  cloudT=setTimeout(cloudDraftNow,700);
+}
+async function cloudDraftNow(){
   try{
-    localStorage.setItem(LKEY,JSON.stringify({
-      mode:S.mode,strokes:S.strokes,object:S.object,ideas:S.ideas,phase:S.phase
-    }));
+    if(!sb||!signedIn||!draftReady) return;
+    var p=draftPayload();
+    if(draftBlank(p)&&!allowBlank) return;
+    allowBlank=false;
+    var txt=JSON.stringify(p);
+    if(txt.length>900000) return;
+    await sb.from('cue_card_drafts').upsert([{card:'creativity-'+S.mode,for_date:DAY,draft:p,updated_at:new Date().toISOString()}],{onConflict:'card,for_date'});
   }catch(e){}
+}
+function applyDraft(o){
+  if(!o||o.mode!==S.mode) return false;
+  if(o.strokes&&o.strokes.length===10) S.strokes=o.strokes;
+  if(o.object) S.object=o.object;
+  if(o.ideas) S.ideas=o.ideas;
+  if(o.phase==='more'||o.phase==='closed') S.phase=o.phase;
+  CARD_DRAFT={typing:o.typing||'',mins:o.mins||''};
+  draftApplied=true;
+  return true;
+}
+function localDraftAt(){
+  try{ var o=JSON.parse(localStorage.getItem(LKEY)||'null'); return (o&&o.at)||0; }catch(e){ return 0; }
 }
 function unstash(){
   try{
     var raw=localStorage.getItem(LKEY); if(!raw) return;
     var o=JSON.parse(raw)||{};
-    if(o.mode!==S.mode) return;
-    if(o.strokes&&o.strokes.length===10) S.strokes=o.strokes;
-    if(o.object) S.object=o.object;
-    if(o.ideas) S.ideas=o.ideas;
-    if(o.phase==='more'||o.phase==='closed') S.phase=o.phase;
+    applyDraft(o);
   }catch(e){}
 }
 unstash();
@@ -435,7 +471,7 @@ function undoLast(){
 function clearCell(i){ S.strokes[i]=[]; repaint(i); stash(); paintCount(); }
 function clearAll(){
   for(var i=0;i<10;i++){ S.strokes[i]=[]; repaint(i); }
-  stash(); paintCount();
+  allowBlank=true; stash(); paintCount();
 }
 /* One image of the whole sheet, two across and five down, for the strip below. */
 function sheetPNG(){
@@ -503,6 +539,8 @@ function renderCircles(){
   });
   el('undo').addEventListener('click',undoLast);
   el('wipe').addEventListener('click',clearAll);
+  if(CARD_DRAFT&&CARD_DRAFT.mins) el('mins').value=CARD_DRAFT.mins;
+  el('mins').addEventListener('input',stash);
   el('stuck').addEventListener('click',function(){
     el('nudge').textContent=NUDGES[Math.floor(Math.random()*NUDGES.length)];
   });
@@ -568,7 +606,7 @@ function addIdea(){
   stash(); paintIdeas();
   if(S.phase==='more'&&bonusCount()>=2) closeOut();
 }
-function delIdea(i){ S.ideas.splice(i,1); stash(); paintIdeas(); }
+function delIdea(i){ S.ideas.splice(i,1); allowBlank=true; stash(); paintIdeas(); }
 
 function renderUses(){
   var o=S.object;
@@ -609,6 +647,9 @@ function renderUses(){
   });
   el('tapped').addEventListener('click',startWait);
   el('did').addEventListener('click',finish);
+  if(CARD_DRAFT){ if(CARD_DRAFT.typing) el('idea').value=CARD_DRAFT.typing; if(CARD_DRAFT.mins) el('mins').value=CARD_DRAFT.mins; }
+  el('idea').addEventListener('input',stash);
+  el('mins').addEventListener('input',stash);
   paintIdeas();
   if(S.phase==='more') openMore();
   if(S.phase==='closed') closeOut(true);
@@ -848,7 +889,9 @@ async function doSignIn(){
   if(r.error){ el('gateMsg').textContent=r.error.message; return; }
   signedIn=true;
   el('gate').classList.add('hidden');
+  draftApplied=false;
   await hydrate();
+  if(draftApplied){ draftApplied=false; if(S.mode==='circles') renderCircles(); else renderUses(); drawFoot(); }
   paintNotice();
   hint();
   drawHist();
@@ -884,6 +927,18 @@ async function hydrate(){
 
     var t=await sb.from('todos').select('id,done').eq('for_date',DAY).eq('tracker',TRACKER).limit(1);
     if(t.data&&t.data[0]&&t.data[0].done) ticked=true;
+  }catch(e){}
+  /* v1.6: newest of the device copy and the account copy wins */
+  try{
+    var dq=await sb.from('cue_card_drafts').select('draft,updated_at').eq('card','creativity-'+S.mode).eq('for_date',DAY).limit(1);
+    if(!dq.error){
+      var cd=(dq.data&&dq.data[0])?dq.data[0].draft:null;
+      if(cd&&cd.mode===S.mode&&(cd.at||0)>localDraftAt()&&!ticked){
+        applyDraft(cd);
+        try{ localStorage.setItem(LKEY,JSON.stringify(cd)); }catch(e){}
+      }
+      draftReady=true;
+    }
   }catch(e){}
 }
 
