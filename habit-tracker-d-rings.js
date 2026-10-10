@@ -1,4 +1,4 @@
-/* Design E: Stack Rings (design file ref 8). v1.3 Oct 5, 2026 (four levels shown without touching the wheel: E = outer rim, thick for Core, thin for Secondary, dotted for Bonus; I = letter badges C, S, B. Rings stay one per stack. Weekly habits sit in a small This week strip, never counted in a ring. A short Features note sits at the bottom of each card.)
+/* Design E: Stack Rings (design file ref 8). v1.4 Oct 9, 2026 (icons ask for the small picture when one exists). v1.3 Oct 5, 2026 (four levels shown without touching the wheel: E = outer rim, thick for Core, thin for Secondary, dotted for Bonus; I = letter badges C, S, B. Rings stay one per stack. Weekly habits sit in a small This week strip, never counted in a ring. A short Features note sits at the bottom of each card.)
    Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
 (function () {
   function pt(cx, cy, r, deg) { var t = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; }
@@ -41,7 +41,7 @@
             }
             svg += '<g data-h="' + P.esc(x.n) + '"><path d="' + arc(60, 60, 34, 52, a1, a2) + '" fill="' + (lit ? x.pastel : '#eef1f6') + '"/>';
             var p = pt(60, 60, 43, am);
-            svg += '<image href="' + P.icon(x) + '" x="' + (p[0] - 7) + '" y="' + (p[1] - 7) + '" width="14" height="14" ' + (lit ? '' : 'style="filter:grayscale(1);opacity:.38"') + '/>' + extra + '</g>';
+            svg += '<image href="' + P.icon(x, true) + '" x="' + (p[0] - 7) + '" y="' + (p[1] - 7) + '" width="14" height="14" ' + (lit ? '' : 'style="filter:grayscale(1);opacity:.38"') + '/>' + extra + '</g>';
           });
           svg += '<text x="60" y="68" text-anchor="middle" font-size="22" font-weight="300" fill="' + (full ? '#c68a2e' : '#3f6f8f') + '">' + d + '/' + n + '</text>';
           h += '<div style="text-align:center;border:1px solid ' + (full ? '#c68a2e' : '#e3e7ee') + ';border-radius:12px;padding:8px 4px;background:#fff;' +
@@ -53,7 +53,7 @@
         if (wk.length) {
           h += '<div style="grid-column:1/-1;text-align:center;border:1px solid #e3e7ee;border-radius:12px;padding:8px 6px;background:#fff"><div style="font-size:10.5px;font-weight:800;letter-spacing:.08em;color:#5b6472;margin-bottom:6px">THIS WEEK &middot; ' + st.counts.wd + ' of ' + st.counts.wt + '</div><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">';
           wk.forEach(function (x) {
-            h += '<span data-h="' + P.esc(x.n) + '" title="' + P.esc(x.n) + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:2px solid ' + (x.done ? '#eef1f6' : x.color) + ';background:' + (x.done ? '#eef1f6' : x.pastel) + '"><img alt="" src="' + P.icon(x) + '" width="16" height="16" ' + (x.done ? 'style="filter:grayscale(1);opacity:.38"' : '') + '></span>';
+            h += '<span data-h="' + P.esc(x.n) + '" title="' + P.esc(x.n) + '" style="width:30px;height:30px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:2px solid ' + (x.done ? '#eef1f6' : x.color) + ';background:' + (x.done ? '#eef1f6' : x.pastel) + '"><img alt="" src="' + P.icon(x, true) + '" width="16" height="16" ' + (x.done ? 'style="filter:grayscale(1);opacity:.38"' : '') + '></span>';
           });
           h += '</div></div>';
         }

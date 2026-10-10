@@ -1,4 +1,4 @@
-/* Design D: Two-Ring Wheel (design file ref 2). v1.1 Oct 3, 2026. Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
+/* Design D: Two-Ring Wheel (design file ref 2). v1.2 Oct 9, 2026 (inner ring asks for the small picture when one exists). v1.1 Oct 3, 2026. Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
 (function () {
   var CX = 160, CY = 160;
   function pt(cx, cy, r, deg) { var t = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; }
@@ -14,7 +14,7 @@
       var c = st.counts, s = '', W = P.SIZES[size] || 330;
       var core = st.habits.filter(function (h) { return h.core; }), sec = st.habits.filter(function (h) { return !h.core; });
       function ic(h, x, y, sz, on) {
-        return '<image href="' + P.icon(h) + '" x="' + (x - sz / 2) + '" y="' + (y - sz / 2) + '" width="' + sz + '" height="' + sz + '" ' +
+        return '<image href="' + P.icon(h, sz <= 16) + '" x="' + (x - sz / 2) + '" y="' + (y - sz / 2) + '" width="' + sz + '" height="' + sz + '" ' +
           (on ? '' : 'style="filter:grayscale(1);opacity:.38"') + '/>';
       }
       [[core, 98, 132, 22], [sec, 70, 90, 16]].forEach(function (q) {

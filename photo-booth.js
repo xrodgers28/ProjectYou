@@ -1,4 +1,4 @@
-/* Photo Booth strip v1.4 — the week of morning photos, as one slim line that opens.
+/* Photo Booth strip v1.5 (Oct 9, 2026: the Train platform row shows Scott's train icon beside its name) — the week of morning photos, as one slim line that opens.
    v1.1: tapping an empty square no longer opens a bare file box. It opens a sheet of the
    pictures already read off the Mac's Photos app (public.recent_photos, refreshed hourly),
    newest first, with that day's shots at the top. Tap one and it is filed. The file box is
@@ -16,6 +16,7 @@
   var URL_BASE = "https://arnjntspmrhigodlssbn.supabase.co";
   var KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
   var SERIES = ["wiwut", "bell", "platform", "street", "safari"];
+  function trainIcon() { return (window.WSV2 && window.WSV2.trainplatform) || (window.ICONS && window.ICONS.trainplatform) || ""; }
   var SHORT = { wiwut: "What I woke up to", bell: "Bell", platform: "Train platform", street: "Street portrait", safari: "Local Safari" };
   var SUB = { wiwut: "WIWUT", bell: "", platform: "Mon to Fri", street: "any day", safari: "1 a work week" };
   var DOW = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
@@ -246,7 +247,7 @@
       /* the two he rolls away carry the marker on every cell of their row; the grid's
          own class decides whether the marker bites, so the toggle is one class flip. */
       var off = FOLDABLE.indexOf(s) >= 0 ? " pbx-off" : "";
-      g += '<div class="pbx-s lab' + off + '"><span>' + SHORT[s] + (SUB[s] ? "<br>" + SUB[s] : "") + "</span></div>";
+      g += '<div class="pbx-s lab' + off + '"><span>' + (s === "platform" && trainIcon() ? '<img src="' + trainIcon() + '" alt="" style="height:13px;width:auto;vertical-align:-2px;margin-right:4px">' : "") + SHORT[s] + (SUB[s] ? "<br>" + SUB[s] : "") + "</span></div>";
       byS[s].forEach(function (r) {
         g += '<div class="pbx-s' + (r.day === today ? " now" : "") + off + '">' + cellHTML(s, r) + "</div>";
       });
@@ -306,7 +307,7 @@
       '<span class="pbx-sp"></span>' +
       '<span class="pbx-hint">' + (open ? "tap to close" : "tap to open") + "</span></button>" +
       '<div class="pbx-shade"><div class="pbx-in">' + g + band +
-      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.4</span></div>' +
+      '<div class="pbx-foot"><a href="photo-booth.html">See the whole year</a><span>Photo Booth v1.5</span></div>' +
       "</div></div></div>"
     );
     return node;
