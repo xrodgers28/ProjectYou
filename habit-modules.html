@@ -505,6 +505,11 @@
   .rmhi{display:block;width:23px;height:23px;object-fit:contain;
       transition:filter .16s,opacity .16s}
   .rmk.on .rmhi{filter:grayscale(1);opacity:.3}
+  /* v6.87: the meet ups pop-up (the real card, shown in a frame) */
+  .meetsh{width:min(1040px,100%);height:min(92vh,920px);background:#fff;border-radius:14px;padding:10px 12px 12px;
+      display:flex;flex-direction:column;box-shadow:0 18px 50px rgba(20,28,44,.32);font-family:Arial,Helvetica,sans-serif;color:#1f2a44}
+  .meetfr{flex:1;width:100%;min-height:0;border:0;border-radius:10px;background:#fff}
+  @media(max-width:700px){ .meetov{padding:8px} .meetsh{height:94vh;padding:8px} }
   .rmhw{position:relative;display:block}
   /* the day it was done, for the weekly ones. A daily habit just fades. */
   .rmhday{position:absolute;right:-2px;bottom:-3px;min-width:11px;height:11px;border-radius:999px;
@@ -932,13 +937,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.84</span>
+    <span class="pn-ver">v6.85</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.84</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.85</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -1854,6 +1859,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     });
     var pb=row('Photo Booth'); R.photo = (d!==wd) ? !!R.pastDone['Photo Booth'] : !!(pb&&pb.done&&pb.for_date===d);
     await loadVices(d);
+    await mhLoadMeet();
     R.ready=true;
     draw();
     socLoadSync();
@@ -2664,6 +2670,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
   }
   function mhName(x){ return x.tile_label || x.habit; }
   function mhDone(x){
+    if(x.tile_rule==='meetups') return (R.meetToday||0)>0;   /* v6.87: the cups read the visit log, not a tick */
     var t=x.qs_tracker, r=row(t);
     if(r && r.done && r.for_date===today()) return true;
     var w=R.mhWeek[t];
@@ -2771,9 +2778,43 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     mhCommit(x);
   }
 
+  /* ===== v6.87 (Oct 9, 2026): the coffee cups open This week's meet ups ==========
+     Scott: tap the cups and the meet ups open as a pop-up; when he has met someone today
+     the cups fade. The meet ups are NOT copied here. The pop-up shows the real card from
+     the Habit Dashboard page (weekly-review.html?embed=meetups), so there is still one
+     copy to look after. The cups fade off the visit log (the connections book), so a visit
+     logged from anywhere counts: the meet ups, the Social Log, the calendar. Texts, calls
+     and meet ups all count, the same as the meet ups card itself. */
+  async function mhLoadMeet(){
+    try{
+      var r=await sb.from('connections').select('id,superseded').eq('happened_on',viewDay());
+      R.meetToday=((r&&r.data)||[]).filter(function(c){return !c.superseded;}).length;
+    }catch(e){ R.meetToday=R.meetToday||0; }
+  }
+  function meetOpen(){
+    if(document.getElementById('meetov')) return;
+    var ov=document.createElement('div'); ov.id='meetov'; ov.className='socov meetov';
+    ov.innerHTML='<div class="meetsh"><div class="sshd"><b>This week\u2019s meet ups</b>'+
+      '<button class="sx" id="meetx" title="Close">&times;</button></div>'+
+      '<iframe id="meetfr" class="meetfr" title="This week\u2019s meet ups" src="weekly-review.html?embed=meetups"></iframe></div>';
+    document.body.appendChild(ov);
+    ov.onclick=function(e){ if(e.target===ov) meetClose(); };
+    document.getElementById('meetx').onclick=meetClose;
+  }
+  async function meetClose(){
+    var ov=document.getElementById('meetov'); if(ov) ov.remove();
+    await mhLoadMeet(); draw();
+  }
+  window.addEventListener('message',function(e){
+    if(e.origin!==location.origin) return;
+    if(e.data && e.data.py==='meetups-changed') mhLoadMeet().then(function(){ draw(); });
+  });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape' && document.getElementById('meetov')) meetClose(); });
+
   async function mhTap(id){
     var x=null; R.mh.forEach(function(y){ if(String(y.id)===String(id)) x=y; });
     if(!x) return;
+    if(x.tile_rule==='meetups'){ meetOpen(); return; }   /* v6.87: grey or not, the cups open the meet ups */
     if(mhDone(x)){ await mhUndo(x); return; }
     if(x.tile_rule==='birthday'){ R.mhOpen=x; R.mhStep='bday'; mhDraw(); return; }
     /* the human moment opens the one social log form rather than logging a bare
