@@ -937,13 +937,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.86</span>
+    <span class="pn-ver">v6.87</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.86</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.87</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -1443,6 +1443,13 @@ async function toggle(m,el){
     /* 10 min default — unless the card's own last page already logged a time today */
     /* 10 min unless the MOD names its own length (Photo Booth is 2) */
     var mins=(row.for_date===today&&row.actual_minutes)?row.actual_minutes:(m.mins||DEFAULT_MIN);
+    /* v6.87 (Oct 9 2026, Scott's answer 5): a card ticked by hand asks for the minutes. No estimate is filled in.
+       If the card's own page already saved a visit today, that time is used and nothing is asked. A card with a fixed length (m.mins) is left alone. */
+    if(window.CueVisits && !m.mins){
+      var ht=await CueVisits.handTick({sb:sb,habit:m.habit,title:m.name,currentMinutes:(row.for_date===today&&row.actual_minutes)?row.actual_minutes:0});
+      if(!ht){ if(el)el.classList.remove('busy'); toast('Not ticked. Type the minutes to tick it by hand.'); return; }
+      mins=ht.minutes; now=new Date().toISOString();
+    }
     upd={done:true,status:'done',done_at:now,actual_minutes:mins,for_date:today,updated_at:now};
   } else {
     upd={done:false,status:'todo',done_at:null,actual_minutes:null,updated_at:now};
@@ -1453,6 +1460,7 @@ async function toggle(m,el){
      So an untick has to clear its own row, or the streak can only ever climb.
      That is exactly why unticking looked like it did nothing. */
   if(!want){
+    if(window.CueVisits){ try{ await CueVisits.clearHand({sb:sb,habit:m.habit}); }catch(e){} }
     var del=await sb.from('qs_log').delete()
       .eq('date',today).eq('tracker',m.qs).eq('source','habit-bandit');
     if(del.error){toast('Cleared the card, but the streak row stayed: '+del.error.message);}
@@ -3867,7 +3875,10 @@ async function minsSave(){
   if(!sb||!signedIn||!row){toast('Sign in first so the new time reaches the wheel.');return;}
   btn.disabled=true;
   var now=new Date().toISOString();
-  var res=await sb.from('todos').update({actual_minutes:n,updated_at:now}).eq('id',row.id);
+  /* v6.87: the day's total is kept as the sum of its visits, so an edit is saved as one adjustment line that makes up the difference */
+  var res=null;
+  if(window.CueVisits){ try{ await CueVisits.setTotal({sb:sb,habit:m.habit,total:n}); }catch(e){ res={error:e}; } }
+  if(!res) res=await sb.from('todos').update({actual_minutes:n,updated_at:now}).eq('id',row.id);
   btn.disabled=false;
   if(res.error){toast('Did not save: '+res.error.message);return;}
   row.actual_minutes=n; row.updated_at=now;
@@ -4968,5 +4979,6 @@ var MCT = (function(){
 })();
 </script>
 
+<script src="cue-visits.js"></script>
 </body>
 </html>

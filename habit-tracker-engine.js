@@ -193,28 +193,39 @@
       var day = (window.PY && window.PY.today) ? window.PY.today() : null;
       if (!day) throw new Error('Could not work out today');
       var names = (c.db_names && c.db_names.length ? c.db_names : [c.habit]).map(norm);
-      return sb.from('todos').select('id,task,done,skipped').eq('is_habit', true).eq('for_date', day).then(function (r) {
+      return sb.from('todos').select('id,task,done,skipped,actual_minutes').eq('is_habit', true).eq('for_date', day).then(function (r) {
         if (r.error) throw r.error;
         var rows = (r.data || []).filter(function (t) { return names.indexOf(norm(t.task)) >= 0; });
         var now = new Date().toISOString();
+        /* Oct 9 2026 (Scott's answer 5): a cue card ticked by hand asks for the minutes first. Cancel throws, and the page puts the tick back. */
+        var cueN = null;
+        (c.db_names && c.db_names.length ? c.db_names : [c.habit]).forEach(function (n) { if (!cueN && window.CueVisits && CueVisits.isCueHabit(n)) cueN = n; });
+        var needAsk = !!(done && cueN && (!rows.length || rows.some(function (t) { return !t.done || t.skipped; })));
+        var cur = rows.reduce(function (a, t) { return Math.max(a, +t.actual_minutes || 0); }, 0);
+        var askP = needAsk ? CueVisits.handTick({ sb: sb, habit: cueN, title: cueN, currentMinutes: cur }) : Promise.resolve(undefined);
+        return askP.then(function (ht) {
+        if (needAsk && !ht) { var ce = new Error('Not ticked: no minutes typed'); ce.cvCancelled = true; throw ce; }
+        var extra = (needAsk && ht) ? { actual_minutes: ht.minutes } : {};
         if (done) {
           var open = rows.filter(function (t) { return !t.done || t.skipped; });
           if (!rows.length) {
             var sc = (set.sections || {})[c.sec] || {};
-            return sb.from('todos').insert({
+            return sb.from('todos').insert(Object.assign({
               section: 'Core To-Dos', subsection: 'HABIT BANDIT', category: 'HABIT BANDIT', task: (c.db_names && c.db_names[0]) || c.habit,
               is_habit: true, for_date: day, bucket: 'today', status: 'todo', done: true, skipped: false, done_at: now, completed_at: now,
               qs_group: sc.name || null
-            }).then(function (x) { if (x.error) throw x.error; return 'created'; });
+            }, extra)).then(function (x) { if (x.error) throw x.error; return 'created'; });
           }
           if (!open.length) return 'already';
-          return sb.from('todos').update({ done: true, skipped: false, done_at: now, completed_at: now })
+          return sb.from('todos').update(Object.assign({ done: true, skipped: false, done_at: now, completed_at: now }, extra))
             .in('id', open.map(function (t) { return t.id; })).then(function (x) { if (x.error) throw x.error; return 'done'; });
         }
         var ticked = rows.filter(function (t) { return t.done; });
         if (!ticked.length) return 'already';
+        if (cueN) { try { CueVisits.clearHand({ sb: sb, habit: cueN }); } catch (e) {} }
         return sb.from('todos').update({ done: false, done_at: null })
           .in('id', ticked.map(function (t) { return t.id; })).then(function (x) { if (x.error) throw x.error; return 'undone'; });
+        });
       });
     });
   };
