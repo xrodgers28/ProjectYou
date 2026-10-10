@@ -71,13 +71,6 @@
   .tile .wflog{font-style:italic;color:var(--muted);font-size:15px;margin:0 0 12px}
   .tile .wfl{display:block;font-size:10.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:16px 0 4px}
   .tile .wfsw{font-size:13px;color:var(--muted);margin-top:14px}
-  .tile .rtc{margin-top:18px;padding-top:6px;border-top:2px solid var(--line)}
-  .tile .rtc:first-of-type{margin-top:6px;border-top:0;padding-top:0}
-  .tile .rtn{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase;color:var(--acc);margin-top:10px}
-  .tile h3.rth{font-size:18px;font-weight:700;line-height:1.25;margin:4px 0 8px;color:var(--ink);text-wrap:balance}
-  .tile .rtpic{margin:0 0 12px}
-  .tile .rtpic img{width:100%;max-height:230px;object-fit:contain;display:block;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;background:#fff}
-  .tile .rtpic .hint{font-size:11px;color:var(--muted);margin:5px 0 0;text-align:center}
   #lbx{position:fixed;inset:0;background:rgba(10,15,20,.9);z-index:200;display:none;overflow:auto;padding:16px;cursor:zoom-out}
   #lbx img{display:block;max-width:100%;height:auto;margin:0 auto;border-radius:8px;background:#fff}
   #lbx span{position:fixed;top:10px;right:18px;color:#fff;font-size:32px;line-height:1}
@@ -97,12 +90,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; your daily AI workout</div>
-  <h1>AI Workout <span class="ver">v2.6</span></h1>
+  <h1>AI Workout <span class="ver">v2.7</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
-  <div class="note">Each day: one tip, one insight, two new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That.</div>
-  <div class="stamp" id="stamp">v2.6</div>
+  <div class="note">Each day: one tip, one insight, two new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable, two stories as two tiles (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That.</div>
+  <div class="stamp" id="stamp">v2.7</div>
 </div>
 
 <script>
@@ -211,7 +204,7 @@ function hl(txt,phrase){
 
 /* ---- workflows (daily) and guides / roundtables (weekly): seen_on is the ledger ---- */
 var DAILY=[{sec:"Workflow of the Day",n:2}];
-var WEEKLY=[{sec:"AI Training",from:0},{sec:"Roundtable",from:4}];   /* from = weekday, Monday = 0 */
+var WEEKLY=[{sec:"AI Training",from:0},{sec:"Roundtable",from:4,grp:true}];   /* from = weekday, Monday = 0 */
 function dealOne(q,t){
   var S=encodeURIComponent(q.sec);
   return api("rundown_items?select=*&section=eq."+S+"&seen_on=eq."+t+"&order=issue_date.asc").then(function(rows){
@@ -228,15 +221,27 @@ function dealOne(q,t){
 }
 function monIdx(iso){ var p=iso.split("-"), d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)); return (d.getUTCDay()+6)%7; }
 function weekStart(iso){ var p=iso.split("-"), d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)); d.setUTCDate(d.getUTCDate()-monIdx(iso)); return d.toISOString().slice(0,10); }
+/* a Roundtable post is split into one row per story: deal every row of the oldest unseen post together */
+function dealGroup(sec,t){
+  var S=encodeURIComponent(sec);
+  return api("rundown_items?select=id,issue_date&section=eq."+S+"&seen_on=is.null"+hidQ()+"&order=issue_date.asc,id.asc&limit=1").then(function(first){
+    if(!first||!first.length) return [];
+    return api("rundown_items?select=id&section=eq."+S+"&issue_date=eq."+first[0].issue_date+"&seen_on=is.null"+hidQ()).then(function(nx){
+      if(!nx||!nx.length) return [];
+      var ids=nx.map(function(r){ return r.id; }).join(",");
+      return api("rundown_items?id=in.("+ids+")&order=id.asc",{method:"PATCH",prefer:"return=representation",body:JSON.stringify({seen_on:t})}).then(function(got){ return got||[]; });
+    });
+  });
+}
 function dealWeekly(w,t){
   var S=encodeURIComponent(w.sec);
-  return api("rundown_items?select=*&section=eq."+S+"&seen_on=eq."+t+"&order=issue_date.asc").then(function(rows){
+  return api("rundown_items?select=*&section=eq."+S+"&seen_on=eq."+t+"&order=issue_date.asc,id.asc").then(function(rows){
     rows=(rows||[]).filter(function(r){ return !HID["r"+r.id]; });
     if(rows.length) return rows;                    /* already dealt today, keep showing it */
     if(monIdx(t)<w.from) return [];                 /* not this section's day yet */
     return api("rundown_items?select=id&section=eq."+S+"&seen_on=gte."+weekStart(t)+"&seen_on=lte."+t+hidQ()+"&limit=1").then(function(done){
       if(done && done.length) return [];            /* this week's one is already used */
-      return dealOne({sec:w.sec,n:1},t);
+      return w.grp?dealGroup(w.sec,t):dealOne({sec:w.sec,n:1},t);
     });
   });
 }
@@ -265,7 +270,7 @@ function pickAi(rows){
 function asTile(kind,r){
   var t={kind:kind,row:r,key:(kind==="ai"?"a":"r")+r.id,sort:0,sub:""};
   if(kind==="ai"){ t.type=r.card_type; t.sort=ORDER[r.card_type]*1000+(r.deck_position||0); if(r.card_type==="tip"&&(r.deck_position||0)>50) t.sort=4500+(r.deck_position-50); }
-  else { t.type=r.section; t.sort=(ORDER[r.section]!=null?ORDER[r.section]:9)*1000+(Date.parse(r.issue_date)/86400000%1000); }
+  else { t.type=r.section; t.sort=(ORDER[r.section]!=null?ORDER[r.section]:9)*1000+(Date.parse(r.issue_date)/86400000%1000)+((r.ai_summary&&r.ai_summary.part)||0)/100; }
   return t;
 }
 
@@ -281,23 +286,11 @@ function srcLine(t){
 function rundownBody(r){
   var body=(r.blocks||[]), h='', inList=false;
   var sm=r.ai_summary;
-  if(r.section==="Workflow of the Day" && sm && sm.v===2){
-    h+='<p class="wflog">'+esc(sm.log)+'</p><p>'+esc(sm.intro)+'</p>';
+  if((r.section==="Workflow of the Day"||r.section==="Roundtable") && sm && sm.v===2 && sm.log){
+    h+='<p class="wflog">'+esc(sm.log)+'</p>'+(sm.intro?'<p>'+esc(sm.intro)+'</p>':'');
     h+='<span class="wfl">Why it works</span><p>'+esc(sm.why)+'</p>';
-    h+='<span class="wfl">How AI builds it</span><ol>'+(sm.steps||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>';
+    h+='<span class="wfl">'+(r.section==="Roundtable"?'How AI does it':'How AI builds it')+'</span><ol>'+(sm.steps||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>';
     if(sm.software) h+='<p class="wfsw">'+esc(sm.software)+'</p>';
-    return h;
-  }
-  if(r.section==="Roundtable" && sm && sm.v===2 && sm.items && sm.items.length){
-    sm.items.forEach(function(it,k){
-      h+='<div class="rtc"><span class="rtn">Use '+(k+1)+'</span><h3 class="rth">'+esc(it.headline)+'</h3>';
-      if(it.shot) h+='<div class="rtpic"><img data-enl="1" src="'+esc(it.shot)+'" alt="Screenshot from the story" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>';
-      h+='<p class="wflog">'+esc(it.log)+'</p>';
-      h+='<span class="wfl">Why it works</span><p>'+esc(it.why)+'</p>';
-      h+='<span class="wfl">How AI does it</span><ol>'+(it.steps||[]).map(function(x){return '<li>'+esc(x)+'</li>';}).join('')+'</ol>';
-      if(it.software) h+='<p class="wfsw">'+esc(it.software)+'</p>';
-      h+='</div>';
-    });
     return h;
   }
   body.forEach(function(b){
@@ -334,6 +327,7 @@ function tileHTML(t,i,n){
     if(t.type==="platform") kick+=" · "+r.__n+" of "+r.__of;
     if(t.type==="tip" && (r.deck_position||0)>50) kick="Extra tip";
   } else {
+    if(r.section==="Roundtable" && r.ai_summary && r.ai_summary.part && r.ai_summary.of>1) kick+=" · "+r.ai_summary.part+" of "+r.ai_summary.of;
     title=(r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.headline)||r.title; body=rundownBody(r);
     if(r.link) link='<a class="more" href="'+esc(r.link)+'" target="_blank" rel="noopener noreferrer">Open the full '+(r.section==="AI Training"?"guide":"story")+'</a>';
   }
@@ -341,7 +335,7 @@ function tileHTML(t,i,n){
   return '<div class="tile">'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+
     '<button class="dt" type="button" data-do="'+esc(t.key)+'" aria-pressed="'+(r.do_this?"true":"false")+'" title="Do this!">Do this</button>'+
     '<button class="st" type="button" data-save="'+esc(t.key)+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
-    ((t.kind==="rd"&&r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.shot)?'<div class="pic wfpic"><div style="height:44px"></div><img data-enl="1" src="'+esc(r.ai_summary.shot)+'" alt="Screenshot from the reader\u2019s project" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>':(t.kind==="rd"&&r.img&&!(r.section==="Roundtable"&&r.ai_summary&&r.ai_summary.items))?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
+    ((t.kind==="rd"&&r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.shot)?'<div class="pic wfpic"><div style="height:44px"></div><img data-enl="1" src="'+esc(r.ai_summary.shot)+'" alt="Screenshot from the reader\u2019s project" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>':(t.kind==="rd"&&r.img&&!(r.section==="Roundtable"&&r.ai_summary&&r.ai_summary.v===2))?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
     '<div class="top"><div class="k">'+esc(kick)+'</div><h2'+(big?' class="bigq"':'')+'>'+esc(title)+'</h2>'+body+link+srcLine(t)+
     '<button class="nx" type="button" data-nx="'+esc(t.key)+'">Don&rsquo;t show again</button>'+
     '</div>'+
@@ -538,7 +532,7 @@ loadHidden().then(function(){ return Promise.all([dealAi().catch(function(){ ret
     var wf=rdRows.filter(function(r){ return r.section==="Workflow of the Day"; }).length;
     var plats=tiles.filter(function(t){ return t.type==="platform"; }).length;
     document.getElementById("sub").textContent=tiles.length+" tiles · about 10 minutes"+(plats?" · "+plats+" new platforms":"")+(wf?" · "+wf+" workflows":"");
-    document.getElementById("stamp").textContent="v2.6 · "+nice(today());
+    document.getElementById("stamp").textContent="v2.7 · "+nice(today());
     render();
   });
 }).catch(function(e){
