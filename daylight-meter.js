@@ -53,8 +53,8 @@
   ];
 
   var C = {
-    night: '#58585b', astro: '#686559', nautical: '#81775f', civil: '#a8976f', day: '#fbe3a2',
-    blue: '#2f80ed', dst: '#12a4b4', ink: '#1f2a44', muted: '#8a93a0'
+    night: '#2b3552', astro: '#3b4570', nautical: '#575f98', civil: '#7d81c2', day: '#f4e6b4',
+    blue: '#3f6f8f', dst: '#4fa08a', dstText: '#5ba898', ink: '#1f2a44', muted: '#8a93a0', up: '#4fa08a', down: '#c05f7a'
   };
 
   /* ---------- small helpers ---------- */
@@ -116,6 +116,34 @@
     if (c >= 1) return 0;
     if (c <= -1) return 24;
     return 2 * Math.acos(c) * 180 / Math.PI / 15;
+  }
+  /* the equation of time (minutes): how far the real sun runs ahead of or behind the clock sun */
+  function eotMin(y, i, lon) {
+    var rad = Math.PI / 180;
+    var jd = Date.UTC(y, 0, 1 + i, 12) / 864e5 + 2440587.5 - lon / 360;
+    var d = jd - 2451545.0;
+    var L = (((280.460 + 0.9856474 * d) % 360) + 360) % 360;
+    var g = (357.528 + 0.9856003 * d) * rad;
+    var lam = (L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * rad;
+    var eps = (23.439 - 0.0000004 * d) * rad;
+    var ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam)) / rad;
+    var diff = L - ra;
+    while (diff > 180) diff -= 360;
+    while (diff < -180) diff += 360;
+    return diff * 4;
+  }
+  /* sunrise and sunset as real moments (ms), for day i of year y. i may run past either end of the year. */
+  function sunMs(lat, lon, y, i) {
+    var h = hrs(lat, decl(y, i, lon), -0.833);
+    if (h <= 0.01) return { none: 'down' };
+    if (h >= 23.99) return { none: 'up' };
+    var noon = Date.UTC(y, 0, 1 + i, 12) - (lon * 4 + eotMin(y, i, lon)) * 60000; /* UTC noon, moved to this place's solar noon */
+    return { rise: noon - h * 18e5, set: noon + h * 18e5, h: h };
+  }
+  /* how many seconds of daylight the day gains (+) or loses (-) per day, around day i */
+  function dayChangeSec(lat, lon, y, i) {
+    var a = hrs(lat, decl(y, i - 1, lon), -0.833), b = hrs(lat, decl(y, i + 1, lon), -0.833);
+    return (b - a) / 2 * 3600;
   }
   var seriesCache = {};
   function series(lat, lon, y, n) {
@@ -232,17 +260,18 @@
   }
 
   /* ---------- page pieces ---------- */
-  var host = null, tile, tileNum, float, card, wrap, svg, tip, locBtn, backBtn, statsEl, legendEl, pop, msgEl, zipIn, cmpBox, xBtn, hoverT = null;
+  var host = null, tile, tileNum, tileChg, sunEl, chgEl, infoTimer = null, float, card, wrap, svg, tip, locBtn, backBtn, statsEl, legendEl, pop, msgEl, zipIn, cmpBox, xBtn, hoverT = null;
 
   function injectCss() {
     if (document.getElementById('dl-css')) return;
     var s = document.createElement('style');
     s.id = 'dl-css';
     s.textContent =
-      '.dl-tile{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:76px;height:76px;padding:6px;background:#fff;border:1px solid #e3e7ee;border-radius:12px;box-shadow:0 4px 12px rgba(31,42,68,.06);cursor:pointer;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
-      '.dl-tile:hover,.dl-tile[aria-expanded="true"]{border-color:#2f80ed}' +
-      '.dl-tile:focus-visible{outline:2px solid #2f80ed;outline-offset:2px}' +
+      '.dl-tile{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:80px;min-height:76px;padding:6px 8px;background:#fff;border:1.5px solid #3f6f8f;border-radius:12px;box-shadow:0 4px 12px rgba(31,42,68,.06);cursor:pointer;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
+      '.dl-tile:hover,.dl-tile[aria-expanded="true"]{border-color:#3f6f8f}' +
+      '.dl-tile:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px}' +
       '.dl-tl{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1.15;color:#5b6472;text-align:center}' +
+      '.dl-td{font-size:9px;font-weight:800;line-height:1.1;white-space:nowrap;letter-spacing:.01em}' +
       '.dl-tn{font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}' +
       '.dl-float{position:absolute;z-index:45;left:0;top:0;display:none}' +
       '.dl-float.on{display:block;animation:dlin .12s ease-out}' +
@@ -254,7 +283,7 @@
       '.dl-loc{font:700 13px Arial,Helvetica,sans-serif;color:#5b6472;background:none;border:0;border-bottom:1px dotted #9aa6b4;padding:2px 0;cursor:pointer}' +
       '.dl-loc:hover,.dl-loc:focus-visible{color:#3f6f8f;border-bottom-color:#3f6f8f;outline:none}' +
       '.dl-loc .dl-car{font-size:10px;margin-left:5px}' +
-      '.dl-back{font:800 11px Arial,Helvetica,sans-serif;color:#2f80ed;background:#eaf2fe;border:0;border-radius:999px;padding:3px 10px;cursor:pointer}' +
+      '.dl-back{font:800 11px Arial,Helvetica,sans-serif;color:#3f6f8f;background:#e2ecf3;border:0;border-radius:999px;padding:3px 10px;cursor:pointer}' +
       '.dl-back[hidden]{display:none}' +
       '.dl-legend{display:flex;gap:4px 14px;flex-wrap:wrap;margin-top:6px;font-size:11px;font-weight:700;color:#5b6472}' +
       '.dl-legend:empty{display:none}' +
@@ -264,12 +293,16 @@
       '.dl-stats{display:flex;flex-direction:column;align-items:flex-end;gap:1px;text-align:right}' +
       '.dl-stat{font-size:12px;color:#8a93a0;line-height:1.35;white-space:nowrap}' +
       '.dl-stat b{font-size:16px;font-weight:800;margin-left:7px;color:#8a93a0;font-variant-numeric:tabular-nums}' +
-      '.dl-stat.dl-blue b{color:#2f80ed}' +
+      '.dl-stat.dl-blue b{color:#3f6f8f}' +
       '.dl-x{flex:none;width:28px;height:28px;margin:-3px -3px 0 0;display:flex;align-items:center;justify-content:center;background:none;border:0;border-radius:8px;color:#8a93a0;font-size:20px;line-height:1;cursor:pointer}' +
       '.dl-x:hover,.dl-x:focus-visible{background:#eef2f8;color:#1f2a44;outline:none}' +
+      '.dl-info{display:flex;justify-content:space-between;gap:2px 16px;flex-wrap:wrap;margin-top:6px;font-size:12px;line-height:1.4;color:#5b6472}' +
+      '.dl-info b{color:#1f2a44;font-weight:800}' +
+      '.dl-info .dl-up{color:#2f7a66}.dl-info .dl-dn{color:#a14560}' +
+      '.dl-info:empty{display:none}' +
       '.dl-chart{position:relative;margin-top:2px}' +
       '.dl-chart svg{display:block;width:100%;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:ew-resize;outline:none}' +
-      '.dl-chart svg:focus-visible{outline:2px solid #2f80ed;outline-offset:2px;border-radius:4px}' +
+      '.dl-chart svg:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px;border-radius:4px}' +
       '.dl-chart .maxhit{cursor:help}' +
       '.dl-tip{position:absolute;z-index:5;pointer-events:none;background:#fff;border:1px solid #e3e7ee;border-radius:8px;box-shadow:0 6px 16px rgba(31,42,68,.16);padding:5px 9px;font-size:11.5px;line-height:1.35;color:#5b6472;white-space:nowrap}' +
       '.dl-tip b{display:block;color:#1f2a44;font-size:13px}' +
@@ -279,7 +312,7 @@
       '.dl-pt{font-size:12px;font-weight:800;color:#1f2a44;margin-bottom:8px}' +
       '.dl-zipf{display:flex;gap:6px}' +
       '.dl-zipf input{flex:1;min-width:0;font:600 14px Arial,Helvetica,sans-serif;padding:7px 10px;border:1px solid #cfd6e0;border-radius:8px;color:#1f2a44}' +
-      '.dl-zipf input:focus{outline:2px solid #2f80ed;outline-offset:0;border-color:#2f80ed}' +
+      '.dl-zipf input:focus{outline:2px solid #3f6f8f;outline-offset:0;border-color:#3f6f8f}' +
       '.dl-btn{font:800 12px Arial,Helvetica,sans-serif;color:#fff;background:#3f6f8f;border:0;border-radius:8px;padding:7px 14px;cursor:pointer}' +
       '.dl-btn:hover{background:#345d79}' +
       '.dl-lnk{display:block;margin-top:8px;font:700 12px Arial,Helvetica,sans-serif;color:#3f6f8f;background:none;border:0;padding:0;cursor:pointer;text-align:left}' +
@@ -289,13 +322,13 @@
       '.dl-sw input{position:absolute;opacity:0;width:0;height:0}' +
       '.dl-sl{flex:none;position:relative;width:34px;height:20px;border-radius:999px;background:#cfd6e0;transition:background .15s;margin-top:1px}' +
       '.dl-sl:after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}' +
-      '.dl-sw input:checked + .dl-sl{background:#2f80ed}' +
+      '.dl-sw input:checked + .dl-sl{background:#3f6f8f}' +
       '.dl-sw input:checked + .dl-sl:after{transform:translateX(14px)}' +
-      '.dl-sw input:focus-visible + .dl-sl{outline:2px solid #2f80ed;outline-offset:2px}' +
+      '.dl-sw input:focus-visible + .dl-sl{outline:2px solid #3f6f8f;outline-offset:2px}' +
       '.dl-msg{margin-top:8px;font-size:12px;font-weight:700;color:#5b6472;min-height:0}' +
       '.dl-msg:empty{display:none}' +
       '.dl-msg.bad{color:#c0392b}' +
-      '@media(max-width:600px){.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}.dl-tile{width:64px;height:64px}.dl-tn{font-size:24px}}';
+      '@media(max-width:600px){.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}.dl-tile{min-width:68px;min-height:64px}.dl-tn{font-size:24px}}';
     document.head.appendChild(s);
   }
 
@@ -305,8 +338,8 @@
     tile.className = 'dl-tile';
     tile.setAttribute('aria-haspopup', 'dialog');
     tile.setAttribute('aria-expanded', 'false');
-    tile.innerHTML = '<span class="dl-tl">Hours of<br>daylight</span><span class="dl-tn"></span>';
-    tileNum = tile.querySelector('.dl-tn');
+    tile.innerHTML = '<span class="dl-tl">Hours of<br>daylight</span><span class="dl-tn"></span><span class="dl-td"></span>';
+    tileNum = tile.querySelector('.dl-tn'); tileChg = tile.querySelector('.dl-td');
     host.appendChild(tile);
 
     float = document.createElement('div');
@@ -327,6 +360,7 @@
         '</div>' +
       '</div>' +
       '<div class="dl-legend"></div>' +
+      '<div class="dl-info" aria-live="off"><span class="dl-sunt"></span><span class="dl-chg"></span></div>' +
       '<div class="dl-pop" role="dialog" aria-label="Daylight location" hidden>' +
         '<div class="dl-pt">Where do you want to see daylight for?</div>' +
         '<form class="dl-zipf" novalidate>' +
@@ -358,12 +392,65 @@
     zipIn = card.querySelector('.dl-zipf input');
     cmpBox = card.querySelector('.dl-cmp');
     xBtn = card.querySelector('.dl-x');
+    sunEl = card.querySelector('.dl-sunt');
+    chgEl = card.querySelector('.dl-chg');
   }
 
   /* ---------- header ---------- */
   function comps() {
     if (!S.compare) return [];
     return COMPARE.filter(function (c) { return c.name !== S.loc.name; });
+  }
+
+  var tmFmt = {};
+  function fmtClock(ms, tz) {
+    try {
+      var k = tz || 'local', f = tmFmt[k] || (tmFmt[k] = new Intl.DateTimeFormat('en-US', { timeZone: tz || undefined, hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }));
+      var parts = f.formatToParts(new Date(ms)), hh = '', mm = '', ap = '', zn = '';
+      parts.forEach(function (p) { if (p.type === 'hour') hh = p.value; else if (p.type === 'minute') mm = p.value; else if (p.type === 'dayPeriod') ap = p.value.toLowerCase(); else if (p.type === 'timeZoneName') zn = p.value; });
+      return hh + ':' + mm + ap + (zn ? ' ' + zn : '');
+    } catch (e) { return ''; }
+  }
+  function fmtDur(ms) {
+    var t = Math.max(0, Math.round(ms / 60000)), hh = Math.floor(t / 60), mm = t % 60;
+    return hh > 0 ? hh + ' hr, ' + mm + ' min' : mm + ' min';
+  }
+  function fmtChange(sec) {
+    var a = Math.abs(Math.round(sec)), m = Math.floor(a / 60), r = a % 60;
+    return m > 0 ? m + 'm ' + r + 's' : r + 's';
+  }
+  /* "Losing 2m 40s a day" for the tile and the pop-up */
+  function changeParts(i) {
+    var sec = dayChangeSec(S.loc.lat, S.loc.lon, S.t.y, i);
+    if (Math.abs(sec) < 15) return { cls: '', arrow: '\u25CF', word: 'Holding steady', short: 'steady', color: C.muted };
+    return sec < 0
+      ? { cls: 'dl-dn', arrow: '\u25BC', word: 'Losing', short: fmtChange(sec) + '/day', amt: fmtChange(sec), color: C.down }
+      : { cls: 'dl-up', arrow: '\u25B2', word: 'Gaining', short: fmtChange(sec) + '/day', amt: fmtChange(sec), color: C.up };
+  }
+
+  /* sunrise, sunset and the light that is left, for the day the blue line is on */
+  function drawInfo() {
+    if (!sunEl) return;
+    var i = S.sel == null ? S.todayIdx : S.sel, y = S.t.y, lat = S.loc.lat, lon = S.loc.lon, tz = S.loc.tz;
+    var sm = sunMs(lat, lon, y, i), txt = '';
+    if (sm.none) {
+      txt = sm.none === 'up' ? 'The sun does not set on this day' : 'The sun does not rise on this day';
+    } else {
+      txt = 'Sunrise <b>' + esc(fmtClock(sm.rise, tz)) + '</b> &middot; Sunset <b>' + esc(fmtClock(sm.set, tz)) + '</b>';
+      if (i === S.todayIdx) {
+        var now = Date.now(), left = '';
+        for (var k = i - 1; k <= i + 1 && !left; k++) {
+          var q = sunMs(lat, lon, y, k);
+          if (q.none) continue;
+          if (now >= q.rise && now < q.set) left = '<b>' + fmtDur(q.set - now) + '</b> of light left';
+          else if (now < q.rise) left = 'Sunrise in <b>' + fmtDur(q.rise - now) + '</b>';
+        }
+        if (left) txt += ' &middot; ' + left;
+      }
+    }
+    sunEl.innerHTML = txt;
+    var c = changeParts(i);
+    chgEl.innerHTML = c.amt ? '<span class="' + c.cls + '"><b class="' + c.cls + '">' + c.arrow + ' ' + c.word + ' ' + c.amt + ' a day</b></span>' : '<b>' + c.arrow + ' ' + c.word + '</b>';
   }
 
   function drawHeader() {
@@ -373,7 +460,7 @@
 
     var cs = comps();
     legendEl.innerHTML = cs.length
-      ? '<span><i style="background:#111"></i>' + esc(S.loc.name) + ' <em class="dl-lv"></em></span>' +
+      ? '<span><i style="background:#1f2a44"></i>' + esc(S.loc.name) + ' <em class="dl-lv"></em></span>' +
         cs.map(function (c) { return '<span><i style="background:' + c.color + '"></i>' + esc(c.name) + ' <em class="dl-lv"></em></span>'; }).join('')
       : '';
 
@@ -390,7 +477,10 @@
 
     var th = series(S.loc.lat, S.loc.lon, S.t.y, S.n).day[S.todayIdx];
     tileNum.textContent = Math.floor(Math.round(th * 60) / 60);
-    tile.setAttribute('aria-label', 'Hours of daylight today in ' + S.loc.name + ': ' + fmtLong(th) + '. Open the daylight meter.');
+    var tc = changeParts(S.todayIdx);
+    tileChg.textContent = tc.arrow + ' ' + tc.short;
+    tileChg.style.color = tc.color === C.muted ? '#5b6472' : (tc.color === C.down ? '#a14560' : '#2f7a66');
+    tile.setAttribute('aria-label', 'Hours of daylight today in ' + S.loc.name + ': ' + fmtLong(th) + ', ' + (tc.amt ? tc.word.toLowerCase() + ' ' + tc.amt + ' a day' : 'holding steady') + '. Open the daylight meter.');
     backBtn.hidden = (S.sel == null || S.sel === S.todayIdx);
   }
 
@@ -442,38 +532,38 @@
       var a = doy0(y, k, 1), b = k === 12 ? n : doy0(y, k + 1, 1);
       h += '<text x="' + f1(g.x0 + (a + b) / 2 / n * pw) + '" y="' + f1(g.y1 + 15) + '" text-anchor="middle" font-size="11" fill="' + C.muted + '">' + (pw / 12 < 34 ? MON[k - 1].charAt(0) : MON[k - 1]) + '</text>';
     }
-    h += '<text x="' + f1(g.x0 + pw * 0.08) + '" y="' + f1(g.y0 + 17) + '" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.6)">night</text>';
-    h += '<text x="' + f1(g.x0 + pw * 0.92) + '" y="' + f1(g.y0 + 17) + '" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.6)">night</text>';
-    h += '<text x="' + f1(g.x0 + pw * 0.5) + '" y="' + f1(g.y1 - 8) + '" text-anchor="middle" font-size="13" fill="rgba(70,55,10,.6)">day</text>';
+    h += '<text x="' + f1(g.x0 + pw * 0.08) + '" y="' + f1(g.y0 + 17) + '" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.7)">night</text>';
+    h += '<text x="' + f1(g.x0 + pw * 0.92) + '" y="' + f1(g.y0 + 17) + '" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.7)">night</text>';
+    h += '<text x="' + f1(g.x0 + pw * 0.5) + '" y="' + f1(g.y1 - 8) + '" text-anchor="middle" font-size="13" fill="rgba(90,70,10,.6)">day</text>';
 
     /* the comparison places, then the main place on top */
     comps().forEach(function (c) { h += line(g, series(c.lat, c.lon, y, n).day, c.color, 1.8); });
-    h += line(g, sr.day, '#111', 2.2);
+    h += line(g, sr.day, C.ink, 2.3);
 
     /* equinoxes and solstices */
     sunEvents(sr, n).forEach(function (e) {
       var dt = new Date(Date.UTC(y, 0, 1 + e.i));
       var nm = MON[dt.getUTCMonth()] + ' ' + (e.kind === 'equinox' ? 'equinox' : 'solstice');
-      h += '<circle cx="' + f1(Xf(g, e.i)) + '" cy="' + f1(Yf(g, sr.day[e.i])) + '" r="2.6" fill="#111"><title>' + esc(nm + ': ' + fmtLong(sr.day[e.i])) + '</title></circle>';
+      h += '<circle cx="' + f1(Xf(g, e.i)) + '" cy="' + f1(Yf(g, sr.day[e.i])) + '" r="2.6" fill="#1f2a44"><title>' + esc(nm + ': ' + fmtLong(sr.day[e.i])) + '</title></circle>';
     });
 
     /* daylight savings: a thin teal line on each day the clocks change */
     dstDays(S.loc.tz, y, n).forEach(function (d) {
       var dx = Xf(g, d.i), dt = new Date(Date.UTC(y, 0, 1 + d.i));
       var when = MON[dt.getUTCMonth()] + ' ' + dt.getUTCDate();
-      var word = d.ahead ? 'clocks ahead' : 'clocks back';
-      h += '<line x1="' + f1(dx) + '" y1="' + f1(g.y0) + '" x2="' + f1(dx) + '" y2="' + f1(g.y1) + '" stroke="' + C.dst + '" stroke-width="1"/>';
-      h += '<rect x="' + f1(dx - 5) + '" y="' + f1(g.y0) + '" width="10" height="' + f1(ph) + '" fill="transparent"><title>' + esc('Daylight savings: ' + when + ', ' + word + ' 1 hr') + '</title></rect>';
+      var word = d.ahead ? 'Clocks ahead' : 'Clocks back';
+      h += '<line x1="' + f1(dx) + '" y1="' + f1(g.y0) + '" x2="' + f1(dx) + '" y2="' + f1(g.y1) + '" stroke="' + C.dst + '" stroke-width="1" stroke-dasharray="1.5 3"/>';
+      h += '<rect x="' + f1(dx - 5) + '" y="' + f1(g.y0) + '" width="10" height="' + f1(ph) + '" fill="transparent"><title>' + esc('Daylight savings: ' + when + ', ' + word.toLowerCase() + ' 1 hr') + '</title></rect>';
       if (pw >= 420) {
         var right = dx < g.x1 - 70;
-        h += '<text x="' + f1(dx + (right ? 4 : -4)) + '" y="' + f1(g.y1 - 5) + '" text-anchor="' + (right ? 'start' : 'end') + '" font-size="9.5" font-weight="600" fill="#0b6e7a">' + esc(word) + '</text>';
+        h += '<text x="' + f1(dx + (right ? 4 : -4)) + '" y="' + f1(g.y1 - 5) + '" text-anchor="' + (right ? 'start' : 'end') + '" font-size="9.5" font-weight="400" fill="' + C.dstText + '">' + esc(word) + '</text>';
       }
     });
 
     /* the longest day: dotted line plus a wider invisible strip to hover on */
     var mi = argmax(sr.day), mx = Xf(g, mi);
     S.maxX = mx; S.maxH = sr.day[mi];
-    h += '<line x1="' + f1(mx) + '" y1="' + f1(g.y0) + '" x2="' + f1(mx) + '" y2="' + f1(g.y1) + '" stroke="#333" stroke-width="1" stroke-dasharray="2 3"/>';
+    h += '<line x1="' + f1(mx) + '" y1="' + f1(g.y0) + '" x2="' + f1(mx) + '" y2="' + f1(g.y1) + '" stroke="#1f2a44" stroke-width="1" stroke-dasharray="2 3"/>';
     h += '<rect class="maxhit" x="' + f1(mx - 7) + '" y="' + f1(g.y0) + '" width="14" height="' + f1(ph) + '" fill="transparent"/>';
 
     S.stEl.innerHTML = h;
@@ -490,7 +580,7 @@
     cs.forEach(function (c) {
       h += '<circle cx="' + f1(x) + '" cy="' + f1(Yf(g, series(c.lat, c.lon, y, n).day[i])) + '" r="3.2" fill="' + c.color + '" stroke="#fff" stroke-width="1"/>';
     });
-    h += '<circle cx="' + f1(x) + '" cy="' + f1(Yf(g, sr.day[i])) + '" r="3.6" fill="#111" stroke="#fff" stroke-width="1.2"/>';
+    h += '<circle cx="' + f1(x) + '" cy="' + f1(Yf(g, sr.day[i])) + '" r="3.6" fill="#1f2a44" stroke="#fff" stroke-width="1.2"/>';
 
     /* the read-out: the day length and date, smaller than the mock, beside the blue line.
        With comparison on, the other places' numbers for this date sit in the legend. */
@@ -511,6 +601,7 @@
     }
 
     S.dynEl.innerHTML = h;
+    drawInfo();
     svg.setAttribute('aria-valuemax', String(n));
     svg.setAttribute('aria-valuenow', String(i + 1));
     svg.setAttribute('aria-valuetext', dateLabel(y, i) + ', ' + fmtLong(sr.day[i]) + ' of daylight in ' + S.loc.name);
@@ -688,12 +779,15 @@
     float.classList.add('on');
     tile.setAttribute('aria-expanded', 'true');
     requestAnimationFrame(drawAll);
+    clearInterval(infoTimer);
+    infoTimer = setInterval(drawInfo, 30000);
   }
   function closeFloat() {
     clearTimeout(hoverT);
     S.open = false;
     S.pinned = false;
     S.drag = false;
+    clearInterval(infoTimer);
     float.classList.remove('on');
     tile.setAttribute('aria-expanded', 'false');
     tip.hidden = true;
@@ -767,5 +861,5 @@
   else init();
 
   /* a tiny hook so a test or another page can read the numbers */
-  window.PYDaylight = { dayHours: function (lat, lon, y, m, d) { return hrs(lat, decl(y, doy0(y, m, d), lon), -0.833); }, fmtLong: fmtLong, fmtShort: fmtShort };
+  window.PYDaylight = { dayHours: function (lat, lon, y, m, d) { return hrs(lat, decl(y, doy0(y, m, d), lon), -0.833); }, fmtLong: fmtLong, fmtShort: fmtShort, sunMs: sunMs, dayChangeSec: dayChangeSec };
 })();
