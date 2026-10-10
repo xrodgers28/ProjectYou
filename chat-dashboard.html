@@ -49,7 +49,7 @@ thead th{position:sticky;top:0;background:var(--card);z-index:2;text-align:left;
 td{padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 tr.day td{background:var(--head);font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--accent);padding:7px 12px}
 tr.day td span{float:right;font-weight:400;letter-spacing:0;text-transform:none;color:var(--ink2)}
-.c-status{width:104px}.c-when{width:100px;color:var(--ink2);font-size:13.5px}.c-meta{width:108px;font-size:13px;color:var(--ink2)}.c-in{width:290px}.c-act{width:150px;white-space:nowrap}
+.c-status{width:104px}.c-proj{width:96px}.c-when{width:100px}.c-meta{width:108px}td.c-proj,td.c-meta{font-size:13px;color:var(--ink2)}td.c-when{color:var(--ink2);font-size:13.5px}.c-in{width:290px}.c-act{width:150px;white-space:nowrap}
 .pill{font:inherit;font-size:12.5px;font-weight:700;padding:3px 11px;border-radius:99px;border:0;cursor:pointer;background:var(--amber-bg);color:var(--amber)}
 .pill.read{background:var(--blue-bg);color:var(--blue)} .pill.reacted{background:var(--green-bg);color:var(--green)}
 .title{font-weight:700;color:var(--ink);text-decoration:none;overflow-wrap:anywhere}
@@ -74,9 +74,9 @@ tr.archived .title{color:var(--ink2)}
   table,tbody,tr,td{display:block;width:100%}
   tr.row{padding:12px 14px;border-bottom:1px solid var(--line)}
   tr.row td{border:0;padding:3px 0;width:auto}
-  .c-status,.c-when,.c-meta,.c-in,.c-act{width:auto}
+  .c-status,.c-proj,.c-when,.c-meta,.c-in,.c-act{width:auto}
   .c-status{display:inline-block;width:auto;margin-right:8px}
-  .c-when,.c-meta{display:inline-block;width:auto;margin-right:10px}
+  .c-proj,.c-when,.c-meta{display:inline-block;width:auto;margin-right:10px}
   tr.row td.c-chat{order:-1}
   tr.row{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
   tr.row td.c-chat,tr.row td.c-in{flex-basis:100%}
@@ -97,6 +97,7 @@ tr.archived .title{color:var(--ink2)}
       <button class="chip" data-f="read" aria-pressed="false">Read</button>
       <button class="chip" data-f="reacted" aria-pressed="false">Reacted</button>
     </div>
+    <div class="grp" id="fproj" hidden><span>Project</span></div>
     <div class="grp"><span>Also</span>
       <button class="chip" id="hasnote" aria-pressed="false">Has my note</button>
       <button class="chip" id="arch" aria-pressed="false">Archived</button>
@@ -105,11 +106,11 @@ tr.archived .title{color:var(--ink2)}
     <input class="search" id="q" type="search" placeholder="Search: titles, what a chat was about, my notes" aria-label="Search chats" autocomplete="off">
   </div>
   <table>
-    <thead><tr><th class="c-status">Status</th><th>Chat</th><th class="c-when">When</th><th class="c-meta">Model, min</th><th class="c-in">Your input</th><th class="c-act">Actions</th></tr></thead>
+    <thead><tr><th class="c-status">Status</th><th>Chat</th><th class="c-proj">Project</th><th class="c-when">When</th><th class="c-meta">Model, min</th><th class="c-in">Your input</th><th class="c-act">Actions</th></tr></thead>
     <tbody id="list"></tbody>
   </table>
 </div>
-<div class="foot"><span>Project YOU &middot; Chat Dashboard v3.0 &middot; Oct 10, 2026</span><span id="src"></span></div>
+<div class="foot"><span>Project YOU &middot; Chat Dashboard v3.1 &middot; Oct 10, 2026</span><span id="src"></span></div>
 </div>
 <div class="toast" id="toast" hidden><span id="toastmsg"></span><button id="toastbtn">Undo</button></div>
 
@@ -119,7 +120,7 @@ tr.archived .title{color:var(--ink2)}
   var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
   var H={apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'};
   var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var rows=[], f='all', showArch=false, onlyNote=false, query='', undoFn=null, toastT=null;
+  var rows=[], f='all', pf='all', showArch=false, onlyNote=false, query='', undoFn=null, toastT=null;
   var NEXT={'new':'read','read':'reacted','reacted':'new'}, LAB={'new':'New','read':'Read','reacted':'Reacted'};
   function $(id){return document.getElementById(id);}
   function el(t,c,x){var e=document.createElement(t); if(c)e.className=c; if(x!=null)e.textContent=x; return e;}
@@ -130,7 +131,7 @@ tr.archived .title{color:var(--ink2)}
   function load(){
     return fetch(SB+'/v_cowork_chats?select=*&order=last_activity.desc&limit=2000',{headers:H}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(d){ rows=d; $('live').textContent='Live'; render(); })
-    .catch(function(e){ $('live').textContent='Offline'; var L=$('list'); L.textContent=''; var tr=el('tr'); var td=el('td','err','The chat list did not load. Reload the page. If it keeps happening, tell Claude: '+e.message); td.colSpan=6; tr.appendChild(td); L.appendChild(tr); });
+    .catch(function(e){ $('live').textContent='Offline'; var L=$('list'); L.textContent=''; var tr=el('tr'); var td=el('td','err','The chat list did not load. Reload the page. If it keeps happening, tell Claude: '+e.message); td.colSpan=7; tr.appendChild(td); L.appendChild(tr); });
   }
   function patch(id,body){ return fetch(SB+'/cowork_chats?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify(body)}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); }); }
   function byId(id){ for(var i=0;i<rows.length;i++){ if(rows[i].id===id) return rows[i]; } return null; }
@@ -145,6 +146,7 @@ tr.archived .title{color:var(--ink2)}
   function matches(r){
     if(showArch? !r.archived_at : !!r.archived_at) return false;
     if(f!=='all' && (r.read_state||'new')!==f) return false;
+    if(pf!=='all' && (r.project||'Project YOU')!==pf) return false;
     if(onlyNote && !(r.scott_note||'').trim()) return false;
     if(query){ var hay=((r.title||'')+' '+(r.gist||'')+' '+(r.scott_note||'')).toLowerCase(); var ps=query.toLowerCase().split(/\s+/).filter(Boolean); for(var i=0;i<ps.length;i++){ if(hay.indexOf(ps[i])<0) return false; } }
     return true;
@@ -154,6 +156,11 @@ tr.archived .title{color:var(--ink2)}
     function n(s){ return live.filter(function(r){return (r.read_state||'new')===s;}).length; }
     var c={all:live.length,'new':n('new'),read:n('read'),reacted:n('reacted')};
     document.querySelectorAll('[data-f]').forEach(function(b){ var k=b.getAttribute('data-f'); b.textContent=(k==='all'?'All':LAB[k])+' '+c[k]; });
+    var P={}; live.forEach(function(r){ var p=r.project||'Project YOU'; P[p]=(P[p]||0)+1; });
+    var names=Object.keys(P).sort(), fp=$('fproj');
+    if(names.length>1){ fp.hidden=false; while(fp.children.length>1) fp.removeChild(fp.lastChild);
+      [['all','All '+live.length]].concat(names.map(function(n){return [n,n+' '+P[n]];})).forEach(function(x){ var b=el('button','chip',x[1]); b.setAttribute('aria-pressed',String(pf===x[0])); b.addEventListener('click',function(){ pf=x[0]; render(); }); fp.appendChild(b); }); }
+    else { fp.hidden=true; pf='all'; }
     var notes=live.filter(function(r){return (r.scott_note||'').trim();}).length;
     $('hasnote').textContent='Has my note '+notes;
     var last=rows.reduce(function(m,r){ return r.synced_at>m?r.synced_at:m; },'');
@@ -168,6 +175,7 @@ tr.archived .title{color:var(--ink2)}
     td=el('td','c-chat'); var a=el('a','title',r.title); a.href=r.url; a.target='_blank'; a.rel='noopener'; a.addEventListener('click',function(){ if((r.read_state||'new')==='new') setRow(r.id,{read_state:'read'}); }); td.appendChild(a);
     if(r.gist){ var g=el('div','gist',r.gist); g.title='Tap to show all'; g.addEventListener('click',function(){ g.classList.toggle('open'); }); td.appendChild(g); }
     tr.appendChild(td);
+    td=el('td','c-proj',r.project||'Project YOU'); tr.appendChild(td);
     td=el('td','c-when'); td.appendChild(el('span','mt',timeLabel(r.last_activity))); tr.appendChild(td);
     td=el('td','c-meta'); var any=false;
     if(r.model){ td.appendChild(el('span','mt',r.model)); any=true; }
@@ -195,10 +203,10 @@ tr.archived .title{color:var(--ink2)}
     $('count').textContent=shown.length+' of '+rows.length;
     var nn=shown.filter(function(r){return (r.read_state||'new')==='new';}).length;
     $('bulk').textContent='Mark '+nn+' shown as read';
-    if(!shown.length){ var tr=el('tr'); var td=el('td','empty',rows.length?'No chats match. Clear the search or pick All.':'No chats yet.'); td.colSpan=6; tr.appendChild(td); L.appendChild(tr); return; }
+    if(!shown.length){ var tr=el('tr'); var td=el('td','empty',rows.length?'No chats match. Clear the search or pick All.':'No chats yet.'); td.colSpan=7; tr.appendChild(td); L.appendChild(tr); return; }
     var last=null, cnt=null, k=0;
     shown.forEach(function(r){
-      if(r.day!==last){ last=r.day; var h=el('tr','day'); var d=el('td'); d.colSpan=6; d.appendChild(document.createTextNode(dayLabel(r.day))); cnt=el('span'); d.appendChild(cnt); h.appendChild(d); L.appendChild(h); k=0; }
+      if(r.day!==last){ last=r.day; var h=el('tr','day'); var d=el('td'); d.colSpan=7; d.appendChild(document.createTextNode(dayLabel(r.day))); cnt=el('span'); d.appendChild(cnt); h.appendChild(d); L.appendChild(h); k=0; }
       k++; cnt.textContent=k+(k===1?' chat':' chats'); L.appendChild(rowEl(r));
     });
   }
