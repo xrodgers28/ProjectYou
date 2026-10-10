@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tracker Animation Ideas · ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="py-day.js"></script>
+<script src="py-icons.js"></script>
+<script src="habit-tracker-art.js"></script>
+<script src="habit-tracker-designs.js"></script>
+<script src="habit-tracker-engine.js"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--green:#1e8e5a;--hot:#c0453b;--amber:#b8801f}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
+  #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
+  #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  #login input{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;margin-bottom:9px;font-size:14px;font-family:inherit}
+  #login .err{color:var(--hot);font-size:12.5px;min-height:16px}
+  .hidden{display:none}
+  .btn{font-family:inherit;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:12px;padding:10px 16px;cursor:pointer;font-size:14px}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .wrap{max-width:1560px;margin:0 auto;padding:10px 16px 70px}
+  .intro{font-size:14px;color:var(--muted);margin:6px 0 14px;max-width:70ch;line-height:1.45}
+  .bar{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+  .bar .stat{font-size:13px;color:var(--muted)} .bar .stat b{color:var(--ink);font-size:15px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+  .seg button{font-family:inherit;font-size:12px;font-weight:700;border:0;background:#fff;color:var(--muted);padding:6px 11px;cursor:pointer;border-right:1px solid var(--line)}
+  .seg button:last-child{border-right:0}
+  .seg button.on{background:var(--accent);color:#fff}
+  .seglab{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;margin-right:6px}
+  .sample{background:#f8eed6;border:1px solid var(--amber);color:#7a5a14;border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:12px}
+  .err{color:var(--hot);font-size:13px}
+  details.chk{background:#fff;border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin-bottom:16px}
+  details.chk summary{cursor:pointer;font-weight:700;font-size:13.5px;color:var(--accent)}
+  .chk table{border-collapse:collapse;width:100%;margin-top:10px;font-size:12.5px}
+  .chk th{text-align:left;color:#9aa6b4;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;padding:4px 6px;border-bottom:1px solid var(--line)}
+  .chk td{padding:4px 6px;border-bottom:1px solid #f0f2f6}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px}
+  #designs{display:grid;grid-template-columns:repeat(auto-fill,minmax(352px,352px));gap:16px;justify-content:center;align-items:start}
+  .moregap{grid-column:1/-1;margin:90px 0 4px;padding-top:16px;border-top:2px dashed var(--line);font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;color:#9aa6b4}
+  .dsn{background:#fff;border:1px solid var(--line);border-radius:18px;padding:10px 10px 8px;box-shadow:0 10px 30px rgba(31,42,68,.07);width:352px;max-width:100%}
+  .dh{display:flex;align-items:center;gap:8px;margin-bottom:10px;min-height:28px}
+  .dh .dl{width:26px;height:26px;border-radius:8px;background:var(--accent);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center}
+  .dh h2{font-size:14.5px;line-height:1.2}
+  .dh .ref{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line);border-radius:999px;padding:2px 8px}
+  .dh .ready{margin-left:auto;font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px}
+  .ready.yes{background:#e3f3ea;color:var(--green)} .ready.no{background:#f7e9dc;color:#b06a2c}
+  .pair{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start}
+  .pv .pl{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;margin-bottom:6px}
+  .mount.card{width:330px;max-width:100%}
+  .mount.phone{width:262px;max-width:100%;border:6px solid #1f2a44;border-radius:30px;overflow:hidden;background:#fff}
+  .soon{width:330px;max-width:100%;min-height:140px;border:2px dashed var(--line);border-radius:14px;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px;color:#9aa6b4;font-size:13px}
+  .cm{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  .cm summary{cursor:pointer;list-style:none;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7d8b9a;display:flex;align-items:center;gap:6px;padding:4px 2px}
+  .cm summary::-webkit-details-marker{display:none}
+  .cm summary::before{content:'\25B8';font-size:12px;transition:transform .15s}
+  .cm[open] summary::before{transform:rotate(90deg)}
+  .cm[open] summary{margin-bottom:6px}
+  .cm label{display:block;font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;margin-bottom:6px}
+  .cm textarea{width:100%;min-height:58px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font-family:inherit;font-size:14px;resize:vertical}
+  .cm .row{display:flex;gap:10px;align-items:center;margin-top:8px}
+  .cm .said{font-size:12.5px;color:var(--green);font-weight:700}
+  .clist{margin-top:10px;display:grid;gap:8px}
+  .clist .c{background:#f7f9fb;border:1px solid #edf0f4;border-radius:10px;padding:8px 11px;font-size:13.5px;line-height:1.4;white-space:pre-wrap}
+  .clist .c .t{display:block;font-size:11px;font-weight:700;color:#9aa6b4;margin-bottom:2px}
+  .clist .none{font-size:12.5px;color:#9aa6b4}
+  .copybox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;margin-top:6px}
+  .copybox h3{font-size:14px;margin-bottom:6px}
+  .copybox textarea{width:100%;min-height:140px;border:1px solid var(--line);border-radius:10px;padding:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#f7f9fb}
+  .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
+  .mount [data-h]{cursor:pointer;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+  #undobar{position:fixed;left:50%;bottom:18px;transform:translate(-50%,20px);z-index:70;display:flex;gap:14px;align-items:center;background:#1f2a44;color:#fff;border-radius:12px;padding:10px 14px;font:14px Arial,Helvetica,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;max-width:calc(100vw - 24px)}
+  #undobar.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+  #undobar button{background:#fff;color:#1f2a44;border:0;border-radius:8px;padding:6px 12px;font:700 14px Arial,Helvetica,sans-serif;cursor:pointer}
+  #undobar.err{background:#a3321f}
+  #htip{position:fixed;z-index:60;pointer-events:none;max-width:220px;background:#1f2a44;color:#fff;border-radius:10px;padding:8px 11px;font:13px/1.35 Arial,Helvetica,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.22);opacity:0;transition:opacity .12s}
+  #htip.on{opacity:1}
+  #htip b{display:block;font-size:14px;margin-bottom:2px}
+  #htip .st{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:99px;font-size:11.5px;font-weight:700}
+  #htip .st.y{background:#1e8e5a}#htip .st.n{background:#5b6578}
+  .mount [data-h]{cursor:help}
+  .mount svg *:not([data-h]):not([data-h] *){pointer-events:none}
+</style>
+<style id="pynav-css">
+.pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
+.pynav::-webkit-scrollbar{height:0}
+.pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+.pn-logo img{height:28px;width:auto;display:block}
+.pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+.pn-group.first{border-left:none}
+.pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+.pn-links{display:flex;gap:1px;align-items:stretch}
+.pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+.pn-link:hover{background:#eef2f8;color:#3f6f8f}
+.pn-link.on{background:#3f6f8f;color:#fff}
+.pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+.pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+.pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+.pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+.pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+.pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+.pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+.pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+</style>
+<style>.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:2px 0 2px}.secbar h1{font-size:23px;color:var(--accent,#3f6f8f)}.secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line,#e3e7ee);border-radius:999px;padding:2px 8px}.secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}.secbar-wrap{max-width:900px;margin:0 auto;padding:10px 16px 0}</style>
+<style>
+  .stage{position:relative;width:332px;max-width:100%;margin:0 auto 10px;border-radius:14px;overflow:hidden}
+  .fx{position:absolute;pointer-events:none;z-index:5}
+  .idea{border-top:1px solid var(--line);padding:10px 2px 6px;margin-top:6px}
+  .idea .it{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;margin-bottom:4px}
+  .idea .it b{font-size:14px}
+  .idea .kind{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4}
+  .idea p{font-size:13px;line-height:1.45;color:var(--muted);margin-bottom:8px}
+  .ctl{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin-bottom:8px}
+  .ans{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .chip{font-family:inherit;font-size:12.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:7px 12px;cursor:pointer}
+  .chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  .idea textarea{width:100%;min-height:44px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-family:inherit;font-size:13.5px;resize:vertical}
+  .idea .said{font-size:12px;color:var(--green);font-weight:700;min-height:14px;margin-top:3px}
+  .mount [data-h]{cursor:default}
+  #designs{align-items:start}
+</style>
+</head>
+<body>
+<div id="login">
+  <h1>Tracker Animation Ideas</h1><p>Sign in to your ProjectYou account.</p>
+  <input id="email" type="email" placeholder="email"><input id="pass" type="password" placeholder="password">
+  <button class="btn primary" style="width:100%" onclick="signIn()">Sign in</button><div class="err" id="loginErr"></div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.8</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>Tracker Animation Ideas</h1><span class="ver">v1.0</span><span class="date"></span></div></div>
+  <div class="wrap">
+    <p class="intro">Two animation ideas for each of the nine trackers, in the same order as the Daily Habit Tracker page. Press <b>Play</b> under each idea to watch it on that tracker. For every idea, tap <b>Love it</b>, <b>Maybe</b> or <b>Not for me</b>, and type a note if you want something changed. Nothing here touches your real habits: it is all sample data.</p>
+    <div class="sample" id="note">Each tracker starts mid-day. The "when you tap" ideas finish one habit. The "when the day is done" ideas finish the last three, then play the big moment.</div>
+    <div class="err hidden" id="loaderr"></div>
+
+    <div id="designs"></div>
+
+    <div class="copybox">
+      <h3>My answers (copy and paste into the chat)</h3>
+      <textarea id="allc" readonly></textarea>
+      <div class="row" style="display:flex;gap:10px;align-items:center;margin-top:8px"><button class="btn primary" id="copyall">Copy my answers</button><span class="said" id="copysaid"></span></div>
+    </div>
+  </div>
+  <div class="badge">Tracker Animation Ideas v1.0</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+sb.auth.onAuthStateChange(function(_ev,_ss){if(!_ss){var a=document.getElementById('app'),l=document.getElementById('login');if(a){a.classList.add('hidden');a.style.display='none';}if(l){l.classList.remove('hidden');l.style.display='';var e=document.getElementById('loginErr');if(e)e.textContent='Your session expired, please sign in again.';}}});
+var P = window.PYHT, RT = {}, ANS = {}, STARTED = false;
+function $(id) { return document.getElementById(id); }
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+function rnd(a, b) { return a + Math.random() * (b - a); }
+
+/* ---------- sign in (same as the tracker page) ---------- */
+async function boot() {
+  var r = await sb.auth.getSession();
+  if (r.data.session) { onLogin(r.data.session); return; }
+  $('login').classList.remove('hidden');
+}
+async function signIn() {
+  var r = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('pass').value });
+  if (r.error) { $('loginErr').textContent = r.error.message; return; }
+  onLogin(r.data.session);
+}
+async function onLogin(session) {
+  try { await sb.realtime.setAuth(session.access_token); } catch (e) {}
+  $('login').classList.add('hidden'); $('app').classList.remove('hidden');
+  if (!STARTED) { STARTED = true; start(); }
+}
+
+/* ---------- small animation toolkit ---------- */
+/* Animate any element. SVG pieces turn around their own middle unless a pivot is given. */
+function A(el, kf, opt) {
+  if (!el) return Promise.resolve();
+  opt = opt || {};
+  if (opt.keep) { /* the shape already carries its own pivot */ }
+  else if (el instanceof SVGElement) {
+    if (opt.pivot) { el.style.transformBox = 'view-box'; el.style.transformOrigin = opt.pivot; }
+    else if (el.ownerSVGElement) { el.style.transformBox = 'fill-box'; el.style.transformOrigin = 'center'; }
+    else el.style.transformOrigin = '50% 50%';
+  } else if (!el.style.transformOrigin) el.style.transformOrigin = '50% 50%';
+  var o = { duration: 400, easing: 'ease-out', fill: opt.fill || 'none' };
+  if (opt.duration != null) o.duration = opt.duration;
+  if (opt.easing) o.easing = opt.easing;
+  if (opt.delay) o.delay = opt.delay;
+  if (opt.iterations) o.iterations = opt.iterations;
+  var an;
+  try { an = el.animate(kf, o); } catch (e) { return Promise.resolve(); }
+  return an.finished.then(function () { return an; }, function () {});
+}
+function qa(rt) { return Array.prototype.slice.call(rt.mount.querySelectorAll('[data-h]')); }
+function q(rt, name) { var a = qa(rt); for (var i = 0; i < a.length; i++) if (a[i].getAttribute('data-h') === name) return a[i]; return null; }
+function box(rt, el) {
+  var a = el.getBoundingClientRect(), b = rt.stage.getBoundingClientRect();
+  return { x: a.left - b.left, y: a.top - b.top, w: a.width, h: a.height, cx: a.left - b.left + a.width / 2, cy: a.top - b.top + a.height / 2 };
+}
+function snap(rt) { var m = {}; qa(rt).forEach(function (el) { m[el.getAttribute('data-h')] = el.getBoundingClientRect(); }); return m; }
+function colorOf(rt, name) {
+  var h = rt.state.habits.concat(rt.state.weekly || []).filter(function (x) { return x.n === name; })[0];
+  return (h && h.color) || '#3f6f8f';
+}
+function draw(rt) { rt.mount.innerHTML = P.render(rt.state, rt.id, 'card'); }
+function fx(rt, css) { var d = document.createElement('div'); d.className = 'fx'; Object.assign(d.style, css); rt.stage.appendChild(d); return d; }
+function ripple(rt, x, y, color, size, dur) {
+  var d = fx(rt, { left: x + 'px', top: y + 'px', width: '10px', height: '10px', marginLeft: '-5px', marginTop: '-5px', border: '3px solid ' + color, borderRadius: '50%' });
+  return A(d, [{ transform: 'scale(1)', opacity: .9 }, { transform: 'scale(' + ((size || 80) / 10) + ')', opacity: 0 }], { duration: dur || 700 }).then(function () { d.remove(); });
+}
+function burst(rt, x, y, n, colors, spread, dur) {
+  var ps = [];
+  for (var i = 0; i < n; i++) {
+    var d = fx(rt, { left: x + 'px', top: y + 'px', width: '7px', height: '10px', marginLeft: '-3px', marginTop: '-5px', background: colors[i % colors.length], borderRadius: '1px' });
+    var ang = rnd(0, Math.PI * 2), dist = rnd(.4, 1) * (spread || 90), dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist - rnd(10, 40);
+    ps.push(A(d, [{ transform: 'translate(0,0) rotate(0)', opacity: 1 },
+      { transform: 'translate(' + dx + 'px,' + dy + 'px) rotate(' + rnd(-300, 300) + 'deg)', opacity: 1, offset: .55 },
+      { transform: 'translate(' + (dx * 1.1) + 'px,' + (dy + rnd(30, 70)) + 'px) rotate(' + rnd(-500, 500) + 'deg)', opacity: 0 }],
+      { duration: (dur || 1100) + rnd(0, 300), easing: 'cubic-bezier(.2,.7,.4,1)' }).then((function (dd) { return function () { dd.remove(); }; })(d)));
+  }
+  return Promise.all(ps);
+}
+function star(rt, x, y, color, size) {
+  var d = fx(rt, { left: x + 'px', top: y + 'px', marginLeft: '-8px', marginTop: '-10px', color: color || '#f4c95d', fontSize: (size || 18) + 'px', lineHeight: '1', fontWeight: '800' });
+  d.textContent = '✦';
+  return A(d, [{ transform: 'scale(0) rotate(0)', opacity: 0 }, { transform: 'scale(1.2) rotate(70deg)', opacity: 1, offset: .4 }, { transform: 'scale(0) rotate(160deg)', opacity: 0 }], { duration: 700 }).then(function () { d.remove(); });
+}
+var GOLD = ['#f4c95d', '#e8884a', '#fff3c4', '#c68a2e'];
+
+/* FLIP: after the tracker has redrawn, glide every piece from where it was to where it is now. */
+function flip(rt, before, opt) {
+  opt = opt || {};
+  var ps = [];
+  qa(rt).forEach(function (el) {
+    var n = el.getAttribute('data-h'), b = before[n];
+    if (!b) return;
+    var a = el.getBoundingClientRect(), dx = b.left - a.left, dy = b.top - a.top;
+    if (Math.abs(dx) < .5 && Math.abs(dy) < .5) return;
+    var sx = 1, sy = 1;
+    if (el instanceof SVGElement && el.getScreenCTM) { var m = el.getScreenCTM(); if (m) { sx = m.a || 1; sy = m.d || 1; } }
+    var ux = dx / sx, uy = dy / sy;
+    var kf = opt.kf ? opt.kf(ux, uy, n) : [{ transform: 'translate(' + ux + 'px,' + uy + 'px)' }, { transform: 'translate(0,0)' }];
+    ps.push(A(el, kf, { duration: opt.dur || 700, easing: opt.easing || 'ease-in-out', delay: opt.delay ? opt.delay(n) : 0 }));
+  });
+  return Promise.all(ps);
+}
+/* Finish one habit: optional "before" move on the old piece, redraw, then "after" moves on the new one. */
+async function complete(rt, name, h) {
+  h = h || {};
+  var el = q(rt, name), b0 = snap(rt);
+  if (h.pre && el) await h.pre(el, rt, name);
+  rt.state = P.reflect(rt.state, name, true);
+  draw(rt);
+  var nel = q(rt, name), ps = [];
+  if (h.flip) ps.push(flip(rt, b0, h.flip));
+  if (h.post) ps.push(h.post(nel, rt, name, b0));
+  await Promise.all(ps);
+}
+function pop(el, big) { return A(el, [{ transform: 'scale(1)' }, { transform: 'scale(' + (big || 1.2) + ')' }, { transform: 'scale(1)' }], { duration: 380, easing: 'cubic-bezier(.3,1.6,.5,1)' }); }
+function tick(el) { return A(el, [{ transform: 'translateY(9px) scale(.9)', opacity: 0 }, { transform: 'translateY(0) scale(1)', opacity: 1 }], { duration: 380, easing: 'cubic-bezier(.3,1.5,.5,1)' }); }
+
+/* ---------- the animations, two per tracker ---------- */
+var IDEAS = {};
+
+/* D: Two-Ring Wheel */
+IDEAS.wheel = [
+  { title: 'Glow, then settle', kind: 'tap', plain: 'Tap a slice and it swells and glows in its own colour. A soft ring spreads out from it, then it shrinks back and turns grey. The done count in the middle ticks up.',
+    run: async function (rt, name) {
+      var c = colorOf(rt, name);
+      await complete(rt, name, {
+        pre: async function (el) { var b = box(rt, el); ripple(rt, b.cx, b.cy, c, 150, 900); await A(el, [{ transform: 'scale(1)', filter: 'brightness(1)' }, { transform: 'scale(1.22)', filter: 'brightness(1.2) drop-shadow(0 0 7px ' + c + ')' }], { duration: 300, fill: 'forwards' }); },
+        post: function (nel, rt) { tick(rt.mount.querySelector('svg text')); return A(nel, [{ transform: 'scale(1.22)', opacity: .5 }, { transform: 'scale(1)', opacity: 1 }], { duration: 450, easing: 'cubic-bezier(.3,1.6,.5,1)' }); }
+      });
+    } },
+  { title: 'Victory spin', kind: 'finish', plain: 'Finish the last three habits and the whole wheel flashes gold, spins one full turn, and shoots confetti out of the middle.',
+    run: async function (rt, names) {
+      for (var i = 0; i < names.length; i++) { await complete(rt, names[i], { post: function (nel) { return pop(nel, 1.12); } }); await sleep(450); }
+      var segs = qa(rt), b = box(rt, rt.mount.querySelector('svg'));
+      burst(rt, b.cx, b.cy, 34, GOLD, 120, 1400);
+      segs.forEach(function (el, i) { A(el, [{ filter: 'brightness(1)' }, { filter: 'sepia(1) saturate(4) brightness(1.15)' }, { filter: 'brightness(1)' }], { duration: 700, delay: i * 45 }); });
+      await Promise.all(segs.map(function (el) { return A(el, [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { pivot: '160px 160px', duration: 1500, easing: 'cubic-bezier(.65,0,.25,1)' }); }));
+      await pop(rt.mount.querySelector('svg text'), 1.3);
+    } }
+];
+
+/* E: Stack Rings (outer rim) and I: Stack Rings (letter badges) */
+function ringOf(el) { return el.closest('svg'); }
+function ringCard(el) { var s = ringOf(el); return s ? s.parentNode : null; }
+function fullCards(rt) { return Array.prototype.slice.call(rt.mount.querySelectorAll('svg')).map(function (s) { return s.parentNode; }).filter(function (d) { return /Complete/.test(d.textContent); }); }
+function shimmer(rt, card) {
+  var b = box(rt, card);
+  var w = fx(rt, { left: b.x + 'px', top: b.y + 'px', width: b.w + 'px', height: b.h + 'px', borderRadius: '12px', overflow: 'hidden' });
+  var s = document.createElement('div'); s.style.cssText = 'position:absolute;top:-20%;bottom:-20%;left:0;width:40%;background:linear-gradient(100deg,transparent,rgba(255,236,170,.85),transparent);transform:translateX(-120%) skewX(-18deg)';
+  w.appendChild(s);
+  return A(s, [{ transform: 'translateX(-120%) skewX(-18deg)' }, { transform: 'translateX(330%) skewX(-18deg)' }], { duration: 900, easing: 'ease-in-out' }).then(function () { w.remove(); });
+}
+function ringIdeas(badges) {
+  var first = badges
+    ? { title: 'Badge spin', kind: 'tap', plain: 'The small C, S or B badge on the slice spins once like a coin while the slice goes grey, then a ripple runs around the ring.',
+        run: async function (rt, name) {
+          var c = colorOf(rt, name);
+          await complete(rt, name, {
+            pre: async function (el) {
+              var kids = Array.prototype.slice.call(el.children), badge = kids.slice(-2), b = box(rt, el);
+              ripple(rt, b.cx, b.cy, c, 90, 800);
+              await Promise.all(badge.map(function (k) { return A(k, [{ transform: 'rotateY(0) scale(1)' }, { transform: 'rotateY(540deg) scale(1.9)' }, { transform: 'rotateY(720deg) scale(1)' }], { duration: 750, easing: 'ease-in-out' }); }).concat([A(el.querySelector('path'), [{ opacity: 1 }, { opacity: .55 }], { duration: 750 })]));
+            },
+            post: function (nel) { return A(nel, [{ opacity: .4 }, { opacity: 1 }], { duration: 350 }); }
+          });
+        } }
+    : { title: 'Ring chime', kind: 'tap', plain: 'Tap a slice and it pops. A ripple spreads around the whole ring and the small count in the middle bounces.',
+        run: async function (rt, name) {
+          var c = colorOf(rt, name);
+          await complete(rt, name, {
+            pre: async function (el) { var s = ringOf(el), b = box(rt, s); ripple(rt, b.cx, b.cy, c, b.w * .55, 900); await A(el, [{ transform: 'scale(1)', filter: 'brightness(1)' }, { transform: 'scale(1.22)', filter: 'brightness(1.2) drop-shadow(0 0 5px ' + c + ')' }], { duration: 280, fill: 'forwards' }); },
+            post: function (nel) { var t = ringOf(nel).querySelector('text'); return Promise.all([A(nel, [{ transform: 'scale(1.2)', opacity: .5 }, { transform: 'scale(1)', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.3,1.6,.5,1)' }), pop(t, 1.45)]); }
+          });
+        } };
+  var second = badges
+    ? { title: 'Domino ring', kind: 'finish', plain: 'When a ring is full, its slices flash gold one after another around the circle, like dominoes, and the card glows.',
+        run: async function (rt, names) {
+          for (var i = 0; i < names.length; i++) { await complete(rt, names[i], { post: function (nel) { return pop(nel, 1.12); } }); await sleep(400); }
+          var cards = fullCards(rt), ps = [];
+          cards.forEach(function (card) {
+            var b = box(rt, card);
+            Array.prototype.slice.call(card.querySelectorAll('[data-h]')).forEach(function (g, i) { ps.push(A(g, [{ transform: 'scale(1)', filter: 'brightness(1)' }, { transform: 'scale(1.18)', filter: 'sepia(1) saturate(4) brightness(1.2)' }, { transform: 'scale(1)', filter: 'brightness(1)' }], { duration: 520, delay: i * 130 })); });
+            ps.push(burst(rt, b.cx, b.y + b.h * .45, 18, GOLD, 70, 1100));
+          });
+          await Promise.all(ps);
+        } }
+    : { title: 'Gold shimmer', kind: 'finish', plain: 'When a ring fills up, a bright streak sweeps across its card and a little gold confetti pops.',
+        run: async function (rt, names) {
+          for (var i = 0; i < names.length; i++) { await complete(rt, names[i], { post: function (nel) { return pop(nel, 1.12); } }); await sleep(400); }
+          var cards = fullCards(rt), ps = [];
+          cards.forEach(function (card, i) { var b = box(rt, card); ps.push(sleep(i * 250).then(function () { burst(rt, b.cx, b.y + b.h * .4, 14, GOLD, 60, 1000); return shimmer(rt, card); })); });
+          await Promise.all(ps);
+        } };
+  return [first, second];
+}
+IDEAS.rings = ringIdeas(false);
+IDEAS['rings-badges'] = ringIdeas(true);
+
+/* H: Remote Lights */
+IDEAS.remote = [
+  { title: 'Press and fade', kind: 'tap', plain: 'The key presses down like a real button. Its little light flashes white and fades out, and the "lights still on" headline drops by one.',
+    run: async function (rt, name) {
+      await complete(rt, name, {
+        pre: async function (el) {
+          var led = el.querySelector('[data-led]');
+          await A(el, [{ transform: 'scale(1) translateY(0)' }, { transform: 'scale(.88) translateY(2px)' }], { duration: 120, fill: 'forwards' });
+          if (led) await A(led, [{ filter: 'blur(.8px) brightness(1)', opacity: 1 }, { filter: 'blur(1.5px) brightness(3)', opacity: 1, offset: .25 }, { filter: 'blur(.8px) brightness(1)', opacity: 0 }], { duration: 520, fill: 'forwards' });
+        },
+        post: function (nel, rt) { return Promise.all([A(nel, [{ transform: 'scale(.88)' }, { transform: 'scale(1.04)' }, { transform: 'scale(1)' }], { duration: 300 }), tick(rt.mount.firstElementChild.firstElementChild)]); }
+      });
+    } },
+  { title: 'Lights out', kind: 'finish', plain: 'When the very last light goes off, the room dims for a moment, then the headline turns gold and pulses.',
+    run: async function (rt, names) {
+      for (var i = 0; i < names.length; i++) {
+        await complete(rt, names[i], { pre: async function (el) { var led = el.querySelector('[data-led]'); await A(el, [{ transform: 'scale(1)' }, { transform: 'scale(.9)' }], { duration: 110, fill: 'forwards' }); if (led) await A(led, [{ opacity: 1 }, { opacity: 0 }], { duration: 300, fill: 'forwards' }); } });
+        await sleep(300);
+      }
+      var b = rt.stage.getBoundingClientRect();
+      var dim = fx(rt, { left: 0, top: 0, width: '100%', height: '100%', background: '#000', borderRadius: '14px', opacity: 0 });
+      var head = rt.mount.firstElementChild.firstElementChild;
+      await A(dim, [{ opacity: 0 }, { opacity: .6, offset: .25 }, { opacity: .6, offset: .6 }, { opacity: 0 }], { duration: 1500 });
+      dim.remove();
+      await A(head, [{ transform: 'scale(1)', textShadow: '0 0 0 #f4c95d' }, { transform: 'scale(1.14)', textShadow: '0 0 22px #f4c95d' }, { transform: 'scale(1)', textShadow: '0 0 8px #f4c95d' }], { duration: 900, easing: 'ease-in-out' });
+    } }
+];
+
+/* F: Icon Grid */
+IDEAS.grid = [
+  { title: 'Flip and stamp', kind: 'tap', plain: 'The tile flips over like a card. As it lands, a check mark stamps down on its corner.',
+    run: async function (rt, name) {
+      rt.mount.style.perspective = '700px';
+      await complete(rt, name, {
+        pre: function (el) { return A(el, [{ transform: 'rotateY(0deg)' }, { transform: 'rotateY(90deg)' }], { duration: 200, easing: 'ease-in', fill: 'forwards' }); },
+        post: function (nel) {
+          var chk = nel.querySelector('span');
+          return Promise.all([A(nel, [{ transform: 'rotateY(-90deg)' }, { transform: 'rotateY(0deg)' }], { duration: 260, easing: 'ease-out' }),
+            chk ? A(chk, [{ transform: 'scale(3) rotate(-30deg)', opacity: 0 }, { transform: 'scale(1) rotate(0)', opacity: 1 }], { duration: 380, delay: 200, easing: 'cubic-bezier(.3,1.5,.5,1)', fill: 'backwards' }) : null]);
+        }
+      });
+    } },
+  { title: 'The wave', kind: 'finish', plain: 'When the last one is done, every tile pops in a quick wave across the grid, and confetti rains from the top.',
+    run: async function (rt, names) {
+      for (var i = 0; i < names.length; i++) { await complete(rt, names[i], { post: function (nel) { return pop(nel, 1.1); } }); await sleep(350); }
+      var b = box(rt, rt.mount.firstElementChild);
+      burst(rt, b.x + b.w * .25, b.y + 20, 22, GOLD.concat(['#5865f2', '#0fb39b', '#f0436f']), 110, 1500);
+      burst(rt, b.x + b.w * .75, b.y + 20, 22, GOLD.concat(['#5865f2', '#0fb39b', '#f0436f']), 110, 1500);
+      var tiles = qa(rt), cols = 6;
+      await Promise.all(tiles.map(function (el, i) { var r = Math.floor(i / cols), c = i % cols; return A(el, [{ transform: 'scale(1)' }, { transform: 'scale(1.18)', offset: .4 }, { transform: 'scale(1)' }], { duration: 480, delay: (r + c) * 70, easing: 'ease-in-out' }); }));
+      await pop(rt.mount.firstElementChild.firstElementChild.firstElementChild, 1.15);
+    } }
+];
+
+/* A: Poster Hourglass */
+function dust(rt, el, colors) { var b = box(rt, el); return burst(rt, b.cx, b.y + b.h * .8, 12, colors, 34, 700); }
+IDEAS.poster = [
+  { title: 'Sand drop', kind: 'tap', plain: 'The finished habit falls to the bottom of the glass like a grain of sand, bounces once, and kicks up a puff of dust.',
+    run: async function (rt, name) {
+      await complete(rt, name, {
+        flip: { dur: 900, kf: function (ux, uy) { return [{ transform: 'translate(' + ux + 'px,' + uy + 'px)', easing: 'cubic-bezier(.5,0,.9,.5)' }, { transform: 'translate(0,0)', offset: .7, easing: 'ease-out' }, { transform: 'translate(0,-5px)', offset: .84, easing: 'ease-in' }, { transform: 'translate(0,0)' }]; } },
+        post: function (nel) { return sleep(620).then(function () { return dust(rt, nel, ['#1a1a1a', '#8a7b5a', '#c9b99a']); }); }
+      });
+    } },
+  { title: 'The glass turns over', kind: 'finish', plain: 'When the day is done, the whole hourglass flips upside down, pauses, and turns back up, ready for tomorrow.',
+    run: async function (rt, names) {
+      for (var i = 0; i < names.length; i++) { var b0 = snap(rt); await complete(rt, names[i], { flip: { dur: 650, easing: 'cubic-bezier(.5,0,.9,.5)' } }); await sleep(250); }
+      var root = rt.mount.firstElementChild;
+      await A(root, [{ transform: 'rotate(0deg)' }, { transform: 'rotate(180deg)' }], { duration: 900, easing: 'cubic-bezier(.6,0,.3,1)', fill: 'forwards' });
+      await sleep(450);
+      await A(root, [{ transform: 'rotate(180deg)' }, { transform: 'rotate(360deg)' }], { duration: 900, easing: 'cubic-bezier(.3,1.4,.5,1)' });
+      root.getAnimations().forEach(function (a) { a.cancel(); });
+    } }
+];
+
+/* B: Heap Ring */
+IDEAS.heap = [
+  { title: 'Roll into the heap', kind: 'tap', plain: 'The marble rolls down to the pile, squashes a little as it lands, and the other marbles shuffle to make room.',
+    run: async function (rt, name) {
+      await complete(rt, name, {
+        flip: { dur: 900, easing: 'cubic-bezier(.45,0,.55,1)' },
+        post: function (nel) { return A(nel, [{ transform: 'scale(1,1)' }, { transform: 'scale(1,1)', offset: .7 }, { transform: 'scale(1.25,.72)', offset: .82 }, { transform: 'scale(.92,1.12)', offset: .92 }, { transform: 'scale(1,1)' }], { duration: 900 }); }
+      });
+    } },
+  { title: 'Twinkle', kind: 'finish', plain: 'When everything is done, the marbles twinkle one by one, and the whole ring gives a small happy wobble.',
+    run: async function (rt, names) {
+      for (var i = 0; i < names.length; i++) { await complete(rt, names[i], { flip: { dur: 700, easing: 'cubic-bezier(.45,0,.55,1)' } }); await sleep(250); }
+      var all = qa(rt).sort(function () { return Math.random() - .5; }), ps = [];
+      all.forEach(function (el, i) {
+        ps.push(A(el, [{ filter: 'brightness(1)', transform: 'scale(1)' }, { filter: 'brightness(1.7) saturate(1.5)', transform: 'scale(1.15)' }, { filter: 'brightness(1)', transform: 'scale(1)' }], { duration: 520, delay: i * 55 }));
+        if (i % 3 === 0) { var b = box(rt, el); ps.push(sleep(i * 55 + 120).then(function () { return star(rt, b.cx, b.cy, '#f4c95d', 16); })); }
+      });
+      ps.push(A(rt.mount.firstElementChild, [{ transform: 'rotate(0)' }, { transform: 'rotate(-1.6deg)' }, { transform: 'rotate(1.6deg)' }, { transform: 'rotate(-1deg)' }, { transform: 'rotate(0)' }], { duration: 900, delay: 300 }));
+      await Promise.all(ps);
+    } }
+];
+
+/* C: Color Blocks */
+function garden(rt) { return Array.prototype.slice.call(rt.mount.querySelectorAll('[data-spin]')); }
+function whirl(rt, turns, dur, stagger) { return Promise.all(garden(rt).map(function (s, i) { return A(s, [{ transform: 'rotate(0deg)' }, { transform: 'rotate(' + (360 * turns) + 'deg)' }], { keep: true, duration: dur, delay: i * (stagger || 0), easing: 'ease-in-out' }); })); }
+IDEAS.blocks = [
+  { title: 'Drop into the bowl', kind: 'tap', plain: 'The marble drops from the grid into the bowl at the bottom. As it lands, the little shapes in the garden whirl once.',
+    run: async function (rt, name) {
+      await complete(rt, name, {
+        flip: { dur: 1000, kf: function (ux, uy) { return [{ transform: 'translate(' + ux + 'px,' + uy + 'px)', easing: 'cubic-bezier(.5,0,.9,.5)' }, { transform: 'translate(0,0)', offset: .72, easing: 'ease-out' }, { transform: 'translate(0,-6px)', offset: .86, easing: 'ease-in' }, { transform: 'translate(0,0)' }]; } },
+        post: function () { return sleep(650).then(function () { return whirl(rt, 1, 900, 40); }); }
+      });
+    } },
+  { title: 'Garden in bloom', kind: 'finish', plain: 'At the end every shape in the garden spins twice in a ripple, the bowl marbles hop, and confetti flies in the page\'s own colours.',
+    run: async function (rt, names) {
+      for (var i = 0; i < names.length; i++) { await complete(rt, names[i], { flip: { dur: 750, easing: 'cubic-bezier(.5,0,.9,.5)' } }); await sleep(300); }
+      var b = box(rt, rt.mount.firstElementChild), ps = [];
+      ps.push(burst(rt, b.cx, b.y + 60, 32, ['#d94b45', '#0a1b54', '#9fc4dd', '#f1e7d3'], 140, 1500));
+      ps.push(whirl(rt, 2, 1300, 60));
+      qa(rt).forEach(function (el, i) { ps.push(A(el, [{ transform: 'translateY(0)' }, { transform: 'translateY(-9px)', offset: .4 }, { transform: 'translateY(0)' }], { duration: 480, delay: 300 + i * 35 })); });
+      await Promise.all(ps);
+    } }
+];
+
+/* G: Steel Plate Tubes */
+IDEAS.tubes = [
+  { title: 'Drop through the plate', kind: 'tap', plain: 'The marble drops down its tube, taps the steel plate with a little flash, and settles with a tiny bounce.',
+    run: async function (rt, name) {
+      await complete(rt, name, {
+        flip: { dur: 850, kf: function (ux, uy) { return [{ transform: 'translate(' + ux + 'px,' + uy + 'px)', easing: 'cubic-bezier(.55,0,1,.5)' }, { transform: 'translate(0,0)', offset: .72, easing: 'ease-out' }, { transform: 'translate(0,-6px)', offset: .86, easing: 'ease-in' }, { transform: 'translate(0,0)' }]; } },
+        post: function (nel) { var b = box(rt, nel); return sleep(600).then(function () { var l = fx(rt, { left: (b.cx - 20) + 'px', top: (b.cy - 2) + 'px', width: '40px', height: '3px', background: 'linear-gradient(90deg,transparent,#fff,transparent)' }); return Promise.all([A(l, [{ opacity: 0, transform: 'scaleX(.3)' }, { opacity: 1, transform: 'scaleX(1.3)', offset: .3 }, { opacity: 0, transform: 'scaleX(1.6)' }], { duration: 500 }).then(function () { l.remove(); }), burst(rt, b.cx, b.cy, 8, ['#e8eef3', '#aeb9c4'], 26, 600)]); }); }
+      });
+    } },
+  { title: 'Marbles dance', kind: 'finish', plain: 'When everything is done, the tube flaps flutter and the marbles bounce in a wave from left to right, with gold sparks.',
+    run: async function (rt, names) {
+      for (var i = 0; i < names.length; i++) { await complete(rt, names[i], { flip: { dur: 650, easing: 'cubic-bezier(.55,0,1,.5)' } }); await sleep(250); }
+      var marbles = qa(rt).sort(function (a, b) { return a.getBoundingClientRect().left - b.getBoundingClientRect().left; }), ps = [];
+      marbles.forEach(function (el, i) { ps.push(A(el, [{ transform: 'translateY(0)' }, { transform: 'translateY(-9px)', offset: .4 }, { transform: 'translateY(0)' }], { duration: 520, delay: i * 40, easing: 'ease-in-out' })); });
+      Array.prototype.slice.call(rt.mount.querySelectorAll('[data-flap]')).forEach(function (f, i) { ps.push(A(f, [{ transform: 'rotate(0deg)' }, { transform: 'rotate(-14deg)' }, { transform: 'rotate(10deg)' }, { transform: 'rotate(0deg)' }], { duration: 700, delay: i * 120 })); });
+      var b = box(rt, rt.mount.firstElementChild);
+      ps.push(burst(rt, b.cx, b.y + b.h * .5, 26, GOLD, 120, 1300));
+      await Promise.all(ps);
+    } }
+];
+
+/* ---------- the page ---------- */
+var LETTER = {};
+function buildShells() {
+  var h = '';
+  P.registry().forEach(function (r) {
+    LETTER[r.id] = r.letter;
+    h += '<section class="dsn" id="d-' + r.id + '"><div class="dh"><span class="dl">' + P.esc(r.letter) + '</span><h2>' + P.esc(r.name) + '</h2></div>' +
+      '<div class="stage" id="stg-' + r.id + '"><div class="mount card" data-d="' + r.id + '"></div></div>';
+    (IDEAS[r.id] || []).forEach(function (idea, i) {
+      h += '<div class="idea" data-d="' + r.id + '" data-i="' + i + '"><div class="it"><b>Idea ' + (i + 1) + ': ' + P.esc(idea.title) + '</b><span class="kind">' + (idea.kind === 'tap' ? 'When you tap a habit' : 'When the day is done') + '</span></div>' +
+        '<p>' + P.esc(idea.plain) + '</p>' +
+        '<div class="ctl"><button class="btn primary play" data-play="' + r.id + ':' + i + '">Play</button>' +
+        '<span class="ans"><button class="chip" data-v="Love it">Love it</button><button class="chip" data-v="Maybe">Maybe</button><button class="chip" data-v="Not for me">Not for me</button></span></div>' +
+        '<textarea placeholder="Anything to change? (optional)"></textarea><div class="said"></div></div>';
+    });
+    h += '</section>';
+  });
+  $('designs').innerHTML = h;
+  P.registry().forEach(function (r) { RT[r.id] = { id: r.id, stage: $('stg-' + r.id), mount: $('stg-' + r.id).firstChild, state: null, busy: false }; });
+}
+function ideaKey(id, i) { return id + ':' + i; }
+function setBusy(id, on) {
+  RT[id].busy = on;
+  document.querySelectorAll('[data-d="' + id + '"] .play').forEach(function (b) { b.disabled = on; b.textContent = on ? 'Playing...' : 'Play'; });
+}
+async function play(id, i) {
+  var rt = RT[id], idea = IDEAS[id][i];
+  if (rt.busy) return;
+  setBusy(id, true);
+  try {
+    var st = await P.getState('mid');
+    if (idea.kind === 'tap') {
+      rt.state = st; draw(rt); await sleep(700);
+      await idea.run(rt, st.next ? st.next.n : st.open[0].n);
+    } else {
+      var nd = nearlyDone(st, 3); rt.state = nd.state; draw(rt); await sleep(800);
+      await idea.run(rt, nd.names);
+    }
+    await sleep(500);
+  } catch (e) { var el = $('loaderr'); el.textContent = 'Could not play: ' + (e && e.message ? e.message : e); el.classList.remove('hidden'); }
+  rt.stage.querySelectorAll('.fx').forEach(function (n) { n.remove(); });
+  rt.mount.style.perspective = '';
+  setBusy(id, false);
+}
+/* A start point where only three habits are left, core first. */
+function nearlyDone(st, left) {
+  var open = st.habits.filter(function (h) { return !h.done; });
+  var keep = open.filter(function (h) { return h.core; }).slice(0, left - 1).concat(open.filter(function (h) { return !h.core; }).slice(0, 1));
+  if (keep.length < left) keep = keep.concat(open.filter(function (h) { return keep.indexOf(h) < 0; })).slice(0, left);
+  var names = keep.map(function (h) { return h.n; });
+  st.habits.forEach(function (h) { if (names.indexOf(h.n) < 0) h.done = true; });
+  (st.weekly || []).forEach(function (h) { h.done = true; h.doneToday = true; });
+  return { state: P.reflect(st, names[0], false), names: names };
+}
+function drawAll() {
+  var out = ['MY ANSWERS ON THE TRACKER ANIMATION IDEAS', ''];
+  P.registry().forEach(function (r) {
+    (IDEAS[r.id] || []).forEach(function (idea, i) {
+      var a = ANS[ideaKey(r.id, i)];
+      if (!a || (!a.v && !a.note)) return;
+      out.push(r.letter + '. ' + r.name + ', idea ' + (i + 1) + ' (' + idea.title + '): ' + (a.v || 'no pick') + (a.note ? '. Note: ' + a.note.replace(/\n/g, ' ') : ''));
+    });
+  });
+  if (out.length === 2) out.push('(no answers yet)');
+  $('allc').value = out.join('\n');
+}
+function store() { try { localStorage.setItem('pyanim-v1', JSON.stringify(ANS)); } catch (e) {} }
+function restore() {
+  try { var s = localStorage.getItem('pyanim-v1'); if (s) ANS = JSON.parse(s) || {}; } catch (e) {}
+  document.querySelectorAll('.idea').forEach(function (n) {
+    var a = ANS[ideaKey(n.getAttribute('data-d'), n.getAttribute('data-i'))]; if (!a) return;
+    n.querySelectorAll('.chip').forEach(function (c) { c.classList.toggle('on', c.getAttribute('data-v') === a.v); });
+    if (a.note) n.querySelector('textarea').value = a.note;
+  });
+}
+async function saveIdea(n) {
+  var id = n.getAttribute('data-d'), i = n.getAttribute('data-i'), a = ANS[ideaKey(id, i)] || {}, s = n.querySelector('.said');
+  if (!a.v && !a.note) return;
+  var idea = IDEAS[id][+i];
+  try {
+    await P.comments.add('anim-' + id + '-' + i, 'Animation idea ' + (+i + 1) + ' (' + idea.title + '): ' + (a.v || 'no pick') + (a.note ? '. Note: ' + a.note : ''));
+    s.textContent = 'Saved.';
+  } catch (e) { s.textContent = 'Kept on this page. Copy it from the box at the bottom.'; }
+  setTimeout(function () { s.textContent = ''; }, 3000);
+}
+async function start() {
+  $('copyall').addEventListener('click', function () {
+    var o = $('allc'), m = $('copysaid'); o.select(); var ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(o.value).then(function () { m.textContent = 'Copied.'; }, function () { m.textContent = ok ? 'Copied.' : 'Press and hold the text to copy.'; });
+    else m.textContent = ok ? 'Copied.' : 'Press and hold the text to copy.';
+    setTimeout(function () { m.textContent = ''; }, 2500);
+  });
+  try { await P.init(sb); await P.loadDesigns(); }
+  catch (e) { var el = $('loaderr'); el.textContent = 'Could not start: ' + (e.message || e); el.classList.remove('hidden'); }
+  buildShells();
+  /* each tracker gets its own copy of the starting state */
+  for (var k in RT) { RT[k].state = await P.getState('mid'); draw(RT[k]); }
+  $('designs').addEventListener('click', function (ev) {
+    var p = ev.target.closest('[data-play]');
+    if (p) { var a = p.getAttribute('data-play').split(':'); play(a[0], +a[1]); return; }
+    var c = ev.target.closest('.chip');
+    if (c) {
+      var n = c.closest('.idea'), key = ideaKey(n.getAttribute('data-d'), n.getAttribute('data-i'));
+      ANS[key] = ANS[key] || {}; ANS[key].v = ANS[key].v === c.getAttribute('data-v') ? '' : c.getAttribute('data-v');
+      n.querySelectorAll('.chip').forEach(function (x) { x.classList.toggle('on', x.getAttribute('data-v') === ANS[key].v); });
+      store(); drawAll(); saveIdea(n);
+    }
+  });
+  $('designs').addEventListener('change', function (ev) {
+    if (ev.target.tagName !== 'TEXTAREA') return;
+    var n = ev.target.closest('.idea'), key = ideaKey(n.getAttribute('data-d'), n.getAttribute('data-i'));
+    ANS[key] = ANS[key] || {}; ANS[key].note = ev.target.value.trim(); store(); drawAll(); saveIdea(n);
+  });
+  $('designs').addEventListener('input', function (ev) {
+    if (ev.target.tagName !== 'TEXTAREA') return;
+    var n = ev.target.closest('.idea'), key = ideaKey(n.getAttribute('data-d'), n.getAttribute('data-i'));
+    ANS[key] = ANS[key] || {}; ANS[key].note = ev.target.value.trim(); drawAll();
+  });
+  restore(); drawAll();
+}
+boot();
+
+</script>
+<script>(function(){var e=document.querySelector('.secbar .date');if(e){var d=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];e.textContent=M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();}})();</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
