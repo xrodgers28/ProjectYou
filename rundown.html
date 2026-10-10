@@ -70,6 +70,7 @@
   .tile .wfpic .hint{font-size:11px;color:var(--muted);margin:5px 0 8px;text-align:center}
   .tile .wflog{font-style:italic;color:var(--muted);font-size:15px;margin:0 0 12px}
   .tile .wfl{display:block;font-size:10.5px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--accent);margin:16px 0 4px}
+  .tile .seenb{display:inline-block;margin:6px 0 2px;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#f8eed6;color:#8a5a12;border:1px solid #e6cf9b}
   .tile .wfsw{font-size:13px;color:var(--muted);margin-top:14px}
   #lbx{position:fixed;inset:0;background:rgba(10,15,20,.9);z-index:200;display:none;overflow:auto;padding:16px;cursor:zoom-out}
   #lbx img{display:block;max-width:100%;height:auto;margin:0 auto;border-radius:8px;background:#fff}
@@ -90,12 +91,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; your daily AI workout</div>
-  <h1>AI Workout <span class="ver">v2.7</span></h1>
+  <h1>AI Workout <span class="ver">v2.8</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
   <div class="note">Each day: one tip, one insight, two new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable, two stories as two tiles (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That.</div>
-  <div class="stamp" id="stamp">v2.7</div>
+  <div class="stamp" id="stamp">v2.8</div>
 </div>
 
 <script>
@@ -255,7 +256,18 @@ function dealRundown(){
 function dealAi(){
   return api("rpc/ensure_today_deck",{method:"POST",body:"{}"}).catch(function(){}).then(function(){
     return api("ai_cards?select=*&for_date=eq."+today()+"&order=deck_position.asc");
-  }).then(function(rows){ return rows||[]; });
+  }).then(function(rows){
+    rows=rows||[];
+    if(!rows.length) return rows;
+    /* v2.7 (Oct 9, 2026): a repeat is never silent. Find the last earlier day each tile was dealt. */
+    var ts=rows.map(function(r){ return '"'+String(r.title).replace(/"/g,"")+'"'; }).join(",");
+    return api("ai_cards?select=title,for_date&for_date=lt."+today()+"&title=in.("+encodeURIComponent(ts)+")&order=for_date.desc")
+      .then(function(prev){
+        var m={}; (prev||[]).forEach(function(p){ if(!m[p.title]) m[p.title]=p.for_date; });
+        rows.forEach(function(r){ if(m[r.title]) r.__seen=m[r.title]; });
+        return rows;
+      }).catch(function(){ return rows; });
+  });
 }
 function pickAi(rows){
   var main=rows.filter(function(r){ return (r.deck_position||0)<=50 && !HID["p:"+r.title]; }), out=[];
@@ -336,7 +348,7 @@ function tileHTML(t,i,n){
     '<button class="dt" type="button" data-do="'+esc(t.key)+'" aria-pressed="'+(r.do_this?"true":"false")+'" title="Do this!">Do this</button>'+
     '<button class="st" type="button" data-save="'+esc(t.key)+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
     ((t.kind==="rd"&&r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.shot)?'<div class="pic wfpic"><div style="height:44px"></div><img data-enl="1" src="'+esc(r.ai_summary.shot)+'" alt="Screenshot from the reader\u2019s project" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>':(t.kind==="rd"&&r.img&&!(r.section==="Roundtable"&&r.ai_summary&&r.ai_summary.v===2))?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
-    '<div class="top"><div class="k">'+esc(kick)+'</div><h2'+(big?' class="bigq"':'')+'>'+esc(title)+'</h2>'+body+link+srcLine(t)+
+    '<div class="top"><div class="k">'+esc(kick)+'</div>'+((t.kind==="ai"&&r.__seen)?'<div class="seenb">Seen before &middot; '+esc(nice(r.__seen))+'</div>':'')+'<h2'+(big?' class="bigq"':'')+'>'+esc(title)+'</h2>'+body+link+srcLine(t)+
     '<button class="nx" type="button" data-nx="'+esc(t.key)+'">Don&rsquo;t show again</button>'+
     '</div>'+
     (last?'<div class="mintotal" id="mintotalLine"></div>':'')+
@@ -532,7 +544,7 @@ loadHidden().then(function(){ return Promise.all([dealAi().catch(function(){ ret
     var wf=rdRows.filter(function(r){ return r.section==="Workflow of the Day"; }).length;
     var plats=tiles.filter(function(t){ return t.type==="platform"; }).length;
     document.getElementById("sub").textContent=tiles.length+" tiles · about 10 minutes"+(plats?" · "+plats+" new platforms":"")+(wf?" · "+wf+" workflows":"");
-    document.getElementById("stamp").textContent="v2.7 · "+nice(today());
+    document.getElementById("stamp").textContent="v2.8 · "+nice(today());
     render();
   });
 }).catch(function(e){
