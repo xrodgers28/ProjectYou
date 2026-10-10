@@ -229,7 +229,7 @@
 <script>
 const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
-const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false}});
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true}});
 // The day is defined ONCE, in py-day.js: 2am to 2am Eastern, because Scott works
 // past midnight. Never reimplement it here. SQL twin: public.py_today().
 function etToday(){return PY.today();}
@@ -248,7 +248,9 @@ async function hydrateFavs(){try{var r=await sb.from('cue_favorites').select('ca
 async function downloadCueFavorites(){var rows=[];try{var r=await sb.from('cue_favorites').select('*').order('starred_at',{ascending:false});if(r.error)throw r.error;rows=r.data||[];}catch(e){toast('Could not reach the server for favorites.');return;}if(!rows.length){toast('No favorites yet. Tap a star first.');return;}var head=['Module','Type','Title / Quote','Detail / Author','Source date','Starred at (UTC)'];var q=function(s){return '"'+String(s==null?'':s).replace(/"/g,'""')+'"';};var csv=head.map(q).join(',')+'\r\n'+rows.map(function(r){return [r.module,r.card_type,r.title,r.detail,r.source_date,r.starred_at].map(q).join(',');}).join('\r\n');var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='cue-cards-favorites.csv';document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},120);}
 function addFavBtn(){if(document.getElementById('favDl'))return;var b=document.createElement('button');b.id='favDl';b.innerHTML='\u2605 Download favorites';b.style.cssText='position:fixed;right:16px;bottom:16px;z-index:99999;background:#7a4f9c;color:#fff;border:none;border-radius:999px;padding:11px 16px;font:600 13px system-ui,-apple-system,sans-serif;box-shadow:0 6px 18px rgba(31,42,68,.22);cursor:pointer';b.onclick=downloadCueFavorites;document.body.appendChild(b);}
 document.addEventListener('DOMContentLoaded',addFavBtn);
-async function boot(){document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');load();}
+async function boot(){var ses=null;try{var r=await sb.auth.getSession();ses=r&&r.data&&r.data.session;}catch(e){}
+  if(ses){try{await sb.realtime.setAuth(ses.access_token);}catch(e){} document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');load();}
+  else{document.getElementById('login').classList.remove('hidden');document.getElementById('app').classList.add('hidden');}}
 async function signIn(){const email=document.getElementById('email').value.trim();const pass=document.getElementById('pass').value;
   const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
   if(error){document.getElementById('loginErr').textContent=error.message;return;}onLogin(data.session);}
