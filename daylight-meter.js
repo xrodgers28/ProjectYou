@@ -54,7 +54,7 @@
 
   var C = {
     night: '#58585b', astro: '#686559', nautical: '#81775f', civil: '#a8976f', day: '#fbe3a2',
-    blue: '#2f80ed', ink: '#1f2a44', muted: '#8a93a0'
+    blue: '#2f80ed', dst: '#12a4b4', ink: '#1f2a44', muted: '#8a93a0'
   };
 
   /* ---------- small helpers ---------- */
@@ -186,6 +186,24 @@
       prev = cur;
     }
     return { none: true };
+  }
+
+  /* every clock change in the calendar year, as day numbers (0 is Jan 1) */
+  var dstCache = {};
+  function dstDays(tz, y, n) {
+    if (!tz) return [];
+    var key = tz + '|' + y + '|' + n;
+    if (dstCache[key]) return dstCache[key];
+    var out = [], prev = offMin(tz, Date.UTC(y, 0, 1, 12)), i, cur;
+    if (prev !== null) {
+      for (i = 1; i < n; i++) {
+        cur = offMin(tz, Date.UTC(y, 0, 1 + i, 12));
+        if (cur === null) break;
+        if (cur !== prev) out.push({ i: i, ahead: cur > prev });
+        prev = cur;
+      }
+    }
+    return (dstCache[key] = out);
   }
 
   /* ---------- state ---------- */
@@ -439,6 +457,19 @@
       h += '<circle cx="' + f1(Xf(g, e.i)) + '" cy="' + f1(Yf(g, sr.day[e.i])) + '" r="2.6" fill="#111"><title>' + esc(nm + ': ' + fmtLong(sr.day[e.i])) + '</title></circle>';
     });
 
+    /* daylight savings: a thin teal line on each day the clocks change */
+    dstDays(S.loc.tz, y, n).forEach(function (d) {
+      var dx = Xf(g, d.i), dt = new Date(Date.UTC(y, 0, 1 + d.i));
+      var when = MON[dt.getUTCMonth()] + ' ' + dt.getUTCDate();
+      var word = d.ahead ? 'clocks ahead' : 'clocks back';
+      h += '<line x1="' + f1(dx) + '" y1="' + f1(g.y0) + '" x2="' + f1(dx) + '" y2="' + f1(g.y1) + '" stroke="' + C.dst + '" stroke-width="1"/>';
+      h += '<rect x="' + f1(dx - 5) + '" y="' + f1(g.y0) + '" width="10" height="' + f1(ph) + '" fill="transparent"><title>' + esc('Daylight savings: ' + when + ', ' + word + ' 1 hr') + '</title></rect>';
+      if (pw >= 420) {
+        var right = dx < g.x1 - 70;
+        h += '<text x="' + f1(dx + (right ? 4 : -4)) + '" y="' + f1(g.y1 - 5) + '" text-anchor="' + (right ? 'start' : 'end') + '" font-size="9.5" font-weight="600" fill="#0b6e7a">' + esc(word) + '</text>';
+      }
+    });
+
     /* the longest day: dotted line plus a wider invisible strip to hover on */
     var mi = argmax(sr.day), mx = Xf(g, mi);
     S.maxX = mx; S.maxH = sr.day[mi];
@@ -464,15 +495,13 @@
     /* the read-out: the day length and date, smaller than the mock, beside the blue line.
        With comparison on, the other places' numbers for this date sit in the legend. */
     var rows = [{ t: fmtLong(sr.day[i]), b: true }, { t: dateLabel(y, i), s: true }];
-    var maxLen = 0;
-    rows.forEach(function (r) { var l = r.t.length * (r.b ? 7 : 6.2); if (l > maxLen) maxLen = l; });
-    var bw = maxLen + 12, lh = 15, bh = rows.length * lh + 6;
+    var lh = 15, bh = rows.length * lh + 6;
     var onRight = x < (g.x0 + g.x1) / 2;
-    var bx = onRight ? x + 8 : x - 8 - bw;
+    var tx = onRight ? x + 5 : x - 5;
     var by = Math.min(Math.max(Yf(g, sr.day[i]) + 8, g.y0 + 4), g.y1 - bh - 3);
     rows.forEach(function (r, k) {
-      var ty = by + 3 + (k + 1) * lh - 4, tx = bx + 6;
-      h += '<text x="' + f1(tx) + '" y="' + f1(ty) + '" font-size="' + (r.b ? 13 : 11.5) + '" font-weight="' + (r.b ? 800 : 600) + '" fill="' + (r.s ? '#5b6472' : C.ink) + '">' + esc(r.t) + '</text>';
+      var ty = by + 3 + (k + 1) * lh - 4;
+      h += '<text x="' + f1(tx) + '" y="' + f1(ty) + '" text-anchor="' + (onRight ? 'start' : 'end') + '" font-size="' + (r.b ? 13 : 11.5) + '" font-weight="' + (r.b ? 800 : 600) + '" fill="' + (r.s ? '#5b6472' : C.ink) + '">' + esc(r.t) + '</text>';
     });
 
     var lv = legendEl.querySelectorAll('.dl-lv');
