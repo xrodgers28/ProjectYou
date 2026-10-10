@@ -755,7 +755,7 @@ html.py-embed #page > :not(#swCard):not(.swovl){display:none!important}
 html.py-embed body{background:#fff}
 html.py-embed #page{padding:0;margin:0;max-width:none}
 html.py-embed #swCard{margin:0;box-shadow:none}
-/* v5.52: Scott, Oct 9 2026: the pop-up is only the three lanes. The Dugout, the year bar and the Social Well-Being strip stay on the dashboard. */
+/* v5.52/v5.53: Scott, Oct 9 2026: the pop-up is only the three lanes. The Dugout, the year bar and the Social Well-Being strip stay on the dashboard. */
 html.py-embed .swdugout, html.py-embed .swpfoot, html.py-embed #swSweep, html.py-embed #swBeam, html.py-embed #swStripTitle,
 html.py-embed #swStrip, html.py-embed #swCards, html.py-embed #swKey, html.py-embed .swfoot{display:none!important}
 </style>
@@ -989,7 +989,10 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
    of outings (database view v_exercise_day): an Apple Health workout and a Strava activity that overlap in time are one
    outing, counted once. A day and kind with no outing keeps whatever minutes were logged for it, and a day with nothing
    falls back to the watch ring as before. py_week_hours() uses the same rule, so every page still agrees. */
-const VERSION='v5.52';
+/* v5.53, Oct 9 2026, Scott: This week's meet ups counted some people two and three times. One person saved under
+   several spellings ("Nick A", "Nick A.", "Nic A") was kept as several people. Now one person is one chip, whatever the
+   spelling, and a new spelling can no longer be added next to an old one. */
+const VERSION='v5.53';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -1210,6 +1213,7 @@ async function load(){
       never:((neverq&&neverq.data)||[]).map(r=>r.person),
       labels:swLabelsMap((labelsq&&labelsq.data)||[]),
       impact:(impactq&&impactq.data)||[]};
+    try{D.slotsRaw=D.slots; D.slots=swMergeSlots(D.slots);}catch(e){}   /* v5.53: one person, one chip */
     S={quiz:{},goals:[],own:'',lastGoals:{}};
     if(D.row){S.quiz=D.row.quiz||{};const g=D.row.goals||{};S.goals=g.picked||[];S.own=g.own||'';S.lastGoals=D.row.prior_goals_result||{};}
     W={hi:[],go:[]};
@@ -2305,6 +2309,27 @@ function swDedupeSlots(rows){
   });
   return Object.keys(by).map(k=>by[k]);
 }
+/* v5.53: one person, one slot. swDedupeSlots only collapses the identical spelling, so "Nick A", "Nick A." and
+   "Nic A" stayed three separate chips. This groups names with the same swSameName rule the rest of the card
+   already uses, keeps the newest, and shows the spelling that matches his social log. Display only, nothing is
+   deleted here. */
+function swMergeSlots(rows){
+  const live=swLive();
+  const groups=[];
+  (rows||[]).forEach(r=>{
+    const g=groups.find(g=>g.some(x=>swSameName(x.person,r.person)));
+    if(g)g.push(r); else groups.push([r]);
+  });
+  return groups.map(g=>{
+    if(g.length===1)return g[0];
+    let w=g[0];
+    g.forEach(r=>{ if(r.week_start>w.week_start||(r.week_start===w.week_start&&(r.updated_at||'')>(w.updated_at||'')))w=r; });
+    /* the spelling on his most recent log row wins */
+    let logged=null,lastOn='';
+    g.forEach(r=>live.forEach(c=>{ if(c.person===r.person&&c.happened_on&&c.happened_on>lastOn){lastOn=c.happened_on;logged=r.person;} }));
+    return Object.assign({},w,{person:logged||w.person});
+  });
+}
 function swSlot(person){
   const r=(D.slots||[]).filter(x=>x.person===person)[0];
   return r?{kind:r.kind,state:r.state,ws:r.week_start,person:person}:null;
@@ -2368,6 +2393,12 @@ function swSlotState(kind,person){
   return (r&&swEffKind(r)===kind)?r.state:'idea';
 }
 async function swPlace(person,kind,state){
+  /* v5.53: if this name is already known under another spelling (his log first, then the lanes), use that spelling,
+     so a new variant can never sit next to the old one. */
+  try{
+    const canon=swLive().map(c=>c.person).concat((D.slotsRaw||[]).map(x=>x.person)).find(n=>swSameName(n,person));
+    if(canon)person=canon;
+  }catch(e){}
   const was=swSlot(person);
   if(was&&swEffKind(was)===kind&&was.state===state&&was.ws===D.ws)return;
   D.slots=(D.slots||[]).filter(x=>x.person!==person);
@@ -2383,6 +2414,12 @@ async function swPlace(person,kind,state){
     await sb.from('social_bullpen').delete()
       .eq('week_start',D.ws).eq('kind',was.kind).eq('person',person);
   }
+  /* v5.53: clear every other spelling of this person that is still saved (never list left alone) */
+  try{
+    const sibs=(D.slotsRaw||[]).map(x=>x.person).filter((n,i,a)=>n!==person&&swSameName(n,person)&&a.indexOf(n)===i);
+    for(const n of sibs){ await sb.from('social_bullpen').delete().eq('person',n).neq('kind','never'); }
+    D.slotsRaw=(D.slotsRaw||[]).filter(x=>!(x.person!==person&&swSameName(x.person,person)));
+  }catch(e){}
   const {error}=await sb.from('social_bullpen')
     .upsert({week_start:D.ws,kind:kind,person:person,state:state,updated_at:new Date().toISOString()},
             {onConflict:'week_start,kind,person'});
@@ -2703,6 +2740,8 @@ function swRenderPens(){
     if(now.some(x=>x.done&&swSameName(x.person,L.person)))return;
     now.push({person:L.person,days_since:null,seen:L.seen,done:true,stale:false,ws:D.ws,day_tag:null});
   });
+  /* v5.53: safety net, the same person is never two yellow chips */
+  for(let i=now.length-1;i>=0;i--){ if(now[i].done&&now.findIndex(x=>x.done&&swSameName(x.person,now[i].person))<i)now.splice(i,1); }
   /* Q4: one line per confirmed date that came and went with nothing logged. */
   const stale=Object.keys(placed).map(n=>placed[n]).filter(swStale);
   const staleHtml=stale.length?'<div class="swask">'+stale.map(r=>
