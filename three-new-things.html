@@ -674,7 +674,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.25</span>
+    <span id="ver" class="ver">v2.26</span>
   </div>
 </div>
 
@@ -1423,7 +1423,7 @@ async function loadProjects(){
 /* Tonight's creativity: the score on tnt_creative, the stars as their own rows
    so the league table is a plain count, not a parsed list. */
 async function saveCreative(){
-  if(!cloud) return;
+  if(!cloud||!N||!draftReady) return;
   if(N.a8.creativity===undefined && !N.stars.length) return;
   try{
     var d=DAY();
@@ -1441,7 +1441,8 @@ async function saveCreative(){
 }
 
 async function saveCheckin(){
-  if(!cloud) return;
+  /* v2.26: never save before tonight's saved answers have been read back, and never save a blank sheet */
+  if(!cloud||!N||!draftReady||nIsBlank()) return;
   try{
     await sb.from('tnt_checkin').upsert({
       for_date:DAY(),
@@ -1452,6 +1453,7 @@ async function saveCheckin(){
       extra_kind:N.extra?N.extra.k:null, extra_body:N.etext||null,
       energy_from:energyText(), minutes:minutesTonight(),
       py_minutes:DAYT?DAYT.py:null, hab_minutes:DAYT?DAYT.hab:null,
+      draft:draftSnapshot(),
       updated_at:new Date().toISOString()
     },{onConflict:'for_date'});
   }catch(e){}
@@ -1498,7 +1500,11 @@ async function doSignIn(){
   signedIn=true;
   document.getElementById('gate').classList.add('hidden');
   await loadCloud();
-  view='start'; render();
+  var resumed2=false;
+  try{ resumed2=await hydrateTonight(); }catch(e){}
+  if(!N) view='start';
+  render();
+  if(resumed2){ nhToast('Picked up where you left off'); if(view==='done') resumeDone(); }
 }
 
 var N=null;      /* tonight */
@@ -2945,6 +2951,180 @@ async function saveRelationshipCheckin(){
   }
 }
 
+/* ==========================================================
+   v2.26 (Oct 9 2026), Scott: leaving the card and coming back started it from
+   scratch, and the first Next tap then saved the blank sheet over his answers.
+   Now tonight's card remembers itself:
+   - every answer and the step he was on is kept on this device AND in his
+     account (tnt_checkin.draft) after every tap and typed line
+   - opening the card reads it back and carries on where he was
+   - nothing is written to his account until the saved copy has been read
+     back, and a blank sheet is never written at all
+   ========================================================== */
+var DRAFT_KEY='tnt-tonight-2026', draftAt=0, draftReady=false, flushT=null;
+var VALID_VIEWS={insight:1,words:1,tags:1,energy:1,hard:1,three:1,savor:1,relationship:1,extra:1,eight:1,lately:1,done:1};
+
+function nIsBlank(){
+  if(!N) return true;
+  try{
+    if(N.presel&&N.presel.length) return false;
+    if(N.words&&N.words.length) return false;
+    if(N.withw&&N.withw.length) return false;
+    if(N.wherew!==null&&N.wherew!==undefined) return false;
+    if(N.energy&&N.energy.length) return false;
+    if(String(N.energyNote||'').trim()) return false;
+    if(String(N.hardText||'').trim()||String(N.hardHelp||'').trim()||String(N.win||'').trim()||String(N.lately||'').trim()) return false;
+    if(N.three&&N.three.some(function(t){return String(t||'').trim();})) return false;
+    if(N.items&&N.items.length) return false;
+    if(String(N.etext||'').trim()) return false;
+    if(N.relationship&&N.relationship.some(function(r){return r>0;})) return false;
+    if(N.a8&&Object.keys(N.a8).length) return false;
+    if(N.a&&Object.keys(N.a).length) return false;
+    if(N.tired!==undefined) return false;
+    if(N.skipped&&N.skipped.length) return false;
+    if(N.crePlaced||(N.stars&&N.stars.length)||String(N.creNote||'').trim()) return false;
+    if(N.sleepNums&&['deep','rem','light','awake'].some(function(k){return String(N.sleepNums[k]||'').trim();})) return false;
+    if(String(N.mins||'').trim()) return false;
+  }catch(e){ return false; }
+  return true;
+}
+
+function draftSnapshot(){
+  var st=null; try{ st=nightState().startedAt||null; }catch(e){}
+  return {d:DAY(), v:view, at:draftAt, st:st, mins:__revealedMins, N:N};
+}
+function localDraftWrite(){
+  if(!N||view==='start'||nIsBlank()) return;
+  draftAt=Date.now();
+  try{ localStorage.setItem(DRAFT_KEY,JSON.stringify(draftSnapshot())); }catch(e){}
+}
+function applyDraft(x){
+  if(!x||!x.N||x.d!==DAY()) return false;
+  var base=newNight(), n=Object.assign(base,x.N);
+  if(!Array.isArray(n.three)||n.three.length!==3) n.three=['','',''];
+  if(!Array.isArray(n.relationship)||n.relationship.length!==18) n.relationship=base.relationship;
+  ['skipped','kept','items','words','presel','withw','energy','dupes','stars'].forEach(function(k){ if(!Array.isArray(n[k])) n[k]=[]; });
+  if(!n.a||typeof n.a!=='object') n.a={};
+  if(!n.a8||typeof n.a8!=='object') n.a8={};
+  if(!n.sleepNums||typeof n.sleepNums!=='object') n.sleepNums=base.sleepNums;
+  N=n;
+  view=VALID_VIEWS[x.v]?x.v:'insight';
+  if(view==='extra'&&!N.extra){ try{ pickExtra(); }catch(e){} }
+  __revealedMins=x.mins||null;
+  draftAt=x.at||Date.now();
+  try{ var ns=nightState(); if(x.st&&!ns.startedAt){ ns.startedAt=x.st; save(); } }catch(e){}
+  return true;
+}
+/* A night saved before v2.26 has no draft, only the finished-looking columns.
+   Rebuild what can be rebuilt from them and from tonight's three moments, so a
+   half-done night from earlier still comes back. */
+function rebuildFromRecord(row,things){
+  var n=newNight(), any=false, a=(row&&row.answers)||{};
+  if(row){
+    if(Array.isArray(row.words)&&row.words.length){ n.words=row.words.slice(); any=true; }
+    if(Array.isArray(row.with_who)&&row.with_who.length){
+      n.withw=row.with_who.map(function(w){ return WITH.indexOf(w); }).filter(function(i){ return i>-1; });
+      if(n.withw.length) any=true;
+    }
+    if(row.where_at){ var wi=WHERE.indexOf(row.where_at); if(wi>-1){ n.wherew=wi; any=true; } }
+    if(row.presence_band){
+      var bi=-1; BANDS.forEach(function(b,i){ if(b.k===row.presence_band) bi=i; });
+      if(bi>-1){ n.presel=[bi]; any=true; }
+    }
+    WRAPCATS.forEach(function(c){ if(a[c.k]!==undefined){ n.a8[c.k]=a[c.k]; any=true; } });
+    if(a.tired!==undefined){ n.tired=a.tired; any=true; }
+    if(a.hard){ n.hardText=String(a.hard); any=true; }
+    if(a.hard_helped){ n.hardHelp=String(a.hard_helped); any=true; }
+    if(a.win){ n.win=String(a.win); any=true; }
+    if(a.lately){ n.lately=a.lately; any=true; }
+    if(a.sleep_minutes){ ['deep','rem','light','awake'].forEach(function(k){ if(a.sleep_minutes[k]!==undefined) n.sleepNums[k]=String(a.sleep_minutes[k]); }); any=true; }
+    if(a.__told) n.a.__told=1;
+    if(row.extra_kind){ EXTRAS.forEach(function(e){ if(e.k===row.extra_kind){ n.extra=e; n.etext=row.extra_body||''; any=true; } }); }
+    if(row.energy_from){ n.energyNote=String(row.energy_from); any=true; }
+  }
+  (things||[]).forEach(function(t){
+    var i=(parseInt(t.slot,10)||1)-1; if(i<0||i>2) return;
+    n.three[i]=t.body; n.kept[i]=t.body; any=true;
+  });
+  n.items=[]; (things||[]).slice().sort(function(x,y){ return (x.slot||0)-(y.slot||0); }).forEach(function(t){ n.items.push({k:t.category,t:t.body}); });
+  if(!any) return null;
+  var v='relationship';
+  if(!n.words.length) v='words';
+  else if(!n.presel.length&&!n.withw.length&&n.wherew===null) v='tags';
+  else if(!String(n.energyNote||'').trim()) v='energy';
+  else if(!String(n.hardText||'').trim()) v='hard';
+  else if(!n.items.length) v='three';
+  return {d:DAY(), v:v, at:Date.now(), st:null, mins:null, N:n, rebuilt:true};
+}
+/* Reads tonight's saved copy from this device and from his account, takes the newest. */
+async function hydrateTonight(){
+  var best=null, bestAt=draftAt||0, cloudRead=false, row=null;
+  try{
+    var lo=JSON.parse(localStorage.getItem(DRAFT_KEY)||'null');
+    if(lo&&lo.d===DAY()&&lo.N&&(lo.at||0)>bestAt){ best=lo; bestAt=lo.at||0; }
+  }catch(e){}
+  if(cloud){
+    try{
+      var r=await sb.from('tnt_checkin').select('draft,words,with_who,where_at,presence_band,answers,extra_kind,extra_body,energy_from').eq('for_date',DAY()).limit(1);
+      if(!r.error){
+        cloudRead=true;
+        row=(r.data&&r.data[0])||null;
+        var cd=row&&row.draft;
+        if(cd&&cd.d===DAY()&&cd.N&&(cd.at||0)>bestAt){ best=cd; bestAt=cd.at||0; }
+      }
+    }catch(e){}
+  }
+  if(!best&&cloudRead&&!(N&&!nIsBlank())){
+    try{
+      var t=await sb.from('tnt_things').select('category,body,slot').eq('for_date',DAY());
+      best=rebuildFromRecord(row,(!t.error&&t.data)||[]);
+    }catch(e){ best=rebuildFromRecord(row,[]); }
+  }
+  var got=false;
+  if(best) got=applyDraft(best);
+  draftReady=cloudRead;
+  return got;
+}
+async function flushDraft(){
+  if(!N||view==='start'||nIsBlank()) return;
+  localDraftWrite();
+  if(!cloud) return;
+  if(!draftReady){
+    /* the first read failed, so look once more before writing anything */
+    try{
+      var r=await sb.from('tnt_checkin').select('draft').eq('for_date',DAY()).limit(1);
+      if(r.error) return;
+      var cd=r.data&&r.data[0]&&r.data[0].draft;
+      if(cd&&cd.N&&(cd.at||0)>draftAt) return;
+      draftReady=true;
+    }catch(e){ return; }
+  }
+  try{ await saveCheckin(); }catch(e){}
+  try{ await saveCreative(); }catch(e){}
+}
+function noteChange(){
+  if(!N) return;
+  setTimeout(localDraftWrite,0);
+  clearTimeout(flushT); flushT=setTimeout(flushDraft,700);
+}
+['input','change','click','keyup','pointerup','touchend'].forEach(function(ev){
+  document.addEventListener(ev,noteChange,true);
+});
+document.addEventListener('visibilitychange',function(){
+  if(document.visibilityState==='hidden'){ clearTimeout(flushT); flushDraft(); }
+});
+window.addEventListener('pagehide',function(){ clearTimeout(flushT); flushDraft(); });
+(function(){
+  var _render=render;
+  render=function(){ var out=_render.apply(this,arguments); noteChange(); return out; };
+})();
+/* If he had already signed off, bring the closing page back with the day and tomorrow filled in. */
+function resumeDone(){
+  loadBlocks().then(function(){ return loadDay(); }).then(function(){ drawDay(); });
+  loadProjects().then(function(){ if(view==='done') render(); });
+  loadTomorrow().then(function(){ drawTomorrow(); });
+}
+
 (async function boot(){
   var g=document.getElementById('gate');
   if(sb){
@@ -2958,7 +3138,10 @@ async function saveRelationshipCheckin(){
     var pw=document.getElementById('pass');
     if(pw) pw.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); doSignIn(); } });
   }
+  var resumed=false;
+  try{ resumed=await hydrateTonight(); }catch(e){}
   render();
+  if(resumed){ nhToast('Picked up where you left off'); if(view==='done') resumeDone(); }
 })();
 </script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
