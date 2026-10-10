@@ -112,30 +112,39 @@ a{color:var(--blue);font-weight:600}
 footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink2);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
 [hidden]{display:none!important}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+.note-in{width:100%;font:inherit;font-size:15px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);resize:vertical;min-height:44px}
+.note-in:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.saved{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--green);margin-left:8px}
+.title a{color:var(--ink);text-decoration:none;border-bottom:2px solid var(--line)}
+.title a:hover{border-bottom-color:var(--blue)}
+details.gist{margin:8px 0 0 24px}
+details.gist summary{cursor:pointer;font-weight:600;font-size:14px;color:var(--blue)}
+details.gist p{margin:8px 0 0;font-size:15px;color:var(--ink2);max-width:70ch}
+.ago{font-weight:600}
+.lbl{display:block;margin:10px 0 4px 24px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2)}
+.inwrap{margin:0 0 0 24px}
+.note.rose{border-left-color:var(--amber);background:var(--amber-bg)}
 </style>
 </head>
 <body>
 <div class="wrap">
-
-<div class="pills"><span class="pill">Project YOU</span><span class="pill">Chat Dashboard v1.0</span><span class="pill">Oct 10, 2026</span><span class="pill" id="live">Loading</span></div>
+<div class="pills"><span class="pill">Project YOU</span><span class="pill">Chat Dashboard v2.0</span><span class="pill">Oct 10, 2026</span><span class="pill" id="live">Loading</span></div>
 <h1>Chat Dashboard</h1>
-<p class="lede">Every chat you have started, with whether you have read it, what model it ran on, and how long it took. This page is for finding a thought and closing a chat. It is not a task list.</p>
+<p class="lede">Your Project YOU chats from the Claude app, newest first. Tap a title to open the chat, or leave your input right here and send it over when you are ready.</p>
 
 <div class="verdicts" id="verdicts"></div>
 
-<p class="eyebrow">Time by project</p>
-<div class="projects" id="projects"></div>
-
-<div class="note" id="gapnote"></div>
+<div class="note rose" id="gapnote"></div>
 
 <div class="tools">
-  <input class="search" id="q" type="search" placeholder="Search titles, ideas, notes and model" aria-label="Search chats" autocomplete="off">
+  <input class="search" id="q" type="search" placeholder="Search titles, what a chat was about, and your notes" aria-label="Search chats" autocomplete="off">
   <div class="filters">
     <button class="chip" data-f="all" aria-pressed="true">All</button>
     <button class="chip" data-f="new" aria-pressed="false">New</button>
     <button class="chip" data-f="read" aria-pressed="false">Read</button>
     <button class="chip" data-f="reacted" aria-pressed="false">Reacted</button>
-    <select id="proj" aria-label="Project"><option value="">All projects</option></select>
+    <button class="chip" id="hasnote" aria-pressed="false">Has my note</button>
     <button class="chip" id="arch" aria-pressed="false">Archived</button>
     <span class="spacer"></span>
     <button class="btn warn" id="bulk">Mark shown as read</button>
@@ -145,8 +154,8 @@ footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);font-fa
 <div id="list"></div>
 
 <footer>
-  <span>Project YOU &middot; Chat Dashboard v1.0 &middot; Oct 10, 2026</span>
-  <span>Source: the chat register. Times Eastern. A day runs 2am to 2am.</span>
+  <span>Project YOU &middot; Chat Dashboard v2.0 &middot; Oct 10, 2026</span>
+  <span id="src">Source: your Claude app chat history. Times Eastern. A day runs 2am to 2am.</span>
 </footer>
 </div>
 <div class="toast" id="toast" hidden><span id="toastmsg"></span><button id="toastbtn">Undo</button></div>
@@ -157,143 +166,67 @@ footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);font-fa
   var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
   var H={apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'};
   var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var rows=[], f='all', showArch=false, query='', projSel='', undoFn=null, toastT=null;
-
+  var rows=[], f='all', showArch=false, onlyNote=false, query='', undoFn=null, toastT=null;
   function $(id){return document.getElementById(id);}
-  function el(tag,cls,text){var e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e;}
-
+  function el(t,c,x){var e=document.createElement(t); if(c)e.className=c; if(x!=null)e.textContent=x; return e;}
   function dayLabel(d){ if(!d) return 'Unknown day'; var p=String(d).split('-'); return MONTHS[+p[1]-1]+' '+(+p[2])+', '+p[0]; }
   var tf=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'});
-  function timeLabel(ts){ if(!ts) return ''; return tf.format(new Date(ts)).replace(' AM','am').replace(' PM','pm')+' Eastern'; }
-  function dur(m){ m=+m||0; if(m<60) return m+' min'; var h=Math.floor(m/60), r=m%60; return h+'h '+(r<10?'0':'')+r+'m'; }
+  function timeLabel(ts){ return tf.format(new Date(ts)).replace(' AM','am').replace(' PM','pm')+' Eastern'; }
+  function ago(ts){ var m=Math.max(0,Math.round((Date.now()-new Date(ts).getTime())/60000)); if(m<2) return 'just now'; if(m<60) return m+' minutes ago'; var h=Math.round(m/60); if(h<24) return h+(h===1?' hour ago':' hours ago'); var d=Math.round(h/24); return d+(d===1?' day ago':' days ago'); }
 
-  /* model name and rule-of-thumb advice */
-  var RUNGS=['haiku','sonnet','opus','fable'], NAMES={haiku:'Haiku',sonnet:'Sonnet',opus:'Opus',fable:'Fable'};
-  function rung(m){ m=(m||'').toLowerCase(); if(/mythos/.test(m)) return 'fable'; for(var i=0;i<RUNGS.length;i++){ if(m.indexOf(RUNGS[i])>-1) return RUNGS[i]; } return ''; }
-  function modelName(m){
-    if(!m) return 'Model not recorded';
-    var r=rung(m); if(!r) return m;
-    var v=(m.toLowerCase().split(r)[1]||'').match(/(\d+)(?:[-. ](\d+))?/);
-    return NAMES[r]+(v?' '+v[1]+(v[2]?'.'+v[2]:''):'');
-  }
-  function advise(r){
-    if(r.model_advice) return {tone:'ok',text:r.model_advice};
-    var have=rung(r.model);
-    if(!have) return {tone:'',text:'Model was not recorded, so no advice for this one.'};
-    var mins=+r.active_minutes||0, t=(r.topic||'')+' '+(r.note||'');
-    var want='sonnet';
-    if(mins>=240 || /(research|architecture|reconcil|rebuild|redesign|seven|several pages|whole system|data flow|map)/i.test(t)) want='opus';
-    else if(mins<=30 && /(\blog\b|\btrack|\btap\b|\bsync\b|lookup|register|\badd\b)/i.test(t)) want='haiku';
-    var a=RUNGS.indexOf(have), b=RUNGS.indexOf(want);
-    if(have==='fable' && want!=='fable') return {tone:'cheaper',text:'Fable is for the hardest jobs only. This looks like '+NAMES[want]+' work.'};
-    if(a===b) return {tone:'ok',text:'Right size for this job.'};
-    if(a>b) return {tone:'cheaper',text:'Could have run on '+NAMES[want]+', which costs less.'};
-    return {tone:'bigger',text:'A bigger model ('+NAMES[want]+') may suit this job better.'};
-  }
-
-  /* data */
   function load(){
-    return fetch(SB+'/v_chat_dashboard?select=*&order=started_at.desc&limit=1000',{headers:H}).then(function(r){
-      if(!r.ok) throw new Error('HTTP '+r.status); return r.json();
-    }).then(function(d){ rows=d; $('live').textContent='Live'; render(); }).catch(function(e){
-      $('live').textContent='Offline';
-      var L=$('list'); L.textContent=''; var b=el('div','err'); b.appendChild(el('b',null,'The chat list did not load. ')); b.appendChild(document.createTextNode('Reload the page. If it keeps happening, tell Claude: '+e.message)); L.appendChild(b);
-    });
+    return fetch(SB+'/v_cowork_chats?select=*&order=last_activity.desc&limit=2000',{headers:H}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    .then(function(d){ rows=d; $('live').textContent='Live'; render(); })
+    .catch(function(e){ $('live').textContent='Offline'; var L=$('list'); L.textContent=''; var b=el('div','err'); b.appendChild(el('b',null,'The chat list did not load. ')); b.appendChild(document.createTextNode('Reload the page. If it keeps happening, tell Claude: '+e.message)); L.appendChild(b); });
   }
-  function patch(id,body){
-    return fetch(SB+'/chat_register?id=eq.'+id,{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify(body)}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); });
-  }
+  function patch(id,body){ return fetch(SB+'/cowork_chats?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify(body)}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); }); }
   function byId(id){ for(var i=0;i<rows.length;i++){ if(rows[i].id===id) return rows[i]; } return null; }
-  function setRow(id,body){
+  function setRow(id,body,quiet){
     var r=byId(id); if(!r) return Promise.resolve(); var old={}; Object.keys(body).forEach(function(k){old[k]=r[k]; r[k]=body[k];});
-    render();
+    if(!quiet) render();
     return patch(id,body).catch(function(){ Object.keys(old).forEach(function(k){r[k]=old[k];}); render(); toast('That change did not save. Try again.'); });
   }
-  function toast(msg,undo){
-    $('toastmsg').textContent=msg; $('toastbtn').hidden=!undo; undoFn=undo||null; $('toast').hidden=false;
-    clearTimeout(toastT); toastT=setTimeout(function(){ $('toast').hidden=true; undoFn=null; },10000);
-  }
+  function toast(msg,undo){ $('toastmsg').textContent=msg; $('toastbtn').hidden=!undo; undoFn=undo||null; $('toast').hidden=false; clearTimeout(toastT); toastT=setTimeout(function(){ $('toast').hidden=true; undoFn=null; },10000); }
   $('toastbtn').addEventListener('click',function(){ var u=undoFn; $('toast').hidden=true; undoFn=null; if(u) u(); });
 
-  /* filtering */
   function matches(r){
     if(showArch? !r.archived_at : !!r.archived_at) return false;
     if(f!=='all' && (r.read_state||'new')!==f) return false;
-    if(projSel && r.project!==projSel) return false;
-    if(query){
-      var hay=((r.topic||'')+' '+(r.ideas||'')+' '+(r.note||'')+' '+(r.project||'')+' '+modelName(r.model)).toLowerCase();
-      var parts=query.toLowerCase().split(/\s+/).filter(Boolean);
-      for(var i=0;i<parts.length;i++){ if(hay.indexOf(parts[i])<0) return false; }
-    }
+    if(onlyNote && !(r.scott_note||'').trim()) return false;
+    if(query){ var hay=((r.title||'')+' '+(r.gist||'')+' '+(r.scott_note||'')).toLowerCase(); var ps=query.toLowerCase().split(/\s+/).filter(Boolean); for(var i=0;i<ps.length;i++){ if(hay.indexOf(ps[i])<0) return false; } }
     return true;
   }
 
-  /* rendering */
   function renderSummary(){
     var live=rows.filter(function(r){return !r.archived_at;});
-    var n=live.filter(function(r){return (r.read_state||'new')==='new';}).length;
-    var rd=live.filter(function(r){return r.read_state==='read';}).length;
-    var re=live.filter(function(r){return r.read_state==='reacted';}).length;
-    var tot=live.reduce(function(s,r){return s+(+r.active_minutes||0);},0);
+    function n(s){ return live.filter(function(r){return (r.read_state||'new')===s;}).length; }
+    var notes=live.filter(function(r){return (r.scott_note||'').trim();}).length;
     var V=$('verdicts'); V.textContent='';
-    [['amber',n,'chats still new, not yet read'],['blue',rd,'read, no reaction yet'],['green',re,'reacted to'],['',dur(tot),'total measured time']].forEach(function(x){
-      var d=el('div','v '+x[0]); d.appendChild(el('b',null,String(x[1]))); d.appendChild(el('span',null,x[2])); V.appendChild(d);
-    });
-    var map={}; live.forEach(function(r){ var p=r.project||'No project'; map[p]=map[p]||{m:0,c:0}; map[p].m+=(+r.active_minutes||0); map[p].c++; });
-    var names=Object.keys(map).sort(function(a,b){return map[b].m-map[a].m;});
-    var max=Math.max.apply(null,names.map(function(k){return map[k].m;}).concat([1]));
-    var P=$('projects'); P.textContent='';
-    names.forEach(function(k){
-      var row=el('div','prow'); row.appendChild(el('span','name',k));
-      var bar=el('div','bar'); var i=el('i'); i.style.width=Math.round(map[k].m/max*100)+'%'; bar.appendChild(i); row.appendChild(bar);
-      row.appendChild(el('span','tot',dur(map[k].m)+' · '+map[k].c+' chats')); P.appendChild(row);
-    });
-    var g=live.filter(function(r){return r.guessed;}).length;
-    $('gapnote').textContent='Only chats that registered themselves can appear here, so a chat that skipped registering is missing. '+(g?g+(g===1?' row is':' rows are')+' marked "guessed": rebuilt from the traces an old chat left, so treat the time as approximate.':'');
-    var sel=$('proj'), cur=sel.value; var all=[]; rows.forEach(function(r){ if(r.project && all.indexOf(r.project)<0) all.push(r.project); });
-    if(sel.options.length!==all.length+1){ sel.textContent=''; var o=el('option',null,'All projects'); o.value=''; sel.appendChild(o); all.forEach(function(p){ var op=el('option',null,p); op.value=p; sel.appendChild(op); }); sel.value=cur; }
+    [['amber',n('new'),'new, not yet read'],['blue',n('read'),'read, no reaction yet'],['green',n('reacted'),'reacted to'],['',notes,'with your note waiting']].forEach(function(x){ var d=el('div','v '+x[0]); d.appendChild(el('b',null,String(x[1]))); d.appendChild(el('span',null,x[2])); V.appendChild(d); });
+    var last=rows.reduce(function(m,r){ return r.synced_at>m?r.synced_at:m; },''); 
+    var oldest=rows.length?rows[rows.length-1].last_activity:null;
+    $('gapnote').textContent='This list shows chat titles and last activity from your Claude app. It does not show which model a chat used, how long you spent in it, or the app\u2019s own unread dot, because the app does not share those. New, Read and Reacted are yours to set. The list refreshes when Claude syncs it'+(last?' (last refresh '+dayLabel(new Date(last).toLocaleDateString('en-CA',{timeZone:'America/New_York'}))+', '+timeLabel(last)+')':'')+(oldest?' and currently goes back to '+dayLabel(new Date(oldest).toLocaleDateString('en-CA',{timeZone:'America/New_York'}))+'.':'.');
   }
 
-  function chatCard(r){
+  function card(r){
     var st=r.read_state||'new';
     var c=el('article','chat '+st+(r.archived_at?' archived':''));
     var top=el('div','top'); top.appendChild(el('span','dot'));
-    top.appendChild(el('div','title',r.topic||'(no title)'));
-    var x=el('button','x',r.archived_at?'Restore':'Archive');
-    x.setAttribute('aria-label',(r.archived_at?'Restore chat: ':'Archive chat: ')+(r.topic||''));
-    x.addEventListener('click',function(){
-      if(r.archived_at){ setRow(r.id,{archived_at:null}); toast('Restored.'); }
-      else { setRow(r.id,{archived_at:new Date().toISOString()}); toast('Archived. It stays in the Archived view.',function(){ setRow(r.id,{archived_at:null}); }); }
-    });
+    var t=el('div','title'); var a=el('a',null,r.title); a.href=r.url; a.target='_blank'; a.rel='noopener'; a.addEventListener('click',function(){ if((r.read_state||'new')==='new') setRow(r.id,{read_state:'read'}); }); t.appendChild(a); top.appendChild(t);
+    var x=el('button','x',r.archived_at?'Restore':'Archive'); x.setAttribute('aria-label',(r.archived_at?'Restore chat: ':'Archive chat: ')+r.title);
+    x.addEventListener('click',function(){ if(r.archived_at){ setRow(r.id,{archived_at:null}); toast('Restored.'); } else { setRow(r.id,{archived_at:new Date().toISOString()}); toast('Archived. It stays in the Archived view.',function(){ setRow(r.id,{archived_at:null}); }); } });
     top.appendChild(x); c.appendChild(top);
-
-    var meta=el('div','meta');
-    meta.appendChild(el('span','when',timeLabel(r.started_at)));
-    meta.appendChild(el('span','tag '+(r.status||''),r.status||'open'));
-    meta.appendChild(el('span','tag',r.project||'No project'));
-    meta.appendChild(el('span','tag',modelName(r.model)));
-    if(r.guessed) meta.appendChild(el('span','tag guess','guessed'));
-    var mb=el('button','mins',dur(r.active_minutes)); mb.title='Tap to correct the minutes'; mb.setAttribute('aria-label','Minutes: '+dur(r.active_minutes)+'. Tap to correct.');
-    mb.addEventListener('click',function(){
-      var inp=el('input','minsin'); inp.type='number'; inp.min='0'; inp.value=+r.active_minutes||0; inp.setAttribute('aria-label','Minutes for this chat');
-      mb.replaceWith(inp); inp.focus(); inp.select(); var done=false;
-      function commit(){ if(done) return; done=true; var v=Math.max(0,parseInt(inp.value,10)||0); if(v!==(+r.active_minutes||0)) setRow(r.id,{active_minutes:v}); else render(); }
-      inp.addEventListener('blur',commit); inp.addEventListener('keydown',function(e){ if(e.key==='Enter') commit(); if(e.key==='Escape'){ done=true; render(); } });
-    });
-    meta.appendChild(mb); c.appendChild(meta);
-
-    var a=advise(r); var adv=el('div','line advice '+a.tone); adv.appendChild(el('b',null,'Model')); adv.appendChild(document.createTextNode(a.text)); c.appendChild(adv);
-    var ideas=r.ideas||r.note; if(ideas){ var il=el('div','line'); il.appendChild(el('b',null,r.ideas?'Ideas':'Note')); il.appendChild(document.createTextNode(ideas)); c.appendChild(il); }
-
+    var meta=el('div','meta'); meta.appendChild(el('span','ago',ago(r.last_activity))); meta.appendChild(el('span','when',timeLabel(r.last_activity))); meta.appendChild(el('span','tag',r.project||'Project YOU')); c.appendChild(meta);
+    if(r.gist){ var d=el('details','gist'); d.appendChild(el('summary',null,'What this chat was about')); d.appendChild(el('p',null,r.gist)); c.appendChild(d); }
+    var lb=el('label','lbl','Your input for this chat'); var id='n'+r.id; lb.setAttribute('for',id); c.appendChild(lb);
+    var w=el('div','inwrap'); var ta=el('textarea','note-in'); ta.id=id; ta.rows=2; ta.placeholder='What do you want next in this chat? (saved as you leave the box)'; ta.value=r.scott_note||''; w.appendChild(ta); c.appendChild(w);
+    var sv=el('span','saved'); sv.hidden=true;
+    ta.addEventListener('blur',function(){ var v=ta.value.trim(); if(v===(r.scott_note||'').trim()) return; setRow(r.id,{scott_note:v||null,note_updated_at:new Date().toISOString(),read_state:(v&&(r.read_state||'new')!=='reacted')?'reacted':r.read_state},true).then(function(){ renderSummary(); }); if(v&&st!=='reacted'){ c.className='chat reacted'+(r.archived_at?' archived':''); seg.querySelectorAll('button').forEach(function(b){ b.setAttribute('aria-pressed',String(b.className==='s-reacted')); }); } sv.textContent='Saved'; sv.hidden=false; setTimeout(function(){ sv.hidden=true; },2500); });
     var act=el('div','actions'); var seg=el('div','seg'); seg.setAttribute('role','group'); seg.setAttribute('aria-label','Status of this chat');
-    [['new','New'],['read','Read'],['reacted','Reacted']].forEach(function(s){
-      var b=el('button','s-'+s[0],s[1]); b.setAttribute('aria-pressed',String(st===s[0]));
-      b.addEventListener('click',function(){ setRow(r.id,{read_state:s[0]}); }); seg.appendChild(b);
-    });
+    [['new','New'],['read','Read'],['reacted','Reacted']].forEach(function(s){ var b=el('button','s-'+s[0],s[1]); b.setAttribute('aria-pressed',String(st===s[0])); b.addEventListener('click',function(){ setRow(r.id,{read_state:s[0]}); }); seg.appendChild(b); });
     act.appendChild(seg);
-    function link(url,label){ if(!url) return; var l=el('a',null,label); l.href=url; l.target='_blank'; l.rel='noopener'; l.addEventListener('click',function(){ if((r.read_state||'new')==='new') setRow(r.id,{read_state:'read'}); }); act.appendChild(l); }
-    link(r.tracker_url,'Open tracker'); link(r.session_url,'Open chat');
-    c.appendChild(act);
+    var go=el('button','btn','Copy my input and open the chat'); go.addEventListener('click',function(){ var txt=ta.value.trim(); function open(){ window.open(r.url,'_blank','noopener'); } if(!txt){ open(); return; } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ toast('Copied. Paste it into the chat.'); open(); },function(){ ta.focus(); ta.select(); toast('Copy the selected text, then open the chat.'); }); } else { ta.focus(); ta.select(); toast('Copy the selected text, then open the chat.'); } });
+    act.appendChild(go); act.appendChild(sv); c.appendChild(act);
     return c;
   }
 
@@ -301,33 +234,32 @@ footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);font-fa
     renderSummary();
     var L=$('list'); L.textContent='';
     var shown=rows.filter(matches);
-    $('bulk').textContent='Mark '+shown.filter(function(r){return (r.read_state||'new')==='new';}).length+' shown as read';
-    $('bulk').disabled=false;
+    var nn=shown.filter(function(r){return (r.read_state||'new')==='new';}).length;
+    $('bulk').textContent='Mark '+nn+' shown as read';
     if(!shown.length){ var e=el('div','empty'); e.textContent=rows.length?'No chats match. Clear the search or pick All.':'No chats yet.'; L.appendChild(e); return; }
-    var last=null, grp=null, count=0;
+    var last=null, cnt=null, k=0;
     shown.forEach(function(r){
-      if(r.day!==last){ last=r.day; var h=el('div','day'); h.appendChild(el('span',null,dayLabel(r.day))); var cnt=el('span',null,''); h.appendChild(cnt); L.appendChild(h); grp=cnt; count=0; }
-      count++; grp.textContent=count+(count===1?' chat':' chats');
-      L.appendChild(chatCard(r));
+      if(r.day!==last){ last=r.day; var h=el('div','day'); h.appendChild(el('span',null,dayLabel(r.day))); cnt=el('span',null,''); h.appendChild(cnt); L.appendChild(h); k=0; }
+      k++; cnt.textContent=k+(k===1?' chat':' chats'); L.appendChild(card(r));
     });
   }
 
-  /* controls */
   var qt=null; $('q').addEventListener('input',function(e){ clearTimeout(qt); var v=e.target.value; qt=setTimeout(function(){ query=v.trim(); render(); },120); });
   document.querySelectorAll('[data-f]').forEach(function(b){ b.addEventListener('click',function(){ f=b.getAttribute('data-f'); document.querySelectorAll('[data-f]').forEach(function(x){ x.setAttribute('aria-pressed',String(x===b)); }); render(); }); });
   $('arch').addEventListener('click',function(){ showArch=!showArch; $('arch').setAttribute('aria-pressed',String(showArch)); render(); });
-  $('proj').addEventListener('change',function(e){ projSel=e.target.value; render(); });
+  $('hasnote').addEventListener('click',function(){ onlyNote=!onlyNote; $('hasnote').setAttribute('aria-pressed',String(onlyNote)); render(); });
   var armed=false, armT=null;
   $('bulk').addEventListener('click',function(){
     var targets=rows.filter(matches).filter(function(r){return (r.read_state||'new')==='new';});
     if(!targets.length){ toast('Nothing new in this view.'); return; }
     if(!armed){ armed=true; $('bulk').textContent='Tap again to mark '+targets.length+' as read'; clearTimeout(armT); armT=setTimeout(function(){ armed=false; render(); },5000); return; }
     armed=false; clearTimeout(armT);
-    var ids=targets.map(function(r){return r.id;});
+    var ids=targets.map(function(r){return '"'+r.id+'"';}).join(',');
     targets.forEach(function(r){ r.read_state='read'; }); render();
-    fetch(SB+'/chat_register?id=in.('+ids.join(',')+')',{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify({read_state:'read'})}).then(function(r){ if(!r.ok) throw new Error(); toast('Marked '+ids.length+' as read.',function(){ ids.forEach(function(i){ var x=byId(i); if(x) x.read_state='new'; }); render(); fetch(SB+'/chat_register?id=in.('+ids.join(',')+')',{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify({read_state:'new'})}); }); }).catch(function(){ load(); toast('That did not save. Reloaded the list.'); });
+    function bulk(state){ return fetch(SB+'/cowork_chats?id=in.('+ids+')',{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify({read_state:state})}); }
+    bulk('read').then(function(r){ if(!r.ok) throw new Error(); toast('Marked '+targets.length+' as read.',function(){ targets.forEach(function(x){ x.read_state='new'; }); render(); bulk('new'); }); }).catch(function(){ load(); toast('That did not save. Reloaded the list.'); });
   });
-  document.addEventListener('visibilitychange',function(){ if(!document.hidden) load(); });
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden && !document.activeElement.classList.contains('note-in')) load(); });
   load();
 })();
 </script>
