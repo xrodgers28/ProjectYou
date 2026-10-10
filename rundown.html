@@ -91,7 +91,7 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; your daily AI workout</div>
-  <h1>AI Workout <span class="ver">v2.8</span></h1>
+  <h1>AI Workout <span class="ver">v2.9</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
@@ -355,7 +355,7 @@ function tileHTML(t,i,n){
     '<div class="prac">'+
       '<button class="btn" type="button" id="back"'+(i===0?' disabled':'')+'>Back</button>'+
       (last
-        ? '<label class="minl">Minutes <input id="mins" type="number" min="1" max="180" placeholder="min"></label><button class="btn pri" type="button" id="fin">'+(ticked?"Done today":"I&rsquo;m done")+'</button>'
+        ? '<label class="minl">Minutes <input id="mins" type="number" min="1" max="180" placeholder="min"></label><button class="btn pri" type="button" id="fin">'+"I&rsquo;m done"+'</button>'
         : '<span style="font-size:12px;color:var(--muted)">'+(i+1)+' of '+n+'</span><button class="btn pri" type="button" id="next">Next</button>')+
     '</div></div>';
 }
@@ -386,7 +386,7 @@ function loadHabit(){
   }).catch(function(){});
 }
 function finish(){
-  if(ticked){ toBoard(); return; }
+  if(window.__cvFin) return; /* a second visit the same day is its own visit */
   if(!sb){ toast("The sign-in did not load. Reload the page."); return; }
   if(!habitRow){ toast("AI Workout is not on your cue cards yet, so there is nothing to tick."); return; }
   if(__cueAskIfIdle()) return;
@@ -403,7 +403,7 @@ function finish(){
     .then(function(res){
       if(res.error){ toast("Did not save: "+res.error.message); return; }
       ticked=true; toast("AI Workout to the wheel, "+totMin+" min");
-      setTimeout(function(){ location.href="habit-modules.html?done="+BOARD_ID; },3000);
+      window.__cvFin=1; if(window.CueVisits){ CueVisits.finish({sb:sb,card:BOARD_ID,minutes:totMin,url:'habit-modules.html?done='+BOARD_ID}); } else { setTimeout(function(){ location.href='habit-modules.html?done='+BOARD_ID; },3000); }
     });
 }
 
@@ -552,7 +552,7 @@ loadHidden().then(function(){ return Promise.all([dealAi().catch(function(){ ret
   document.getElementById("deck").innerHTML='<div class="tile"><div class="empty">Could not load today&rsquo;s workout: '+esc(e.message)+'</div></div>';
 });
 </script>
-<script src="nav-config.js"></script><script src="navpatch.js"></script><div id="lbx"><span>&times;</span><img alt=""></div>
+<script src="cue-visits.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script><div id="lbx"><span>&times;</span><img alt=""></div>
 <script>
 document.addEventListener("click",function(e){
   var im=e.target&&e.target.closest?e.target.closest("img[data-enl]"):null;

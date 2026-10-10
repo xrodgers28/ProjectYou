@@ -121,7 +121,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.9</span>
+    <span class="pn-ver">v1.10</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -465,9 +465,9 @@ function render(){
       '</div>'+
       '<div class="prac"><div class="lab">How this works</div><div class="txt">'+esc(c.foot)+'</div></div>'+
     '</div>'+
-    (idx===n-1&&!ticked&&!c.done?'<div class="mintotal" id="mintotalLine"></div>':'')+
+    (idx===n-1&&!c.done?'<div class="mintotal" id="mintotalLine"></div>':'')+
     '<div class="nav2"><button class="bk" id="bk"'+(idx===0?' disabled':'')+'>&larr; Back</button>'+
-      (idx===n-1&&!ticked&&!c.done?'<input class="minin" id="mins" type="number" min="1" max="180" placeholder="min" title="How long did that take? (keeps time until you tap Finish, or type your own)">':'')+
+      (idx===n-1&&!c.done?'<input class="minin" id="mins" type="number" min="1" max="180" placeholder="min" title="How long did that take? (keeps time until you tap Finish, or type your own)">':'')+
       '<button class="nx" id="nx">'+(idx===n-1?'Finish':'Next')+'</button></div>'+
    '</div>';
   __cueHandTick();
@@ -519,7 +519,7 @@ async function ensureRow(){
 
 async function finish(){
   if(!sb||!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
-  if(ticked){toBoard();return;}
+  if(window.__cvFin)return; /* v: a second visit the same day is its own visit, so a ticked card no longer bounces straight back */
   if(__cueAskIfIdle()) return;
   clearInterval(__cueTickId);
   var el=document.getElementById('mins');
@@ -535,7 +535,7 @@ async function finish(){
   if(res.error){toast('Did not save: '+res.error.message);return;}
   ticked=true; habitRow.done=true; habitRow.for_date=today;
   toast('The Feed \u2192 wheel \u2713, '+totMin+' min');
-  if(window.CueVisits){CueVisits.finish({sb:sb,card:'feed',minutes:totMin,url:'habit-modules.html?done=feed'});}else{setTimeout(function(){location.href='habit-modules.html?done=feed';},3000);}
+  window.__cvFin=1;if(window.CueVisits){CueVisits.finish({sb:sb,card:'feed',minutes:totMin,url:'habit-modules.html?done=feed'});}else{setTimeout(function(){location.href='habit-modules.html?done=feed';},3000);}
 }
 
 /* The last tile closes the card and goes back to the Cue Cards board — the same

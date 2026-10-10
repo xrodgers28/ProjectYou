@@ -709,7 +709,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.20</span></h1>
+      <h1>Sparkboard <span class="ver">v2.21</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -817,7 +817,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.20</div>
+  <div class="stamp" id="stamp">v2.21</div>
 </div>
 
 <aside class="stx-col">
@@ -2142,8 +2142,8 @@ function paintFinish(){
   var b=document.getElementById("finbtn");
   if(!b) return;
   if(ticked){
-    b.textContent="Done today"; b.classList.add("tick");
-    finMsg("Ticked. It is on today's list, the wheel and your worksheet.");
+    b.textContent="Add this visit"; b.classList.add("tick");
+    finMsg("Ticked today. Tap Add this visit to count another visit.");
   }else{
     b.textContent="Done for today"; b.classList.remove("tick");
   }
@@ -2172,7 +2172,7 @@ function loadHabit(){
 function finish(){
   if(!sb){ finMsg("The sign-in did not load, so the tick cannot be saved. Reload the page."); return; }
   if(!signedIn){ document.getElementById("gate").classList.remove("hidden"); finMsg("Sign in first so the tick reaches the wheel."); return; }
-  if(ticked){ toBoard(); return; }
+  if(window.__cvFin) return; /* v2.21: a second visit the same day is its own visit */
   if(!habitRow){
     if(!finish._retried){ finish._retried=true; finMsg("Looking for Sparkboard on today's list..."); loadHabit().then(function(){ finish(); }); return; }
     finish._retried=false;
@@ -2207,7 +2207,7 @@ function finish(){
       ticked=true; targets.forEach(function(row){ row.done=true; row.for_date=t; });
       paintFinish();
       finMsg("Time on the Sparkboard: "+mins+" min. Saved to the wheel. Taking you back to the board.");
-      setTimeout(function(){ location.href="habit-modules.html?done=wall"; },3000);
+      window.__cvFin=1; if(window.CueVisits){ CueVisits.finish({sb:sb,card:'wall',minutes:mins,url:'habit-modules.html?done=wall'}); } else { setTimeout(function(){ location.href='habit-modules.html?done=wall'; },3000); }
     });
 }
 
@@ -2631,7 +2631,7 @@ function renderDateLine(){
   document.getElementById("sub").textContent=
     days[d.getDay()]+", "+nice+" \u00b7 "+ITEMS.length+" pieces from "+nSrc+" sources"+(DAYIDX===0?"":" \u00b7 looking back");
   document.getElementById("stamp").textContent=
-    "v2.20 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
+    "v2.21 \u00b7 dealt "+nice+" \u00b7 the order is shuffled fresh every day, and none of the pictures are about you";
   var lbl=document.getElementById("daylabel");
   if(lbl) lbl.textContent = (DAYIDX===0 ? "Today" : days[d.getDay()].slice(0,3)+" "+nice);
   var ds=document.getElementById("daystep");
@@ -2701,5 +2701,5 @@ loadSportsTicker();
 
 <script src="cue-fav.js"></script>
 <script>CueFav.mount({module:'wall',label:'Sparkboard',doOnly:true,current:function(){var a=document.querySelector('#oaKeep');if(a){var l=document.querySelector('.oa .bar .tx a');if(l)return {key:l.textContent.trim(),title:l.textContent.trim()};}try{if(typeof VIEW!=='undefined'&&VIEW>=0&&VORDER[VIEW]&&document.getElementById('vkeep')&&document.getElementById('vkeep').offsetParent){var t=String(VORDER[VIEW].title||'').trim();if(t)return {key:t,title:t};}}catch(e){}return null;}});</script>
-<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<script src="cue-visits.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
