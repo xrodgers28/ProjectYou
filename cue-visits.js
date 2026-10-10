@@ -1,4 +1,4 @@
-/* cue-visits.js v1.0, Oct 9 2026 (Scott's answers 4, 5 and 6 to the Cue Card Timer Review)
+/* cue-visits.js v1.1, Oct 9 2026 (Scott's answers 4, 5 and 6 to the Cue Card Timer Review)
    One shared helper for every Cue Card page, the Cue Cards board, Today's Tasks and the Habit Tracker.
 
    1. SEPARATE VISITS. Every time you finish a card page, that visit is saved as its own line in
@@ -104,6 +104,21 @@
     });
   }
 
+  /* save one visit line, no screen. Resolves { id, error } and never rejects */
+  function log(o){
+    var habit = o.habit || habitFor(o.card), mins = Math.max(1, Math.round(+o.minutes || 1));
+    if (!o.sb || !habit) return Promise.resolve({ id:null, error:{ message:'no database or habit name' } });
+    try {
+      return Promise.resolve(o.sb.from('card_visits').insert({
+        day: today(), habit: habit, card: o.card || cardForHabit(habit), minutes: mins, source: 'page',
+        started_at: o.started || new Date(Date.now() - mins*60000).toISOString()
+      }).select('id').single()).then(function(r){
+        if (!r || r.error || !r.data) return { id:null, error:(r && r.error) || { message:'no answer' } };
+        return { id:r.data.id, error:null };
+      }).catch(function(e){ return { id:null, error:e }; });
+    } catch(e) { return Promise.resolve({ id:null, error:e }); }
+  }
+
   /* ---- Done screen: save the visit, show the bar with Fix, then go back to the board ---- */
   function finish(o){
     css();
@@ -129,15 +144,12 @@
     }
     paint();
 
-    if (sb && habit) {
-      st.saved = Promise.resolve(sb.from('card_visits').insert({
-        day: today(), habit: habit, card: card, minutes: mins, source: 'page',
-        started_at: o.started || new Date(Date.now() - mins*60000).toISOString()
-      }).select('id').single()).then(function(r){
-        if (r.error || !r.data) { showErr('Time saved, but the visit list did not update: ' + ((r.error && r.error.message) || 'no answer')); return; }
-        st.id = r.data.id;
-      }).catch(function(e){ showErr('Time saved, but the visit list did not update: ' + (e && e.message || e)); });
-    } else { st.saved = Promise.resolve(); }
+    var logged = o.logged || ((sb && habit) ? log({ sb:sb, card:card, habit:habit, minutes:mins, started:o.started }) : Promise.resolve({ id:null, error:null, skipped:true }));
+    st.saved = Promise.resolve(logged).then(function(r){
+      r = r || {};
+      if (r.error) { showErr('Time saved, but the visit list did not update: ' + (r.error.message || r.error)); return; }
+      st.id = r.id || null;
+    });
 
     st.tick = setInterval(function(){ st.left--; if (!st.fixing) paint(); }, 1000);
     st.timer = setTimeout(go, ms);
@@ -218,7 +230,7 @@
   }
 
   window.CueVisits = {
-    version:'1.0', habitFor:habitFor, cardForHabit:cardForHabit, isCueHabit:isCueHabit, canonHabit:canonHabit,
-    today:today, askMinutes:askMinutes, finish:finish, handTick:handTick, clearHand:clearHand, setTotal:setTotal
+    version:'1.1', habitFor:habitFor, cardForHabit:cardForHabit, isCueHabit:isCueHabit, canonHabit:canonHabit,
+    today:today, askMinutes:askMinutes, finish:finish, log:log, handTick:handTick, clearHand:clearHand, setTotal:setTotal
   };
 })();
