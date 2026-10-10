@@ -9,6 +9,12 @@
 <script src="learning-log.js"></script>
 </head>
 <body>
+<style>
+.wallx{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:9999;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 26px/1 Arial,Helvetica,sans-serif;text-decoration:none;color:#1f2a44;background:rgba(255,255,255,.94);border:1px solid #c3c9d2;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.wallx:hover{background:#fff;border-color:#1f2a44}
+.wallx:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px}
+</style>
+<a class="wallx" id="wallx" href="habit-modules.html" aria-label="Close and go back to the Cue Cards board" title="Close, back to the board">&times;</a>
 <div class="pynav"></div>
 <style>
   :root{
@@ -663,7 +669,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.15</span></h1>
+      <h1>Sparkboard <span class="ver">v2.18</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -765,7 +771,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.15</div>
+  <div class="stamp" id="stamp">v2.18</div>
 </div>
 
 <aside class="stx-col">
@@ -1779,9 +1785,15 @@ document.addEventListener("click",function(e){
   if(e.target.closest("button,a")) return;
   var fig=document.getElementById("vfig");
   if(fig && (e.target===fig || fig.contains(e.target))){
+    /* v2.17 (Oct 8, 2026): the outer third on each side steps back or forward, the middle third
+       opens that tile's own link in a new window. Arrows, swipe and keyboard arrows still work. */
     var r=fig.getBoundingClientRect();
     if(!r.width || !r.height) return;
-    vGo((e.clientX-r.left)/r.width < 0.5 ? -1 : 1);
+    var fx=(e.clientX-r.left)/r.width;
+    if(fx<0.33){ vGo(-1); return; }
+    if(fx>0.67){ vGo(1); return; }
+    var cur=VORDER[VIEW], lk=cur && cur.link;
+    if(lk && lk!=="#"){ window.open(lk,"_blank","noopener,noreferrer"); }
     return;
   }
   if(e.target.id==="viewer") vClose();
@@ -2001,11 +2013,13 @@ function toBoard(){ setTimeout(function(){ location.href="habit-modules.html?don
 /* v2.14 (Oct 4, 2026): the list row is still named "The Wall" inside, so the lookup now accepts that name. Before, Done could not find the row, so it never timed and never closed. */
 function loadHabit(){
   if(!sb || !signedIn) return Promise.resolve();
+  /* v2.18 (Oct 9, 2026): the row name is matched ignoring capitals. The list calls it "SparkBoard" (capital B) and this page asked for "Sparkboard", so Done never found its row: no time, no close. */
   return sb.from("todos").select("id,task,done,actual_minutes,for_date")
-    .eq("is_habit",true).in("task",[HABIT,"Inspiration Wall","The Wall"])
-    .order("for_date",{ascending:false}).limit(1)
+    .eq("is_habit",true)
+    .order("for_date",{ascending:false}).limit(400)
     .then(function(r){
-      habitRow=(r.data && r.data[0]) || null;
+      var okNames=["sparkboard","the sparkboard","inspiration wall","the wall"];
+      habitRow=((r.data||[]).filter(function(x){ return okNames.indexOf(String(x.task||"").replace(/\s+/g," ").trim().toLowerCase())>=0; })[0]) || null;
       ticked=!!(habitRow && habitRow.done && habitRow.for_date===today());
       paintFinish();
     });
@@ -2015,7 +2029,13 @@ function finish(){
   if(!sb){ finMsg("The sign-in did not load, so the tick cannot be saved. Reload the page."); return; }
   if(!signedIn){ document.getElementById("gate").classList.remove("hidden"); finMsg("Sign in first so the tick reaches the wheel."); return; }
   if(ticked){ toBoard(); return; }
-  if(!habitRow){ finMsg("Could not find Sparkboard on today's list."); return; }
+  if(!habitRow){
+    if(!finish._retried){ finish._retried=true; finMsg("Looking for Sparkboard on today's list..."); loadHabit().then(function(){ finish(); }); return; }
+    finish._retried=false;
+    finMsg("Could not find Sparkboard on today's list. Use the X in the top right to go back to the board.");
+    return;
+  }
+  finish._retried=false;
   /* v2.11 (Oct 1, 2026): Done always stops the clock and uses it. No questions asked. If the page sat untouched for 2+ hours, the clock counts only up to your last touch. */
   clearInterval(__cueTickId);
   var el=document.getElementById("mins");
