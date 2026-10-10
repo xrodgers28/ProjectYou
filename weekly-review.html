@@ -95,9 +95,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 .lanes .num{font-size:25px;font-weight:800;line-height:1}.lanes .lanename{font-size:13.5px;font-weight:700}.lanes .lanename span{font-weight:400;color:var(--muted)}
 .lanes .bar{height:12px;background:var(--bg);border-radius:4px;position:relative;margin-top:3px}.lanes .bar i{display:block;height:12px;border-radius:4px}
 .lanes .cap40{position:absolute;top:-4px;bottom:-4px;left:100%;width:2px;background:var(--ink)}
-.lanes .hatch{background:repeating-linear-gradient(135deg,var(--bad) 0 5px,var(--badbg) 5px 10px)}
 .hoursright{width:290px;flex:none;border-left:1px solid var(--line);padding-left:18px}
-.donutrow{display:flex;gap:12px;align-items:center}.donutlegend{display:flex;flex-direction:column;gap:9px}.donutlegend b{font-size:21px;font-weight:800;line-height:1;display:block}
+.donutrow{display:flex;gap:12px;align-items:center}.donutlegend{display:flex;flex-direction:column;gap:6px}.donutlegend b{font-size:19px;font-weight:800;line-height:1;display:block}
 .gridrow{display:flex;gap:18px;align-items:flex-start}.gridwrap{flex:1;min-width:0;overflow-x:auto}
 #habitGrid{border-collapse:collapse;width:100%}#habitGrid th,#habitGrid td{border:1px solid var(--line);padding:0 6px;font-size:11px;height:30px;vertical-align:middle}
 #habitGrid th{font-size:8px;font-weight:800;letter-spacing:.5px;color:#aab2bd;height:18px;text-align:center}#habitGrid th.l{text-align:left;white-space:nowrap;width:1%}
@@ -965,7 +964,15 @@ const SUPABASE_KEY = 'sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
 
-const VERSION='v5.47';
+/* v5.49, Oct 9 2026, Scott: "Where the hours went" fixed and reconciled.
+   Project YOU lane is pink (no more candy cane) and reads the Todays Tasks calendar, not the
+   Claude chat clock that was empty. New lanes: Exercise and TreadWell, in the bars AND the wheel.
+   ONE rule for every weekly hour, the same on every page (twin in the database: py_week_hours):
+   Habit and Exercise come from the habit table's own minutes, so the card and the table cannot
+   disagree (Exercise = the exercise rows plus the watch ring on a day with none; Habit = every
+   other row not set to NOT COUNTED on the Habit Worksheets). Work, Project YOU and TreadWell come
+   from the Todays Tasks calendar (day_tally), the same record the wheel and YouMatics read. */
+const VERSION='v5.49';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
 const COUNTERS=['Coffee','Water'];
@@ -997,6 +1004,7 @@ const PHOTO=['Train platform','Bell','What I Woke Up To','Photo Booth'];
    logged section decide where it sits, same as every other habit. */
 const PYPHOTO=['Train platform','Bell','Photo Booth'];
 const QUICK=['Social'];
+const EXERCISE_T=new Set(['Walk','Ride','Run','Hike','Swim','Workout','Yoga','Weight Training','Rowing']); /* v5.49: shared by the hours card and the habit table */
 const PYPINK='#fbeaf1', PYLINE='#e8a0b8';
 /* v5.13: ticked-icon outline color. Was each section's own bold accent color;
    Scott asked for a plain dark grey on every row instead, no matter the section. */
@@ -1111,13 +1119,13 @@ async function load(){
        uses the watch's exercise-ring minutes. Loaded here, per day, for this week only. */
     try{const {data:rg}=await sb.from('health_metrics').select('day,value').eq('metric','apple_exercise_time').gte('day',ws).lte('day',we);RING={};(rg||[]).forEach(r=>{RING[r.day]=(RING[r.day]||0)+Math.round(+r.value||0);});}catch(e){RING={};}
     const q=(t,sel,f)=>{let r=sb.from(t).select(sel);if(f)r=f(r);return r;};
-    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq,impactq]=await Promise.all([
+    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq,impactq,tallyq]=await Promise.all([
       /* v5.18: added value and note to this list. value already had reader code
          (the counter "x n" badge) that only worked for a tap logged earlier in
          the same visit, since a fresh page load never actually fetched it;
          note is new, holding the typed location for Local/National Safari. */
       q('qs_log','date,"group",tracker,minutes,logged_at,value,note',r=>r.gte('date',from28).lte('date',we).limit(5000)),
-      q('worksheet_rows','id,habit,area,icon,identity,insight,outcome,qs_tracker,count_on,is_active,retired,position',r=>r.eq('is_active',true)),
+      q('worksheet_rows','id,habit,area,icon,identity,insight,outcome,qs_tracker,count_on,count_time,is_active,retired,position',r=>r.eq('is_active',true)),
       q('todos','for_date,actual_minutes,task',r=>r.eq('category','Strava').gte('for_date',ws).lte('for_date',we)),
       q('session_trackers','day,created_at,updated_at,project,title',r=>r.gte('day',from14).lte('day',we)),
       q('calendar_events','date,start_time,end_time,is_work,hidden,dismissed,title',r=>r.gte('date',from14).lte('date',we).eq('is_work',true)),
@@ -1162,7 +1170,9 @@ async function load(){
       /* v5.4: "Habit making impact?" - one flag per habit per week, kept in its
          own small table (like Stack Builder/Weekly Items) so history survives
          across weeks instead of one week's answers overwriting the last. */
-      q('weekly_habit_impact','tracker,impact',r=>r.eq('week_start',ws))
+      q('weekly_habit_impact','tracker,impact',r=>r.eq('week_start',ws)),
+      /* v5.49: the Todays Tasks calendar's own daily record. Work, Project YOU and TreadWell hours. */
+      q('day_tally','day,amz,py,hab,ex,treadwell',r=>r.gte('day',ws).lte('day',we))
     ]);
     const bad=[qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,quotes,areas].filter(x=>x.error);
     if(bad.length){throw new Error(bad.map(x=>x.error.message).join('; '));}
@@ -1173,7 +1183,7 @@ async function load(){
     let officeYear=null;
     try{const {data:oy}=await sb.from('qs_log').select('date').eq('tracker','Office day').gte('date',we.slice(0,4)+'-01-01').lte('date',we).limit(1000);officeYear=new Set((oy||[]).map(r=>r.date)).size;}catch(e){officeYear=null;}
     const officeWk=[...new Set((qs.data||[]).filter(r=>r.tracker==='Office day'&&r.date>=ws&&r.date<=we).map(r=>r.date))];
-    D={days,ws,we,from28,from14,office:officeWk,officeYear,qs:(qs.data||[]).filter(r=>r.tracker!=='Office day'),wr:wr.data||[],strava:strava.data||[],sess:sess.data||[],cal:(cal.data||[]).filter(c=>!c.hidden&&!c.dismissed),tl:tl.data||[],deck:deck.data||[],sf:sf.data||[],ai:ai.data||[],fav:fav.data||[],doThis:(doq&&doq.data)||[],quotes:quotes.data||[],prev:prevrow.data||null,row:thisrow.data||null,fs:(fs&&fs.data)||[],stacks:(hstk&&hstk.data)||[],chatreg:(chatreg&&chatreg.data)||[],sleep:(sleepq&&sleepq.data)||[],train:(trainq&&trainq.data)||[],conns:(connq&&connq.data)||[],
+    D={days,ws,we,from28,from14,office:officeWk,officeYear,qs:(qs.data||[]).filter(r=>r.tracker!=='Office day'),wr:wr.data||[],strava:strava.data||[],sess:sess.data||[],cal:(cal.data||[]).filter(c=>!c.hidden&&!c.dismissed),tl:tl.data||[],deck:deck.data||[],sf:sf.data||[],ai:ai.data||[],fav:fav.data||[],doThis:(doq&&doq.data)||[],quotes:quotes.data||[],prev:prevrow.data||null,row:thisrow.data||null,fs:(fs&&fs.data)||[],stacks:(hstk&&hstk.data)||[],chatreg:(chatreg&&chatreg.data)||[],tally:(tallyq&&tallyq.data)||[],tallyErr:(tallyq&&tallyq.error)?tallyq.error.message:null,sleep:(sleepq&&sleepq.data)||[],train:(trainq&&trainq.data)||[],conns:(connq&&connq.data)||[],
       quiet:(quietq&&quietq.data)||[],pnotes:(notesq&&notesq.data)||[],
       pphotos:(photoq&&photoq.data)||[],
       slots:swDedupeSlots((slotsq&&slotsq.data)||[]),cks:(ckq&&ckq.data)||[],
@@ -1329,12 +1339,11 @@ function compute(){
   const votes={};let voteN=0;const noLine=new Set();
   wk.forEach(r=>{if(excl(r.tracker))return;const w=wsOf[r.tracker];if(w&&w.identity&&w.identity.trim()){const k=w.identity.trim();votes[k]=votes[k]||{n:0,h:r.tracker};votes[k].n++;voteN++;}else if(daily.has(r.tracker))noLine.add(r.tracker);});
   /* hours */
-  const workMin=days.reduce((tot,d)=>{const iv=D.cal.filter(c=>c.date===d).map(c=>[tmin(c.start_time),tmin(c.end_time)]).filter(x=>x[0]!=null&&x[1]!=null&&x[1]>x[0]).sort((a,b)=>a[0]-b[0]);let sum=0,cs=null,ce=null;iv.forEach(([s,e])=>{if(cs==null){cs=s;ce=e;}else if(s<=ce){ce=Math.max(ce,e);}else{sum+=ce-cs;cs=s;ce=e;}});if(cs!=null)sum+=ce-cs;return tot+sum;},0);
+  /* v5.49: workMin, habitMin, pyMin now defined below, after the grid rows are known. */
   /* v5.20, Sep 29 2026: walking and biking count ONCE. Every Strava/watch outing already
      sits in the log with its minutes on one line per day, so adding the Strava to-dos on
      top counted each walk two or three times (Sep 22 read 250 min for 87 real). */
-  const habitMin=wk.reduce((a,r)=>a+(r.minutes||0),0);
-  const pyMin=D.chatreg.filter(r=>r.project==='Project YOU').reduce((a,r)=>a+(r.active_minutes||0),0);
+  /* v5.48, Oct 8 2026: a habit set to NOT COUNTED on the Habit Worksheets (count_time off, Medicine today) stays on the day but its minutes are left out of Habit hours. */
   const sessWk=D.sess.filter(s=>s.day>=ws&&s.day<=we);
   /* order of the day */
   const order=days.map(d=>{const ev=D.cal.filter(c=>c.date===d);const ss=D.sess.filter(s=>s.day===d);const first=ev.length?Math.min(...ev.map(c=>tmin(c.start_time)).filter(x=>x!=null)):null;const last=ev.length?Math.max(...ev.map(c=>tmin(c.end_time)).filter(x=>x!=null)):null;const firstBuild=ss.length?Math.min(...ss.map(s=>etMinutes(s.created_at))):null;let ok=true;if(last!=null&&firstBuild!=null&&firstBuild<last)ok=false;const fh=ticksAt(d);return {d,first,last,firstBuild,n:ss.length,ok,firstHabit:fh};});
@@ -1367,12 +1376,20 @@ function compute(){
   Object.keys(rowsBy).forEach(a=>rowsBy[a].sort((x,y)=>posOf(x)-posOf(y)||x.localeCompare(y)));
   /* v5.28: Local Safari always sits immediately above National Safari, whatever their saved positions say. */
   {const a=rowsBy['Environmental Health'];if(a){const l=a.indexOf('Local Safari'),n=a.indexOf('National Safari');if(l>-1&&n>-1&&l!==n-1){a.splice(l,1);a.splice(a.indexOf('National Safari'),0,'Local Safari');}}}
+  /* v5.49, Oct 9 2026: the week's hours, one rule, same on every page. See the note at VERSION. */
+  let habitMin=0,exMin=0;const exDayM={};
+  Object.keys(rowsBy).forEach(a=>rowsBy[a].forEach(t=>{const m=days.reduce((s,d)=>s+((mins[t]&&mins[t][d])||0),0);
+    if(EXERCISE_T.has(t)){exMin+=m;days.forEach(d=>{exDayM[d]=(exDayM[d]||0)+((mins[t]&&mins[t][d])||0);});}
+    else if(!(wsOf[t]&&wsOf[t].count_time===false))habitMin+=m;}));
+  days.forEach(d=>{if(!exDayM[d]&&RING[d])exMin+=RING[d];});
+  const tallyOf=k=>(D.tally||[]).reduce((a,r)=>a+(+r[k]||0),0);
+  const workMin=tallyOf('amz'),pyMin=tallyOf('py'),twMin=tallyOf('treadwell');
   /* winners and losers, 14 days */
   const d14=[];for(let i=13;i>=0;i--)d14.push(addDays(we,-i));
   const missRun={};const wl=d14.map(d=>{const up=inWin.filter(r=>r.date===d&&!isCounter(r.tracker)).map(r=>AREACOL[r.group]||AREACOL['Not sure yet']);const dn=[];const isPresent=inWin.some(r=>r.date===d);daily.forEach(t=>{const start=firstTick[t]||ws;if(d<start)return;const hit=inWin.some(r=>r.date===d&&r.tracker===t);if(hit){missRun[t]=0;}else if(isPresent){missRun[t]=(missRun[t]||0)+1;dn.push(missRun[t]===1?'#f2cf5b':(missRun[t]===2?'#e0975a':'#c0453b'));}});dn.sort((a,b)=>['#f2cf5b','#e0975a','#c0453b'].indexOf(a)-['#f2cf5b','#e0975a','#c0453b'].indexOf(b));return {d,up,dn};});
   /* v5.4: this week's "Habit making impact?" flags, keyed by tracker. */
   const impact={};(D.impact||[]).forEach(r=>{impact[r.tracker]=!!r.impact;});
-  C={present,tick,mins,cnt,locs,daily,perHabit,done,possible,coverage,pcov,lit,ticksBy,never,votes,voteN,noLine:[...noLine],workMin,habitMin,pyMin,sessN:sessWk.length,order,rightDays,streak,stacks,rowsBy,wsOf,areaOf,wl,isCounter,isLoc,isPhoto,firstTick,impact};
+  C={present,tick,mins,cnt,locs,daily,perHabit,done,possible,coverage,pcov,lit,ticksBy,never,votes,voteN,noLine:[...noLine],workMin,habitMin,exMin,pyMin,twMin,sessN:sessWk.length,order,rightDays,streak,stacks,rowsBy,wsOf,areaOf,wl,isCounter,isLoc,isPhoto,firstTick,impact};
 }
 
 /* ---------- render ---------- */
@@ -3043,7 +3060,7 @@ function render(){
   const pct=C.possible?Math.round(C.done/C.possible*100):0;
   el('titleSub').textContent=fmt(ws)+' to '+fmt(we,true)+' · '+C.present.length+' of 7 days present'+(C.never.length?', '+C.never.length+' Compass point'+(C.never.length>1?'s':'')+' never lit':', every Compass point lit');
   el('streakN').textContent=C.streak;el('orderN').innerHTML=C.rightDays+'<span class="n26sub">/7</span>';
-  const pyH=C.pyMin?hrs(C.pyMin):null;
+  const pyH=hrs(C.pyMin);
   /* TIME ON TRAIN, Sep 19 2026. Reads the week's train blocks off the day calendar.
      A week with no train blocks shows a dash rather than a zero, because zero would
      read as "you did not commute" when it usually means nothing was logged. */
@@ -3066,7 +3083,7 @@ function render(){
   el('hdrnums').innerHTML=
     '<div><div class="cap">Habits completed</div><div class="big"><b>'+C.done+'</b><i>of '+C.possible+'</i></div></div>'+
     '<div><div class="cap">Votes cast</div><div class="big"><b>'+C.voteN+'</b><i>identity</i></div></div>'+
-    '<div class="'+(pyH?'':'bad')+'"><div class="cap">Project YOU hours</div><div class="big"><b>'+(pyH||'?')+'</b><i>'+(pyH?'logged':'no clock')+'</i></div></div>'+
+    '<div><div class="cap">Project YOU hours</div><div class="big"><b>'+pyH+'</b><i>'+(C.pyMin?'on the calendar':'none logged')+'</i></div></div>'+
     '<div><div class="cap">Habit hours</div><div class="big"><b>'+hrs(C.habitMin)+'</b><i>'+C.present.length+' days</i></div></div>'+
     '<div class="blue"><div class="cap">Build sessions</div><div class="big"><b>'+C.sessN+'</b><i>this week</i></div></div>'+
     trainTile()+officeTile();
@@ -3080,17 +3097,22 @@ function render(){
   renderRetention();
   renderSleep();
   /* hours */
-  const workH=hrs(C.workMin),habH=hrs(C.habitMin);
-  const workPct=Math.min(100,C.workMin/2400*100), habPct=Math.min(100,C.habitMin/2400*100);
-  el('hoursSub').textContent=C.rightDays+' of 7 days';
-  el('lanes').innerHTML=
-    /* v3.4: no figure beside the bar. Every one of them is in the donut legend. */
-    '<div class="num" style="color:#1e8e5a">1</div><div><div class="lanename">Habit Bandit</div><div class="bar"><i style="width:'+habPct+'%;background:#1e8e5a"></i></div></div>'+
-    '<div class="num" style="color:#7a3a52">2</div><div><div class="lanename">'+PINWHEEL+'ProjectYou</div><div class="bar'+(pyH?'':' hatch')+'">'+(pyH?'<i style="width:'+Math.min(100,C.pyMin/2400*100)+'%;background:#e8a0b8"></i>':'')+'</div></div>'+
-    '<div class="num" style="color:#FF9900">3</div><div><div class="lanename">Work <span>cap 40 h</span></div><div class="bar"><i style="width:'+workPct+'%;background:#FF9900"></i><span class="cap40"></span></div></div>';
-  const tot=C.workMin+C.habitMin+C.pyMin;const a1=tot?360*C.habitMin/tot:0,a2=tot?360*(C.habitMin+C.pyMin)/tot:0;
-  el('donut').innerHTML='<svg width="150" height="150" viewBox="0 0 170 170">'+(tot?arc(85,85,62,0,Math.max(0,a1-1),'#1e8e5a')+(C.pyMin?arc(85,85,62,a1+1,Math.max(a1+1,a2-1),'#e8a0b8'):'')+arc(85,85,62,a2+1,359,'#FF9900'):'<circle cx="85" cy="85" r="62" fill="none" stroke="#e3e7ee" stroke-width="24"/>')+'<text x="85" y="82" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#1f2a44">'+hrs(tot)+'</text><text x="85" y="98" text-anchor="middle" font-family="Arial" font-size="8" letter-spacing="1.5" fill="#5b6472">HOURS TRACKED</text></svg>';
-  el('donutLegend').innerHTML='<div><b style="color:#1e8e5a">'+habH+'</b><span class="tiny">Habit Bandit</span></div><div><b style="color:#7a3a52">'+(pyH||'?')+'</b><span class="tiny">ProjectYou</span></div><div><b style="color:#FF9900">'+workH+'</b><span class="tiny">Work, meetings</span></div>';
+  /* hours, v5.49: five lanes, one source for each, the same numbers on every page */
+  const LANES=[
+    {k:'habitMin',name:'Habit Bandit',fill:'#1e8e5a',num:'#1e8e5a',leg:'Habit Bandit'},
+    {k:'exMin',name:'Exercise',fill:'#c05f7a',num:'#c05f7a',leg:'Exercise'},
+    {k:'pyMin',name:PINWHEEL+'ProjectYou',fill:'#e8a0b8',num:'#7a3a52',leg:'ProjectYou'},
+    {k:'twMin',name:'TreadWell',fill:'#2e8b9a',num:'#1d5f6b',leg:'TreadWell'},
+    {k:'workMin',name:'Work <span>cap 40 h</span>',fill:'#FF9900',num:'#FF9900',leg:'Work, meetings',cap:true}
+  ];
+  const nDays=D.days.filter(d=>d<=PY.today()).length;
+  el('hoursSub').textContent=(nDays<7?'week so far, '+nDays+' of 7 days':'full week')+(D.tallyErr?' · calendar hours unavailable':'');
+  /* v3.4: no figure beside the bar. Every one of them is in the donut legend. */
+  el('lanes').innerHTML=LANES.map((l,i)=>{const m=C[l.k]||0;const w=Math.min(100,m/2400*100);return '<div class="num" style="color:'+l.num+'">'+(i+1)+'</div><div><div class="lanename">'+l.name+'</div><div class="bar"><i style="width:'+w+'%;background:'+l.fill+'"></i>'+(l.cap?'<span class="cap40"></span>':'')+'</div></div>';}).join('');
+  const tot=LANES.reduce((a,l)=>a+(C[l.k]||0),0);let ang=0,arcs='';
+  LANES.forEach(l=>{const m=C[l.k]||0;if(!m||!tot)return;const sweep=360*m/tot;arcs+=arc(85,85,62,ang+.5,Math.max(ang+.5,ang+sweep-.5),l.fill);ang+=sweep;});
+  el('donut').innerHTML='<svg width="150" height="150" viewBox="0 0 170 170">'+(tot?arcs:'<circle cx="85" cy="85" r="62" fill="none" stroke="#e3e7ee" stroke-width="24"/>')+'<text x="85" y="82" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#1f2a44">'+hrs(tot)+'</text><text x="85" y="98" text-anchor="middle" font-family="Arial" font-size="8" letter-spacing="1.5" fill="#5b6472">HOURS TRACKED</text></svg>';
+  el('donutLegend').innerHTML=LANES.map(l=>'<div><b style="color:'+l.num+'">'+hrs(C[l.k]||0)+'</b><span class="tiny">'+l.leg+'</span></div>').join('');
   /* grid */
   /* v4.6: AVG / DAY is the week's minutes spread across every day of the week
      you were present, not across the days you ticked. That is the number that
@@ -3120,13 +3142,12 @@ function render(){
      Strava logs. Those rows stay on the grid in their section, but their minutes go
      to their own Exercise row at the bottom, never into a section subtotal or the
      habit grand total. Twin of EXERCISE_HABITS / cxExerciseKind on Todays Tasks. */
-  const EXERCISE_T=new Set(['Walk','Ride','Run','Hike','Swim','Workout','Yoga','Weight Training','Rowing']);
   let exTotal=0;const exDay={};
   sections.forEach(area=>{const rows=C.rowsBy[area]||[];if(!rows.length&&OFF.includes(area))return;const c=AREACOL[area],py=area==='Project YOU';const bg=py?PYPINK:tint(c,.3),bl=py?PYLINE:c;const nrows=Math.max(1,rows.length);const lbl=(nrows>=3?SECNAME[area]:SECABBR[area])||area;const first='<td class="sec" rowspan="'+nrows+'" style="background:'+bg+';border-left-color:'+bl+'"><div style="color:'+(py?'#7a3a52':'#1f2a44')+';height:'+Math.max(20,nrows*30-6)+'px">'+(py&&nrows>=3?PINWHEEL:'')+esc(lbl)+'</div></td>';if(!rows.length){h+='<tr>'+first+'<td class="empty" colspan="14">Nothing ticked all week.'+(D.wr.some(w=>w.area===area)?' Card and habit are both on, it just did not get ticked.':'')+'</td></tr>';return;}
     let sectionTotal=0;
     rows.forEach((t,i)=>{const done=days.filter(d=>C.tick[t]&&C.tick[t][d]).length,poss=C.perHabit[t]?C.perHabit[t].possible:C.present.length,wkMin=days.reduce((a,d)=>a+((C.mins[t]&&C.mins[t][d])||0),0);
       const isEx=EXERCISE_T.has(t);
-      if(isEx){exTotal+=wkMin;days.forEach(d=>{exDay[d]=(exDay[d]||0)+((C.mins[t]&&C.mins[t][d])||0);});}else sectionTotal+=wkMin;
+      if(isEx){exTotal+=wkMin;days.forEach(d=>{exDay[d]=(exDay[d]||0)+((C.mins[t]&&C.mins[t][d])||0);});}else if(!(C.wsOf[t]&&C.wsOf[t].count_time===false))sectionTotal+=wkMin;
       const isCtr=C.isCounter(t);const isLc=C.isLoc(t);
       /* v5.10: the row is now draggable (grip on the left, reorderRow below
          persists it to worksheet_rows.position) and removable (× on the
@@ -3197,6 +3218,9 @@ function render(){
   h+='<tr class="grandtotal"><td></td><td class="gtlbl" colspan="8">GRAND TOTAL, HABITS, THE WEEK</td><td class="n" title="The whole week&#39;s total spread across '+Math.max(1,C.present.length)+' day'+(C.present.length===1?'':'s')+' present.">'+(grandTotal?esc(mdur(grandAvg)):'&ndash;')+'</td><td class="n tot">'+(grandTotal?esc(mdur(grandTotal)):'&ndash;')+'</td><td colspan="4"></td></tr>';
   /* v5.29: a day with no recorded outing takes the watch ring instead of zero */
   days.forEach(d=>{if(!exDay[d]&&RING[d])exTotal+=RING[d];});
+  /* v5.49: the hours card above and this table must never disagree. */
+  C.gridHabit=grandTotal;C.gridEx=exTotal;
+  if(Math.round(grandTotal)!==Math.round(C.habitMin)||Math.round(exTotal)!==Math.round(C.exMin))console.warn('Habit hours: card and table disagree',{card:C.habitMin,table:grandTotal,exCard:C.exMin,exTable:exTotal});
   const exAvg=exTotal/Math.max(1,C.present.length);
   h+='<tr class="grandtotal extotal"><td></td><td class="gtlbl" colspan="8" style="background:#c05f7a">EXERCISE, THE WEEK (WALKING, BIKING AND MORE, NOT IN THE HABIT TOTAL)</td><td class="n" style="background:#c05f7a" title="Exercise spread across '+Math.max(1,C.present.length)+' day'+(C.present.length===1?'':'s')+' present.">'+(exTotal?esc(mdur(exAvg)):'&ndash;')+'</td><td class="n tot" style="background:#c05f7a;color:#fff">'+(exTotal?esc(mdur(exTotal)):'&ndash;')+'</td><td colspan="4" style="background:#c05f7a"></td></tr>';
   el('habitGrid').innerHTML=h+'</tbody>';
@@ -3722,7 +3746,7 @@ function renderRetention(){const {s,n,total}=score();const pct=SCORE.max?Math.ro
 function goalIdeas(){const g=[];C.never.forEach(p=>g.push({t:'Light '+p+' at least twice',w:'Zero ticks this week.'}));
   Object.keys(C.perHabit).filter(t=>C.perHabit[t].possible>=5&&C.perHabit[t].done<=C.perHabit[t].possible-2).sort((a,b)=>(C.perHabit[a].done/C.perHabit[a].possible)-(C.perHabit[b].done/C.perHabit[b].possible)).slice(0,3).forEach(t=>g.push({t:t+' back to daily',w:C.perHabit[t].done+' of '+C.perHabit[t].possible+' this week.'}));
   if(C.rightDays<7)g.push({t:'Build Project YOU only after work and habits are done',w:(7-C.rightDays)+' queue jump'+(7-C.rightDays>1?'s':'')+' this week.'});
-  if(!C.pyMin)g.push({t:'Every build session logs its hours',w:C.sessN+' sessions, no hours recorded.'});
+  if(!C.pyMin&&C.sessN)g.push({t:'Put Project YOU time on the calendar',w:C.sessN+' build session'+(C.sessN>1?'s':'')+', no Project YOU time on the calendar.'});
   if(C.coverage<5)g.push({t:'Get Coverage to '+Math.min(7,Math.ceil(C.coverage+1))+' Compass points a day',w:'It was '+C.coverage.toFixed(1)+' this week.'});
   g.push({t:'Score over 75% on next week’s quiz',w:'Say cards back out loud the day you read them.'});
   return g.slice(0,7);}
@@ -3735,7 +3759,8 @@ function renderOut(){}
 
 /* ---------- save ---------- */
 let saveT=null;
-async function saveScores(){const pct=C.possible?Math.round(C.done/C.possible*100):null;const {s,n,total}=score();const row={week_start:D.ws,coverage:+C.coverage.toFixed(2),consistency:pct,retention:(total&&n>=total&&SCORE.max)?Math.round(s/SCORE.max*100):null,habits_done:C.done,habits_possible:C.possible,votes:C.voteN,work_hours:+hrs(C.workMin),habit_hours:+hrs(C.habitMin),py_hours:C.pyMin?+hrs(C.pyMin):null,build_sessions:C.sessN,right_order_days:C.rightDays,days_present:C.present.length,updated_at:new Date().toISOString()};const {error}=await sb.from('weekly_review').upsert(row,{onConflict:'week_start'});if(error)wrSay('Could not save this week: '+error.message);}
+async function saveScores(){const pct=C.possible?Math.round(C.done/C.possible*100):null;const {s,n,total}=score();const row={week_start:D.ws,coverage:+C.coverage.toFixed(2),consistency:pct,retention:(total&&n>=total&&SCORE.max)?Math.round(s/SCORE.max*100):null,habits_done:C.done,habits_possible:C.possible,votes:C.voteN,work_hours:+hrs(C.workMin),habit_hours:+hrs(C.habitMin),py_hours:+hrs(C.pyMin),exercise_hours:+hrs(C.exMin),treadwell_hours:+hrs(C.twMin),build_sessions:C.sessN,right_order_days:C.rightDays,days_present:C.present.length,updated_at:new Date().toISOString()};if(D.tallyErr){delete row.work_hours;delete row.py_hours;delete row.treadwell_hours;} /* v5.49: never save zeros the calendar did not give us */
+  const {error}=await sb.from('weekly_review').upsert(row,{onConflict:'week_start'});if(error)wrSay('Could not save this week: '+error.message);}
 /* v3.6: the line that showed these messages was in the box Scott removed, so
    wrSay writes only if something is listening. Saving still happens. */
 function wrSay(t){const e=el('saveState');if(e)e.textContent=t;}
