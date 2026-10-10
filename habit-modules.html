@@ -937,13 +937,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.87</span>
+    <span class="pn-ver">v6.88</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.87</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.88</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -1714,6 +1714,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
   /* ---------- load ---------- */
   async function load(){
     if(!sb) return;
+    if(!R._addDraftBooted){ R._addDraftBooted=true; addDraftRestore(); }
     var d=viewDay(), wd=today();
     var trackers=['Mental Fitness','Coffee','Water','Photo Booth',"Today's Plan",'Exercise','Medicine','Elevate','Imprint','Impulse','Social','Meditation','Stretching','Balance','Vices',
       /* v6.63, Oct 4 2026: the Environmental tiles (Local Safari helmet, WIWUT, Travel Research) were never in this list,
@@ -2530,6 +2531,62 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
   }
 
   var ADNUM=[['adCal','Calories'],['adPro','Protein g'],['adCarb','Carbs g'],['adFat','Fat g'],['adFib','Fibre g']];
+
+  /* ===== v6.88 (Oct 9, 2026): the Add a regular form keeps itself =====
+     Every typed character and tap is kept on this device straight away and in the
+     account a moment later, so closing the app halfway through never starts him over.
+     Nothing is written to the account until the saved copy has been read back, and a
+     blank form never overwrites a saved one. Photos cannot be kept, so those are added again. */
+  var ADD_KEY='py-add-regular-draft', ADD_DAY='2000-01-01', ADD_CARD='habit-add-regular';
+  var addDraftReady=false, addDraftT=null, addAllowBlank=false;
+  function addDraftObj(){
+    var o={name:R.addName||'',slot:R.addSlot||'',n:{},at:Date.now()};
+    ADNUM.forEach(function(x){ o.n[x[0]]=R['a_'+x[0]]||''; });
+    return o;
+  }
+  function addDraftBlank(o){ return !o.name && !o.slot && !ADNUM.some(function(x){ return o.n&&o.n[x[0]]; }); }
+  function addDraftSave(){
+    try{ localStorage.setItem(ADD_KEY,JSON.stringify(addDraftObj())); }catch(e){}
+    clearTimeout(addDraftT);
+    addDraftT=setTimeout(addDraftCloud,700);
+  }
+  async function addDraftCloud(){
+    try{
+      if(!sb||!addDraftReady) return;
+      var o=addDraftObj(), blank=addDraftBlank(o);
+      if(blank&&!addAllowBlank) return;
+      addAllowBlank=false;
+      if(blank){ await sb.from('cue_card_drafts').delete().eq('card',ADD_CARD).eq('for_date',ADD_DAY); return; }
+      await sb.from('cue_card_drafts').upsert([{card:ADD_CARD,for_date:ADD_DAY,draft:o,updated_at:new Date().toISOString()}],{onConflict:'card,for_date'});
+    }catch(e){}
+  }
+  function addDraftApply(o){
+    if(!o||!o.n) return;
+    R.addName=o.name||''; R.addSlot=o.slot||'';
+    ADNUM.forEach(function(x){ R['a_'+x[0]]=o.n[x[0]]||''; });
+  }
+  async function addDraftRestore(){
+    if(!addDraftBlank(addDraftObj())){ addDraftReady=true; return; }
+    var loc=null, at=0;
+    try{ loc=JSON.parse(localStorage.getItem(ADD_KEY)||'null'); }catch(e){}
+    if(loc&&loc.n&&!addDraftBlank(loc)){ addDraftApply(loc); at=loc.at||0; }
+    try{
+      if(sb){
+        var q=await sb.from('cue_card_drafts').select('draft').eq('card',ADD_CARD).eq('for_date',ADD_DAY).limit(1);
+        if(!q.error){
+          var cd=(q.data&&q.data[0])?q.data[0].draft:null;
+          if(cd&&cd.n&&!addDraftBlank(cd)&&(cd.at||0)>at){ addDraftApply(cd); try{ localStorage.setItem(ADD_KEY,JSON.stringify(cd)); }catch(e){} }
+          addDraftReady=true;
+        }
+      }
+    }catch(e){}
+    if(R.addOpen) moreDraw();
+  }
+  function addDraftClear(){
+    addAllowBlank=true;
+    try{ localStorage.removeItem(ADD_KEY); }catch(e){}
+    addDraftCloud();
+  }
   function addHtml(){
     var s=R.addSlot||'';
     return '<div class="mdcd"><h4>Add a regular</h4>'+
@@ -2552,12 +2609,12 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
   }
   function bindAdd(bk){
     var nm=bk.querySelector('#adName');
-    if(nm) nm.oninput=function(){R.addName=nm.value;};
+    if(nm) nm.oninput=function(){R.addName=nm.value;addDraftSave();};
     bk.querySelectorAll('[data-mdkind]').forEach(function(b){
-      b.onclick=function(){R.addSlot=b.dataset.mdkind;moreDraw();};});
+      b.onclick=function(){R.addSlot=b.dataset.mdkind;addDraftSave();moreDraw();};});
     ADNUM.forEach(function(x){
       var el=bk.querySelector('#'+x[0]);
-      if(el) el.oninput=function(){R['a_'+x[0]]=el.value;};});
+      if(el) el.oninput=function(){R['a_'+x[0]]=el.value;addDraftSave();};});
     var ph=bk.querySelector('#adPhoto');
     if(ph) ph.onchange=function(){R.addPhoto=ph.files&&ph.files[0];R.addPhotoName=R.addPhoto?R.addPhoto.name:'';moreDraw();};
     var lb=bk.querySelector('#adLabel');
@@ -2596,6 +2653,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
       R.addBusy=false;R.addOpen=false;R.addName='';R.addSlot='';R.addPhoto=null;R.addLabel=null;
       R.addPhotoName='';R.addLabelName='';R.addSay='';
       ADNUM.forEach(function(x){R['a_'+x[0]]='';});
+      addDraftClear();
       if(typeof toast==='function') toast(cal===null?(name+' saved — reading the label'):(name+' saved'));
       await load(); R.more=true; moreDraw();
     }catch(e){
