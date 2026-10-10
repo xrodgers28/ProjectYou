@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Libre+Franklin:wght@600;800&display=swap">
+<style>
+:root{
+  --ground:#eceff3; --card:#ffffff; --inset:#e6eaf0; --line:#cfd6df;
+  --ink:#1c2733; --ink2:#3d4b5a;
+  --green:#2f7a54; --green-bg:#e3f1ea;
+  --amber:#a8650d; --amber-bg:#faedd6;
+  --rose:#b03a48; --rose-bg:#f7e2e5;
+  --blue:#2f66a0; --blue-bg:#e1ebf6;
+  --focus:#1c2733;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#12181f; --card:#1b242d; --inset:#25303b; --line:#384654;
+    --ink:#eaf0f6; --ink2:#c3cfdb;
+    --green:#7fcaa0; --green-bg:#1b2f25;
+    --amber:#e8b062; --amber-bg:#35291a;
+    --rose:#ee8e9a; --rose-bg:#38222a;
+    --blue:#8db9e6; --blue-bg:#1d2d3f;
+    --focus:#eaf0f6;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#12181f; --card:#1b242d; --inset:#25303b; --line:#384654;
+  --ink:#eaf0f6; --ink2:#c3cfdb;
+  --green:#7fcaa0; --green-bg:#1b2f25;
+  --amber:#e8b062; --amber-bg:#35291a;
+  --rose:#ee8e9a; --rose-bg:#38222a;
+  --blue:#8db9e6; --blue-bg:#1d2d3f;
+  --focus:#eaf0f6;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.5}
+.wrap{max-width:960px;margin:0 auto;padding:28px 18px 80px}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.pill{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:12px;letter-spacing:.04em;padding:4px 10px;border:1px solid var(--line);border-radius:99px;background:var(--card);color:var(--ink2)}
+h1{font-family:"Libre Franklin",Arial,sans-serif;font-weight:800;font-size:clamp(28px,5vw,38px);line-height:1.1;margin:0 0 10px;letter-spacing:-.01em}
+.lede{margin:0 0 22px;max-width:68ch;color:var(--ink2)}
+.eyebrow{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);margin:0 0 8px}
+
+.verdicts{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin:0 0 20px}
+.v{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:8px;padding:12px 14px;min-width:0}
+.v b{display:block;font-family:"IBM Plex Mono",monospace;font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.v span{display:block;font-size:14px;color:var(--ink2);margin-top:3px}
+.v.amber{border-left-color:var(--amber)} .v.blue{border-left-color:var(--blue)} .v.green{border-left-color:var(--green)}
+
+.projects{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:0 0 20px}
+.prow{display:grid;grid-template-columns:minmax(120px,200px) 1fr auto;gap:12px;align-items:center;padding:5px 0}
+.prow .name{font-weight:600;min-width:0;overflow-wrap:anywhere}
+.bar{height:10px;background:var(--inset);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--blue);border-radius:99px}
+.prow .tot{font-family:"IBM Plex Mono",monospace;font-size:13.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+@media(max-width:560px){.prow{grid-template-columns:1fr auto}.prow .bar{grid-column:1 / -1;grid-row:2}}
+
+.tools{position:sticky;top:0;z-index:10;background:var(--ground);padding:10px 0;margin:0 0 6px;display:grid;gap:10px}
+.search{width:100%;font:inherit;padding:11px 13px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink)}
+.search:focus-visible,.seg button:focus-visible,.btn:focus-visible,select:focus-visible,.mins:focus-visible,.minsin:focus-visible,.x:focus-visible,a:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.chip{font:inherit;font-size:14px;padding:6px 12px;border-radius:99px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+select{font:inherit;font-size:14px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink)}
+.spacer{flex:1}
+.btn{font:inherit;font-size:14px;font-weight:600;padding:7px 13px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.warn{border-color:var(--amber);color:var(--amber)}
+
+.day{font-family:"IBM Plex Mono",monospace;font-size:12.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);margin:24px 0 8px;display:flex;justify-content:space-between;gap:12px}
+.chat{background:var(--card);border:1px solid var(--line);border-left:6px solid var(--amber);border-radius:8px;padding:13px 14px 12px;margin:0 0 10px}
+.chat.read{border-left-color:var(--blue)} .chat.reacted{border-left-color:var(--green)} .chat.archived{border-left-style:dashed}
+.top{display:flex;gap:10px;align-items:flex-start}
+.dot{width:14px;height:14px;border-radius:99px;flex:none;margin-top:4px;background:var(--amber)}
+.read .dot{background:var(--blue)} .reacted .dot{background:var(--green)}
+.title{font-weight:600;font-size:17px;line-height:1.3;flex:1;min-width:0;overflow-wrap:anywhere}
+.x{font:inherit;font-size:14px;font-weight:600;border:1px solid var(--line);background:var(--inset);color:var(--ink);border-radius:8px;padding:5px 11px;cursor:pointer;flex:none}
+.meta{display:flex;flex-wrap:wrap;gap:6px 8px;margin:8px 0 0 24px;align-items:center}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.03em;padding:2px 8px;border-radius:5px;background:var(--inset);color:var(--ink);white-space:nowrap}
+.tag.guess{background:var(--amber-bg);color:var(--amber)}
+.tag.open{background:var(--blue-bg);color:var(--blue)} .tag.wrapped{background:var(--green-bg);color:var(--green)}
+.when{font-size:14px;color:var(--ink2)}
+.mins{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;padding:2px 9px;border-radius:5px;border:1px dashed var(--ink2);background:transparent;color:var(--ink);cursor:pointer;font-variant-numeric:tabular-nums}
+.minsin{width:76px;font-family:"IBM Plex Mono",monospace;font-size:13px;padding:2px 6px;border:1px solid var(--ink);border-radius:5px;background:var(--card);color:var(--ink)}
+.line{margin:8px 0 0 24px;font-size:15px;color:var(--ink);overflow-wrap:anywhere}
+.line b{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);font-weight:600;margin-right:6px}
+.advice{padding:6px 10px;border-radius:6px;border-left:4px solid var(--line);background:var(--inset)}
+.advice.ok{border-left-color:var(--green);background:var(--green-bg)}
+.advice.cheaper{border-left-color:var(--amber);background:var(--amber-bg)}
+.advice.bigger{border-left-color:var(--rose);background:var(--rose-bg)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0 0 24px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:14px;font-weight:600;padding:6px 13px;border:0;border-right:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"].s-new{background:var(--amber-bg);color:var(--amber)}
+.seg button[aria-pressed="true"].s-read{background:var(--blue-bg);color:var(--blue)}
+.seg button[aria-pressed="true"].s-reacted{background:var(--green-bg);color:var(--green)}
+a{color:var(--blue);font-weight:600}
+.empty,.err{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:18px;margin:12px 0}
+.err{border-left:6px solid var(--rose)}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 14px;border-radius:8px;display:flex;gap:12px;align-items:center;z-index:30;max-width:calc(100vw - 32px)}
+.toast button{font:inherit;font-weight:700;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:3px 10px;cursor:pointer}
+.note{border-left:5px solid var(--blue);background:var(--blue-bg);padding:10px 14px;border-radius:6px;margin:0 0 18px;font-size:15px}
+footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--line);font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink2);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="pills"><span class="pill">Project YOU</span><span class="pill">Chat Dashboard v1.0</span><span class="pill">Oct 10, 2026</span><span class="pill" id="live">Loading</span></div>
+<h1>Chat Dashboard</h1>
+<p class="lede">Every chat you have started, with whether you have read it, what model it ran on, and how long it took. This page is for finding a thought and closing a chat. It is not a task list.</p>
+
+<div class="verdicts" id="verdicts"></div>
+
+<p class="eyebrow">Time by project</p>
+<div class="projects" id="projects"></div>
+
+<div class="note" id="gapnote"></div>
+
+<div class="tools">
+  <input class="search" id="q" type="search" placeholder="Search titles, ideas, notes and model" aria-label="Search chats" autocomplete="off">
+  <div class="filters">
+    <button class="chip" data-f="all" aria-pressed="true">All</button>
+    <button class="chip" data-f="new" aria-pressed="false">New</button>
+    <button class="chip" data-f="read" aria-pressed="false">Read</button>
+    <button class="chip" data-f="reacted" aria-pressed="false">Reacted</button>
+    <select id="proj" aria-label="Project"><option value="">All projects</option></select>
+    <button class="chip" id="arch" aria-pressed="false">Archived</button>
+    <span class="spacer"></span>
+    <button class="btn warn" id="bulk">Mark shown as read</button>
+  </div>
+</div>
+
+<div id="list"></div>
+
+<footer>
+  <span>Project YOU &middot; Chat Dashboard v1.0 &middot; Oct 10, 2026</span>
+  <span>Source: the chat register. Times Eastern. A day runs 2am to 2am.</span>
+</footer>
+</div>
+<div class="toast" id="toast" hidden><span id="toastmsg"></span><button id="toastbtn">Undo</button></div>
+
+<script>
+(function(){
+  var SB='https://arnjntspmrhigodlssbn.supabase.co/rest/v1';
+  var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+  var H={apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'};
+  var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var rows=[], f='all', showArch=false, query='', projSel='', undoFn=null, toastT=null;
+
+  function $(id){return document.getElementById(id);}
+  function el(tag,cls,text){var e=document.createElement(tag); if(cls)e.className=cls; if(text!=null)e.textContent=text; return e;}
+
+  function dayLabel(d){ if(!d) return 'Unknown day'; var p=String(d).split('-'); return MONTHS[+p[1]-1]+' '+(+p[2])+', '+p[0]; }
+  var tf=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'});
+  function timeLabel(ts){ if(!ts) return ''; return tf.format(new Date(ts)).replace(' AM','am').replace(' PM','pm')+' Eastern'; }
+  function dur(m){ m=+m||0; if(m<60) return m+' min'; var h=Math.floor(m/60), r=m%60; return h+'h '+(r<10?'0':'')+r+'m'; }
+
+  /* model name and rule-of-thumb advice */
+  var RUNGS=['haiku','sonnet','opus','fable'], NAMES={haiku:'Haiku',sonnet:'Sonnet',opus:'Opus',fable:'Fable'};
+  function rung(m){ m=(m||'').toLowerCase(); if(/mythos/.test(m)) return 'fable'; for(var i=0;i<RUNGS.length;i++){ if(m.indexOf(RUNGS[i])>-1) return RUNGS[i]; } return ''; }
+  function modelName(m){
+    if(!m) return 'Model not recorded';
+    var r=rung(m); if(!r) return m;
+    var v=(m.toLowerCase().split(r)[1]||'').match(/(\d+)(?:[-. ](\d+))?/);
+    return NAMES[r]+(v?' '+v[1]+(v[2]?'.'+v[2]:''):'');
+  }
+  function advise(r){
+    if(r.model_advice) return {tone:'ok',text:r.model_advice};
+    var have=rung(r.model);
+    if(!have) return {tone:'',text:'Model was not recorded, so no advice for this one.'};
+    var mins=+r.active_minutes||0, t=(r.topic||'')+' '+(r.note||'');
+    var want='sonnet';
+    if(mins>=240 || /(research|architecture|reconcil|rebuild|redesign|seven|several pages|whole system|data flow|map)/i.test(t)) want='opus';
+    else if(mins<=30 && /(\blog\b|\btrack|\btap\b|\bsync\b|lookup|register|\badd\b)/i.test(t)) want='haiku';
+    var a=RUNGS.indexOf(have), b=RUNGS.indexOf(want);
+    if(have==='fable' && want!=='fable') return {tone:'cheaper',text:'Fable is for the hardest jobs only. This looks like '+NAMES[want]+' work.'};
+    if(a===b) return {tone:'ok',text:'Right size for this job.'};
+    if(a>b) return {tone:'cheaper',text:'Could have run on '+NAMES[want]+', which costs less.'};
+    return {tone:'bigger',text:'A bigger model ('+NAMES[want]+') may suit this job better.'};
+  }
+
+  /* data */
+  function load(){
+    return fetch(SB+'/v_chat_dashboard?select=*&order=started_at.desc&limit=1000',{headers:H}).then(function(r){
+      if(!r.ok) throw new Error('HTTP '+r.status); return r.json();
+    }).then(function(d){ rows=d; $('live').textContent='Live'; render(); }).catch(function(e){
+      $('live').textContent='Offline';
+      var L=$('list'); L.textContent=''; var b=el('div','err'); b.appendChild(el('b',null,'The chat list did not load. ')); b.appendChild(document.createTextNode('Reload the page. If it keeps happening, tell Claude: '+e.message)); L.appendChild(b);
+    });
+  }
+  function patch(id,body){
+    return fetch(SB+'/chat_register?id=eq.'+id,{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify(body)}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); });
+  }
+  function byId(id){ for(var i=0;i<rows.length;i++){ if(rows[i].id===id) return rows[i]; } return null; }
+  function setRow(id,body){
+    var r=byId(id); if(!r) return Promise.resolve(); var old={}; Object.keys(body).forEach(function(k){old[k]=r[k]; r[k]=body[k];});
+    render();
+    return patch(id,body).catch(function(){ Object.keys(old).forEach(function(k){r[k]=old[k];}); render(); toast('That change did not save. Try again.'); });
+  }
+  function toast(msg,undo){
+    $('toastmsg').textContent=msg; $('toastbtn').hidden=!undo; undoFn=undo||null; $('toast').hidden=false;
+    clearTimeout(toastT); toastT=setTimeout(function(){ $('toast').hidden=true; undoFn=null; },10000);
+  }
+  $('toastbtn').addEventListener('click',function(){ var u=undoFn; $('toast').hidden=true; undoFn=null; if(u) u(); });
+
+  /* filtering */
+  function matches(r){
+    if(showArch? !r.archived_at : !!r.archived_at) return false;
+    if(f!=='all' && (r.read_state||'new')!==f) return false;
+    if(projSel && r.project!==projSel) return false;
+    if(query){
+      var hay=((r.topic||'')+' '+(r.ideas||'')+' '+(r.note||'')+' '+(r.project||'')+' '+modelName(r.model)).toLowerCase();
+      var parts=query.toLowerCase().split(/\s+/).filter(Boolean);
+      for(var i=0;i<parts.length;i++){ if(hay.indexOf(parts[i])<0) return false; }
+    }
+    return true;
+  }
+
+  /* rendering */
+  function renderSummary(){
+    var live=rows.filter(function(r){return !r.archived_at;});
+    var n=live.filter(function(r){return (r.read_state||'new')==='new';}).length;
+    var rd=live.filter(function(r){return r.read_state==='read';}).length;
+    var re=live.filter(function(r){return r.read_state==='reacted';}).length;
+    var tot=live.reduce(function(s,r){return s+(+r.active_minutes||0);},0);
+    var V=$('verdicts'); V.textContent='';
+    [['amber',n,'chats still new, not yet read'],['blue',rd,'read, no reaction yet'],['green',re,'reacted to'],['',dur(tot),'total measured time']].forEach(function(x){
+      var d=el('div','v '+x[0]); d.appendChild(el('b',null,String(x[1]))); d.appendChild(el('span',null,x[2])); V.appendChild(d);
+    });
+    var map={}; live.forEach(function(r){ var p=r.project||'No project'; map[p]=map[p]||{m:0,c:0}; map[p].m+=(+r.active_minutes||0); map[p].c++; });
+    var names=Object.keys(map).sort(function(a,b){return map[b].m-map[a].m;});
+    var max=Math.max.apply(null,names.map(function(k){return map[k].m;}).concat([1]));
+    var P=$('projects'); P.textContent='';
+    names.forEach(function(k){
+      var row=el('div','prow'); row.appendChild(el('span','name',k));
+      var bar=el('div','bar'); var i=el('i'); i.style.width=Math.round(map[k].m/max*100)+'%'; bar.appendChild(i); row.appendChild(bar);
+      row.appendChild(el('span','tot',dur(map[k].m)+' · '+map[k].c+' chats')); P.appendChild(row);
+    });
+    var g=live.filter(function(r){return r.guessed;}).length;
+    $('gapnote').textContent='Only chats that registered themselves can appear here, so a chat that skipped registering is missing. '+(g?g+(g===1?' row is':' rows are')+' marked "guessed": rebuilt from the traces an old chat left, so treat the time as approximate.':'');
+    var sel=$('proj'), cur=sel.value; var all=[]; rows.forEach(function(r){ if(r.project && all.indexOf(r.project)<0) all.push(r.project); });
+    if(sel.options.length!==all.length+1){ sel.textContent=''; var o=el('option',null,'All projects'); o.value=''; sel.appendChild(o); all.forEach(function(p){ var op=el('option',null,p); op.value=p; sel.appendChild(op); }); sel.value=cur; }
+  }
+
+  function chatCard(r){
+    var st=r.read_state||'new';
+    var c=el('article','chat '+st+(r.archived_at?' archived':''));
+    var top=el('div','top'); top.appendChild(el('span','dot'));
+    top.appendChild(el('div','title',r.topic||'(no title)'));
+    var x=el('button','x',r.archived_at?'Restore':'Archive');
+    x.setAttribute('aria-label',(r.archived_at?'Restore chat: ':'Archive chat: ')+(r.topic||''));
+    x.addEventListener('click',function(){
+      if(r.archived_at){ setRow(r.id,{archived_at:null}); toast('Restored.'); }
+      else { setRow(r.id,{archived_at:new Date().toISOString()}); toast('Archived. It stays in the Archived view.',function(){ setRow(r.id,{archived_at:null}); }); }
+    });
+    top.appendChild(x); c.appendChild(top);
+
+    var meta=el('div','meta');
+    meta.appendChild(el('span','when',timeLabel(r.started_at)));
+    meta.appendChild(el('span','tag '+(r.status||''),r.status||'open'));
+    meta.appendChild(el('span','tag',r.project||'No project'));
+    meta.appendChild(el('span','tag',modelName(r.model)));
+    if(r.guessed) meta.appendChild(el('span','tag guess','guessed'));
+    var mb=el('button','mins',dur(r.active_minutes)); mb.title='Tap to correct the minutes'; mb.setAttribute('aria-label','Minutes: '+dur(r.active_minutes)+'. Tap to correct.');
+    mb.addEventListener('click',function(){
+      var inp=el('input','minsin'); inp.type='number'; inp.min='0'; inp.value=+r.active_minutes||0; inp.setAttribute('aria-label','Minutes for this chat');
+      mb.replaceWith(inp); inp.focus(); inp.select(); var done=false;
+      function commit(){ if(done) return; done=true; var v=Math.max(0,parseInt(inp.value,10)||0); if(v!==(+r.active_minutes||0)) setRow(r.id,{active_minutes:v}); else render(); }
+      inp.addEventListener('blur',commit); inp.addEventListener('keydown',function(e){ if(e.key==='Enter') commit(); if(e.key==='Escape'){ done=true; render(); } });
+    });
+    meta.appendChild(mb); c.appendChild(meta);
+
+    var a=advise(r); var adv=el('div','line advice '+a.tone); adv.appendChild(el('b',null,'Model')); adv.appendChild(document.createTextNode(a.text)); c.appendChild(adv);
+    var ideas=r.ideas||r.note; if(ideas){ var il=el('div','line'); il.appendChild(el('b',null,r.ideas?'Ideas':'Note')); il.appendChild(document.createTextNode(ideas)); c.appendChild(il); }
+
+    var act=el('div','actions'); var seg=el('div','seg'); seg.setAttribute('role','group'); seg.setAttribute('aria-label','Status of this chat');
+    [['new','New'],['read','Read'],['reacted','Reacted']].forEach(function(s){
+      var b=el('button','s-'+s[0],s[1]); b.setAttribute('aria-pressed',String(st===s[0]));
+      b.addEventListener('click',function(){ setRow(r.id,{read_state:s[0]}); }); seg.appendChild(b);
+    });
+    act.appendChild(seg);
+    function link(url,label){ if(!url) return; var l=el('a',null,label); l.href=url; l.target='_blank'; l.rel='noopener'; l.addEventListener('click',function(){ if((r.read_state||'new')==='new') setRow(r.id,{read_state:'read'}); }); act.appendChild(l); }
+    link(r.tracker_url,'Open tracker'); link(r.session_url,'Open chat');
+    c.appendChild(act);
+    return c;
+  }
+
+  function render(){
+    renderSummary();
+    var L=$('list'); L.textContent='';
+    var shown=rows.filter(matches);
+    $('bulk').textContent='Mark '+shown.filter(function(r){return (r.read_state||'new')==='new';}).length+' shown as read';
+    $('bulk').disabled=false;
+    if(!shown.length){ var e=el('div','empty'); e.textContent=rows.length?'No chats match. Clear the search or pick All.':'No chats yet.'; L.appendChild(e); return; }
+    var last=null, grp=null, count=0;
+    shown.forEach(function(r){
+      if(r.day!==last){ last=r.day; var h=el('div','day'); h.appendChild(el('span',null,dayLabel(r.day))); var cnt=el('span',null,''); h.appendChild(cnt); L.appendChild(h); grp=cnt; count=0; }
+      count++; grp.textContent=count+(count===1?' chat':' chats');
+      L.appendChild(chatCard(r));
+    });
+  }
+
+  /* controls */
+  var qt=null; $('q').addEventListener('input',function(e){ clearTimeout(qt); var v=e.target.value; qt=setTimeout(function(){ query=v.trim(); render(); },120); });
+  document.querySelectorAll('[data-f]').forEach(function(b){ b.addEventListener('click',function(){ f=b.getAttribute('data-f'); document.querySelectorAll('[data-f]').forEach(function(x){ x.setAttribute('aria-pressed',String(x===b)); }); render(); }); });
+  $('arch').addEventListener('click',function(){ showArch=!showArch; $('arch').setAttribute('aria-pressed',String(showArch)); render(); });
+  $('proj').addEventListener('change',function(e){ projSel=e.target.value; render(); });
+  var armed=false, armT=null;
+  $('bulk').addEventListener('click',function(){
+    var targets=rows.filter(matches).filter(function(r){return (r.read_state||'new')==='new';});
+    if(!targets.length){ toast('Nothing new in this view.'); return; }
+    if(!armed){ armed=true; $('bulk').textContent='Tap again to mark '+targets.length+' as read'; clearTimeout(armT); armT=setTimeout(function(){ armed=false; render(); },5000); return; }
+    armed=false; clearTimeout(armT);
+    var ids=targets.map(function(r){return r.id;});
+    targets.forEach(function(r){ r.read_state='read'; }); render();
+    fetch(SB+'/chat_register?id=in.('+ids.join(',')+')',{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify({read_state:'read'})}).then(function(r){ if(!r.ok) throw new Error(); toast('Marked '+ids.length+' as read.',function(){ ids.forEach(function(i){ var x=byId(i); if(x) x.read_state='new'; }); render(); fetch(SB+'/chat_register?id=in.('+ids.join(',')+')',{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify({read_state:'new'})}); }); }).catch(function(){ load(); toast('That did not save. Reloaded the list.'); });
+  });
+  document.addEventListener('visibilitychange',function(){ if(!document.hidden) load(); });
+  load();
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
