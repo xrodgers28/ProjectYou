@@ -6,8 +6,6 @@
 <title>Habit Dashboard · Project YOU</title>
 <link rel="icon" href="project-you-logo.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@700&display=swap">
-<script>/* v5.50: the Cue Cards page shows the meet ups card in a pop-up by loading this page with ?embed=meetups */
-try{ if(/[?&]embed=meetups\b/.test(location.search)) document.documentElement.classList.add('py-embed'); }catch(e){}</script>
 <script src="py-day.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="py-icons.js"></script>
@@ -748,14 +746,6 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 </style>
 </head>
 <body>
-<style id="py-embed-css">
-/* v5.50 (Oct 9, 2026): pop-up view. Same card, same code, nothing else on the page. */
-html.py-embed .pynav, html.py-embed #app > :not(#page){display:none!important}
-html.py-embed #page > :not(#swCard):not(.swovl){display:none!important}
-html.py-embed body{background:#fff}
-html.py-embed #page{padding:0;margin:0;max-width:none}
-html.py-embed #swCard{margin:0;box-shadow:none}
-</style>
 <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link on">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v4.9</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
 <div id="login">
   <h2>Habit Dashboard</h2>
@@ -982,6 +972,10 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
    disagree (Exercise = the exercise rows plus the watch ring on a day with none; Habit = every
    other row not set to NOT COUNTED on the Habit Worksheets). Work, Project YOU and TreadWell come
    from the Todays Tasks calendar (day_tally), the same record the wheel and YouMatics read. */
+/* v5.50, Oct 9 2026, Scott: Apple Health and Strava both record the same walks, so exercise now reads one merged list
+   of outings (database view v_exercise_day): an Apple Health workout and a Strava activity that overlap in time are one
+   outing, counted once. A day and kind with no outing keeps whatever minutes were logged for it, and a day with nothing
+   falls back to the watch ring as before. py_week_hours() uses the same rule, so every page still agrees. */
 const VERSION='v5.50';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const OFF=['Project YOU','Not sure yet'];
@@ -1129,7 +1123,7 @@ async function load(){
        uses the watch's exercise-ring minutes. Loaded here, per day, for this week only. */
     try{const {data:rg}=await sb.from('health_metrics').select('day,value').eq('metric','apple_exercise_time').gte('day',ws).lte('day',we);RING={};(rg||[]).forEach(r=>{RING[r.day]=(RING[r.day]||0)+Math.round(+r.value||0);});}catch(e){RING={};}
     const q=(t,sel,f)=>{let r=sb.from(t).select(sel);if(f)r=f(r);return r;};
-    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq,impactq,tallyq]=await Promise.all([
+    const [qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,doq,quotes,areas,prevrow,thisrow,fs,hstk,chatreg,sleepq,trainq,connq,quietq,notesq,photoq,slotsq,yearq,neverq,ckq,labelsq,impactq,tallyq,exq]=await Promise.all([
       /* v5.18: added value and note to this list. value already had reader code
          (the counter "x n" badge) that only worked for a tap logged earlier in
          the same visit, since a fresh page load never actually fetched it;
@@ -1182,7 +1176,9 @@ async function load(){
          across weeks instead of one week's answers overwriting the last. */
       q('weekly_habit_impact','tracker,impact',r=>r.eq('week_start',ws)),
       /* v5.49: the Todays Tasks calendar's own daily record. Work, Project YOU and TreadWell hours. */
-      q('day_tally','day,amz,py,hab,ex,treadwell',r=>r.gte('day',ws).lte('day',we))
+      q('day_tally','day,amz,py,hab,ex,treadwell',r=>r.gte('day',ws).lte('day',we)),
+      /* v5.50: exercise outings, Apple Health and Strava merged, same outing once */
+      q('v_exercise_day','day,tracker,minutes',r=>r.gte('day',ws).lte('day',we))
     ]);
     const bad=[qs,wr,strava,sess,cal,tl,deck,sf,ai,fav,quotes,areas].filter(x=>x.error);
     if(bad.length){throw new Error(bad.map(x=>x.error.message).join('; '));}
@@ -1193,7 +1189,7 @@ async function load(){
     let officeYear=null;
     try{const {data:oy}=await sb.from('qs_log').select('date').eq('tracker','Office day').gte('date',we.slice(0,4)+'-01-01').lte('date',we).limit(1000);officeYear=new Set((oy||[]).map(r=>r.date)).size;}catch(e){officeYear=null;}
     const officeWk=[...new Set((qs.data||[]).filter(r=>r.tracker==='Office day'&&r.date>=ws&&r.date<=we).map(r=>r.date))];
-    D={days,ws,we,from28,from14,office:officeWk,officeYear,qs:(qs.data||[]).filter(r=>r.tracker!=='Office day'),wr:wr.data||[],strava:strava.data||[],sess:sess.data||[],cal:(cal.data||[]).filter(c=>!c.hidden&&!c.dismissed),tl:tl.data||[],deck:deck.data||[],sf:sf.data||[],ai:ai.data||[],fav:fav.data||[],doThis:(doq&&doq.data)||[],quotes:quotes.data||[],prev:prevrow.data||null,row:thisrow.data||null,fs:(fs&&fs.data)||[],stacks:(hstk&&hstk.data)||[],chatreg:(chatreg&&chatreg.data)||[],tally:(tallyq&&tallyq.data)||[],tallyErr:(tallyq&&tallyq.error)?tallyq.error.message:null,sleep:(sleepq&&sleepq.data)||[],train:(trainq&&trainq.data)||[],conns:(connq&&connq.data)||[],
+    D={days,ws,we,from28,from14,office:officeWk,officeYear,qs:(qs.data||[]).filter(r=>r.tracker!=='Office day'),wr:wr.data||[],strava:strava.data||[],sess:sess.data||[],cal:(cal.data||[]).filter(c=>!c.hidden&&!c.dismissed),tl:tl.data||[],deck:deck.data||[],sf:sf.data||[],ai:ai.data||[],fav:fav.data||[],doThis:(doq&&doq.data)||[],quotes:quotes.data||[],prev:prevrow.data||null,row:thisrow.data||null,fs:(fs&&fs.data)||[],stacks:(hstk&&hstk.data)||[],chatreg:(chatreg&&chatreg.data)||[],tally:(tallyq&&tallyq.data)||[],exd:(exq&&exq.data)||[],exErr:(exq&&exq.error)?exq.error.message:null,tallyErr:(tallyq&&tallyq.error)?tallyq.error.message:null,sleep:(sleepq&&sleepq.data)||[],train:(trainq&&trainq.data)||[],conns:(connq&&connq.data)||[],
       quiet:(quietq&&quietq.data)||[],pnotes:(notesq&&notesq.data)||[],
       pphotos:(photoq&&photoq.data)||[],
       slots:swDedupeSlots((slotsq&&slotsq.data)||[]),cks:(ckq&&ckq.data)||[],
@@ -1324,6 +1320,8 @@ function compute(){
        than one safari on it can show all of them on rollover. */
     if(r.note){locs[r.tracker]=locs[r.tracker]||{};(locs[r.tracker][r.date]=locs[r.tracker][r.date]||[]).push(r.note);}
   });
+  /* v5.50: the merged outing list replaces the logged minutes for any exercise kind that has an outing that day */
+  (D.exd||[]).forEach(r=>{if(!EXERCISE_T.has(r.tracker)||!(+r.minutes>0))return;tick[r.tracker]=tick[r.tracker]||{};tick[r.tracker][r.day]=true;mins[r.tracker]=mins[r.tracker]||{};mins[r.tracker][r.day]=+r.minutes;});
   /* daily set */
   const days28={};inWin.forEach(r=>{if(excl(r.tracker))return;days28[r.tracker]=days28[r.tracker]||new Set();days28[r.tracker].add(r.date);});
   const daily=new Set();
@@ -2412,8 +2410,6 @@ async function swReloadConns(){
     if(y&&y.data)D.year=y.data.filter(c=>!c.superseded);
   }catch(e){}
   swRender();
-  /* v5.50: when this card is shown inside the Cue Cards pop-up, tell it so the coffee cups can fade */
-  try{ if(window.parent!==window) window.parent.postMessage({py:'meetups-changed'},location.origin); }catch(e){}
 }
 function swLogDone(person){
   if(window.PYSocial){
@@ -3771,7 +3767,7 @@ function renderOut(){}
 
 /* ---------- save ---------- */
 let saveT=null;
-async function saveScores(){const pct=C.possible?Math.round(C.done/C.possible*100):null;const {s,n,total}=score();const row={week_start:D.ws,coverage:+C.coverage.toFixed(2),consistency:pct,retention:(total&&n>=total&&SCORE.max)?Math.round(s/SCORE.max*100):null,habits_done:C.done,habits_possible:C.possible,votes:C.voteN,work_hours:+hrs(C.workMin),habit_hours:+hrs(C.habitMin),py_hours:+hrs(C.pyMin),exercise_hours:+hrs(C.exMin),treadwell_hours:+hrs(C.twMin),build_sessions:C.sessN,right_order_days:C.rightDays,days_present:C.present.length,updated_at:new Date().toISOString()};if(D.tallyErr){delete row.work_hours;delete row.py_hours;delete row.treadwell_hours;} /* v5.49: never save zeros the calendar did not give us */
+async function saveScores(){const pct=C.possible?Math.round(C.done/C.possible*100):null;const {s,n,total}=score();const row={week_start:D.ws,coverage:+C.coverage.toFixed(2),consistency:pct,retention:(total&&n>=total&&SCORE.max)?Math.round(s/SCORE.max*100):null,habits_done:C.done,habits_possible:C.possible,votes:C.voteN,work_hours:+hrs(C.workMin),habit_hours:+hrs(C.habitMin),py_hours:+hrs(C.pyMin),exercise_hours:+hrs(C.exMin),treadwell_hours:+hrs(C.twMin),build_sessions:C.sessN,right_order_days:C.rightDays,days_present:C.present.length,updated_at:new Date().toISOString()};if(D.exErr){delete row.exercise_hours;}if(D.tallyErr){delete row.work_hours;delete row.py_hours;delete row.treadwell_hours;} /* v5.49: never save zeros the calendar did not give us */
   const {error}=await sb.from('weekly_review').upsert(row,{onConflict:'week_start'});if(error)wrSay('Could not save this week: '+error.message);}
 /* v3.6: the line that showed these messages was in the box Scott removed, so
    wrSay writes only if something is listening. Saving still happens. */
