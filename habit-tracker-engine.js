@@ -9,7 +9,7 @@
 
    A design is a small plug-in: PYHT.register({id, name, render(state, size, PYHT) -> html string}).
    size is 'card' (cue card page) or 'phone' (one-tap iPhone view).
-   v1.4 (Oct 6, 2026): E.art(h, true) prefers the latest Stack Builder icon (worksheet_rows.icon through wsicons-v2.js). v1.3 (Oct 5, 2026): four levels. core, secondary, bonus, weekly. Bonus counts like secondary. Weekly habits are NOT in state.habits (so no design counts them in today's lights); they are in state.weekly, done if ticked any day this week (Monday to Sunday, 2am days), counts.wt and counts.wd.
+   v1.5 (Oct 9, 2026): E.icon(h, true) prefers a camera-free small picture (ICONS[icon_key + '_sm']) when one exists; only Train platform has one today. Used by Stack Rings and the Two-Ring Wheel inner ring. v1.4 (Oct 6, 2026): E.art(h, true) prefers the latest Stack Builder icon (worksheet_rows.icon through wsicons-v2.js). v1.3 (Oct 5, 2026): four levels. core, secondary, bonus, weekly. Bonus counts like secondary. Weekly habits are NOT in state.habits (so no design counts them in today's lights); they are in state.weekly, done if ticked any day this week (Monday to Sunday, 2am days), counts.wt and counts.wd.
    state.habits[i] = {lvl, n, ic, sec, core(1/0), st(stack index), stack, pos, done, art, color, pastel, bg, secName}. */
 (function () {
   var TZ = 'America/New_York';
@@ -147,7 +147,7 @@
     return { type: 'img', src: I[a.key] || I[h.ic] || '' };
   };
   /* The simple row icon (used by the flat designs). */
-  E.icon = function (h) { return (window.ICONS || {})[h.ic] || ''; };
+  E.icon = function (h, small) { var I = window.ICONS || {}; return (small && I[h.ic + '_sm']) || I[h.ic] || ''; };
 
   /* Design registry: the list lives in habit-tracker-designs.js, one line per design. */
   E.register = function (d) { E._designs[d.id] = d; };
