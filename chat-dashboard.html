@@ -68,7 +68,22 @@ tr.archived .title{color:var(--ink2)}
 .toast button{font:inherit;font-weight:700;background:transparent;border:1px solid currentColor;color:inherit;border-radius:6px;padding:3px 10px;cursor:pointer}
 .foot{margin-top:14px;font-size:12px;color:var(--ink2);display:flex;flex-wrap:wrap;gap:4px 18px;justify-content:space-between}
 [hidden]{display:none!important}
+.c-drag{width:34px;padding-right:0!important}
+.grip{cursor:grab;touch-action:none;background:none;border:0;color:var(--ink2);font-size:19px;line-height:1;padding:4px 6px;border-radius:6px;user-select:none}
+.grip:hover{background:var(--head)}
+.grip[disabled]{opacity:.25;cursor:not-allowed}
+tr.dragging td{background:var(--blue-bg)!important;opacity:.85}
+tr.cat td{padding:9px 12px}
+tr.cat b{font-size:13px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent)}
+tr.cat .cap{float:none;margin-left:10px;font-size:12.5px;letter-spacing:0;text-transform:none;font-weight:400;color:var(--ink2)}
+tr.cat .top{margin-left:10px;font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--green);background:var(--green-bg);padding:2px 8px;border-radius:99px}
+tr.cat .ct{float:right;font-size:12px;font-weight:400;color:var(--ink2)}
+tr.emptyg td{color:var(--ink2);font-size:13px;font-style:italic;padding:10px 12px 10px 46px}
+.tsel{display:block;margin-top:6px;font:inherit;font-size:12.5px;padding:3px 6px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--ink);max-width:100%}
+.hint{font-size:12.5px;color:var(--ink2);padding:8px 18px;border-bottom:1px solid var(--line)}
 @media(max-width:820px){
+  .c-drag{width:auto!important}
+  tr.row td.c-drag{flex:0 0 auto}
   .search{margin-left:0;width:100%}
   thead{display:none}
   table,tbody,tr,td{display:block;width:100%}
@@ -97,6 +112,11 @@ tr.archived .title{color:var(--ink2)}
       <button class="chip" data-f="read" aria-pressed="false">Read</button>
       <button class="chip" data-f="reacted" aria-pressed="false">Reacted</button>
     </div>
+    <div class="grp" id="fgroup"><span>Group by</span>
+      <button class="chip" data-g="type" aria-pressed="true">Type</button>
+      <button class="chip" data-g="day" aria-pressed="false">Day</button>
+      <button class="chip" data-g="mine" aria-pressed="false">My order</button>
+    </div>
     <div class="grp" id="fproj" hidden><span>Project</span></div>
     <div class="grp"><span>Also</span>
       <button class="chip" id="hasnote" aria-pressed="false">Has my note</button>
@@ -105,12 +125,13 @@ tr.archived .title{color:var(--ink2)}
     </div>
     <input class="search" id="q" type="search" placeholder="Search: titles, what a chat was about, my notes" aria-label="Search chats" autocomplete="off">
   </div>
+  <div class="hint" id="hint"></div>
   <table>
-    <thead><tr><th class="c-status">Status</th><th>Chat</th><th class="c-proj">Project</th><th class="c-when">When</th><th class="c-meta">Model, min</th><th class="c-in">Your input</th><th class="c-act">Actions</th></tr></thead>
+    <thead><tr><th class="c-drag"></th><th class="c-status">Status</th><th>Chat</th><th class="c-proj">Project</th><th class="c-when">When</th><th class="c-meta">Model, min</th><th class="c-in">Your input</th><th class="c-act">Actions</th></tr></thead>
     <tbody id="list"></tbody>
   </table>
 </div>
-<div class="foot"><span>Project YOU &middot; Chat Dashboard v3.1 &middot; Oct 10, 2026</span><span id="src"></span></div>
+<div class="foot"><span>Project YOU &middot; Chat Dashboard v3.2 &middot; Oct 10, 2026</span><span id="src"></span></div>
 </div>
 <div class="toast" id="toast" hidden><span id="toastmsg"></span><button id="toastbtn">Undo</button></div>
 
@@ -120,7 +141,20 @@ tr.archived .title{color:var(--ink2)}
   var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
   var H={apikey:KEY,Authorization:'Bearer '+KEY,'Content-Type':'application/json'};
   var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  var rows=[], f='all', pf='all', showArch=false, onlyNote=false, query='', undoFn=null, toastT=null;
+  var rows=[], f='all', pf='all', mode='type', showArch=false, onlyNote=false, query='', undoFn=null, toastT=null;
+  var CATS=[
+    {k:'new',s:'Not sorted',n:'Not sorted yet',c:'Newly synced chats land here'},
+    {k:'see',s:'Habit visibility',n:'Shows me if I am hitting my habits',c:'Meters, trackers, counters and the data behind them',top:1},
+    {k:'do',s:'Doing the habits',n:'Helps me do the habits',c:'Cue cards and their content'},
+    {k:'fix',s:'Fixes',n:'Fixes and plumbing',c:'Bugs, popups and connectors'},
+    {k:'tidy',s:'Tidy up',n:'Tidy up the site',c:'Navigation and layout'},
+    {k:'idea',s:'Ideas and talk',n:'Ideas, research and the talk',c:'Research and the Project YOU presentation'},
+    {k:'tw',s:'TreadWell',n:'TreadWell',c:'The other project'},
+    {k:'fun',s:'Fun',n:'Makes it more fun',c:'Animations, icons and looks'}
+  ];
+  function catKey(r){ var k=r.category||'new'; for(var i=0;i<CATS.length;i++){ if(CATS[i].k===k) return k; } return 'new'; }
+  function catIdx(r){ var k=catKey(r); for(var i=0;i<CATS.length;i++){ if(CATS[i].k===k) return i; } return 0; }
+  function so(r){ return r.sort_order==null?-1:r.sort_order; }
   var NEXT={'new':'read','read':'reacted','reacted':'new'}, LAB={'new':'New','read':'Read','reacted':'Reacted'};
   function $(id){return document.getElementById(id);}
   function el(t,c,x){var e=document.createElement(t); if(c)e.className=c; if(x!=null)e.textContent=x; return e;}
@@ -131,7 +165,7 @@ tr.archived .title{color:var(--ink2)}
   function load(){
     return fetch(SB+'/v_cowork_chats?select=*&order=last_activity.desc&limit=2000',{headers:H}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
     .then(function(d){ rows=d; $('live').textContent='Live'; render(); })
-    .catch(function(e){ $('live').textContent='Offline'; var L=$('list'); L.textContent=''; var tr=el('tr'); var td=el('td','err','The chat list did not load. Reload the page. If it keeps happening, tell Claude: '+e.message); td.colSpan=7; tr.appendChild(td); L.appendChild(tr); });
+    .catch(function(e){ $('live').textContent='Offline'; var L=$('list'); L.textContent=''; var tr=el('tr'); var td=el('td','err','The chat list did not load. Reload the page. If it keeps happening, tell Claude: '+e.message); td.colSpan=8; tr.appendChild(td); L.appendChild(tr); });
   }
   function patch(id,body){ return fetch(SB+'/cowork_chats?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:Object.assign({Prefer:'return=minimal'},H),body:JSON.stringify(body)}).then(function(r){ if(!r.ok) throw new Error('HTTP '+r.status); }); }
   function byId(id){ for(var i=0;i<rows.length;i++){ if(rows[i].id===id) return rows[i]; } return null; }
@@ -169,8 +203,17 @@ tr.archived .title{color:var(--ink2)}
 
   function rowEl(r){
     var st=r.read_state||'new';
-    var tr=el('tr','row '+st+(r.archived_at?' archived':''));
-    var td=el('td','c-status'); var p=el('button','pill '+st,LAB[st]); p.title='Tap to change: New, Read, Reacted'; p.setAttribute('aria-label','Status: '+LAB[st]+'. Tap to change to '+LAB[NEXT[st]]);
+    var tr=el('tr','row '+st+(r.archived_at?' archived':'')); tr.setAttribute('data-id',r.id);
+    var td=el('td','c-drag'); var gp=el('button','grip','\u2807'); gp.type='button'; gp.setAttribute('aria-label','Move: '+r.title+'. Drag, or press the up and down arrow keys.');
+    if(!canDrag()){ gp.disabled=true; gp.title='Clear search and filters, and pick Type or My order, to reorder'; } else {
+      gp.title='Drag to reorder';
+      gp.addEventListener('pointerdown',function(e){ startDrag(e,tr,gp); });
+      gp.addEventListener('keydown',function(e){ var body=$('list');
+        if(e.key==='ArrowUp'){ e.preventDefault(); var p=tr.previousElementSibling; if(p&&p.classList.contains('row')||p&&p.classList.contains('cat')){ body.insertBefore(tr,p); commitOrder(r.id); } }
+        else if(e.key==='ArrowDown'){ e.preventDefault(); var n=tr.nextElementSibling; if(n){ body.insertBefore(tr,n.nextElementSibling); commitOrder(r.id); } } });
+    }
+    td.appendChild(gp); tr.appendChild(td);
+    td=el('td','c-status'); var p=el('button','pill '+st,LAB[st]); p.title='Tap to change: New, Read, Reacted'; p.setAttribute('aria-label','Status: '+LAB[st]+'. Tap to change to '+LAB[NEXT[st]]);
     p.addEventListener('click',function(){ setRow(r.id,{read_state:NEXT[st]}); }); td.appendChild(p); tr.appendChild(td);
     td=el('td','c-chat'); var a=el('a','title',r.title); a.href=r.url; a.target='_blank'; a.rel='noopener'; a.addEventListener('click',function(){ if((r.read_state||'new')==='new') setRow(r.id,{read_state:'read'}); }); td.appendChild(a);
     if(r.gist){ var g=el('div','gist',r.gist); g.title='Tap to show all'; g.addEventListener('click',function(){ g.classList.toggle('open'); }); td.appendChild(g); }
@@ -192,27 +235,81 @@ tr.archived .title{color:var(--ink2)}
     go.addEventListener('click',function(){ var txt=ta.value.trim(); function open(){ window.open(r.url,'_blank','noopener'); } if(!txt){ open(); return; } if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(function(){ toast('Copied. Paste it into the chat.'); open(); },function(){ ta.focus(); ta.select(); toast('Copy the selected text, then open the chat.'); }); } else { ta.focus(); ta.select(); toast('Copy the selected text, then open the chat.'); } });
     var x=el('button','lnk q',r.archived_at?'Restore':'Archive'); x.setAttribute('aria-label',(r.archived_at?'Restore chat: ':'Archive chat: ')+r.title);
     x.addEventListener('click',function(){ if(r.archived_at){ setRow(r.id,{archived_at:null}); toast('Restored.'); } else { setRow(r.id,{archived_at:new Date().toISOString()}); toast('Archived. It stays in the Archived view.',function(){ setRow(r.id,{archived_at:null}); }); } });
-    td.appendChild(go); td.appendChild(x); tr.appendChild(td);
+    td.appendChild(go); td.appendChild(x);
+    var sel=el('select','tsel'); sel.setAttribute('aria-label','Type for: '+r.title);
+    CATS.forEach(function(c){ var o=el('option',null,c.s); o.value=c.k; if(c.k===catKey(r)) o.selected=true; sel.appendChild(o); });
+    sel.addEventListener('change',function(){ setRow(r.id,{category:sel.value}); });
+    td.appendChild(sel); tr.appendChild(td);
     return tr;
   }
 
+  function canDrag(){ return mode!=='day' && f==='all' && pf==='all' && !onlyNote && !query && !showArch; }
+  function ordered(list){
+    var a=list.slice();
+    if(mode==='type') a.sort(function(x,y){ return catIdx(x)-catIdx(y) || so(x)-so(y); });
+    else if(mode==='mine') a.sort(function(x,y){ return so(x)-so(y); });
+    return a;
+  }
+  function commitOrder(focusId){
+    var body=$('list'), cur=null, seq=[], changes=0;
+    Array.prototype.forEach.call(body.children,function(el){
+      if(el.classList.contains('cat')){ cur=el.getAttribute('data-cat'); return; }
+      if(!el.classList.contains('row')) return;
+      var r=byId(el.getAttribute('data-id')); if(!r) return;
+      seq.push({r:r,cat:(mode==='type'&&cur)?cur:null});
+    });
+    seq.forEach(function(x,i){
+      var b={}, no=(i+1)*10;
+      if(x.r.sort_order!==no) b.sort_order=no;
+      if(x.cat && catKey(x.r)!==x.cat) b.category=x.cat;
+      if(Object.keys(b).length){ changes++; setRow(x.r.id,b,true); }
+    });
+    render(); if(changes) toast('Order saved.');
+    if(focusId){ var g=document.querySelector('tr[data-id="'+focusId+'"] .grip'); if(g) g.focus(); }
+  }
+  function startDrag(ev,tr,grip){
+    if(ev.button>0) return; ev.preventDefault();
+    var body=$('list'); tr.classList.add('dragging');
+    function move(e){
+      var y=e.clientY, target=null, els=Array.prototype.slice.call(body.children).filter(function(x){ return x!==tr; });
+      for(var i=0;i<els.length;i++){ var rc=els[i].getBoundingClientRect(); if(y<rc.top+rc.height/2){ target=els[i]; break; } }
+      if(target!==tr.nextElementSibling) body.insertBefore(tr,target);
+      if(y<90) window.scrollBy(0,-14); else if(y>window.innerHeight-90) window.scrollBy(0,14);
+    }
+    function up(){ document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up); document.removeEventListener('pointercancel',up); tr.classList.remove('dragging'); commitOrder(tr.getAttribute('data-id')); }
+    document.addEventListener('pointermove',move); document.addEventListener('pointerup',up); document.addEventListener('pointercancel',up);
+  }
   function render(){
     counts();
     var L=$('list'); L.textContent='';
-    var shown=rows.filter(matches);
+    var shown=ordered(rows.filter(matches));
     $('count').textContent=shown.length+' of '+rows.length;
     var nn=shown.filter(function(r){return (r.read_state||'new')==='new';}).length;
     $('bulk').textContent='Mark '+nn+' shown as read';
-    if(!shown.length){ var tr=el('tr'); var td=el('td','empty',rows.length?'No chats match. Clear the search or pick All.':'No chats yet.'); td.colSpan=7; tr.appendChild(td); L.appendChild(tr); return; }
+    $('hint').textContent=canDrag()?'Drag the handle on the left to reorder. Drop a chat under another type to change its type. On a keyboard, focus the handle and use the up and down arrow keys.':(mode==='day'?'Grouped by day. Switch to Type or My order to reorder.':'Reordering is paused while a filter or search is on. Clear it to drag.');
+    if(!shown.length){ var tr=el('tr'); var td=el('td','empty',rows.length?'No chats match. Clear the search or pick All.':'No chats yet.'); td.colSpan=8; tr.appendChild(td); L.appendChild(tr); return; }
+    if(mode==='type'){
+      CATS.forEach(function(c){
+        var items=shown.filter(function(r){ return catKey(r)===c.k; });
+        if(!items.length && !(canDrag() && c.k!=='new')) return;
+        var h=el('tr','day cat'); h.setAttribute('data-cat',c.k); var d=el('td'); d.colSpan=8;
+        d.appendChild(el('b',null,c.n)); if(c.top) d.appendChild(el('span','top','TOP PRIORITY')); d.appendChild(el('span','cap',c.c)); d.appendChild(el('span','ct',items.length+(items.length===1?' chat':' chats')));
+        h.appendChild(d); L.appendChild(h);
+        items.forEach(function(r){ L.appendChild(rowEl(r)); });
+      });
+      return;
+    }
+    if(mode==='mine'){ shown.forEach(function(r){ L.appendChild(rowEl(r)); }); return; }
     var last=null, cnt=null, k=0;
     shown.forEach(function(r){
-      if(r.day!==last){ last=r.day; var h=el('tr','day'); var d=el('td'); d.colSpan=7; d.appendChild(document.createTextNode(dayLabel(r.day))); cnt=el('span'); d.appendChild(cnt); h.appendChild(d); L.appendChild(h); k=0; }
+      if(r.day!==last){ last=r.day; var h=el('tr','day'); var d=el('td'); d.colSpan=8; d.appendChild(document.createTextNode(dayLabel(r.day))); cnt=el('span'); d.appendChild(cnt); h.appendChild(d); L.appendChild(h); k=0; }
       k++; cnt.textContent=k+(k===1?' chat':' chats'); L.appendChild(rowEl(r));
     });
   }
 
   var qt=null; $('q').addEventListener('input',function(e){ clearTimeout(qt); var v=e.target.value; qt=setTimeout(function(){ query=v.trim(); render(); },120); });
   document.querySelectorAll('[data-f]').forEach(function(b){ b.addEventListener('click',function(){ f=b.getAttribute('data-f'); document.querySelectorAll('[data-f]').forEach(function(x){ x.setAttribute('aria-pressed',String(x===b)); }); render(); }); });
+  document.querySelectorAll('[data-g]').forEach(function(b){ b.addEventListener('click',function(){ mode=b.getAttribute('data-g'); document.querySelectorAll('[data-g]').forEach(function(x){ x.setAttribute('aria-pressed',String(x===b)); }); render(); }); });
   $('arch').addEventListener('click',function(){ showArch=!showArch; $('arch').setAttribute('aria-pressed',String(showArch)); render(); });
   $('hasnote').addEventListener('click',function(){ onlyNote=!onlyNote; $('hasnote').setAttribute('aria-pressed',String(onlyNote)); render(); });
   var armed=false, armT=null;
