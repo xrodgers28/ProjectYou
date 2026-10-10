@@ -669,7 +669,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.18</span></h1>
+      <h1>Sparkboard <span class="ver">v2.19</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -771,7 +771,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.18</div>
+  <div class="stamp" id="stamp">v2.19</div>
 </div>
 
 <aside class="stx-col">
@@ -1872,7 +1872,7 @@ function mountPhotogs(){
    done with the minutes typed in, then bounce to the Cue Cards board. The
    to-do list is behind a sign-in, so this half of the page needs the account
    even though the pictures do not. */
-var HABIT="Sparkboard", sb=null, signedIn=false, ticked=false, habitRow=null;
+var HABIT="Sparkboard", sb=null, signedIn=false, ticked=false, habitRow=null, habitRows=[];
 /* Cue card clock v2 (Sep 29, 2026). The start time is saved in this browser, so a reload or coming back from another page no longer restarts the clock. After 2+ hours with no touch, Done asks how many minutes instead of guessing. */
 var __CUE_IDLE=2*3600*1000, __CUE_STALE=12*3600*1000, __cueAway=false, __cueSt=null, __cueKey='', __cueLastW=0;
 function __cueSave(force){ var n=Date.now(); if(!force&&n-__cueLastW<8000) return; __cueLastW=n; try{ localStorage.setItem(__cueKey,JSON.stringify(__cueSt)); }catch(e){} }
@@ -2019,8 +2019,12 @@ function loadHabit(){
     .order("for_date",{ascending:false}).limit(400)
     .then(function(r){
       var okNames=["sparkboard","the sparkboard","inspiration wall","the wall"];
-      habitRow=((r.data||[]).filter(function(x){ return okNames.indexOf(String(x.task||"").replace(/\s+/g," ").trim().toLowerCase())>=0; })[0]) || null;
-      ticked=!!(habitRow && habitRow.done && habitRow.for_date===today());
+      var found=(r.data||[]).filter(function(x){ return okNames.indexOf(String(x.task||"").replace(/\s+/g," ").trim().toLowerCase())>=0; });
+      /* v2.19 (Oct 9, 2026): the list has a "SparkBoard" row and the board makes its own "The Wall" row, so there are two. Done now saves the time on BOTH, so the list and the board agree. A tick made on the board does not count as this page's Done: the board only fills in the 10 minute estimate, so Done here replaces it with the real time. */
+      habitRows=found.filter(function(x){ return x.for_date===found[0].for_date; });
+      habitRow=habitRows[0]||null;
+      var usedToday=false; try{ usedToday=(localStorage.getItem("wallfin:"+today())==="1"); }catch(e){}
+      ticked=!!(habitRow && usedToday);
       paintFinish();
     });
 }
@@ -2047,11 +2051,20 @@ function finish(){
   if(totLine){ totLine.textContent="Time on the Sparkboard: "+mins+" min"; totLine.classList.add("show"); }
   var fb=document.getElementById("finbtn"); if(fb){ fb.disabled=true; fb.style.opacity=".55"; fb.style.pointerEvents="none"; }
   var now=new Date().toISOString(), t=today();
-  sb.from("todos").update({done:true,status:"done",done_at:now,actual_minutes:mins,for_date:t,updated_at:now})
-    .eq("id",habitRow.id)
-    .then(function(res){
-      if(res.error){ finMsg("Did not save: "+res.error.message); return; }
-      ticked=true; habitRow.done=true; habitRow.for_date=t;
+  var targets=(habitRows&&habitRows.length)?habitRows:[habitRow];
+  Promise.all(targets.map(function(row){
+    return sb.from("todos").update({done:true,status:"done",done_at:now,actual_minutes:mins,for_date:t,updated_at:now}).eq("id",row.id);
+  }))
+    .then(function(results){
+      var bad=null; results.forEach(function(x){ if(x && x.error && !bad) bad=x.error; });
+      if(bad){
+        finMsg("Did not save: "+bad.message+" Tap Done to try again, or use the X to leave.");
+        if(fb){ fb.disabled=false; fb.style.opacity=""; fb.style.pointerEvents=""; }
+        if(el){ el.disabled=false; }
+        return;
+      }
+      try{ localStorage.setItem("wallfin:"+t,"1"); }catch(e){}
+      ticked=true; targets.forEach(function(row){ row.done=true; row.for_date=t; });
       paintFinish();
       finMsg("Time on the Sparkboard: "+mins+" min. Saved to the wheel. Taking you back to the board.");
       setTimeout(function(){ location.href="habit-modules.html?done=wall"; },3000);
