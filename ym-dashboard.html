@@ -205,7 +205,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link on">YouMatics</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.10</span>
+    <span class="pn-ver">v1.11</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -542,6 +542,8 @@
    v1.8, Sep 6 2026: the stack order is his priority order, bottom up: Habits,
    Project You, Amazon, Personal, then Your to-dos, Still open on top. Same order
    in the legend and in the Month bars; The balance stacks 'yours' the same way.
+   v1.11, Oct 9 2026: Where the hours went reads the week's five totals (Habit Bandit, Exercise, Project YOU,
+   TreadWell, Work) from py_week_hours, the same function the Habit Dashboard reads, so they match.
    v1.9, Sep 6 2026: the day columns HANG FROM THE TOP so Habits sits on top and
    Still open at the bottom; the strip above the chart is a WEEK picker now, one
    block per week (Monday's date), the current week in red, and the headline is
@@ -733,42 +735,71 @@
      the hours tracked across the three. (The day-by-day "order of the day" green/red
      squares and their rule were removed Sep 6, 2026 per Scott: not a judgment call
      he wants tracked.) */
+  /* v1.11, Oct 9 2026, Scott: the hours on this strip must match the Habit Dashboard and the
+     Habit Worksheets for the same week. The week's five totals now come from ONE database
+     function, public.py_week_hours(monday), the same one the Habit Dashboard's card reads, so a
+     week reads the same everywhere. Habits here no longer means "calendar blocks coloured green":
+     it is habit time, exercise kept separate, Medicine left out. TreadWell and Exercise added.
+     The day-by-day chart below is still the Todays Tasks calendar, minute by minute. */
   var PRI = [
-    { k:'hab', name:'Habits and habit building', c:'#1e8e5a' },
-    { k:'py',  name:'Building Project YOU',      c:'#e8a0b8' },
-    { k:'amz', name:'Amazon',                    c:'#e8912f', cap: 40 * 60 }
+    { k:'hab', name:'Habit Bandit', c:'#1e8e5a', leg:'Habit Bandit' },
+    { k:'ex',  name:'Exercise',     c:'#c05f7a', leg:'Exercise' },
+    { k:'py',  name:'Project YOU',  c:'#e8a0b8', leg:'Project YOU' },
+    { k:'tw',  name:'TreadWell',    c:'#2e8b9a', leg:'TreadWell' },
+    { k:'amz', name:'Work',         c:'#FF9900', leg:'Work', cap: 40 * 60 }
   ];
+  var hwTok = 0;
+  var WKTOT = {};   /* monday -> {hab,ex,py,tw,amz} minutes, from py_week_hours */
+  function loadWeekTotals(mon, cb) {
+    if (WKTOT[mon]) { cb(WKTOT[mon]); return; }
+    fetch('https://arnjntspmrhigodlssbn.supabase.co/rest/v1/rpc/py_week_hours', {
+      method: 'POST',
+      headers: { 'apikey': KEY, 'Authorization': 'Bearer ' + KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_week_start: mon })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      var o = d && d[0]; if (!o) throw new Error('no row');
+      WKTOT[mon] = { hab: +o.habit_min || 0, ex: +o.exercise_min || 0, py: +o.py_min || 0, tw: +o.treadwell_min || 0, amz: +o.work_min || 0 };
+      cb(WKTOT[mon]);
+    }).catch(function () { cb(null); });
+  }
   function drawHoursWent(wk, mon, today) {
     var box = document.getElementById('hourswent');
-    var byD = {}; wk.forEach(function (r) { byD[r.day] = r; });
-    var tot = {}; PRI.forEach(function (p) { tot[p.k] = wk.reduce(function (s0, r) { return s0 + r[p.k]; }, 0); });
-    var dayN = {}; PRI.forEach(function (p) { dayN[p.k] = wk.filter(function (r) { return r[p.k] > 0; }).length; });
-    var all = tot.hab + tot.py + tot.amz;
-    var SCALE = 40 * 60;
     var title = weekBack === 0 ? 'This week so far' : 'Week of ' + shortDate(mon);
-    var h = '<div class="hwhead"><b>' + title + '</b><span>in the order of your priorities</span></div>';
-    h += '<div class="hwbody"><div class="hwleft">';
-    PRI.forEach(function (p, i) {
-      var pct = Math.min(100, tot[p.k] / SCALE * 100);
-      h += '<div class="hwrank" style="color:' + p.c + '">' + (i + 1) + '</div>' +
-           '<div><div class="hwlab">' + p.name + (p.cap ? '<small>cap 40 h</small>' : '') + '</div>' +
-           '<div class="hwtrack" title="' + hlab(tot[p.k]) + ' this week, on a 40 h scale"><i style="width:' + pct.toFixed(1) + '%;background:' + p.c + '"></i>' + (p.cap ? '<em></em>' : '') + '</div></div>' +
-           '<div class="hwval">' + hlab(tot[p.k]) + '<small>' + dayN[p.k] + ' of ' + wk.length + ' day' + (wk.length === 1 ? '' : 's') + '</small></div>';
+    box.innerHTML = '<div class="hwhead"><b>' + title + '</b><span>loading the week’s hours…</span></div>';
+    box.classList.add('on');
+    var tok = ++hwTok;
+    loadWeekTotals(mon, function (tot) {
+      if (tok !== hwTok) return;
+      var note = 'same totals as the Habit Dashboard';
+      if (!tot) {   /* the week function could not be reached: fall back to the calendar's own day totals, and say so */
+        tot = {}; PRI.forEach(function (p) { tot[p.k] = wk.reduce(function (s0, r) { return s0 + (r[p.k] || 0); }, 0); });
+        note = 'calendar totals, the Habit Dashboard totals could not be loaded';
+      }
+      var all = 0; PRI.forEach(function (p) { all += tot[p.k]; });
+      var SCALE = 40 * 60;
+      var h = '<div class="hwhead"><b>' + title + '</b><span>' + note + (weekBack === 0 ? ' · ' + wk.length + ' day' + (wk.length === 1 ? '' : 's') + ' so far' : '') + '</span></div>';
+      h += '<div class="hwbody"><div class="hwleft">';
+      PRI.forEach(function (p, i) {
+        var pct = Math.min(100, tot[p.k] / SCALE * 100);
+        h += '<div class="hwrank" style="color:' + p.c + '">' + (i + 1) + '</div>' +
+             '<div><div class="hwlab">' + p.name + (p.cap ? '<small>cap 40 h</small>' : '') + '</div>' +
+             '<div class="hwtrack" title="' + hlab(tot[p.k]) + ' this week, on a 40 h scale"><i style="width:' + pct.toFixed(1) + '%;background:' + p.c + '"></i>' + (p.cap ? '<em></em>' : '') + '</div></div>' +
+             '<div class="hwval">' + hlab(tot[p.k]) + '</div>';
+      });
+      h += '</div><div class="hwright">';
+      var R = 26, C = 2 * Math.PI * R, off = 0, ring = '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="' + R + '" fill="none" stroke="#eef1f6" stroke-width="9"/>';
+      if (all > 0) PRI.forEach(function (p) {
+        var len = tot[p.k] / all * C;
+        ring += '<circle cx="32" cy="32" r="' + R + '" fill="none" stroke="' + p.c + '" stroke-width="9" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" transform="rotate(-90 32 32)"/>';
+        off += len;
+      });
+      ring += txt(32, 31, 11, '#1f2a44', 'middle', 800, hlab(all)) + txt(32, 41, 5.5, '#a9b2bd', 'middle', 800, 'TRACKED') + '</svg>';
+      h += '<div class="hwring">' + ring + '<div class="hwleg">' +
+           PRI.map(function (p) { return '<div><b style="color:' + p.c + '">' + hlab(tot[p.k]) + '</b><span>' + p.leg + '</span></div>'; }).join('') +
+           '</div></div>';
+      h += '</div></div>';
+      if (document.getElementById('hourswent') === box) { box.innerHTML = h; box.classList.add('on'); }
     });
-    h += '</div><div class="hwright">';
-    /* the ring: three arcs, hours tracked in the middle */
-    var R = 26, C = 2 * Math.PI * R, off = 0, ring = '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="' + R + '" fill="none" stroke="#eef1f6" stroke-width="9"/>';
-    if (all > 0) PRI.forEach(function (p) {
-      var len = tot[p.k] / all * C;
-      ring += '<circle cx="32" cy="32" r="' + R + '" fill="none" stroke="' + p.c + '" stroke-width="9" stroke-dasharray="' + len.toFixed(2) + ' ' + (C - len).toFixed(2) + '" stroke-dashoffset="' + (-off).toFixed(2) + '" transform="rotate(-90 32 32)"/>';
-      off += len;
-    });
-    ring += txt(32, 31, 11, '#1f2a44', 'middle', 800, hlab(all)) + txt(32, 41, 5.5, '#a9b2bd', 'middle', 800, 'TRACKED') + '</svg>';
-    h += '<div class="hwring">' + ring + '<div class="hwleg">' +
-         PRI.map(function (p) { return '<div><b style="color:' + p.c + '">' + hlab(tot[p.k]) + '</b><span>' + (p.k === 'hab' ? 'Habits' : p.k === 'py' ? 'Project YOU' : 'Amazon') + '</span></div>'; }).join('') +
-         '</div></div>';
-    h += '</div></div>';
-    box.innerHTML = h; box.classList.add('on');
   }
 
   /* -------------------------------------------------------- A3, the balance - */
