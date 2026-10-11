@@ -260,19 +260,20 @@
   }
 
   /* ---------- page pieces ---------- */
-  var host = null, tile, tileNum, outEl, sunEl, chgEl, infoTimer = null, float, card, wrap, svg, tip, locBtn, backBtn, statsEl, legendEl, pop, msgEl, zipIn, cmpBox, xBtn, hoverT = null;
+  var host = null, tile, tileNum, skyEls = null, skyTimer = null, outEl, sunEl, chgEl, infoTimer = null, float, card, wrap, svg, tip, locBtn, backBtn, statsEl, legendEl, pop, msgEl, zipIn, cmpBox, xBtn, hoverT = null;
 
   function injectCss() {
     if (document.getElementById('dl-css')) return;
     var s = document.createElement('style');
     s.id = 'dl-css';
     s.textContent =
-      '.dl-tile{flex:none;position:relative;top:-3px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 12px;background:#fff;border:1.5px solid #3f6f8f;border-radius:12px;box-shadow:0 2px 8px rgba(31,42,68,.06);cursor:pointer;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
-      '.pagehead .meter .bar{min-width:10px}' +
+      '.dl-tile{flex:none;position:relative;top:-5px;box-sizing:border-box;width:40px;height:40px;padding:0;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;background:#fff;border:1.5px solid #3f6f8f;border-radius:10px;box-shadow:0 2px 6px rgba(31,42,68,.06);cursor:pointer;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
       '.dl-tile:hover,.dl-tile[aria-expanded="true"]{border-color:#3f6f8f}' +
       '.dl-tile:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px}' +
-      '.dl-tl{font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1.15;color:#5b6472;text-align:left}' +
-      '.dl-tn{font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;order:-1}' +
+      '.dl-sky{position:absolute;left:0;top:0;width:100%;height:100%;display:block;opacity:.55;pointer-events:none}' +
+      '.dl-tl,.dl-tn{position:relative;z-index:1}' +
+      '.dl-tl{font-size:5.4px;font-weight:800;letter-spacing:.02em;text-transform:uppercase;line-height:1.1;color:#3d4960;text-align:center;white-space:nowrap;margin-top:-1.5px}' +
+      '.dl-tn{font-size:20px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;order:-1}' +
       '.dl-float{position:absolute;z-index:45;left:0;top:0;display:none}' +
       '.dl-float.on{display:block;animation:dlin .12s ease-out}' +
       '@keyframes dlin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}' +
@@ -332,8 +333,64 @@
       '.dl-msg{margin-top:8px;font-size:12px;font-weight:700;color:#5b6472;min-height:0}' +
       '.dl-msg:empty{display:none}' +
       '.dl-msg.bad{color:#c0392b}' +
-      '@media(max-width:600px){.pagehead .meter{margin-bottom:10px}.dl-tile{top:0}.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}.dl-tile{height:34px;padding:0 9px;gap:6px}.dl-tn{font-size:21px}}';
+      '@media(max-width:600px){.pagehead .meter{margin-bottom:10px}.dl-tile{top:0}.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}}';
     document.head.appendChild(s);
+  }
+
+  /* ---------- the live sky behind the tile ----------
+     Colors run through the real day: night, dawn at sunrise, midday at solar noon, dusk at sunset, night again.
+     The sun crosses the box from sunrise to sunset; at night a moon and a few stars show. */
+  var SKY = {
+    night: { c: ['#aab0cc', '#b9bfd8', '#c9cde0'], sun: '#f4eed0' },
+    dawn:  { c: ['#f6d9d0', '#f7e6c8', '#fff4dc'], sun: '#f0a35a' },
+    day:   { c: ['#cfe3f1', '#e6f0f4', '#fbf3d6'], sun: '#f2c04e' },
+    dusk:  { c: ['#a9a2cc', '#e5b7b0', '#f6d19a'], sun: '#e07f4f' }
+  };
+  function hex2(h) { return [parseInt(h.substr(1, 2), 16), parseInt(h.substr(3, 2), 16), parseInt(h.substr(5, 2), 16)]; }
+  function mixHex(a, b, t) {
+    var x = hex2(a), y = hex2(b), o = [], k;
+    for (k = 0; k < 3; k++) o.push(Math.round(x[k] + (y[k] - x[k]) * t));
+    return 'rgb(' + o.join(',') + ')';
+  }
+  function skyMarkup() {
+    var st = '', P = [[12, 15, 2.2], [50, 10, 2.6], [30, 86, 2], [90, 70, 2], [62, 55, 1.6]], k, rays = '';
+    for (k = 0; k < P.length; k++) st += '<circle cx="' + P[k][0] + '" cy="' + P[k][1] + '" r="' + P[k][2] + '" fill="#fff"/>';
+    for (k = 0; k < 360; k += 22) rays += '<line x1="0" y1="0" x2="' + (200 * Math.cos(k * Math.PI / 180)).toFixed(1) + '" y2="' + (200 * Math.sin(k * Math.PI / 180)).toFixed(1) + '" stroke="#fff" stroke-opacity=".3" stroke-width="6"/>';
+    return '<svg class="dl-sky" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">' +
+      '<defs><linearGradient id="dl-skyg" x1="0" y1="0" x2="0" y2="1"><stop class="dl-s0" offset="0"/><stop class="dl-s1" offset=".6"/><stop class="dl-s2" offset="1"/></linearGradient></defs>' +
+      '<rect width="100" height="100" fill="url(#dl-skyg)"/>' +
+      '<g class="dl-rays">' + rays + '</g><g class="dl-stars">' + st + '</g>' +
+      '<g class="dl-sun"><circle r="30"/><circle r="8"/></g>' +
+      '<g class="dl-moon"><circle cx="80" cy="20" r="18" fill="#fff" fill-opacity=".35"/><circle cx="80" cy="20" r="7" fill="#fff"/></g></svg>';
+  }
+  function paintSky() {
+    if (!skyEls || !S.loc) return;
+    var now = Date.now(), sm = sunMs(S.loc.lat, S.loc.lon, S.t.y, S.todayIdx), H = 36e5, A, B, f, t = -1, night = 1, a, b, k;
+    if (sm.none) { A = sm.none === 'up' ? SKY.day : SKY.night; B = A; f = 0; night = sm.none === 'up' ? 0 : 1; }
+    else {
+      var noon = (sm.rise + sm.set) / 2;
+      if (now < sm.rise - H || now > sm.set + H) { A = B = SKY.night; f = 0; }
+      else if (now < sm.rise) { A = SKY.night; B = SKY.dawn; f = (now - (sm.rise - H)) / H; }
+      else if (now < noon) { A = SKY.dawn; B = SKY.day; f = (now - sm.rise) / (noon - sm.rise); }
+      else if (now < sm.set) { A = SKY.day; B = SKY.dusk; f = (now - noon) / (sm.set - noon); }
+      else { A = SKY.dusk; B = SKY.night; f = (now - sm.set) / H; }
+      t = (now - sm.rise) / (sm.set - sm.rise);
+      night = (A === SKY.night ? 1 - f : 0) + (B === SKY.night ? f : 0);
+      if (A === SKY.night && B === SKY.night) night = 1;
+    }
+    skyEls.top.setAttribute('stop-color', mixHex(A.c[0], B.c[0], f));
+    skyEls.mid.setAttribute('stop-color', mixHex(A.c[1], B.c[1], f));
+    skyEls.bot.setAttribute('stop-color', mixHex(A.c[2], B.c[2], f));
+    var sunCol = mixHex(A.sun, B.sun, f);
+    var tt = Math.max(0, Math.min(1, t)), sx = 15 + 70 * tt, sy = 75 - 55 * Math.sin(Math.PI * tt);
+    var vis = t < 0 ? Math.max(0, 1 - (-t * (sm.set - sm.rise) / (H / 2))) : (t > 1 ? Math.max(0, 1 - ((t - 1) * (sm.set - sm.rise) / (H / 2))) : 1);
+    if (sm.none === 'up') { vis = 1; sx = 50; sy = 20; }
+    if (sm.none === 'down') vis = 0;
+    skyEls.sun.setAttribute('transform', 'translate(' + sx.toFixed(1) + ' ' + sy.toFixed(1) + ')');
+    skyEls.rays.setAttribute('transform', 'translate(' + sx.toFixed(1) + ' ' + sy.toFixed(1) + ')');
+    skyEls.sun.style.opacity = vis; skyEls.rays.style.opacity = vis * (1 - night);
+    var cs = skyEls.sun.children; cs[0].setAttribute('fill', sunCol); cs[0].setAttribute('fill-opacity', '.28'); cs[1].setAttribute('fill', sunCol);
+    skyEls.moon.style.opacity = night; skyEls.stars.style.opacity = night * .9;
   }
 
   function build() {
@@ -342,7 +399,8 @@
     tile.className = 'dl-tile';
     tile.setAttribute('aria-haspopup', 'dialog');
     tile.setAttribute('aria-expanded', 'false');
-    tile.innerHTML = '<span class="dl-tl">Hours of<br>daylight</span><span class="dl-tn"></span>';
+    tile.innerHTML = skyMarkup() + '<span class="dl-tl">Hours of<br>daylight</span><span class="dl-tn"></span>';
+    skyEls = { top: tile.querySelector('.dl-s0'), mid: tile.querySelector('.dl-s1'), bot: tile.querySelector('.dl-s2'), rays: tile.querySelector('.dl-rays'), sun: tile.querySelector('.dl-sun'), moon: tile.querySelector('.dl-moon'), stars: tile.querySelector('.dl-stars') };
     tileNum = tile.querySelector('.dl-tn');
     host.appendChild(tile);
 
@@ -484,6 +542,7 @@
     var th = series(S.loc.lat, S.loc.lon, S.t.y, S.n).day[S.todayIdx];
     tileNum.textContent = Math.floor(Math.round(th * 60) / 60);
     var tc = changeParts(S.todayIdx);
+    paintSky();
 
     tile.setAttribute('aria-label', 'Hours of daylight today in ' + S.loc.name + ': ' + fmtLong(th) + ', ' + (tc.amt ? tc.word.toLowerCase() + ' ' + tc.amt + ' a day' : 'holding steady') + '. Open the daylight meter.');
     backBtn.hidden = (S.sel == null || S.sel === S.todayIdx);
@@ -894,6 +953,8 @@
     wirePop();
     wireFloat();
     drawHeader();
+    clearInterval(skyTimer);
+    skyTimer = setInterval(paintSky, 60000);
 
     if (window.ResizeObserver) {
       var last = 0;
