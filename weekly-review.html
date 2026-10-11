@@ -82,6 +82,19 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 .wheels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .wheel{padding:10px 14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left;min-height:0}.wheelpic{flex:none;line-height:0}.wheeltext{display:flex;flex-direction:column;gap:3px;min-width:0}
 .wheel.green{background:var(--goodbg)}.wheel.dark{background:var(--ink);color:#fff}
+/* v5.63, Oct 11, 2026: the Clarity Compass wheel is a real button now, styled to look
+   exactly like the other two cards, plus a chevron that turns when the drawer is open. */
+.wheelbtn{font-family:inherit;width:100%;text-align:left;cursor:pointer;color:inherit;font-size:inherit}
+.wheelbtn:hover{border-color:var(--accent)}
+.wheelbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wheelbtn.on{border-color:var(--accent);box-shadow:0 0 0 2px rgba(63,111,143,.14)}
+.wcar{display:inline-block;font-size:9px;margin-left:5px;color:var(--faint);transition:transform .2s}
+.wheelbtn.on .wcar{transform:rotate(180deg);color:var(--accent)}
+.compassdrawer{overflow:hidden;max-height:0;transition:max-height .3s ease}
+.compassdrawer.open{max-height:900px}
+.compasscard{margin-top:12px}
+.compasscard .compassrow{border-top:0;padding-top:0}
+@media (prefers-reduced-motion: reduce){.compassdrawer,.wcar{transition:none}}
 .lab{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
 .lab.green{color:var(--good)}.lab.gold{color:#c6a63f}.labsub{font-weight:400;text-transform:none;letter-spacing:0;color:var(--faint)}
 .n30{font-size:30px;font-weight:800;line-height:1}.n30 small{font-size:12.5px;font-weight:400;color:var(--muted)}
@@ -864,9 +877,22 @@ html.py-embed .swshadebtn{display:none!important}
 
     <!-- three wheels -->
     <div class="wheels">
-      <div class="card wheel"><div class="wheelpic" id="dial"></div><div class="wheeltext"><div class="lab">Coverage</div><div class="n30" id="covN"></div><div class="sub" id="covSub"></div></div></div>
+      <!-- v5.63, Oct 11, 2026, Scott: "Coverage" is now "Clarity Compass", and tapping this wheel
+           opens the Compass drawer that sits directly underneath these three wheels. -->
+      <button type="button" class="card wheel wheelbtn" id="covWheel" aria-expanded="false" aria-controls="compassDrawer" title="Tap to open the Clarity Compass"><div class="wheelpic" id="dial"></div><div class="wheeltext"><div class="lab">Clarity Compass <span class="wcar" aria-hidden="true">&#9660;</span></div><div class="n30" id="covN"></div><div class="sub" id="covSub"></div></div></button>
       <div class="card wheel green"><div class="wheelpic" id="ring"></div><div class="wheeltext"><div class="lab green">Consistency</div><div class="n30" id="conN"></div><div class="sub" id="conSub"></div></div></div>
       <div class="card wheel dark"><div class="wheelpic" id="retRing"></div><div class="wheeltext"><div class="lab gold">Retention</div><div class="sub light" id="retSub">Four rounds, about three minutes.</div><a class="cta" href="#quiz" id="dealBtn">Deal the quiz</a></div></div>
+    </div>
+
+    <!-- v5.63: the Compass drawer. It used to live at the foot of the habit table, a long way
+         from the wheel that describes it. It now opens where the tap happened. -->
+    <div class="compassdrawer" id="compassDrawer">
+      <div class="card block compasscard">
+        <div class="compassrow">
+          <div class="compassdial"><div id="dial2"></div><div class="tiny">CLARITY COMPASS</div></div>
+          <div class="tickbars"><div class="lab">Ticks by Compass point</div><div id="tickBars"></div></div>
+        </div>
+      </div>
     </div>
 
     <!-- sleep synopsis -->
@@ -892,10 +918,6 @@ html.py-embed .swshadebtn{display:none!important}
       <div class="h2" style="display:flex;align-items:center;gap:8px"><img class="h2icon" data-ic="dots" alt="">The week, habit by habit<button class="btn" id="shadeAllBtn" style="margin-left:auto;font-size:11px" title="Open or close every Insight, Outcome and Identify box at once">Expand notes</button></div>
       <div class="gridrow">
         <div class="gridwrap"><table id="habitGrid"></table></div>
-      </div>
-      <div class="compassrow">
-        <div class="compassdial"><div id="dial2"></div><div class="tiny">CLARITY COMPASS</div></div>
-        <div class="tickbars"><div class="lab">Ticks by Compass point</div><div id="tickBars"></div></div>
       </div>
     </div>
 
@@ -1005,7 +1027,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
    spelling, and a new spelling can no longer be added next to an old one. */
 /* v5.54, Oct 10, 2026, Scott: yellow names (already met) stay locked, but now carry an x that hides them from This
    Week. The meet up stays in his log. It is the same x the grey names have, so "bring them back" undoes it. */
-const VERSION='v5.62';
+const VERSION='v5.63';
 (function(){ /* v5.55: window shade on the meet ups card, remembered per browser */
   function wire(){
     const b=document.getElementById('swShadeBtn'), c=document.getElementById('swCard'); if(!b||!c)return;
@@ -1098,10 +1120,10 @@ function hrs(m){return (Math.round(m/6)/10).toString();}
 /* v5.62, Oct 11, 2026, Scott: time reads as hours and minutes, not a decimal. Takes minutes. */
 function hmin(m){m=Math.round(m||0);var H=Math.floor(m/60),M=m%60;return H?(H+'h'+(M?' '+M+'m':'')):(M+'m');}
 
-/* v5.62, Oct 11, 2026, Scott: the little birthday line inside This week's meet ups now covers
-   the Monday to Sunday week that starts on the coming Monday, his answer to "which seven days".
-   On a Monday that is today, so the line says "this week"; any other day it is the week ahead
-   and the line says "next week". Nobody with a birthday in that week means no line at all. */
+/* v5.63, Oct 11, 2026, Scott: the birthday line covers from today through the END of next week,
+   so nothing in the current week is missed and next week still gets its notice. The label says
+   which week each one falls in: this week, next week, or both. No birthdays in that stretch
+   means no line at all. */
 function loadBirthdays(){
   var note=el('bdayNote');
   if(!note) return;
@@ -1109,20 +1131,27 @@ function loadBirthdays(){
   sb.from('birthdays').select('person,bmonth,bday').then(function(res){
     var rows=(res&&res.data)||[];
     var today=PY.today();
-    var toMon=(1-dow(today)+7)%7;          /* 0 on a Monday, 1 on a Sunday, 6 on a Tuesday */
-    var start=addDays(today,toMon);
-    var label=(toMon===0)?'this week':'next week';
-    var p=start.split('-').map(Number);
+    var toSun=(7-dow(today))%7;             /* days to the Sunday that ends THIS week */
+    var thisSun=addDays(today,toSun);
+    var lastDay=addDays(thisSun,7);         /* the Sunday that ends NEXT week */
+    var span=0;
+    var d0=new Date(today+'T12:00:00Z'), d1=new Date(lastDay+'T12:00:00Z');
+    span=Math.round((d1-d0)/86400000);
+    var p=today.split('-').map(Number);
     var base=new Date(Date.UTC(p[0],p[1]-1,p[2],12,0,0));
-    var upcoming=[];
-    for(var i=0;i<7;i++){
+    var upcoming=[],anyThis=false,anyNext=false;
+    for(var i=0;i<=span;i++){
       var d=new Date(base.getTime()); d.setUTCDate(d.getUTCDate()+i);
       var m=d.getUTCMonth()+1, dd=d.getUTCDate(), ds=d.toISOString().slice(0,10);
       rows.forEach(function(r){
-        if(r.bmonth===m && r.bday===dd) upcoming.push({person:r.person,when:dname(ds)+' \u00b7 '+fmt(ds)});
+        if(r.bmonth===m && r.bday===dd){
+          if(ds<=thisSun)anyThis=true; else anyNext=true;
+          upcoming.push({person:r.person,when:dname(ds)+' \u00b7 '+fmt(ds)});
+        }
       });
     }
     if(!upcoming.length){ note.innerHTML=''; return; }
+    var label=(anyThis&&anyNext)?'this week and next':(anyThis?'this week':'next week');
     note.innerHTML='\ud83c\udf82 '+(upcoming.length>1?'Birthdays':'Birthday')+' '+label+': '+
       upcoming.map(function(u){ return '<b>'+esc(u.person)+'</b> ('+esc(u.when)+')'; }).join(', ');
   }).catch(function(){ note.innerHTML=''; });
@@ -1498,19 +1527,29 @@ function compute(){
   /* v5.28: Local Safari always sits immediately above National Safari, whatever their saved positions say. */
   {const a=rowsBy['Environmental Health'];if(a){const l=a.indexOf('Local Safari'),n=a.indexOf('National Safari');if(l>-1&&n>-1&&l!==n-1){a.splice(l,1);a.splice(a.indexOf('National Safari'),0,'Local Safari');}}}
   /* v5.49, Oct 9 2026: the week's hours, one rule, same on every page. See the note at VERSION. */
-  let habitMin=0,exMin=0;const exDayM={};
+  let habitMin=0,exMin=0;const exDayM={},habitDayM={};
   Object.keys(rowsBy).forEach(a=>rowsBy[a].forEach(t=>{const m=days.reduce((s,d)=>s+((mins[t]&&mins[t][d])||0),0);
     if(EXERCISE_T.has(t)){exMin+=m;days.forEach(d=>{exDayM[d]=(exDayM[d]||0)+((mins[t]&&mins[t][d])||0);});}
-    else if(!(wsOf[t]&&wsOf[t].count_time===false))habitMin+=m;}));
+    else if(!(wsOf[t]&&wsOf[t].count_time===false)){habitMin+=m;days.forEach(d=>{habitDayM[d]=(habitDayM[d]||0)+((mins[t]&&mins[t][d])||0);});}}));
   days.forEach(d=>{if(!exDayM[d]&&RING[d])exMin+=RING[d];});
   const tallyOf=k=>(D.tally||[]).reduce((a,r)=>a+(+r[k]||0),0);
   const workMin=tallyOf('amz'),pyMin=tallyOf('py'),twMin=tallyOf('treadwell');
+  /* v5.63, Oct 11, 2026, Scott: "the TreadWell number is wrong as that was only one day."
+     Spreading a one-off across the whole week made a real hour look like a daily habit.
+     Each lane now also knows how many days it ACTUALLY happened on, and the line under
+     each bar says so. */
+  const tallyDays=k=>(D.tally||[]).filter(r=>(+r[k]||0)>0).length;
+  const laneDays={
+    habitMin:days.filter(d=>(habitDayM[d]||0)>0).length,
+    exMin:days.filter(d=>((exDayM[d]||0)>0)||RING[d]>0).length,
+    pyMin:tallyDays('py'), twMin:tallyDays('treadwell'), workMin:tallyDays('amz')
+  };
   /* winners and losers, 14 days */
   const d14=[];for(let i=13;i>=0;i--)d14.push(addDays(we,-i));
   const missRun={};const wl=d14.map(d=>{const up=inWin.filter(r=>r.date===d&&!isCounter(r.tracker)).map(r=>AREACOL[r.group]||AREACOL['Not sure yet']);const dn=[];const isPresent=inWin.some(r=>r.date===d);daily.forEach(t=>{const start=firstTick[t]||ws;if(d<start)return;const hit=inWin.some(r=>r.date===d&&r.tracker===t);if(hit){missRun[t]=0;}else if(isPresent){missRun[t]=(missRun[t]||0)+1;dn.push(missRun[t]===1?'#f2cf5b':(missRun[t]===2?'#e0975a':'#c0453b'));}});dn.sort((a,b)=>['#f2cf5b','#e0975a','#c0453b'].indexOf(a)-['#f2cf5b','#e0975a','#c0453b'].indexOf(b));return {d,up,dn};});
   /* v5.4: this week's "Habit making impact?" flags, keyed by tracker. */
   const impact={};(D.impact||[]).forEach(r=>{impact[r.tracker]=!!r.impact;});
-  C={present,tick,mins,cnt,locs,daily,perHabit,done,possible,coverage,pcov,lit,ticksBy,never,votes,voteN,noLine:[...noLine],workMin,habitMin,exMin,pyMin,twMin,sessN:sessWk.length,order,rightDays,streak,stacks,rowsBy,wsOf,areaOf,wl,isCounter,isLoc,isPhoto,firstTick,impact};
+  C={present,tick,mins,cnt,locs,daily,perHabit,done,possible,coverage,pcov,lit,ticksBy,never,votes,voteN,noLine:[...noLine],workMin,habitMin,exMin,pyMin,twMin,laneDays,sessN:sessWk.length,order,rightDays,streak,stacks,rowsBy,wsOf,areaOf,wl,isCounter,isLoc,isPhoto,firstTick,impact};
 }
 
 /* ---------- render ---------- */
@@ -1753,6 +1792,37 @@ function renderSleepDrop(S2){
     };
   }
 }
+
+/* ---------- the Clarity Compass drawer. v5.63, Oct 11, 2026 ----------
+   Scott picked this shape out of three mocks: the Compass used to sit at the foot of the
+   habit table, far from the wheel that describes it. Tapping the Clarity Compass wheel now
+   opens it directly underneath the three wheels, where the tap happened. Closed by default,
+   and whether it was left open is remembered in this browser only. */
+(function(){
+  var W=el('covWheel'), D=el('compassDrawer');
+  if(!W||!D||W._wired)return;
+  W._wired=true;
+  var KEY='py-compass-open';
+  function set(open,remember){
+    D.classList.toggle('open',open);
+    W.classList.toggle('on',open);
+    W.setAttribute('aria-expanded',open?'true':'false');
+    W.title=open?'Tap to close the Clarity Compass':'Tap to open the Clarity Compass';
+    if(remember){ try{ localStorage.setItem(KEY,open?'1':'0'); }catch(e){} }
+  }
+  var start='0';
+  try{ start=localStorage.getItem(KEY)||'0'; }catch(e){ start='0'; }
+  set(start==='1',false);
+  W.addEventListener('click',function(){
+    var open=!D.classList.contains('open');
+    set(open,true);
+    if(open){
+      /* only nudge the page if the drawer opened below the fold */
+      var r=D.getBoundingClientRect();
+      if(r.bottom>window.innerHeight) D.scrollIntoView({behavior:'smooth',block:'nearest'});
+    }
+  });
+})();
 
 /* ---------- What gave me energy. v5.39, Oct 4 2026 ----------
    Scott's calls: the week's lines from the Energy card get a box of their own inside
@@ -3257,7 +3327,9 @@ function render(){
     trainTile();
   el('dial').innerHTML=dial(118);el('dial2').innerHTML=dial(170);
   el('covN').innerHTML=C.coverage.toFixed(1)+'<small> of 7 a day</small>';
-  el('covSub').textContent='Slices grow with the week’s ticks. '+(C.never.length?C.never.length+' never lit. ':'')+(C.pcov!=null?(C.coverage>=C.pcov?'Up from ':'Down from ')+C.pcov.toFixed(1)+' last week.':'');
+  /* v5.63, Oct 11, 2026, Scott wrote this line himself. The old one described the picture
+     instead of saying what the number meant. */
+  el('covSub').textContent='How you showed up this week across different aspects of your life. Every tick is a vote for who you are.';
   el('ring').innerHTML=ring(pct,'#1e8e5a',118,pct+'%');
   el('conN').innerHTML=C.done+'<small> of '+C.possible+'</small>';
   const sevens=Object.keys(C.perHabit).filter(t=>C.perHabit[t].possible>=7&&C.perHabit[t].done===C.perHabit[t].possible).length;
@@ -3274,17 +3346,28 @@ function render(){
     {k:'workMin',name:'Work',fill:'#FF9900',num:'#FF9900',leg:'Work, meetings',cap:true}
   ];
   const nDays=D.days.filter(d=>d<=PY.today()).length;
+  /* v5.63: honest wording per lane. One day's work never reads as a daily average. */
+  function laneLine(k){
+    const m=C[k]||0, n=(C.laneDays&&C.laneDays[k])||0;
+    if(!m) return 'nothing logged';
+    if(n<=1) return hmin(m)+', all on one day';
+    return hmin(m)+' over '+n+' days, about '+hmin(m/n)+' a day';
+  }
   el('hoursSub').textContent=(nDays<7?'week so far, '+nDays+' of 7 days':'full week')+(D.tallyErr?' · calendar hours unavailable':'');
   /* v3.4: no figure beside the bar. Every one of them is in the donut legend. */
-  el('lanes').innerHTML=LANES.map((l,i)=>{const m=C[l.k]||0;const w=Math.min(100,m/2400*100);return '<div class="num" style="color:'+l.num+'">'+(i+1)+'</div><div><div class="lanename">'+l.name+'<span style="margin-left:8px;font-size:11px;font-weight:400;color:#aab2bd">Avg '+hmin((C[l.k]||0)/Math.max(1,nDays))+' a day</span></div><div class="bar"><i style="width:'+w+'%;background:'+l.fill+'"></i>'+'</div></div>';}).join('')+'<div id="hoursAvg" style="grid-column:2;font-size:12px;color:#aab2bd;font-weight:400"></div>';
+  el('lanes').innerHTML=LANES.map((l,i)=>{const m=C[l.k]||0;const w=Math.min(100,m/2400*100);return '<div class="num" style="color:'+l.num+'">'+(i+1)+'</div><div><div class="lanename">'+l.name+'<span style="margin-left:8px;font-size:11px;font-weight:400;color:#aab2bd">'+laneLine(l.k)+'</span></div><div class="bar"><i style="width:'+w+'%;background:'+l.fill+'"></i>'+'</div></div>';}).join('')+'<div id="hoursAvg" style="grid-column:2;font-size:12px;color:#aab2bd;font-weight:400"></div>';
   /* v5.56, Oct 10 2026, Scott: light gray average hours a day under the bars, over the days completed so far (nDays), not the full 7. */
   (function(){const tm=LANES.reduce((a,l)=>a+(C[l.k]||0),0),dd=Math.max(1,nDays);el('hoursAvg').textContent='Avg '+hmin(tm/dd)+' a day, over '+dd+' day'+(dd===1?'':'s')+(nDays<7?' so far':'');})();
   const tot=LANES.reduce((a,l)=>a+(C[l.k]||0),0);let ang=0,arcs='';
-  LANES.forEach(l=>{const m=C[l.k]||0;if(!m||!tot)return;const sweep=360*m/tot;arcs+=arc(85,85,62,ang+.5,Math.max(ang+.5,ang+sweep-.5),l.fill);ang+=sweep;});
-  el('donut').innerHTML='<svg width="150" height="150" viewBox="0 0 170 170">'+(tot?arcs:'<circle cx="85" cy="85" r="62" fill="none" stroke="#e3e7ee" stroke-width="24"/>')+'<text x="85" y="82" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#1f2a44">'+hmin(tot)+'</text><text x="85" y="98" text-anchor="middle" font-family="Arial" font-size="8" letter-spacing="1.5" fill="#5b6472">TRACKED THIS WEEK</text></svg>';
+  LANES.forEach(l=>{const m=C[l.k]||0;if(!m||!tot)return;const sweep=360*m/tot;
+    const share=Math.round(m/tot*100);
+    arcs+=arc(85,85,62,ang+.5,Math.max(ang+.5,ang+sweep-.5),l.fill,esc(l.leg)+' \u00b7 '+hmin(m)+' \u00b7 '+share+'% of the time tracked this week');
+    ang+=sweep;});
+  el('donut').innerHTML='<svg width="150" height="150" viewBox="0 0 170 170">'+(tot?arcs:'<circle cx="85" cy="85" r="62" fill="none" stroke="#e3e7ee" stroke-width="24"/>')+'<text x="85" y="82" text-anchor="middle" font-family="Arial" font-size="26" font-weight="800" fill="#1f2a44">'+hmin(tot)+'</text><text x="85" y="98" text-anchor="middle" font-family="Arial" font-size="7.5" letter-spacing="1" fill="#5b6472">TRACKED THIS WEEK</text></svg>';
   /* v5.62, Oct 11, 2026, Scott: these were bare decimal numbers with no unit on them,
      inside the circle and beside it. Both now read as hours and minutes. */
-  el('donutLegend').innerHTML=LANES.map(l=>'<div><b style="color:'+l.num+'">'+hmin(C[l.k]||0)+'</b><span class="tiny">'+l.leg+'</span></div>').join('');
+  el('donutLegend').innerHTML=LANES.map(l=>{const m=C[l.k]||0;const share=tot?Math.round(m/tot*100):0;
+    return '<div title="'+esc(l.leg)+' \u00b7 '+hmin(m)+' \u00b7 '+share+'% of the time tracked this week"><b style="color:'+l.num+'">'+hmin(m)+'</b><span class="tiny">'+l.leg+'</span></div>';}).join('');
   /* grid */
   /* v4.6: AVG / DAY is the week's minutes spread across every day of the week
      you were present, not across the days you ticked. That is the number that
@@ -3868,7 +3951,9 @@ async function wrImpact(td){
     btn.classList.toggle('on',notesAllOpen);
   });
 })();
-function arc(cx,cy,r,a0,a1,col){if(a1<=a0)return '';const p0=[cx+r*Math.cos((a0-90)*Math.PI/180),cy+r*Math.sin((a0-90)*Math.PI/180)],p1=[cx+r*Math.cos((a1-90)*Math.PI/180),cy+r*Math.sin((a1-90)*Math.PI/180)];return '<path d="M'+p0[0].toFixed(1)+','+p0[1].toFixed(1)+' A'+r+','+r+' 0 '+(a1-a0>180?1:0)+' 1 '+p1[0].toFixed(1)+','+p1[1].toFixed(1)+'" fill="none" stroke="'+col+'" stroke-width="24"/>';}
+/* v5.63, Oct 11, 2026, Scott: a slice can now carry its own rollover, so hovering it
+   says which lane it is, how long, and what share of the tracked week that is. */
+function arc(cx,cy,r,a0,a1,col,tip){if(a1<=a0)return '';const p0=[cx+r*Math.cos((a0-90)*Math.PI/180),cy+r*Math.sin((a0-90)*Math.PI/180)],p1=[cx+r*Math.cos((a1-90)*Math.PI/180),cy+r*Math.sin((a1-90)*Math.PI/180)];return '<path d="M'+p0[0].toFixed(1)+','+p0[1].toFixed(1)+' A'+r+','+r+' 0 '+(a1-a0>180?1:0)+' 1 '+p1[0].toFixed(1)+','+p1[1].toFixed(1)+'" fill="none" stroke="'+col+'" stroke-width="24">'+(tip?'<title>'+tip+'</title>':'')+'</path>';}
 function renderWL(){const R=6,STEP=15,W=38;const maxup=Math.max(1,...C.wl.map(x=>x.up.length)),maxdn=Math.max(1,...C.wl.map(x=>x.dn.length));const Hup=maxup*STEP+10,Hdn=maxdn*STEP+10,zero=Hup+20,width=60+C.wl.length*W+10;let s='<svg width="'+width+'" height="'+(zero+Hdn+30)+'" viewBox="0 0 '+width+' '+(zero+Hdn+30)+'"><line x1="50" y1="'+zero+'" x2="'+(width-10)+'" y2="'+zero+'" stroke="#1f2a44" stroke-width="1.5"/>';C.wl.forEach((x,i)=>{const cx=60+i*W+W/2;x.up.forEach((c,j)=>{s+='<circle cx="'+cx+'" cy="'+(zero-8-j*STEP)+'" r="'+R+'" fill="'+c+'"/>';});x.dn.forEach((c,j)=>{s+='<circle cx="'+cx+'" cy="'+(zero+8+j*STEP)+'" r="'+R+'" fill="'+c+'"/>';});s+='<text x="'+cx+'" y="'+(zero+Hdn+22)+'" text-anchor="middle" font-family="Arial" font-size="9" fill="#5b6472">'+fmt(x.d)+'</text>';if(x.d===D.ws)s+='<line x1="'+(60+i*W)+'" y1="20" x2="'+(60+i*W)+'" y2="'+(zero+Hdn)+'" stroke="#e3e7ee" stroke-dasharray="3 3"/><text x="'+(60+i*W+4)+'" y="14" font-family="Arial" font-size="8" letter-spacing="1" fill="#5b6472">THIS WEEK</text>';});s+='<text x="12" y="'+(zero-Hup/2)+'" transform="rotate(-90 12 '+(zero-Hup/2)+')" text-anchor="middle" font-family="Arial" font-size="8" letter-spacing="1" fill="#5b6472">HABITS DONE</text><text x="12" y="'+(zero+Hdn/2)+'" transform="rotate(-90 12 '+(zero+Hdn/2)+')" text-anchor="middle" font-family="Arial" font-size="8" letter-spacing="1" fill="#5b6472">HABITS MISSED</text></svg>';el('wl').innerHTML=s;el('wlLegend').innerHTML=COMPASS.map(p=>'<span><i style="background:'+AREACOL[p]+'"></i>'+esc(p)+'</span>').join('')+'<span><i style="background:'+AREACOL['Project YOU']+'"></i>Project YOU</span><span><i style="background:#f2cf5b"></i>missed once</span><span><i style="background:#e0975a"></i>missed twice</span><span><i style="background:#c0453b"></i>missed 3+ days</span>';}
 
 /* ---------- quiz ---------- */
