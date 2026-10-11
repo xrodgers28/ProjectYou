@@ -1,4 +1,10 @@
-/* BANDIT BLOCKS v1.1 (Oct 10, 2026)
+/* BANDIT BLOCKS v1.2 (Oct 10, 2026)
+   v1.2: the four meters sit in ONE ROW across the full width of the page, not in a
+   narrow 2x2 panel down the side. In the side panel each brick came out about six
+   pixels tall, which read as empty even when the day was two thirds done. Scott's
+   words: "bandit blocks are not populating". They were populating; they were too
+   small to see. Across the page each brick is roughly double that and the stacks
+   are legible from across the room, which is the whole point of them.
    Named "Time Bandit Meters" when it was built earlier today; Scott picked
    "Bandit Blocks" the same evening. The file keeps its old name so the page
    does not have to be republished to change one word.
@@ -35,7 +41,8 @@
 (function () {
   'use strict';
 
-  var TBM = window.TBM = { version: '1.1', name: 'Bandit Blocks' };
+  var TBM = window.TBM = { version: '1.2', name: 'Bandit Blocks' };
+  var BOX = 330;   /* how tall every meter is. Brick size is worked out from this. */
 
   /* ---------- the one definition ---------- */
   var SEG = TBM.SEG = {
@@ -99,17 +106,20 @@
     '  --settlec:cubic-bezier(.33,.9,.42,1);--overshoot:cubic-bezier(.32,1.14,.5,1);',
     '  background:#fff;border:1px solid #e3e7ee;border-radius:16px;padding:14px 14px 16px;',
     '  box-shadow:0 8px 22px rgba(31,42,68,.06)}',
-    '.tbm h2{font-size:14px;font-weight:800;color:#1f2a44;margin:0 0 2px;letter-spacing:-.01em}',
-    '.tbm .tbmsub{font-size:11.5px;color:#5b6472;line-height:1.45;margin:0 0 12px}',
-    '.tbm .tbmgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}',
-    '.tbm .met{background:#fbfcfd;border:1px solid #edf0f5;border-radius:12px;padding:10px 8px 9px;',
+    '.tbm h2{font-size:17px;font-weight:800;color:#1f2a44;margin:0 0 2px;letter-spacing:-.01em}',
+    '.tbm .tbmsub{font-size:13px;color:#5b6472;line-height:1.45;margin:0 0 12px}',
+    /* ONE ROW, four across. Falls to two across on a narrow window, never to one
+       column on a laptop, because the row is the comparison. */
+    '.tbm .tbmgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}',
+    '@media (max-width:900px){.tbm .tbmgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}',
+    '.tbm .met{background:#fbfcfd;border:1px solid #edf0f5;border-radius:12px;padding:13px 10px 11px;',
     '  display:flex;flex-direction:column;align-items:center}',
-    '.tbm .big{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:25px;font-weight:800;',
+    '.tbm .big{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:34px;font-weight:800;',
     '  color:#1e8e5a;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}',
-    '.tbm .big .of{font-size:15px;color:#8a8f99;font-weight:700}',
+    '.tbm .big .of{font-size:20px;color:#8a8f99;font-weight:700}',
     '.tbm .biglab{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#8a8f99;',
     '  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;margin:1px 0 9px}',
-    '.tbm .mname{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:#5b6472;',
+    '.tbm .mname{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#5b6472;',
     '  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;margin-top:9px;text-align:center;line-height:1.3}',
     '.tbm .mwrap{position:relative}',
     /* pile */
@@ -123,19 +133,19 @@
     '.tbm .stacks{display:flex;gap:4px;align-items:flex-end;background:#eef2f8;border:1px solid #e3e7ee;',
     '  border-radius:9px;padding:6px 5px}',
     '.tbm .scol{display:flex;flex-direction:column;align-items:center;gap:3px}',
-    '.tbm .stube{width:16px;background:#fff;border:1px solid #e3e7ee;border-radius:5px;display:flex;',
+    '.tbm .stube{width:24px;background:#fff;border:1px solid #e3e7ee;border-radius:5px;display:flex;',
     '  flex-direction:column-reverse;padding:2px;gap:2px;overflow:hidden;position:relative}',
-    '.tbm .skey{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:7px;color:#8a8f99;letter-spacing:.02em}',
+    '.tbm .skey{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;font-size:8.5px;color:#8a8f99;letter-spacing:.02em}',
     '.tbm .scol.full .skey{color:#1e8e5a;font-weight:700}',
     /* thermo */
-    '.tbm .thermo{width:26px;background:#eef2f8;border:1px solid #e3e7ee;border-radius:13px;display:flex;',
+    '.tbm .thermo{width:40px;background:#eef2f8;border:1px solid #e3e7ee;border-radius:13px;display:flex;',
     '  flex-direction:column-reverse;padding:3px;gap:2px;overflow:hidden;position:relative}',
     /* caption */
     '.tbm .cap{text-align:center;font-size:11px;font-weight:800;color:#1e8e5a;margin-top:8px;min-height:15px;',
     '  opacity:0;transform:translateY(5px);',
     '  transition:opacity var(--settle) var(--overshoot),transform var(--settle) var(--overshoot)}',
     '.tbm .cap.on{opacity:1;transform:none}',
-    '.tbm .foot{font-size:10.5px;color:#8a8f99;line-height:1.5;margin-top:11px;padding-top:9px;border-top:1px solid #edf0f5}',
+    '.tbm .foot{font-size:12.5px;color:#8a8f99;line-height:1.5;margin-top:11px;padding-top:9px;border-top:1px solid #edf0f5}',
     '.tbm .foot b{color:#5b6472}',
     '@media (prefers-reduced-motion:reduce){.tbm *{transition:none !important}}'
   ].join('');
@@ -164,7 +174,7 @@
   /* ---------- the four meters ---------- */
   /* A: one column, brick height set by minutes, section colours, in list order */
   function drawColumn(host, data, equal) {
-    var H = 212, inner = H - 14;
+    var H = BOX, inner = H - 14;
     var all = [], doneMarks = [];
     data.rows.forEach(function (r) {
       var ms = equal ? [{ full: true, mins: SEG.minutes(r) }] : marksOf(r);
@@ -182,7 +192,7 @@
 
     var wrap = document.createElement('div'); wrap.className = 'mwrap';
     var pile = document.createElement('div'); pile.className = 'pile';
-    pile.style.width = '100%'; pile.style.height = H + 'px';
+    pile.style.width = '100%'; pile.style.maxWidth = '190px'; pile.style.height = H + 'px';
     wrap.appendChild(pile);
 
     /* the daily goal line: where the stack reaches when everything is done */
@@ -211,7 +221,7 @@
      scale is shared, and it is each section's GOAL LINE that sits low or high depending
      on how much that part of life actually asks of you today. */
   function drawStacks(host, data) {
-    var H = 212;
+    var H = BOX;
     var live = ORDER.filter(function (s) {
       return data.rows.some(function (r) { return r.section === s; });
     });
@@ -267,7 +277,7 @@
 
   /* C: the slim tube with the goal line across it */
   function drawThermo(host, data) {
-    var H = 212, inner = H - 8;
+    var H = BOX, inner = H - 8;
     var all = [], doneM = [];
     data.rows.forEach(function (r) {
       marksOf(r).forEach(function (m) {
@@ -306,6 +316,12 @@
      the component fetches them itself, so there is still only one component. */
   TBM.mount = function (opts) {
     style();
+    /* The Daily Habit Tracker still wraps this in a two column grid from when the
+       meters lived down the side. Stand that down so the row runs the full width.
+       Harmless if the wrapper is not there. */
+    var cols = document.getElementById('tbmcols');
+    if (cols) { cols.style.display = 'block'; }
+    if (opts.el) { opts.el.style.display = 'block'; opts.el.style.marginBottom = '18px'; }
     TBM._el = opts.el; TBM._sb = opts.sb;
     if (opts.rows) return TBM.refresh(opts.rows);
     return opts.sb.from('daily_template').select('*').then(function (r) {
