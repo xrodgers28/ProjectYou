@@ -301,16 +301,23 @@
   ];
 
   /* ---------- mount ---------- */
-  /* rows: the daily_template rows the page already holds. sb: the page's client. */
+  /* sb: the page's client. rows: the daily_template rows, when the page already
+     holds them. A page that does not (the Daily Habit Tracker) leaves rows out and
+     the component fetches them itself, so there is still only one component. */
   TBM.mount = function (opts) {
     style();
     TBM._el = opts.el; TBM._sb = opts.sb;
-    return TBM.refresh(opts.rows);
+    if (opts.rows) return TBM.refresh(opts.rows);
+    return opts.sb.from('daily_template').select('*').then(function (r) {
+      TBM._rows = r.data || [];
+      return TBM.refresh(TBM._rows);
+    }, function () { return TBM.refresh([]); });
   };
 
   TBM.refresh = function (rows) {
     var el = TBM._el, sb = TBM._sb;
     if (!el) return Promise.resolve();
+    if (!rows) rows = TBM._rows || [];
     var day = (window.PY && window.PY.today) ? window.PY.today() : null;
     var counting = (rows || []).filter(SEG.counts);
     return sb.from('todos').select('task,done,skipped')
