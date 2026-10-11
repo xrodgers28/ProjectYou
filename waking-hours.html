@@ -105,7 +105,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>How I Spend My Waking Hours</h1><span class="ver">v0.1</span>
+  <div class="secbar"><h1>How I Spend My Waking Hours</h1><span class="ver">v0.2</span>
     <div class="weeknav"><button class="btn" id="prev">&larr; Previous</button><span class="weeklabel" id="weeklabel"></span><button class="btn" id="next">Next &rarr;</button></div>
   </div>
   <div class="page">
@@ -166,16 +166,18 @@ const COLORS=['#3f6f8f','#e07a3f','#4aa36c','#c0453b','#8e6bbf','#d9a62e','#2f9f
 /* ---------- the starting list: what Project YOU already tracks, this week's real numbers ---------- */
 const WEEK0='2026-10-05';
 const SEED=[
- {k:'desk',label:'At my desk (Amazon work)',z:'chart',h:0,conf:'need',note:'No desk-only data exists. Your work calendar shows 30.7h booked and all of it is counted under meetings, so type your own number.'},
- {k:'meet',label:'In meetings',z:'chart',h:30.67,conf:'measured',note:'Work calendar events Mon to Fri, overlaps removed (1,840 min).'},
+ {k:'desk',label:'At my desk',z:'chart',group:true,h:0},
+ {k:'d_amz',p:'desk',label:'Amazon work (not in meetings)',z:'chart',h:6.5,conf:'worked',note:'Your own Amazon blocks, 390 min. Gets more accurate once meetings are tagged.'},
+ {k:'d_py',p:'desk',label:'Project YOU',z:'chart',h:14.73,conf:'measured',note:'Day tally (884 min).'},
+ {k:'meet',label:'In meetings (Amazon)',z:'chart',h:30.67,conf:'worked',note:'All Amazon calendar events Mon to Fri, overlaps removed (1,840 min). Includes anything that was not a real meeting until events are tagged.'},
  {k:'commute',label:'Commuting',z:'chart',group:true,h:0},
- {k:'c_train',p:'commute',label:'On the train',z:'chart',h:1.86,conf:'worked',note:'Commute total (4.7h) minus the three lines below.'},
+ {k:'c_train',p:'commute',label:'On the train',z:'chart',h:2.16,conf:'worked',note:'Commute blocks (4.7h) minus the platform, bike and recorded walks.'},
  {k:'c_plat',p:'commute',label:'Waiting on the platform',z:'chart',h:0.67,conf:'measured',note:'Train platform blocks, 40 min.'},
  {k:'c_bike',p:'commute',label:'On my bike to the stations',z:'chart',h:0.28,conf:'worked',note:'Greenwich rides Mon evening and Tue morning.'},
- {k:'c_walk',p:'commute',label:'Walking to and from the office',z:'chart',h:1.91,conf:'worked',note:'Manhattan walks on office days (6 walks, moving time). Assumes those walks are the commute.'},
+ {k:'c_walk',p:'commute',label:'Walking to and from the office',z:'chart',h:2.58,conf:'rule',note:'8 walks (4 office days, no Friday). 5 recorded on Strava (1.6h), 3 missing (Tue x2, Thu morning) filled in at the 19 min average.'},
  {k:'bike',label:'On a bike (not commuting)',z:'chart',h:0.21,conf:'worked',note:'Ride minutes (29) minus the station rides.'},
- {k:'zingo',label:'Zingo walk in the morning before 8am',z:'chart',h:1.49,conf:'measured',note:'Strava walks starting before 8am: Tue, Wed, Thu, Fri (Sat started at 8:31).'},
- {k:'walks',label:'Other walks',z:'chart',h:0.36,conf:'measured',note:'Sat morning walk, Old Greenwich.'},
+ {k:'zingo',label:'Zingo walks (any time of day)',z:'chart',h:1.85,conf:'measured',note:'The five Greenwich walks: Tue to Fri before 8am plus Sat 8:31am.'},
+ {k:'walks',label:'Other walks',z:'chart',h:0.3,conf:'measured',note:'Fri Manhattan walk (not a commute day).'},
  {k:'runs',label:'Runs',z:'chart',h:0.15,conf:'measured',note:'Two short runs in Manhattan.'},
  {k:'social',label:'Social',z:'chart',group:true,h:0},
  {k:'s_friend',p:'social',label:'Face to face with a friend',z:'chart',h:4.75,conf:'measured',note:'Coffee with Claire 90 min, Coffee and AI with Kamil 75, Get together with James 120.'},
@@ -183,13 +185,13 @@ const SEED=[
  {k:'s_son',p:'social',label:'Being a good dad',z:'chart',h:1.75,conf:'measured',note:'105 min logged Tue.'},
  {k:'s_culture',p:'social',label:'Culture events',z:'chart',h:0,conf:'measured',note:'None this week.'},
  {k:'safari',label:'Safaris (new places)',z:'chart',h:4.17,conf:'measured',note:'Local Safari, Red Hook, Tue.'},
- {k:'py',label:'Project YOU',z:'chart',h:14.73,conf:'measured',note:'Day tally (884 min).'},
  {k:'tw',label:'TreadWell',z:'chart',h:1.75,conf:'measured',note:'Day tally (105 min), Tue only.'},
- {k:'mf',label:'Mental Fitness apps (Elevate, Imprint, Impulse)',z:'chart',h:1.5,conf:'measured',note:'90 min logged, 6 days.'},
- {k:'ai',label:'AI Workout',z:'chart',h:0.53,conf:'measured',note:'32 min, 7 days.'},
- {k:'mc',label:'MasterClass',z:'chart',h:1.17,conf:'measured',note:'70 min, 2 days.'},
- {k:'med',label:'Meditation',z:'chart',h:1.0,conf:'measured',note:'60 min, 6 days.'},
- {k:'stretch',label:'Stretching',z:'chart',h:0.75,conf:'measured',note:'45 min, 3 days.'},
+ {k:'mind',label:'Mind and body habits',z:'chart',group:true,h:0},
+ {k:'m_mf',p:'mind',label:'Mental Fitness apps (Elevate, Imprint, Impulse)',z:'chart',h:1.5,conf:'measured',note:'90 min logged, 6 days.'},
+ {k:'m_ai',p:'mind',label:'AI Workout',z:'chart',h:0.53,conf:'measured',note:'32 min, 7 days.'},
+ {k:'m_mc',p:'mind',label:'MasterClass',z:'chart',h:1.17,conf:'measured',note:'70 min, 2 days.'},
+ {k:'m_med',p:'mind',label:'Meditation',z:'chart',h:1.0,conf:'measured',note:'60 min, 6 days.'},
+ {k:'m_str',p:'mind',label:'Stretching',z:'chart',h:0.75,conf:'measured',note:'45 min, 3 days.'},
  {k:'home',label:'Home and household (Irvine)',z:'chart',h:4.75,conf:'measured',note:'Irvine blocks on the calendar, 285 min.'},
  {k:'eat',label:'Eating',z:'chart',h:0.45,conf:'rule',note:'Only 27 to 30 min logged, so almost certainly under-counted.'},
  {k:'balance',label:'Balance practice',z:'chart',h:0,conf:'measured',note:'Not done this week. Here so the framework is ready.'},
