@@ -1,4 +1,7 @@
-/* TIME BANDIT METERS v1.0 (Oct 10, 2026)
+/* BANDIT BLOCKS v1.1 (Oct 10, 2026)
+   Named "Time Bandit Meters" when it was built earlier today; Scott picked
+   "Bandit Blocks" the same evening. The file keeps its old name so the page
+   does not have to be republished to change one word.
    ---------------------------------------------------------------------------
    The four stacking meters that sit on the left of the Daily Habits page.
    Each one answers the same question a different way: how much of today's
@@ -32,7 +35,7 @@
 (function () {
   'use strict';
 
-  var TBM = window.TBM = { version: '1.0' };
+  var TBM = window.TBM = { version: '1.1', name: 'Bandit Blocks' };
 
   /* ---------- the one definition ---------- */
   var SEG = TBM.SEG = {
@@ -333,8 +336,8 @@
 
     el.className = 'tbm';
     el.innerHTML =
-      '<h2>Time Bandit Meters</h2>' +
-      '<p class="tbmsub">Every brick is one ten minute block of habit time banked today. ' +
+      '<h2>Bandit Blocks</h2>' +
+      '<p class="tbmsub">Every block is ten minutes of habit time you took back today. ' +
       'The number is the same one in the middle of the Time Bandit Wheel. ' +
       'The dashed line is the day\'s goal.</p>' +
       '<div class="tbmgrid" id="tbmgrid"></div>' +
