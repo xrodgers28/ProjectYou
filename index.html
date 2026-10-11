@@ -1237,7 +1237,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.51</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.52</span><span class="date"></span><a class="waiting" id="waitchip" href="staging-area.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.53</span><span class="date"></span><a class="waiting" id="waitchip" href="staging-area.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -6209,8 +6209,13 @@ function cxLooksLikeCommute(m) { return !!m && (!m.tov || m.tov === 'nomeeting')
    Day totals are not changed by this tag. */
 const CX_MEET_FROM = '2026-10-11';
 let cxNotMeet = new Set();
+/* v6.53, Oct 11 2026 (Scott): a "With Åsa" tag on any event, any day, so the Waking Hours chart can
+   count time together from the calendar. Same pattern: a "With Åsa?" chip only SUGGESTS when the title
+   names her; the menu button tags any event. tag_override 'asa'. Day totals are not changed. */
+const CX_ASA_RE = /(\u00e5sa|\basa\b|\bwife\b)/i;
+function cxLooksLikeAsa(m) { return !!m && (!m.tov || m.tov === 'nomeeting') && !m.skipped && CX_ASA_RE.test(String(m.t || '')); }
 function cxLooksLikeMeeting(m) {
-  return !!m && !!m.amz && !m.tov && !m.skipped && !cxLooksLikeCommute(m) &&
+  return !!m && !!m.amz && !m.tov && !m.skipped && !cxLooksLikeCommute(m) && !cxLooksLikeAsa(m) &&
          !cxNotMeet.has(String(m.t || '').trim());
 }
 async function cxLoadNotMeet() {
@@ -6394,12 +6399,14 @@ function cxDrawGrid() {
     const ht = Math.max(11, (m.e - m.s) * CX_PX);
     const cmt = (m.tov === 'commute' && cxDay >= CX_SUB_FROM);
     const cls = (m.amz && !cmt ? ' amz' : '') + (m.skipped ? ' skip' : '') + (m.moved ? ' moved' : '') + (cmt ? ' commute' : '');
-    const line2 = (cmt ? 'Commute \u00b7 ' : (m.tov === 'meeting' && cxDay >= CX_MEET_FROM ? 'Meeting \u00b7 ' : '')) + (m.sub || (cxHHMM(m.s) + ' to ' + cxHHMM(m.e)));
+    const line2 = (cmt ? 'Commute \u00b7 ' : (m.tov === 'meeting' && cxDay >= CX_MEET_FROM ? 'Meeting \u00b7 ' : (m.tov === 'asa' ? 'With \u00c5sa \u00b7 ' : ''))) + (m.sub || (cxHHMM(m.s) + ' to ' + cxHHMM(m.e)));
     const sugChip = (cxDay >= CX_SUB_FROM && cxLooksLikeCommute(m))
       ? '<span class="cxsug" data-cxsug="' + i + '" title="Looks like a commute. Tap to count it as Commute.">Commute?</span>' : '';
     const meetChip = (cxDay >= CX_MEET_FROM && cxLooksLikeMeeting(m))
       ? '<span class="cxsug" data-cxmeet="' + i + '" title="Is this a meeting? Tap to count it as one.">Meeting?</span>' : '';
-    const dup = sugChip + meetChip + (m.dup > 1 ? '<span class="cxdup">' + m.dup + ' bookings</span>' : '') +
+    const asaChip = (cxLooksLikeAsa(m))
+      ? '<span class="cxsug" data-cxasa="' + i + '" title="Time with \u00c5sa? Tap to count it.">With \u00c5sa?</span>' : '';
+    const dup = sugChip + meetChip + asaChip + (m.dup > 1 ? '<span class="cxdup">' + m.dup + ' bookings</span>' : '') +
                 (m.tmov ? '<span class="cxdup">moved</span>' : '');
     /* One meeting alone keeps the exact geometry it always had. */
     const pos = n < 2 ? 'left:38px;right:10px'
@@ -7416,6 +7423,7 @@ function cxOpenMenu(i, x, y) {
        (m.skipped ? 'Count this again' : 'Take out of the count') + '</button>';
   h += '<button data-cxact="social"><i style="background:#4a7fa8"></i>Log as a Social Moment</button>';
   h += '<button data-cxact="commute"><i style="background:#b0763f"></i>' + (m.tov === 'commute' ? 'Not a commute' : 'Make this Commute') + '</button>';
+  h += '<button data-cxact="asa"><i style="background:#c0453b"></i>' + (m.tov === 'asa' ? 'Not time with \u00c5sa' : 'Log as time with \u00c5sa') + '</button>';
   if (m.amz && cxDay >= CX_MEET_FROM) {
     h += '<button data-cxact="meeting"><i style="background:#e8912f"></i>' + (m.tov === 'meeting' ? 'Not a meeting (undo)' : 'Make this a Meeting') + '</button>';
     if (m.tov !== 'nomeeting') h += '<button data-cxact="nomeeting"><i style="background:#c9d0d8"></i>Not a meeting, stop asking</button>';
@@ -7461,17 +7469,18 @@ async function cxTagMeetingKind(i, kind) {
   const was = m.tov || '';
   const title = String(m.t || '').trim();
   const wasNot = cxNotMeet.has(title);
-  if (kind === 'meeting') m.tov = (was === 'meeting') ? '' : 'meeting';
+  if (kind === 'asa') m.tov = (was === 'asa') ? '' : 'asa';
+  else if (kind === 'meeting') m.tov = (was === 'meeting') ? '' : 'meeting';
   else { m.tov = 'nomeeting'; if (title) cxNotMeet.add(title); }
   cxDraw();
   const { error } = await sb.from('calendar_events')
     .update({ tag_override: m.tov || null, updated_at: new Date().toISOString() }).in('id', m.ids);
   if (error) {
-    m.tov = was; if (kind !== 'meeting' && !wasNot) cxNotMeet.delete(title);
+    m.tov = was; if (kind === 'nomeeting' && !wasNot) cxNotMeet.delete(title);
     cxDraw(); toast('Could not tag that one'); return;
   }
-  if (kind !== 'meeting') await cxSaveNotMeet();
-  toast(kind === 'meeting' ? (m.tov ? 'Tagged Meeting' : 'Meeting tag removed')
+  if (kind === 'nomeeting') await cxSaveNotMeet();
+  toast(kind === 'asa' ? (m.tov ? 'Tagged time with \u00c5sa' : 'Åsa tag removed') : kind === 'meeting' ? (m.tov ? 'Tagged Meeting' : 'Meeting tag removed')
                            : 'Got it, not a meeting' + (title ? ' · I will stop asking about ' + title : ''));
 }
 async function cxNoCommute(i) {
@@ -8127,6 +8136,8 @@ function cxWire() {
         cxTagMeeting(i);
       } else if (act.dataset.cxact === 'nocommute') {
         cxNoCommute(i);
+      } else if (act.dataset.cxact === 'asa') {
+        cxTagMeetingKind(i, 'asa');
       } else if (act.dataset.cxact === 'meeting') {
         cxTagMeetingKind(i, 'meeting');
       } else if (act.dataset.cxact === 'nomeeting') {
@@ -8142,6 +8153,8 @@ function cxWire() {
     /* Checked before the meeting itself, because the x lives inside it. */
     const sgc = e.target.closest('[data-cxsug]');
     if (sgc) { e.preventDefault(); e.stopPropagation(); cxCloseMenu(); cxTagMeeting(+sgc.dataset.cxsug); return; }
+    const sga = e.target.closest('[data-cxasa]');
+    if (sga) { e.preventDefault(); e.stopPropagation(); cxCloseMenu(); cxTagMeetingKind(+sga.dataset.cxasa, 'asa'); return; }
     const sgm = e.target.closest('[data-cxmeet]');
     if (sgm) { e.preventDefault(); e.stopPropagation(); cxCloseMenu(); cxTagMeetingKind(+sgm.dataset.cxmeet, 'meeting'); return; }
     const mx = e.target.closest('[data-cxmx]');

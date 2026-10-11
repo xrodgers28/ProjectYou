@@ -927,6 +927,19 @@ html.py-embed .swshadebtn{display:none!important}
       </div>
     </div>
 
+    <!-- waking hours chart, v5.67 -->
+    <div class="card block" id="whCard">
+      <div class="h2row hasicon"><img class="h2icon" data-ic="focus" alt=""><div class="h2">How I spend my waking hours</div><div class="sub" id="whSub"></div></div>
+      <div class="whbar">
+        <div class="whtog" id="whTog" role="group" aria-label="Chart look"><button type="button" data-v="pics">Pictures</button><button type="button" data-v="nest">Nested boxes</button></div>
+        <a class="whedit" href="waking-hours.html">Edit the list &rarr;</a>
+      </div>
+      <div class="whstage" id="whStage"><div id="whSvgHost"></div></div>
+      <div class="whempty" id="whEmpty" style="display:none">No list for this week yet. <a href="waking-hours.html">Open the list page</a> once and it builds itself.</div>
+      <div class="whlegend" id="whLegend"></div>
+      <ul class="whstats" id="whStats"></ul>
+    </div>
+
     <!-- habit grid + right column -->
     <div class="card block" id="habitCard">
       <div class="h2" style="display:flex;align-items:center;gap:8px"><img class="h2icon" data-ic="dots" alt="">The week, habit by habit<button class="btn" id="shadeAllBtn" style="margin-left:auto;font-size:11px" title="Open or close every Insight, Outcome and Identify box at once">Expand notes</button></div>
@@ -1041,7 +1054,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
    spelling, and a new spelling can no longer be added next to an old one. */
 /* v5.54, Oct 10, 2026, Scott: yellow names (already met) stay locked, but now carry an x that hides them from This
    Week. The meet up stays in his log. It is the same x the grey names have, so "bring them back" undoes it. */
-const VERSION='v5.66';
+const VERSION='v5.67';
 (function(){ /* v5.55: window shade on the meet ups card, remembered per browser */
   function wire(){
     const b=document.getElementById('swShadeBtn'), c=document.getElementById('swCard'); if(!b||!c)return;
@@ -1295,6 +1308,7 @@ async function load(){
     if(D.row&&D.row.highlights){const h=D.row.highlights;W.hi=(h.hi||[]).map(r=>({t:r.t||'',g:r.g||''}));W.go=(h.go||[]).map(r=>({t:r.t||'',g:r.g||''}));}
     compute(); computeSleep(); render(); saveScores();
     safariLoad(ws,we);
+    try{whChartLoad(ws,we);}catch(e){}
     engLoad(ws,we);
     status('Live · '+D.qs.filter(r=>r.date>=ws).length+' ticks read for this week');
   }catch(e){status('Could not load: '+e.message,true);console.error(e);}
@@ -4788,5 +4802,188 @@ hkRenderStars();
 })();
 </script>
 
+<style>
+#whCard .whbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
+#whCard .whtog{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+#whCard .whtog button{border:0;background:#fff;color:var(--muted);font:700 13px Arial,Helvetica,sans-serif;padding:7px 16px;cursor:pointer}
+#whCard .whtog button.on{background:var(--ink);color:#fff}
+#whCard .whedit{font-size:13px;font-weight:700;color:var(--accent);text-decoration:none}
+#whCard .whstage{background:#f7f9fb;border:1px solid var(--line);border-radius:8px;padding:6px;overflow:hidden}
+#whCard .whbox{cursor:default}
+#whCard .whempty{padding:16px;color:var(--muted);font-size:13px}
+#whCard .whlegend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--muted)}
+#whCard .whlg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+#whCard .whlg b{color:var(--ink)}#whCard .whlg.zero{opacity:.55}
+#whCard .whstats{margin:0;padding-left:18px;font-size:13px;color:var(--ink)}#whCard .whstats li{margin:2px 0}
+#whTip{position:fixed;z-index:99999;display:none;pointer-events:none;background:#1f2a44;color:#fff;border-radius:8px;padding:8px 11px;font:12px/1.35 Arial,Helvetica,sans-serif;max-width:250px;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+#whTip .whtn{font-weight:700;font-size:13px}#whTip .whth{font-size:17px;font-weight:800;margin:1px 0}#whTip .whth span{font-size:11px;font-weight:400;opacity:.8}
+#whTip .whts{opacity:.8;font-size:11px}#whTip .whtc{margin-top:4px;opacity:.9;font-size:11px}
+</style>
+<script>
+var WHS={};
+WHS.desk='<rect width="200" height="140" fill="#dfe8f1"/><rect x="0" y="0" width="14" height="140" fill="#a9b7c7"/><rect x="186" y="0" width="14" height="140" fill="#a9b7c7"/><rect x="0" y="96" width="200" height="44" fill="#8a6a4a"/><rect x="62" y="40" width="78" height="46" rx="3" fill="#2b3644"/><rect x="66" y="44" width="70" height="38" fill="#8fc3e8"/><rect x="92" y="86" width="18" height="10" fill="#2b3644"/><circle cx="100" cy="52" r="0" fill="none"/><circle cx="52" cy="70" r="13" fill="#f0c8a0"/><path d="M34 112c0-22 36-22 36 0v6H34z" fill="#d1693f"/><rect x="40" y="100" width="12" height="8" rx="2" fill="#c0a27a"/><rect x="150" y="82" width="14" height="14" rx="3" fill="#e0694f"/><path d="M160 82q6-8 0-12" stroke="#e8eef4" fill="none" stroke-width="2"/><rect x="72" y="100" width="56" height="6" rx="2" fill="#6b7886"/>';
+WHS.meeting='<rect width="200" height="140" fill="#cfd8e3"/><rect x="40" y="14" width="120" height="48" rx="3" fill="#2b3644"/><rect x="48" y="22" width="22" height="32" fill="#4aa3d8"/><rect x="76" y="34" width="12" height="20" fill="#e0694f"/><rect x="94" y="28" width="12" height="26" fill="#d9a62e"/><rect x="112" y="40" width="40" height="3" fill="#8fa3b8"/><rect x="112" y="48" width="30" height="3" fill="#8fa3b8"/><ellipse cx="100" cy="104" rx="84" ry="22" fill="#8a6a4a"/><ellipse cx="100" cy="100" rx="84" ry="20" fill="#a98562"/><g fill="#f0c8a0"><circle cx="40" cy="78" r="7"/><circle cx="72" cy="74" r="7"/><circle cx="104" cy="73" r="7"/><circle cx="136" cy="74" r="7"/><circle cx="168" cy="78" r="7"/></g><g fill="#3b4b5e"><rect x="33" y="85" width="14" height="10" rx="3"/><rect x="65" y="81" width="14" height="10" rx="3"/><rect x="97" y="80" width="14" height="10" rx="3"/><rect x="129" y="81" width="14" height="10" rx="3"/><rect x="161" y="85" width="14" height="10" rx="3"/></g><rect x="60" y="102" width="20" height="8" rx="1" fill="#f4f6f9"/><rect x="118" y="104" width="16" height="6" rx="1" fill="#f4f6f9"/>';
+WHS.train='<rect width="200" height="140" fill="#9fc6e6"/><rect x="0" y="108" width="200" height="32" fill="#6f7a86"/><rect x="0" y="116" width="200" height="4" fill="#4a535c"/><rect x="6" y="42" width="188" height="62" rx="12" fill="#e9eef3"/><rect x="6" y="80" width="188" height="10" fill="#4d6fa8"/><g fill="#7fb4dc"><rect x="16" y="52" width="30" height="24" rx="3"/><rect x="54" y="52" width="30" height="24" rx="3"/><rect x="92" y="52" width="30" height="24" rx="3"/><rect x="130" y="52" width="30" height="24" rx="3"/></g><circle cx="31" cy="64" r="6" fill="#f0c8a0"/><circle cx="108" cy="64" r="6" fill="#f0c8a0"/><circle cx="40" cy="108" r="8" fill="#333f4c"/><circle cx="160" cy="108" r="8" fill="#333f4c"/>';
+WHS.platform='<rect width="200" height="140" fill="#c9d3de"/><rect x="0" y="96" width="200" height="44" fill="#8e99a5"/><rect x="0" y="92" width="200" height="6" fill="#e5c34a"/><rect x="30" y="20" width="60" height="24" rx="3" fill="#2b3644"/><text x="38" y="37" font-size="13" font-weight="700" fill="#f4f6f9">9:12</text><rect x="58" y="44" width="4" height="48" fill="#6a7683"/><circle cx="130" cy="64" r="10" fill="#f0c8a0"/><path d="M112 96c0-26 36-26 36 0z" fill="#3f7d5f"/><rect x="146" y="76" width="14" height="18" rx="2" fill="#2b3644"/>';
+WHS.bikeBars='<rect width="200" height="140" fill="#bfe0f5"/><rect y="52" width="200" height="88" fill="#7fb36b"/><polygon points="88,52 112,52 190,140 10,140" fill="#6b7480"/><g fill="#f4f6f9"><rect x="98" y="58" width="4" height="8"/><rect x="97" y="76" width="6" height="12"/><rect x="95" y="100" width="10" height="18"/></g><circle cx="30" cy="42" r="14" fill="#2f8a4e"/><circle cx="170" cy="40" r="16" fill="#2f8a4e"/><rect x="28" y="44" width="4" height="12" fill="#6b4a2f"/><rect x="168" y="44" width="4" height="14" fill="#6b4a2f"/><path d="M20 128q80-30 160 0" stroke="#2b3644" stroke-width="7" fill="none" stroke-linecap="round"/><rect x="12" y="120" width="22" height="14" rx="6" fill="#1f2a33"/><rect x="166" y="120" width="22" height="14" rx="6" fill="#1f2a33"/><rect x="92" y="114" width="16" height="12" rx="3" fill="#4a535c"/>';
+WHS.dog='<rect width="200" height="140" fill="#f3e2c3"/><ellipse cx="100" cy="76" rx="52" ry="58" fill="#c98f52"/><ellipse cx="48" cy="62" rx="20" ry="46" fill="#7b4e27" transform="rotate(14 48 62)"/><ellipse cx="152" cy="62" rx="20" ry="46" fill="#7b4e27" transform="rotate(-14 152 62)"/><ellipse cx="100" cy="98" rx="30" ry="24" fill="#f0d3a8"/><circle cx="78" cy="64" r="11" fill="#fff"/><circle cx="122" cy="64" r="11" fill="#fff"/><circle cx="80" cy="66" r="6" fill="#241a12"/><circle cx="120" cy="66" r="6" fill="#241a12"/><circle cx="82" cy="63" r="2" fill="#fff"/><circle cx="122" cy="63" r="2" fill="#fff"/><ellipse cx="100" cy="86" rx="12" ry="8" fill="#241a12"/><path d="M100 94v8q-12 8-20 0M100 102q12 8 20 0" stroke="#241a12" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M92 106q8 22 16 0z" fill="#e87a8a"/>';
+WHS.shoes='<rect width="200" height="140" fill="#dbe9d5"/><path d="M10 120q60-10 100-50t80-40" stroke="#c4d6bb" stroke-width="22" fill="none" stroke-linecap="round"/><g fill="#3f9a6b"><ellipse cx="46" cy="104" rx="9" ry="14" transform="rotate(-20 46 104)"/><ellipse cx="78" cy="90" rx="9" ry="14" transform="rotate(-30 78 90)"/><ellipse cx="108" cy="70" rx="9" ry="14" transform="rotate(-40 108 70)"/><ellipse cx="136" cy="54" rx="9" ry="14" transform="rotate(-50 136 54)"/><ellipse cx="164" cy="38" rx="9" ry="14" transform="rotate(-55 164 38)"/></g>';
+WHS.coffee='<rect width="200" height="140" fill="#fbe3c8"/><circle cx="30" cy="22" r="3" fill="#e0694f"/><circle cx="172" cy="30" r="4" fill="#d9a62e"/><circle cx="150" cy="16" r="2.5" fill="#2a9bb0"/><rect x="0" y="104" width="200" height="36" fill="#a97b52"/><circle cx="52" cy="58" r="15" fill="#f0c8a0"/><path d="M26 108c0-34 52-34 52 0z" fill="#e0694f"/><circle cx="148" cy="58" r="15" fill="#e6b88a"/><path d="M122 108c0-34 52-34 52 0z" fill="#2a9bb0"/><path d="M45 62q7 7 14 0M141 62q7 7 14 0" stroke="#3a2a20" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="46" cy="54" r="2" fill="#3a2a20"/><circle cx="58" cy="54" r="2" fill="#3a2a20"/><circle cx="142" cy="54" r="2" fill="#3a2a20"/><circle cx="154" cy="54" r="2" fill="#3a2a20"/><rect x="84" y="86" width="14" height="16" rx="3" fill="#f4f6f9"/><rect x="104" y="86" width="14" height="16" rx="3" fill="#f4f6f9"/><path d="M91 80q-4-6 0-10M111 80q-4-6 0-10" stroke="#ffffff" stroke-width="2.5" fill="none" stroke-linecap="round"/>';
+WHS.asa='<rect width="200" height="140" fill="#fbe0e0"/><circle cx="80" cy="56" r="16" fill="#f0c8a0"/><circle cx="122" cy="56" r="16" fill="#e8c9a4"/><path d="M52 118c0-40 56-40 56 0zM94 118c0-40 56-40 56 0z" fill="#e0694f"/><path d="M101 28c-6-10-18 0-8 8l8 8 8-8c10-8-2-18-8-8z" fill="#c0453b"/>';
+WHS.dad='<rect width="200" height="140" fill="#fde8cc"/><circle cx="76" cy="46" r="15" fill="#f0c8a0"/><path d="M48 124c0-42 56-42 56 0z" fill="#4d6fa8"/><circle cx="132" cy="74" r="11" fill="#f0c8a0"/><path d="M114 124c0-30 36-30 36 0z" fill="#d49a2a"/><path d="M96 96l22 6" stroke="#f0c8a0" stroke-width="6" stroke-linecap="round"/>';
+WHS.pin='<rect width="200" height="140" fill="#d7ecd0"/><path d="M0 100q50-40 100-10t100-40" stroke="#bcd9ee" stroke-width="16" fill="none"/><path d="M20 120l50-30 40 12 60-52" stroke="#e0694f" stroke-width="3" stroke-dasharray="7 6" fill="none"/><path d="M140 20c-14 0-24 10-24 24 0 18 24 40 24 40s24-22 24-40c0-14-10-24-24-24z" fill="#c0453b"/><circle cx="140" cy="44" r="9" fill="#fff"/>';
+WHS.globe='<rect width="200" height="140" fill="#cfe9ef"/><circle cx="100" cy="70" r="52" fill="#4aa3c8"/><path d="M62 54q16-14 30 0t-6 22-24-6zM104 88q16-10 28 4t-14 18-20-10z" fill="#5db26e"/><path d="M48 70h104M100 18q-26 52 0 104M100 18q26 52 0 104" stroke="#e8f4f8" stroke-width="1.5" fill="none" opacity=".7"/>';
+WHS.lotus='<rect width="200" height="140" fill="#e6dcf2"/><circle cx="100" cy="70" r="46" fill="#d6c4ec"/><circle cx="100" cy="46" r="14" fill="#f0c8a0"/><path d="M62 110c0-32 76-32 76 0z" fill="#8a63b5"/><path d="M70 108q30 10 60 0" stroke="#6a4a96" stroke-width="5" fill="none" stroke-linecap="round"/>';
+WHS.stretch='<rect width="200" height="140" fill="#e6dcf2"/><circle cx="100" cy="40" r="12" fill="#f0c8a0"/><path d="M100 52v44M100 62l-34-30M100 62l34-30M100 96l-22 30M100 96l22 30" stroke="#8a63b5" stroke-width="9" stroke-linecap="round" fill="none"/>';
+WHS.spark='<rect width="200" height="140" fill="#e6dcf2"/><path d="M100 18l12 34 34 12-34 12-12 34-12-34-34-12 34-12z" fill="#8a63b5"/><circle cx="160" cy="30" r="6" fill="#d9a62e"/><circle cx="40" cy="106" r="8" fill="#d9a62e"/>';
+WHS.house='<rect width="200" height="140" fill="#fdecc8"/><rect x="0" y="108" width="200" height="32" fill="#8fbf6b"/><rect x="50" y="62" width="100" height="50" fill="#e6b27a"/><polygon points="40,64 100,22 160,64" fill="#a8523b"/><rect x="88" y="80" width="24" height="32" fill="#7b4e27"/><rect x="60" y="76" width="20" height="18" fill="#ffe28a"/><rect x="120" y="76" width="20" height="18" fill="#ffe28a"/><circle cx="170" cy="86" r="16" fill="#2f8a4e"/>';
+WHS.plate='<rect width="200" height="140" fill="#fbe9c6"/><circle cx="100" cy="72" r="46" fill="#f4f6f9"/><circle cx="100" cy="72" r="32" fill="#e8edf2"/><circle cx="92" cy="68" r="10" fill="#e0694f"/><circle cx="110" cy="78" r="9" fill="#5db26e"/><rect x="28" y="30" width="6" height="84" rx="3" fill="#8a949f"/><rect x="166" y="30" width="6" height="84" rx="3" fill="#8a949f"/>';
+WHS.culture='<rect width="200" height="140" fill="#efd9e6"/><rect x="0" y="0" width="200" height="22" fill="#a8324f"/><path d="M0 22q20 40 0 90M200 22q-20 40 0 90" fill="#c0453b"/><rect x="40" y="96" width="120" height="30" fill="#8a6a4a"/><circle cx="100" cy="60" r="12" fill="#f0c8a0"/><path d="M82 96c0-30 36-30 36 0z" fill="#4d6fa8"/><circle cx="156" cy="40" r="5" fill="#d9a62e"/>';
+WHS.travel='<rect width="200" height="140" fill="#cfe4f5"/><path d="M30 84l110-34 24 8-70 32 30 10-8 8-40-12-26 14-10-6 20-14z" fill="#f4f6f9" stroke="#8fa3b8" stroke-width="3" stroke-linejoin="round"/><path d="M0 120q50-20 100 0t100 0v20H0z" fill="#dbe9d5"/>';
+WHS.balance='<rect width="200" height="140" fill="#e6dcf2"/><rect x="40" y="108" width="120" height="8" rx="4" fill="#8a63b5"/><circle cx="100" cy="116" r="8" fill="#6a4a96"/><circle cx="100" cy="44" r="11" fill="#f0c8a0"/><path d="M100 56v32M100 64l-36 -6M100 64l36 -6M100 88l-14 22M100 88l14 22" stroke="#8a63b5" stroke-width="7" stroke-linecap="round" fill="none"/>';
+WHS.generic='<rect width="200" height="140" fill="#e3e7ee"/><circle cx="100" cy="70" r="30" fill="#c8d0db"/>';
+
+/* ===== How I Spend My Waking Hours (v5.67, Oct 11 2026) =====
+   Reads the list you agreed on the Waking Hours page (waking_hours_items) for the week on screen.
+   Two looks, one toggle: Pictures and Nested boxes. Colours are the seven Clarity Compass sections. */
+var WHC={rows:[],view:'pics',ws:null,tipOn:false};
+try{WHC.view=localStorage.getItem('whc_view')||'pics';}catch(e){}
+var WH_SEC={desk:'Sense of Purpose',meet:'Sense of Purpose',commute:'Environmental Health',home:'Environmental Health',
+  bike:'Physical Health',zingo:'Physical Health',walks:'Physical Health',runs:'Physical Health',eat:'Physical Health',
+  social:'Social Well-Being',safari:'Recreational Health',travel:'Recreational Health',mind:'Mental Fitness',balance:'Emotional Health',tw:'Sense of Purpose'};
+var WH_SCENE={d_amz:'desk',d_py:'desk',tw:'globe',meet:'meeting',c_train:'train',c_plat:'platform',c_bike:'bikeBars',c_walk:'shoes',bike:'bikeBars',zingo:'dog',walks:'shoes',runs:'shoes',s_friend:'coffee',s_asa:'asa',s_son:'dad',s_culture:'culture',safari:'pin',m_mf:'spark',m_ai:'spark',m_mc:'spark',m_med:'lotus',m_str:'stretch',home:'house',eat:'plate',balance:'balance',travel:'travel'};
+var WH_CONF={measured:'measured',worked:'worked out',rule:'rule of thumb',need:'needs your number',typed:'typed by you'};
+function whKey(id){return String(id).split(':').slice(1).join(':');}
+function whSecOf(r,parent){var k=whKey((parent||r).id);if(WH_SEC[k])return WH_SEC[k];var t=((parent||r).label||'').toLowerCase();
+  if(/walk|run|ride|bike|eat|sleep|gym|stretch/.test(t))return 'Physical Health';if(/friend|social|family|dad|åsa|asa/.test(t))return 'Social Well-Being';
+  if(/work|meeting|desk|project/.test(t))return 'Sense of Purpose';if(/home|commute|house/.test(t))return 'Environmental Health';return 'Not sure yet';}
+function whFh(n){return (Math.round(n*10)/10).toFixed(1);}
+function whEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function whTree(){
+  var rows=WHC.rows.filter(function(r){return r.zone==='chart';});
+  var tops=rows.filter(function(r){return !r.parent_id;}).sort(function(a,b){return a.sort-b.sort;});
+  var out=[];
+  tops.forEach(function(t){
+    var kids=rows.filter(function(r){return r.parent_id===t.id;}).sort(function(a,b){return a.sort-b.sort;}).filter(function(k){return +k.hours>0;});
+    var sec=whSecOf(t);
+    if(kids.length){var n={id:t.id,label:t.label,sec:sec,kids:kids.map(function(k){return {id:k.id,label:k.label,h:+k.hours,v:+k.hours,sec:sec,conf:k.confidence,note:k.source_note,parent:t.label};})};
+      n.v=n.kids.reduce(function(a,k){return a+k.v;},0);if(n.v>0)out.push(n);}
+    else if(+t.hours>0){out.push({id:t.id,label:t.label,h:+t.hours,v:+t.hours,sec:sec,conf:t.confidence,note:t.source_note});}
+  });
+  return out;
+}
+function whSquarify(nodes,x,y,w,h){
+  var list=nodes.slice().sort(function(a,b){return b.v-a.v;});
+  var total=list.reduce(function(a,n){return a+n.v;},0);if(!total||w<=0||h<=0)return [];
+  var scale=w*h/total,items=list.map(function(n){return {n:n,a:n.v*scale};}),out=[],rx=x,ry=y,rw=w,rh=h,row=[];
+  function worst(r,side){var s=r.reduce(function(a,i){return a+i.a;},0),mx=Math.max.apply(null,r.map(function(i){return i.a;})),mn=Math.min.apply(null,r.map(function(i){return i.a;}));return Math.max(side*side*mx/(s*s),s*s/(side*side*mn));}
+  function lay(r){var s=r.reduce(function(a,i){return a+i.a;},0);
+    if(rw>=rh){var cw=s/rh,cy=ry;r.forEach(function(i){var hh=i.a/cw;out.push({n:i.n,x:rx,y:cy,w:cw,h:hh});cy+=hh;});rx+=cw;rw-=cw;}
+    else{var ch=s/rw,cx=rx;r.forEach(function(i){var ww=i.a/ch;out.push({n:i.n,x:cx,y:ry,w:ww,h:ch});cx+=ww;});ry+=ch;rh-=ch;}}
+  items.forEach(function(it){var side=Math.min(rw,rh);if(!row.length||worst(row.concat([it]),side)<=worst(row,side))row.push(it);else{lay(row);row=[it];}});
+  if(row.length)lay(row);return out;
+}
+function whCol(sec){return (typeof AREACOL!=='undefined'&&AREACOL[sec])||'#8a93a1';}
+/* the hover card: name, hours, share, section, how sure we are */
+function whTipAttr(n,total){
+  var share=total?Math.round(n.v/total*100):0;
+  return ' data-wt="'+whEsc(n.label)+'" data-wh="'+whFh(n.v)+'" data-wp="'+share+'" data-ws="'+whEsc(n.sec)+'" data-wc="'+whEsc(WH_CONF[n.conf]||'')+'" data-wn="'+whEsc(n.parent?('Inside '+n.parent+'. '):'')+'"';
+}
+/* big bold number first, name under it when it fits, every box gets something */
+function whLabel(x,y,w,h,n,fg,opts){
+  opts=opts||{};var out='';
+  var big=Math.max(9,Math.min(opts.maxBig||44,w*.34,h*.52));
+  var num=whFh(n.v);
+  if(num.length*big*.58>w-10)big=Math.max(7,(w-10)/(num.length*.58));
+  if(w<22||h<14){return '';}
+  out+='<text x="'+(x+7)+'" y="'+(y+6+big*.82)+'" font-size="'+big.toFixed(1)+'" font-weight="800" fill="'+fg+'" style="font-family:Arial Black,Arial,sans-serif;paint-order:stroke;stroke:rgba(0,0,0,.28);stroke-width:2.2px;letter-spacing:-.02em">'+num+(big>=15?'<tspan font-size="'+Math.max(8,big*.4).toFixed(1)+'" font-weight="700"> h</tspan>':'')+'</text>';
+  var fs=Math.max(9,Math.min(13.5,(w-14)/(n.label.length*.56)));
+  if(h>big+fs+16&&w>=58){
+    var nm=n.label;if(nm.length*fs*.56>w-12){var mx=Math.max(4,Math.floor((w-14)/(fs*.56)));nm=nm.slice(0,mx-1)+'…';}
+    out+='<text x="'+(x+8)+'" y="'+(y+big+10+fs)+'" font-size="'+fs.toFixed(1)+'" font-weight="700" fill="'+fg+'" style="paint-order:stroke;stroke:rgba(0,0,0,.28);stroke-width:2px">'+whEsc(nm)+'</text>';
+  }
+  return out;
+}
+function whDraw(){
+  var host=document.getElementById('whSvgHost');if(!host)return;
+  var tree=whTree();
+  var empty=document.getElementById('whEmpty'),svgBox=document.getElementById('whStage');
+  if(!tree.length){svgBox.style.display='none';empty.style.display='block';document.getElementById('whStats').innerHTML='';document.getElementById('whLegend').innerHTML='';return;}
+  svgBox.style.display='block';empty.style.display='none';
+  var W=Math.max(300,Math.round(host.clientWidth||host.parentNode.clientWidth||900));
+  var H=W<560?Math.round(W*1.5):Math.round(W*0.56);
+  var top=whSquarify(tree,0,0,W,H),total=tree.reduce(function(a,n){return a+n.v;},0);
+  var s='<svg id="whSvg" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="How I spend my waking hours, a proportional area chart">';
+  if(WHC.view==='pics'){
+    s+='<defs>';var leaves=[];
+    top.forEach(function(r){if(r.n.kids){whSquarify(r.n.kids,r.x,r.y,r.w,r.h).forEach(function(k){leaves.push(k);});}else leaves.push(r);});
+    leaves.forEach(function(r,i){s+='<clipPath id="whc'+i+'"><rect x="'+(r.x+1.5)+'" y="'+(r.y+1.5)+'" width="'+Math.max(r.w-3,1)+'" height="'+Math.max(r.h-3,1)+'" rx="6"/></clipPath>';});
+    s+='</defs>';
+    leaves.forEach(function(r,i){
+      var n=r.n,sc=WHS[WH_SCENE[whKey(n.id)]]||WHS.generic,bg=(sc.match(/fill="(#[0-9a-f]{6})"/i)||[0,'#dde'])[1],c=whCol(n.sec);
+      s+='<g class="whbox"'+whTipAttr(n,total)+' clip-path="url(#whc'+i+')"><rect x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" fill="'+bg+'"/>'+
+         '<svg x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" viewBox="0 0 200 140" preserveAspectRatio="xMidYMid meet">'+sc+'</svg>';
+      /* section-colour band + label chip */
+      var chipH=Math.min(r.h-2,Math.max(24,Math.min(60,r.h*.5)));
+      s+='<rect x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+Math.min(chipH,r.h)+'" fill="'+c+'" opacity=".92"/>'+whLabel(r.x,r.y,r.w,Math.min(chipH,r.h)+(r.h>90?10:0),n,'#fff',{maxBig:30});
+      s+='</g><rect x="'+(r.x+1.5)+'" y="'+(r.y+1.5)+'" width="'+Math.max(r.w-3,1)+'" height="'+Math.max(r.h-3,1)+'" rx="6" fill="none" stroke="#fff" stroke-width="3" pointer-events="none"/>';
+    });
+  }else{
+    top.forEach(function(r){var n=r.n,c=whCol(n.sec);
+      if(n.kids){var head=(r.h>70&&r.w>110)?26:0;
+        s+='<g class="whbox"'+whTipAttr(n,total)+'><rect x="'+(r.x+1)+'" y="'+(r.y+1)+'" width="'+(r.w-2)+'" height="'+(r.h-2)+'" fill="'+c+'" stroke="#fff" stroke-width="2.5"/>';
+        if(head)s+='<text x="'+(r.x+10)+'" y="'+(r.y+19)+'" font-size="15" font-weight="800" fill="#fff" style="paint-order:stroke;stroke:rgba(0,0,0,.28);stroke-width:2px">'+whEsc(n.label)+' · '+whFh(n.v)+' h</text>';
+        else s+=whLabel(r.x+1,r.y+1,r.w-2,Math.min(r.h-2,40),n,'#fff',{maxBig:22});
+        s+='</g>';
+        var pad=5,hh=head?head:(Math.min(r.h-2,40)>20&&r.h>80?36:0);
+        whSquarify(n.kids,r.x+pad,r.y+pad+hh,Math.max(r.w-2*pad,1),Math.max(r.h-2*pad-hh,1)).forEach(function(k){
+          s+='<g class="whbox"'+whTipAttr(k.n,total)+'><rect x="'+k.x+'" y="'+k.y+'" width="'+k.w+'" height="'+k.h+'" fill="#000" fill-opacity=".2" stroke="#fff" stroke-width="2"/>'+whLabel(k.x,k.y,k.w,k.h,k.n,'#fff',{maxBig:30})+'</g>';});
+      }else{
+        s+='<g class="whbox"'+whTipAttr(n,total)+'><rect x="'+(r.x+1)+'" y="'+(r.y+1)+'" width="'+(r.w-2)+'" height="'+(r.h-2)+'" fill="'+c+'" stroke="#fff" stroke-width="2.5"/>'+whLabel(r.x+1,r.y+1,r.w-2,r.h-2,n,'#fff',{maxBig:50})+'</g>';}
+    });
+  }
+  s+='</svg>';host.innerHTML=s;
+  /* legend: the seven sections with their hours */
+  var bySec={};tree.forEach(function(n){bySec[n.sec]=(bySec[n.sec]||0)+n.v;});
+  var secs=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
+  document.getElementById('whLegend').innerHTML=secs.map(function(k){var v=bySec[k]||0;return '<span class="whlg'+(v?'':' zero')+'"><i style="background:'+whCol(k)+'"></i>'+whEsc(k)+' <b>'+whFh(v)+'h</b></span>';}).join('');
+  /* what it reveals */
+  var flat=[];tree.forEach(function(n){if(n.kids)n.kids.forEach(function(k){flat.push(k);});else flat.push(n);});
+  flat.sort(function(a,b){return b.v-a.v;});
+  var wake=112,pct=function(v){return Math.round(v/total*100);};
+  var purpose=bySec['Sense of Purpose']||0,phys=bySec['Physical Health']||0,soc=bySec['Social Well-Being']||0;
+  var st=[['<b>'+whFh(total)+' of '+wake+'</b> waking hours are in the boxes ('+Math.round(total/wake*100)+'%). The rest is not tracked yet.'],
+          ['<b>'+whEsc(flat[0].label)+'</b> is the biggest single box: '+whFh(flat[0].v)+' h, '+pct(flat[0].v)+'% of what is drawn.'],
+          ['<b>Purpose work is '+pct(purpose)+'%</b> of the chart. Physical health is '+pct(phys)+'% and social is '+pct(soc)+'%.']];
+  document.getElementById('whStats').innerHTML=st.map(function(x){return '<li>'+x[0]+'</li>';}).join('');
+  document.getElementById('whTog').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.v===WHC.view);b.setAttribute('aria-pressed',b.dataset.v===WHC.view?'true':'false');});
+}
+async function whChartLoad(ws,we){
+  WHC.ws=ws;
+  var card=document.getElementById('whCard');if(!card)return;
+  document.getElementById('whSub').textContent=fmt(ws)+' to '+fmt(we,true);
+  var r=await sb.from('waking_hours_items').select('id,label,parent_id,zone,hours,source_note,confidence,sort').eq('week_start',ws).order('sort');
+  WHC.rows=(r&&r.data)||[];
+  whDraw();
+}
+(function(){
+  var tip=null;
+  function ensure(){if(!tip){tip=document.createElement('div');tip.id='whTip';document.body.appendChild(tip);}return tip;}
+  function show(g,x,y){var t=ensure();
+    t.innerHTML='<div class="whtn">'+g.getAttribute('data-wt')+'</div><div class="whth">'+g.getAttribute('data-wh')+' h <span>· '+g.getAttribute('data-wp')+'% of the chart</span></div><div class="whts">'+g.getAttribute('data-ws')+'</div>'+
+      ((g.getAttribute('data-wn')||g.getAttribute('data-wc'))?'<div class="whtc">'+g.getAttribute('data-wn')+(g.getAttribute('data-wc')?'How sure: '+g.getAttribute('data-wc')+'.':'')+'</div>':'');
+    t.style.display='block';var w=t.offsetWidth,h=t.offsetHeight;
+    t.style.left=Math.max(6,Math.min(x+14,window.innerWidth-w-6))+'px';t.style.top=Math.max(6,Math.min(y+14,window.innerHeight-h-6))+'px';}
+  function hide(){if(tip)tip.style.display='none';}
+  document.addEventListener('mousemove',function(e){var g=e.target.closest&&e.target.closest('#whCard .whbox');if(g)show(g,e.clientX,e.clientY);else hide();});
+  document.addEventListener('click',function(e){
+    var b=e.target.closest&&e.target.closest('#whTog button');
+    if(b){WHC.view=b.dataset.v;try{localStorage.setItem('whc_view',WHC.view);}catch(x){}whDraw();return;}
+    var g=e.target.closest&&e.target.closest('#whCard .whbox');
+    if(g&&'ontouchstart' in window){show(g,e.clientX,e.clientY);} else if(!g)hide();});
+  var rt=null;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(function(){if(WHC.rows.length)whDraw();},150);});
+})();
+
+</script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>

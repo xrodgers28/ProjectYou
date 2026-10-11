@@ -105,7 +105,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>How I Spend My Waking Hours</h1><span class="ver">v0.2</span>
+  <div class="secbar"><h1>How I Spend My Waking Hours</h1><span class="ver">v0.3</span>
     <div class="weeknav"><button class="btn" id="prev">&larr; Previous</button><span class="weeklabel" id="weeklabel"></span><button class="btn" id="next">Next &rarr;</button></div>
   </div>
   <div class="page">
@@ -122,6 +122,13 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
       <p class="sub">One line = one box. Groups (Commute, Social) add up their sub-lines. Percent is the share of the chart list.</p>
       <div class="zone" id="zoneChart" data-zone="chart"></div>
       <div class="addbar"><input type="text" id="newChart" placeholder="Add a line to the chart, e.g. Reading on the train"><input type="number" id="newChartH" step="0.25" min="0" placeholder="hours"><button class="btn" id="addChart">Add line</button><button class="btn" id="addGroup">Add group</button><button class="btn calc" id="calcAll">Calculate all</button></div>
+    </div>
+
+    <div class="card" id="meetCard">
+      <h2>Which Amazon events were real meetings?</h2>
+      <p class="sub">My guess is ticked. Untick anything that was not a meeting (holds, travel, personal time). One tap on Confirm saves it, teaches Today's Todos to stop asking about those titles, and recalculates "In meetings".</p>
+      <div id="meetList" style="max-height:420px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:4px 12px"></div>
+      <div class="createbar" style="margin-top:8px"><button class="btn pri" id="meetConfirm">Confirm these</button><button class="btn" id="meetReload">Reload</button><span id="meetMsg" class="sub" style="margin:0"></span></div>
     </div>
 
     <div class="card park">
@@ -169,6 +176,7 @@ const SEED=[
  {k:'desk',label:'At my desk',z:'chart',group:true,h:0},
  {k:'d_amz',p:'desk',label:'Amazon work (not in meetings)',z:'chart',h:6.5,conf:'worked',note:'Your own Amazon blocks, 390 min. Gets more accurate once meetings are tagged.'},
  {k:'d_py',p:'desk',label:'Project YOU',z:'chart',h:14.73,conf:'measured',note:'Day tally (884 min).'},
+ {k:'tw',p:'desk',label:'TreadWell',z:'chart',h:1.75,conf:'measured',note:'Day tally (105 min), Tue only.'},
  {k:'meet',label:'In meetings (Amazon)',z:'chart',h:30.67,conf:'worked',note:'All Amazon calendar events Mon to Fri, overlaps removed (1,840 min). Includes anything that was not a real meeting until events are tagged.'},
  {k:'commute',label:'Commuting',z:'chart',group:true,h:0},
  {k:'c_train',p:'commute',label:'On the train',z:'chart',h:2.16,conf:'worked',note:'Commute blocks (4.7h) minus the platform, bike and recorded walks.'},
@@ -181,11 +189,10 @@ const SEED=[
  {k:'runs',label:'Runs',z:'chart',h:0.15,conf:'measured',note:'Two short runs in Manhattan.'},
  {k:'social',label:'Social',z:'chart',group:true,h:0},
  {k:'s_friend',p:'social',label:'Face to face with a friend',z:'chart',h:4.75,conf:'measured',note:'Coffee with Claire 90 min, Coffee and AI with Kamil 75, Get together with James 120.'},
- {k:'s_asa',p:'social',label:'Time with Åsa',z:'chart',h:0.17,conf:'measured',note:'Only 10 min logged. Likely under-counted, since time together is not always logged.'},
+ {k:'s_asa',p:'social',label:'Time with Åsa',z:'chart',h:3,conf:'typed',note:'Your numbers: about 2 hours on Sun Oct 11, plus roughly 20 minute walks Mon, Tue and Wed mornings. Tag events "With Åsa" on Today\'s Todos and press Calculate to use the calendar instead.'},
  {k:'s_son',p:'social',label:'Being a good dad',z:'chart',h:1.75,conf:'measured',note:'105 min logged Tue.'},
  {k:'s_culture',p:'social',label:'Culture events',z:'chart',h:0,conf:'measured',note:'None this week.'},
  {k:'safari',label:'Safaris (new places)',z:'chart',h:4.17,conf:'measured',note:'Local Safari, Red Hook, Tue.'},
- {k:'tw',label:'TreadWell',z:'chart',h:1.75,conf:'measured',note:'Day tally (105 min), Tue only.'},
  {k:'mind',label:'Mind and body habits',z:'chart',group:true,h:0},
  {k:'m_mf',p:'mind',label:'Mental Fitness apps (Elevate, Imprint, Impulse)',z:'chart',h:1.5,conf:'measured',note:'90 min logged, 6 days.'},
  {k:'m_ai',p:'mind',label:'AI Workout',z:'chart',h:0.53,conf:'measured',note:'32 min, 7 days.'},
@@ -238,7 +245,7 @@ async function load(){
     S.items=data.map(r=>({id:r.id,week:S.week,label:r.label,parent:r.parent_id,zone:r.zone,hours:+r.hours,note:r.source_note||'',conf:r.confidence||'typed',sort:r.sort,custom:r.is_custom,group:false}));
     SEED.filter(s=>s.group).forEach(s=>{const it=S.items.find(x=>x.id===S.week+':'+s.k);if(it)it.group=true;});
   }else{S.items=seedWeek(S.week);await saveNow();}
-  S.loaded=true;render();
+  S.loaded=true;render();loadMeet();
 }
 function queueSave(){clearTimeout(S.timer);S.timer=setTimeout(saveNow,600);}
 async function saveNow(){
@@ -319,6 +326,14 @@ $('calcAll').onclick=async()=>{const b=$('calcAll');b.disabled=true;b.textConten
 const STOP=new Set(['with','time','from','that','this','your','the','and','for','what','when','into','about','walk','walking']);
 async function calcItem(it){
   const wk=S.week,end=addDays(wk,6);
+  if(/:meet$/.test(it.id)||/:s_asa$/.test(it.id)){
+    const isMeet=/:meet$/.test(it.id),tag=isMeet?'meeting':'asa';
+    const t=await taggedHours(wk,tag);
+    if(t.n){it.hours=r2(t.h);it.conf='worked';
+      it.note='Calculated '+fmtDate(todayET())+': '+fmtH(t.h)+'h from '+t.n+' event'+(t.n>1?'s':'')+' you tagged "'+(isMeet?'Meeting':'With Åsa')+'" on Today\'s Todos'+(isMeet?', overlaps removed.':'. This replaces the number you typed, so tag the walks too.');
+      return true;}
+    if(!isMeet){it.note='No events tagged "With Åsa" this week yet, so your typed number stays.';return false;}
+  }
   const base=it.label.replace(/\(.*?\)/g,' ').trim();
   const words=base.toLowerCase().split(/[^a-zåäöé0-9']+/).filter(w=>w.length>3&&!STOP.has(w));
   const terms=[base,...words].filter((v,i,a)=>v&&a.indexOf(v)===i).slice(0,5);
@@ -347,6 +362,64 @@ async function calcItem(it){
   it.note='No matches in your data for this week (looked for '+terms.map(t=>'"'+t+'"').join(', ')+'). Hours left as they were.';
   return false;
 }
+
+/* ---------- tagged calendar events (Meeting, With Åsa) ---------- */
+const tmin=s=>{const p=String(s).split(':');return +p[0]*60+ +p[1];};
+async function taggedHours(wk,tag){
+  const {data}=await sb.from('calendar_events').select('date,start_time,end_time,hidden,skipped,dismissed').eq('tag_override',tag).gte('date',wk).lte('date',addDays(wk,6)).limit(2000);
+  const byDay={};let n=0;
+  (data||[]).filter(r=>!r.hidden&&!r.skipped&&!r.dismissed&&r.start_time&&r.end_time).forEach(r=>{(byDay[r.date]=byDay[r.date]||[]).push([tmin(r.start_time),Math.max(tmin(r.end_time),tmin(r.start_time))]);n++;});
+  let mins=0;Object.values(byDay).forEach(iv=>{iv.sort((a,b)=>a[0]-b[0]);let cs=null,ce=null;iv.forEach(x=>{if(cs===null){cs=x[0];ce=x[1];}else if(x[0]<=ce){ce=Math.max(ce,x[1]);}else{mins+=ce-cs;cs=x[0];ce=x[1];}});if(cs!==null)mins+=ce-cs;});
+  return {h:mins/60,n};
+}
+
+/* ---------- which Amazon events were real meetings (my guess, you confirm) ---------- */
+const NOT_MEET=/\b(commute|train|lunch|dinner|breakfast|leave for|prep|hold:|hold\b|road ?block|focus|headspace|ooo|pto|out of office|travel|flight|drive|walk|break|busy|placeholder|aura work|meet ?up|coffee|club)\b/i;
+const M={rows:[]};
+async function loadMeet(){
+  const wk=S.week;
+  const {data,error}=await sb.from('calendar_events').select('id,date,title,start_time,end_time,hidden,skipped,dismissed,tag_override').eq('is_work',true).gte('date',wk).lte('date',addDays(wk,6)).order('date').order('start_time').limit(2000);
+  if(error){$('meetList').innerHTML='<div class="sub">Could not load events: '+esc(error.message)+'</div>';return;}
+  const seen=new Map();
+  (data||[]).filter(r=>!r.hidden&&!r.skipped&&!r.dismissed&&r.start_time&&r.end_time&&r.tag_override!=='commute'&&r.tag_override!=='asa').forEach(r=>{
+    const k=r.date+'|'+r.title+'|'+r.start_time;
+    if(seen.has(k)){seen.get(k).ids.push(r.id);return;}
+    const guess=!NOT_MEET.test(r.title||'');
+    seen.set(k,{ids:[r.id],date:r.date,title:r.title||'(untitled)',s:r.start_time.slice(0,5),e:r.end_time.slice(0,5),on:r.tag_override==='meeting'?true:r.tag_override==='nomeeting'?false:guess,state:r.tag_override||'',guess});
+  });
+  M.rows=[...seen.values()];renderMeet();
+}
+function renderMeet(){
+  const el=$('meetList');
+  if(!M.rows.length){el.innerHTML='<div class="sub">No timed Amazon events found for this week.</div>';return;}
+  let h='',day='';
+  M.rows.forEach((r,i)=>{
+    if(r.date!==day){day=r.date;h+='<div style="font-weight:700;margin:10px 0 4px;font-size:13px">'+esc(fmtDate(day))+'</div>';}
+    h+='<label style="display:flex;gap:8px;align-items:flex-start;padding:4px 0;font-size:13px;cursor:pointer"><input type="checkbox" data-mr="'+i+'"'+(r.on?' checked':'')+' style="margin-top:3px"><span><b>'+esc(r.title)+'</b> <span class="sub" style="margin:0">'+r.s+' to '+r.e+(r.state?' · saved as '+(r.state==='meeting'?'meeting':'not a meeting'):(r.guess?'':' · my guess: not a meeting'))+'</span></span></label>';
+  });
+  el.innerHTML=h;
+  const n=M.rows.filter(r=>r.on).length;$('meetMsg').textContent=n+' of '+M.rows.length+' ticked as meetings';
+}
+document.addEventListener('change',e=>{const i=e.target.dataset&&e.target.dataset.mr;if(i===undefined)return;M.rows[+i].on=e.target.checked;const n=M.rows.filter(r=>r.on).length;$('meetMsg').textContent=n+' of '+M.rows.length+' ticked as meetings';});
+$('meetConfirm').onclick=async()=>{
+  const b=$('meetConfirm');b.disabled=true;b.textContent='Saving...';
+  try{
+    const yes=M.rows.filter(r=>r.on).flatMap(r=>r.ids),no=M.rows.filter(r=>!r.on).flatMap(r=>r.ids);
+    const now=new Date().toISOString();
+    if(yes.length){const {error}=await sb.from('calendar_events').update({tag_override:'meeting',updated_at:now}).in('id',yes);if(error)throw error;}
+    if(no.length){const {error}=await sb.from('calendar_events').update({tag_override:'nomeeting',updated_at:now}).in('id',no);if(error)throw error;
+      /* teach Today's Todos to stop asking about these titles */
+      let cur=[];try{const {data}=await sb.from('app_meta').select('value').eq('key','cx_notmeeting_titles').maybeSingle();if(data&&data.value)cur=JSON.parse(data.value);}catch(e){}
+      const set=new Set(cur);M.rows.filter(r=>!r.on).forEach(r=>set.add(String(r.title).trim()));
+      await sb.from('app_meta').upsert({key:'cx_notmeeting_titles',value:JSON.stringify([...set]),updated_at:now},{onConflict:'key'});}
+    const it=S.items.find(x=>x.id===S.week+':meet');
+    if(it){await calcItem(it);render();queueSave();}
+    flash('Saved. '+M.rows.filter(r=>r.on).length+' meetings, '+no.length+' not meetings.');
+    await loadMeet();
+  }catch(err){flash('Could not save: '+(err.message||err));}
+  b.disabled=false;b.textContent='Confirm these';
+};
+$('meetReload').onclick=loadMeet;
 
 /* ---------- drag and drop, finger or mouse ---------- */
 let drag=null;
