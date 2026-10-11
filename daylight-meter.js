@@ -267,11 +267,12 @@
     var s = document.createElement('style');
     s.id = 'dl-css';
     s.textContent =
-      '.dl-tile{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:76px;height:76px;padding:6px;background:#fff;border:1.5px solid #3f6f8f;border-radius:12px;box-shadow:0 4px 12px rgba(31,42,68,.06);cursor:pointer;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
+      '.dl-tile{flex:none;position:relative;top:-3px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;height:36px;padding:0 12px;background:#fff;border:1.5px solid #3f6f8f;border-radius:12px;box-shadow:0 2px 8px rgba(31,42,68,.06);cursor:pointer;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
+      '.pagehead .meter .bar{min-width:10px}' +
       '.dl-tile:hover,.dl-tile[aria-expanded="true"]{border-color:#3f6f8f}' +
       '.dl-tile:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px}' +
-      '.dl-tl{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1.15;color:#5b6472;text-align:center}' +
-      '.dl-tn{font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}' +
+      '.dl-tl{font-size:8.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1.15;color:#5b6472;text-align:left}' +
+      '.dl-tn{font-size:24px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums;order:-1}' +
       '.dl-float{position:absolute;z-index:45;left:0;top:0;display:none}' +
       '.dl-float.on{display:block;animation:dlin .12s ease-out}' +
       '@keyframes dlin{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}' +
@@ -331,7 +332,7 @@
       '.dl-msg{margin-top:8px;font-size:12px;font-weight:700;color:#5b6472;min-height:0}' +
       '.dl-msg:empty{display:none}' +
       '.dl-msg.bad{color:#c0392b}' +
-      '@media(max-width:600px){.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}.dl-tile{width:64px;height:64px}.dl-tn{font-size:24px}}';
+      '@media(max-width:600px){.pagehead .meter{margin-bottom:10px}.dl-tile{top:0}.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}.dl-tile{height:34px;padding:0 9px;gap:6px}.dl-tn{font-size:21px}}';
     document.head.appendChild(s);
   }
 
