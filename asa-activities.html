@@ -5,11 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Asa Activities · ProjectYou</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--warm:#a35a4e;--warm2:#c07a6a;--green:#1e8e5a;--hot:#c0453b}
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink)}
-  .wrap{max-width:820px;margin:0 auto;padding:14px 16px 60px}
+  .wrap{max-width:1320px;margin:0 auto;padding:14px 16px 60px}
   .intro{font-size:13px;color:var(--muted);margin:2px 0 14px;line-height:1.55}
   .intro b{color:var(--ink)}
 
@@ -27,13 +29,13 @@
   .sectsub{font-size:12.5px;color:var(--muted);margin-bottom:12px;line-height:1.5}
 
   /* date ideas: one card each */
-  .idea{position:relative;display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--warm);border-radius:12px;padding:12px 40px 12px 14px;margin-bottom:9px;box-shadow:0 5px 14px rgba(31,42,68,.05)}
+  .idea{position:relative;display:flex;gap:12px;align-items:flex-start;background:var(--card);border:1px solid var(--line);border-left:4px solid var(--warm);border-radius:12px;padding:12px 62px 12px 14px;margin-bottom:9px;box-shadow:0 5px 14px rgba(31,42,68,.05)}
   .idea.done{opacity:.55;border-left-color:var(--green)}
   .idea.done .t{text-decoration:line-through}
   .tick{flex:none;width:20px;height:20px;border:2px solid #cfd6df;border-radius:6px;cursor:pointer;margin-top:1px}
   .tick:hover{border-color:var(--warm)}
   .idea.done .tick{background:var(--green);border-color:var(--green)}
-  .idea .t{font-size:14.5px;font-weight:700;line-height:1.35}
+  .idea .t{font-size:14.5px;font-weight:400;line-height:1.35}
   .idea .m{font-size:12px;color:var(--muted);margin-top:3px}
   .idea .m .pl{font-weight:700;color:#7d8794}
   .del{position:absolute;top:10px;right:11px;font-size:14px;color:#c9cfd6;cursor:pointer;line-height:1}
@@ -66,8 +68,54 @@
   .badge{position:fixed;right:12px;bottom:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;color:var(--muted)}
   .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .25s;pointer-events:none}.toast.show{opacity:1}
   .hidden{display:none}
+
+  /* v1.1: map beside the date ideas, areas, tags */
+  .cols{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:20px;align-items:start;margin-bottom:26px}
+  .cols .sect{margin-bottom:0}
+  .mapcol{position:sticky;top:12px}
+  #map{height:calc(100vh - 150px);min-height:380px;border-radius:12px;border:1px solid var(--line);box-shadow:0 5px 14px rgba(31,42,68,.08);background:#dfe6ee}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:11.5px;color:var(--muted);margin:8px 2px 0}
+  .legend .lg{display:inline-flex;align-items:center;gap:5px}
+  .legend .sw{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .legend .sw.hol{background:transparent!important;border:2px solid #7d8794}
+  .nopin{margin-top:10px;background:#fbfcfe;border:1px dashed #cfd8e3;border-radius:12px;padding:9px 12px;font-size:12px;color:var(--muted)}
+  .nopin .nph{font-size:10.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:#9aa6b4;margin-bottom:5px}
+  .nopin .np{padding:3px 0;line-height:1.35}
+  .nopin .np i{font-style:normal;color:#9aa6b4}
+  .nopin .hint{margin-top:6px;color:#9aa6b4}
+  .filters{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 6px}
+  .fbtn{font-family:inherit;font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--accent2);border-radius:999px;padding:5px 11px;cursor:pointer}
+  .fbtn span{color:#9aa6b4;font-weight:700;margin-left:2px}
+  .fbtn:hover{border-color:var(--warm)}
+  .fbtn.on{background:var(--warm);border-color:var(--warm);color:#fff}
+  .fbtn.on span{color:#f3d9d3}
+  .area{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;color:var(--accent2);margin:18px 0 8px}
+  .area:first-child{margin-top:8px}
+  .area .dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+  .area .acnt{color:#9aa6b4;font-weight:800}
+  .tgs{margin-top:5px}
+  .tg{display:inline-block;font-size:10.5px;font-weight:700;background:var(--chip);color:var(--accent2);border-radius:999px;padding:2px 8px;margin:0 4px 0 0}
+  .idea .t{cursor:pointer}
+  .idea.flash{box-shadow:0 0 0 3px rgba(163,90,78,.35)}
+  .edit{position:absolute;top:9px;right:32px;font-size:14px;color:#c9cfd6;cursor:pointer;line-height:1}
+  .edit:hover{color:var(--accent)}
+  .editor{margin-top:9px;padding:10px;background:#f7f9fc;border:1px solid var(--line);border-radius:10px}
+  .editor select{font-family:inherit;font-size:12.5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:7px}
+  .editor .eb{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .editor button.sv,.editor button.fm,.editor button.cx{font-family:inherit;font-size:12px;font-weight:700;border:none;border-radius:8px;padding:6px 11px;cursor:pointer}
+  .editor button.sv{background:var(--warm);color:#fff}
+  .editor button.fm{background:var(--accent);color:#fff}
+  .editor button.cx{background:var(--chip);color:#8d96a3}
+  .tgb{font-family:inherit;font-size:11.5px;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--accent2);border-radius:999px;padding:4px 9px;cursor:pointer;margin:0 4px 5px 0}
+  .tgb.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
+  .addtags{flex-basis:100%}
+  .addbar button.tgb{font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:999px;background:#fff;color:var(--accent2);border:1px solid var(--line)}
+  .addbar button.tgb:hover{background:#fff;border-color:var(--warm)}
+  .addbar button.tgb.on{background:var(--accent2);border-color:var(--accent2);color:#fff}
+  .addbar #ar{flex:1;min-width:130px}
+  @media (max-width:860px){.cols{grid-template-columns:1fr}.mapcol{position:static}#map{height:340px;min-height:300px}}
 </style>
-<style>.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:2px 0 2px}.secbar h1{font-size:23px;color:var(--accent,#3f6f8f)}.secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line,#e3e7ee);border-radius:999px;padding:2px 8px}.secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}.secbar-wrap{max-width:820px;margin:0 auto;padding:10px 16px 0}</style>
+<style>.secbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:2px 0 2px}.secbar h1{font-size:23px;color:var(--accent,#3f6f8f)}.secbar .ver{font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid var(--line,#e3e7ee);border-radius:999px;padding:2px 8px}.secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700}.secbar-wrap{max-width:1320px;margin:0 auto;padding:10px 16px 0}</style>
 </head>
 <body>
 <div id="login">
@@ -79,7 +127,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>💛 Asa Activities</h1><span class="ver">v1.0</span><span class="date"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>💛 Asa Activities</h1><span class="ver">v1.1</span><span class="date"></span></div></div>
 
 <div class="wrap">
   <div class="intro">Two lists you and Åsa are building together. <b>Date Ideas</b> is the actionable one &mdash; things to go and do, ticked off as you do them. <b>Things we like to do together</b> is the reference list the ideas come from.</div>
@@ -88,14 +136,24 @@
     <input id="it" placeholder="Add something...">
     <select id="g"><option value="date_idea">Date idea</option><option value="like">Thing we like</option></select>
     <input id="pl" placeholder="Where (optional)">
+    <select id="ar"><option value="">Area (auto)</option><option>NYC</option><option>Westchester</option><option>Hudson Valley</option><option>Connecticut</option><option>Further away</option></select>
     <button onclick="addItem()">Add</button>
+    <div class="addtags" id="addtags"></div>
   </div>
 
-  <div class="sect">
+  <div class="cols">
+   <div class="sect">
     <div class="secthead"><h2>Date Ideas</h2><span class="cnt" id="cDate"></span></div>
-    <div class="sectsub">Things to go and do. Tick one when it happens.</div>
+    <div class="sectsub">Things to go and do. Tick one when it happens. Tap an idea to find it on the map, tap a tag to filter.</div>
+    <div class="filters" id="filters"></div>
     <div id="listDate"></div>
     <div id="sugDate"></div>
+   </div>
+   <div class="mapcol">
+    <div id="map"></div>
+    <div class="legend" id="legend"></div>
+    <div class="nopin" id="nopin"></div>
+   </div>
   </div>
 
   <div class="sect">
@@ -105,7 +163,7 @@
     <div id="sugLike"></div>
   </div>
 </div>
-<div class="badge">Asa Activities v1.0</div>
+<div class="badge">Asa Activities v1.1</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -148,28 +206,164 @@ function render(){
   document.getElementById('cDate').textContent=dates.length+(doneN?' · '+doneN+' done':'');
   document.getElementById('cLike').textContent=likes.length+' of 15';
 
-  const dh=document.getElementById('listDate');
-  dh.innerHTML = dates.length ? dates.map(r=>{
-    const done=r.status==='done';
-    return '<div class="idea'+(done?' done':'')+'">'+
-      '<span class="tick" onclick="toggle(\''+r.id+'\','+(done?'true':'false')+')" title="'+(done?'Mark not done':'Mark done')+'"></span>'+
-      '<div><div class="t">'+esc(r.item)+'</div>'+
-      ((r.place||r.notes||r.done_on)?'<div class="m">'+
-        (r.place?'<span class="pl">'+esc(r.place)+'</span>':'')+
-        (r.place&&r.notes?' · ':'')+(r.notes?esc(r.notes):'')+
-        (r.done_on?(r.place||r.notes?' · ':'')+'done '+r.done_on:'')+
-      '</div>':'')+
-      '</div><span class="del" title="Remove" onclick="del(\''+r.id+'\')">✕</span></div>';
-  }).join('') : '<div class="empty">Nothing here yet. Add the first idea above.</div>';
+  const tagOK=r=>!FILTER||(r.tags||[]).includes(FILTER);
+  const sugAll=sug('date_idea');
+  const datesV=dates.filter(tagOK), sugV=sugAll.filter(tagOK);
+  drawFilters(dates.concat(sugAll));
+  drawDates(datesV);
 
   const lh=document.getElementById('listLike');
   lh.innerHTML = likes.length ? likes.map(r=>
     '<span class="chip">'+esc(r.item)+'<span class="x" title="Remove" onclick="del(\''+r.id+'\')">✕</span></span>'
   ).join('') : '<div class="empty">Nothing here yet.</div>';
 
-  drawSug('sugDate', sug('date_idea'), 'date ideas');
+  drawSug('sugDate', sugV, 'date ideas');
+  drawMap(datesV, sugV);
   drawSug('sugLike', sug('like'), 'things you might both like');
 }
+
+
+/* ---------- v1.1: areas, tags, map ---------- */
+const AREAS=['NYC','Westchester','Hudson Valley','Connecticut','Further away'];
+const AREA_COL={'NYC':'#3f6f8f','Westchester':'#a35a4e','Hudson Valley':'#1e8e5a','Connecticut':'#8a5fb0','Further away':'#6b7280','Not placed yet':'#9aa6b4'};
+const TAGS=['Food','Music','Museum','Art','Photography','Walk','Hiking','Biking','Water','Shopping','Antiques','Stay','Spa','Tour','Movies','Travel'];
+let FILTER='', EDIT=null, MAP=null, LAYER=null, MK={};
+const ADDTAGS=new Set();
+
+function guessArea(t){t=(t||'').toLowerCase();
+  if(/\bnyc\b|new york city|manhattan|brooklyn|queens|bronx|harlem|chelsea|tribeca/.test(t))return 'NYC';
+  if(/white plains|peekskill|irvington|tarrytown|scarsdale|yonkers|westchester|mamaroneck|new rochelle|ossining|croton|rye\b/.test(t))return 'Westchester';
+  if(/beacon|garrison|cold spring|hudson|poughkeepsie|rhinebeck|kingston|catskill|saugerties|nyack/.test(t))return 'Hudson Valley';
+  if(/\bct\b|connecticut|greenwich|stamford|norwalk|westport|fairfield|darien|new canaan|wilton|ridgefield|milford|new haven|southport/.test(t))return 'Connecticut';
+  return null;}
+
+async function geocode(q){
+  try{
+    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),7000);
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q),{signal:ctl.signal});
+    clearTimeout(to);const j=await r.json();
+    if(j&&j[0])return {lat:Math.round(+j[0].lat*1e5)/1e5,lng:Math.round(+j[0].lon*1e5)/1e5};
+  }catch(e){}
+  return null;}
+
+function drawAddTags(){
+  const h=document.getElementById('addtags');if(!h)return;
+  h.innerHTML=TAGS.map(t=>'<button type="button" class="tgb'+(ADDTAGS.has(t)?' on':'')+'" onclick="togAddTag(\''+t+'\')">'+t+'</button>').join('');
+}
+function togAddTag(t){ADDTAGS.has(t)?ADDTAGS.delete(t):ADDTAGS.add(t);drawAddTags();}
+
+function setFilter(t){FILTER=(FILTER===t)?'':t;render();}
+function drawFilters(rows){
+  const c={};rows.forEach(r=>(r.tags||[]).forEach(t=>c[t]=(c[t]||0)+1));
+  const names=TAGS.filter(t=>c[t]);
+  document.getElementById('filters').innerHTML=
+    '<button class="fbtn'+(!FILTER?' on':'')+'" onclick="setFilter(\'\')">All</button>'+
+    names.map(t=>'<button class="fbtn'+(FILTER===t?' on':'')+'" onclick="setFilter(\''+t+'\')">'+t+' <span>'+c[t]+'</span></button>').join('');
+}
+
+function ideaCard(r){
+  const done=r.status==='done';
+  const tg=(r.tags||[]).length?'<div class="tgs">'+(r.tags||[]).map(t=>'<span class="tg">'+esc(t)+'</span>').join('')+'</div>':'';
+  return '<div class="idea'+(done?' done':'')+'" id="c-'+r.id+'">'+
+    '<span class="tick" onclick="toggle(\''+r.id+'\','+(done?'true':'false')+')" title="'+(done?'Mark not done':'Mark done')+'"></span>'+
+    '<div style="min-width:0;flex:1"><div class="t" onclick="panTo(\''+r.id+'\')">'+esc(r.item)+'</div>'+
+    ((r.place||r.notes||r.done_on)?'<div class="m">'+
+      (r.place?'<span class="pl">'+esc(r.place)+'</span>':'')+
+      (r.place&&r.notes?' · ':'')+(r.notes?esc(r.notes):'')+
+      (r.done_on?(r.place||r.notes?' · ':'')+'done '+r.done_on:'')+
+    '</div>':'')+tg+
+    ((EDIT&&EDIT.id===r.id)?editorHtml(r):'')+
+    '</div><span class="edit" title="Edit area and tags" onclick="startEdit(\''+r.id+'\')">✎</span>'+
+    '<span class="del" title="Remove" onclick="del(\''+r.id+'\')">✕</span></div>';
+}
+function editorHtml(r){
+  return '<div class="editor"><div><select id="eArea"><option value="">Not placed yet</option>'+
+    AREAS.map(a=>'<option'+(EDIT.area===a?' selected':'')+'>'+a+'</option>').join('')+'</select></div>'+
+    '<div>'+TAGS.map(t=>'<button type="button" class="tgb'+(EDIT.tags.has(t)?' on':'')+'" onclick="togEditTag(\''+t+'\')">'+t+'</button>').join('')+'</div>'+
+    '<div class="eb"><button class="sv" onclick="saveEdit(\''+r.id+'\')">Save</button>'+
+    '<button class="fm" onclick="findOnMap(\''+r.id+'\')">'+(r.lat==null?'Find on map':'Re-find on map')+'</button>'+
+    '<button class="cx" onclick="cancelEdit()">Cancel</button></div></div>';
+}
+function startEdit(id){
+  const r=ROWS.find(x=>x.id===id);if(!r)return;
+  EDIT={id,area:r.area||'',tags:new Set(r.tags||[])};render();
+}
+function cancelEdit(){EDIT=null;render();}
+function togEditTag(t){
+  const a=document.getElementById('eArea');if(a&&EDIT)EDIT.area=a.value;
+  EDIT.tags.has(t)?EDIT.tags.delete(t):EDIT.tags.add(t);render();
+}
+async function saveEdit(id){
+  const a=document.getElementById('eArea');
+  const patch={area:(a?a.value:EDIT.area)||null,tags:Array.from(EDIT.tags),updated_at:new Date().toISOString()};
+  const {error}=await sb.from('asa_activities').update(patch).eq('id',id);
+  if(error){toast(error.message);return;}
+  EDIT=null;toast('Saved.');load();
+}
+async function findOnMap(id){
+  const r=ROWS.find(x=>x.id===id);if(!r)return;
+  toast('Looking...');
+  let gc=await geocode(r.place?r.item+', '+r.place:r.item);
+  let how='';
+  if(!gc&&r.place){gc=await geocode(r.place);how=' (at '+r.place+')';}
+  if(!gc){toast('Could not find it. Try adding a town in the Where field.');return;}
+  const a=document.getElementById('eArea');
+  const patch={lat:gc.lat,lng:gc.lng,area:(a?a.value:EDIT&&EDIT.area)||r.area||guessArea((r.place||'')+' '+r.item)||null,tags:EDIT?Array.from(EDIT.tags):(r.tags||[]),updated_at:new Date().toISOString()};
+  const {error}=await sb.from('asa_activities').update(patch).eq('id',id);
+  if(error){toast(error.message);return;}
+  EDIT=null;toast('Pinned'+how+'.');load();
+}
+
+function drawDates(rows){
+  const host=document.getElementById('listDate');
+  if(!rows.length){host.innerHTML='<div class="empty">'+(FILTER?'Nothing tagged '+esc(FILTER)+' yet.':'Nothing here yet. Add the first idea above.')+'</div>';return;}
+  const g={};
+  rows.forEach(r=>{const a=AREAS.includes(r.area)?r.area:'Not placed yet';(g[a]=g[a]||[]).push(r);});
+  host.innerHTML=AREAS.concat(['Not placed yet']).filter(a=>g[a]).map(a=>
+    '<div class="area"><span class="dot" style="background:'+AREA_COL[a]+'"></span>'+esc(a)+'<span class="acnt">'+g[a].length+'</span></div>'+
+    g[a].map(ideaCard).join('')).join('');
+}
+
+function initMap(){
+  if(MAP||typeof L==='undefined')return;
+  MAP=L.map('map',{scrollWheelZoom:true}).setView([41.4,-73.7],8);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'&copy; OpenStreetMap contributors'}).addTo(MAP);
+  LAYER=L.layerGroup().addTo(MAP);
+}
+function drawMap(active,sugg){
+  initMap();
+  const np=document.getElementById('nopin'),lg=document.getElementById('legend');
+  const all=active.map(r=>({r,s:false})).concat(sugg.map(r=>({r,s:true})));
+  const pinned=all.filter(x=>x.r.lat!=null&&x.r.lng!=null), loose=all.filter(x=>x.r.lat==null||x.r.lng==null);
+  if(MAP){
+    LAYER.clearLayers();MK={};
+    pinned.forEach(({r,s})=>{
+      const col=AREA_COL[AREAS.includes(r.area)?r.area:'Not placed yet'];
+      const m=L.circleMarker([r.lat,r.lng],{radius:s?8:10,color:s?col:'#fff',weight:s?2.5:2,fillColor:col,fillOpacity:s?0.12:(r.status==='done'?0.45:0.95)}).addTo(LAYER);
+      m.bindPopup('<b style="font-weight:700">'+esc(r.item)+'</b>'+(r.place?'<br>'+esc(r.place):'')+(s?'<br><i>Suggested</i>':''));
+      m.on('click',()=>focusIdea(r.id));
+      MK[r.id]=m;
+    });
+    if(pinned.length){MAP.fitBounds(L.latLngBounds(pinned.map(x=>[x.r.lat,x.r.lng])),{padding:[30,30],maxZoom:11});}
+    setTimeout(()=>MAP.invalidateSize(),50);
+  }
+  const seen={};pinned.concat(loose).forEach(x=>{seen[AREAS.includes(x.r.area)?x.r.area:'Not placed yet']=1;});
+  lg.innerHTML=AREAS.concat(['Not placed yet']).filter(a=>seen[a]).map(a=>'<span class="lg"><span class="sw" style="background:'+AREA_COL[a]+'"></span>'+a+'</span>').join('')+
+    '<span class="lg"><span class="sw hol"></span>Suggested</span>';
+  np.innerHTML=loose.length?'<div class="nph">No pin yet · '+loose.length+'</div>'+
+    loose.map(x=>'<div class="np">'+esc(x.r.item)+(x.s?' <i>(suggested)</i>':'')+'</div>').join('')+
+    '<div class="hint">Tap the pencil on an idea, then Find on map.</div>':'';
+}
+function panTo(id){
+  const m=MK[id];
+  if(m&&MAP){MAP.setView(m.getLatLng(),Math.max(MAP.getZoom(),12));m.openPopup();}
+  else toast('No pin for this one yet. Use the pencil, then Find on map.');
+}
+function focusIdea(id){
+  const el=document.getElementById('c-'+id);
+  if(el){el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),1600);}
+}
+drawAddTags();
 
 function drawSug(hostId, rows, what){
   const host=document.getElementById(hostId);
@@ -188,10 +382,19 @@ async function addItem(){
   if(!item){toast('What would you like to add?');return;}
   const grp=document.getElementById('g').value;
   const place=document.getElementById('pl').value.trim();
-  const {error}=await sb.from('asa_activities').insert({item,grp,place:place||null,status:'active',source:'scott'});
+  const row={item,grp,place:place||null,status:'active',source:'scott'};
+  let pinned=false;
+  if(grp==='date_idea'){
+    row.area=document.getElementById('ar').value||guessArea(place+' '+item)||null;
+    row.tags=Array.from(ADDTAGS);
+    const gc=await geocode(place?item+', '+place:item) || (place?await geocode(place):null);
+    if(gc){row.lat=gc.lat;row.lng=gc.lng;pinned=true;}
+  }
+  const {error}=await sb.from('asa_activities').insert(row);
   if(error){toast('Could not add: '+error.message);return;}
   document.getElementById('it').value='';document.getElementById('pl').value='';
-  toast('Added.'); load();
+  document.getElementById('ar').value='';ADDTAGS.clear();drawAddTags();
+  toast(grp==='date_idea'?(pinned?'Added and pinned.':'Added. No pin yet, use the pencil to find it on the map.'):'Added.'); load();
 }
 async function toggle(id,done){
   const patch = done ? {status:'active',done_on:null} : {status:'done',done_on:ymd(new Date())};
