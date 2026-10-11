@@ -298,7 +298,7 @@
       '.dl-x:hover,.dl-x:focus-visible{background:#eef2f8;color:#1f2a44;outline:none}' +
       '.dl-info{display:flex;justify-content:space-between;gap:2px 16px;flex-wrap:wrap;margin-top:6px;font-size:12px;line-height:1.4;color:#5b6472}' +
       '.dl-info b{color:#1f2a44;font-weight:800}' +
-      '.dl-info .dl-up{color:#2f7a66}.dl-info .dl-dn{color:#a14560}' +
+      '.dl-info .dl-chg{font-weight:400;color:#b9c0ca}.dl-info .dl-ar{font-style:normal}.dl-info .dl-ar.dl-up{color:#c4651d}' +
       '.dl-info:empty{display:none}' +
       '.dl-out{display:flex;align-items:center;gap:7px;margin-top:2px;font-size:11.5px;font-weight:700;color:#5b6472}' +
       '.dl-out i{display:inline-block;width:3px;height:11px;border-radius:2px;background:#e0975a;flex:none}' +
@@ -456,7 +456,7 @@
     }
     sunEl.innerHTML = txt;
     var c = changeParts(i);
-    chgEl.innerHTML = c.amt ? '<span class="' + c.cls + '"><b class="' + c.cls + '">' + c.arrow + ' ' + c.word + ' ' + c.amt + ' a day</b></span>' : '<b>' + c.arrow + ' ' + c.word + '</b>';
+    chgEl.innerHTML = c.amt ? '<i class="dl-ar ' + c.cls + '">' + c.arrow + '</i> ' + c.word + ' ' + c.amt + ' a day' : '<i class="dl-ar">' + c.arrow + '</i> ' + c.word;
   }
 
   function drawHeader() {
