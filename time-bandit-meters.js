@@ -1,4 +1,15 @@
-/* BANDIT BLOCKS v1.3 (Oct 11, 2026)
+/* BANDIT BLOCKS v1.4 (Oct 11, 2026)
+   v1.4 makes the meters follow the page's View switcher (Live today, Sample: start
+   of day, Sample: mid day, Sample: all done) the way the eight designs already do.
+   Scott asked for it so he can see what "finished" actually looks like.
+
+   The cause was not in this file. The page rebuilt the eight designs whenever the
+   view changed but never told the meters, because the redraw that follows the
+   switcher did not call them. So the meters sat on the live day whatever the switch
+   said. The page now calls them on every redraw and hands over the sample's habit
+   list; a sample has no date, so the week strip stands down while one is showing.
+   ---------------------------------------------------------------------------
+   BANDIT BLOCKS v1.3 (Oct 11, 2026)
    v1.3 fixes the thing Scott actually saw and adds the day he asked for.
 
    THE BUG. "brick column and equak bricks are not filling in". They were
@@ -66,7 +77,7 @@
 (function () {
   'use strict';
 
-  var TBM = window.TBM = { version: '1.3', name: 'Bandit Blocks' };
+  var TBM = window.TBM = { version: '1.4', name: 'Bandit Blocks' };
   var BOX = 330;   /* how tall every meter is. Brick size is worked out from this. */
 
   /* ---------- the one definition ---------- */
@@ -133,6 +144,7 @@
     '  box-shadow:0 8px 22px rgba(31,42,68,.06)}',
     '.tbm h2{font-size:17px;font-weight:800;color:#1f2a44;margin:0 0 2px;letter-spacing:-.01em}',
     /* the day being shown, so a past day can never be mistaken for today */
+    '.tbm h2 .tbmsample{color:#5b7fa8;background:#eef3fa;border-color:#d9e3f0}',
     '.tbm h2 .tbmday{margin-left:9px;font-size:12px;font-weight:700;color:#8a6d1f;background:#fdf4dc;',
     '  border:1px solid #f0e2b8;border-radius:999px;padding:3px 9px;vertical-align:2px;letter-spacing:.01em}',
     '.tbm .tbmsub{font-size:13px;color:#5b6472;line-height:1.45;margin:0 0 12px}',
@@ -354,6 +366,7 @@
      the component fetches them itself, so there is still only one component. */
   TBM.mount = function (opts) {
     style();
+    if (opts.sample) TBM._sample = opts.sample;
     /* The Daily Habit Tracker still wraps this in a two column grid from when the
        meters lived down the side. Stand that down so the row runs the full width.
        Harmless if the wrapper is not there. */
@@ -431,6 +444,25 @@
       });
   }
 
+  /* A SAMPLE DAY. The page's View switcher hands over the tracker engine's own habit
+     list for a made-up day, so there is nothing to look up: the ticks are right there.
+     Matching allows the tracker name as well as the task name, because the engine lists
+     some habits under a different name from the template (the same mismatch loadPast
+     deals with). A sample is not a date, so it overrides any day picked on the strip. */
+  function sampleKeys(habits) {
+    var keys = {};
+    (habits || []).forEach(function (h) {
+      if (h && h.done && h.n) keys[SEG.plain(h.n)] = 1;
+    });
+    return { keys: keys, byTracker: true };
+  }
+  /* null puts the meters back on the real day. The page calls this on every redraw. */
+  TBM.setSample = function (habits) {
+    TBM._sample = habits || null;
+    if (TBM._sample) TBM._day = null;
+    return TBM.refresh();
+  };
+
   /* TBM.setDay(null) goes back to today. The week strip calls this. */
   TBM.setDay = function (day) {
     TBM._day = (day && day !== today()) ? day : null;
@@ -442,16 +474,18 @@
     var el = TBM._el, sb = TBM._sb;
     if (!el) return Promise.resolve();
     if (!rows) rows = TBM._rows || [];
-    var day = TBM.day(), past = !!TBM._day;
+    var sample = TBM._sample;
+    var day = TBM.day(), past = !sample && !!TBM._day;
     var counting = (rows || []).filter(SEG.counts);
-    var load = past ? loadPast(sb, day) : loadToday(sb, day);
+    var load = sample ? Promise.resolve(sampleKeys(sample))
+             : past ? loadPast(sb, day) : loadToday(sb, day);
     return load.then(function (got) {
       var done = {};
       counting.forEach(function (row) {
         if (got.keys[SEG.plain(row.task)]) { done[row.id] = 1; return; }
         if (got.byTracker && row.tracker && got.keys[SEG.plain(row.tracker)]) done[row.id] = 1;
       });
-      paint(el, { rows: counting, done: done, day: day, past: past });
+      paint(el, { rows: counting, done: done, day: day, past: past, sample: !!sample });
     }, function () { paint(el, { rows: counting, done: {}, day: day, past: past, err: true }); });
   };
 
@@ -463,9 +497,13 @@
 
     el.className = 'tbm';
     el.innerHTML =
-      '<h2>Bandit Blocks' + (data.past ? '<span class="tbmday">' + pretty(data.day) + '</span>' : '') + '</h2>' +
+      '<h2>Bandit Blocks' +
+        (data.sample ? '<span class="tbmday tbmsample">Sample day, not your real ticks</span>'
+                     : data.past ? '<span class="tbmday">' + pretty(data.day) + '</span>' : '') + '</h2>' +
       '<p class="tbmsub">Every block is ten minutes of habit time you took back' +
-      (data.past
+      (data.sample
+        ? ' on a made-up day. Nothing here is your real data. Switch back to Live today to see the real one.'
+        : data.past
         ? ' that day. The bar is today\'s habits, so every day is measured against the' +
           ' same thing and the stacks can be compared. Past days are read from the' +
           ' morning snapshot, so a habit ticked but never timed still counts.'
