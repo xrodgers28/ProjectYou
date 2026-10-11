@@ -79,6 +79,12 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 .hdrnums .big b{font-size:54px;font-weight:800;line-height:.9;letter-spacing:-2px;font-variant-numeric:tabular-nums}
 .hdrnums .big i{font-style:normal;font-size:10px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
 .hdrnums .bad b{color:var(--bad)}.hdrnums .blue b{color:var(--accent)}
+/* v5.65, Oct 11, 2026: the quiet chip shelf under the stats line. */
+.chiprow{display:flex;gap:7px;flex-wrap:wrap;padding:7px 0 0}
+.chiprow:empty{display:none}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--line);border-radius:7px;padding:3px 9px}
+.chip svg{width:13px;height:13px;color:var(--faint);flex:none}
+.chip b{font-variant-numeric:tabular-nums;color:var(--ink);font-weight:800}
 .wheels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
 .wheel{padding:10px 14px;display:flex;flex-direction:row;align-items:center;gap:12px;text-align:left;min-height:0}.wheelpic{flex:none;line-height:0}.wheeltext{display:flex;flex-direction:column;gap:3px;min-width:0}
 .wheel.green{background:var(--goodbg)}.wheel.dark{background:var(--ink);color:#fff}
@@ -879,6 +885,9 @@ html.py-embed .swshadebtn{display:none!important}
 
     <!-- header numbers -->
     <div class="hdrnums" id="hdrnums"></div>
+    <!-- v5.65, Oct 11, 2026, Scott picked this out of five mocks: the small counts that do not
+         deserve a big tile live here as quiet chips. Office days first. Empty chips never render. -->
+    <div class="chiprow" id="chipRow"></div>
 
     <!-- three wheels -->
     <div class="wheels">
@@ -1032,7 +1041,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
    spelling, and a new spelling can no longer be added next to an old one. */
 /* v5.54, Oct 10, 2026, Scott: yellow names (already met) stay locked, but now carry an x that hides them from This
    Week. The meet up stays in his log. It is the same x the grey names have, so "bring them back" undoes it. */
-const VERSION='v5.64';
+const VERSION='v5.65';
 (function(){ /* v5.55: window shade on the meet ups card, remembered per browser */
   function wire(){
     const b=document.getElementById('swShadeBtn'), c=document.getElementById('swCard'); if(!b||!c)return;
@@ -3330,6 +3339,23 @@ function render(){
     '<div><div class="cap">Project YOU hours</div><div class="big"><b>'+pyH+'</b>'+(C.pyMin?'':'<i>none logged</i>')+'</div></div>'+
     '<div><div class="cap">Habit hours</div><div class="big"><b>'+hrs(C.habitMin)+'</b><i>'+C.present.length+' days</i></div></div>'+
     trainTile();
+  /* v5.65: the chip shelf. officeTile() above is retired; the office number lives here now. */
+  (function(){
+    const row=el('chipRow'); if(!row)return;
+    const ICON={
+      office:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="4" y="3" width="11" height="18" rx="1"/><path d="M15 9h5v12h-5"/><path d="M7.5 7h1M11 7h1M7.5 11h1M11 11h1M7.5 15h1M11 15h1"/></svg>',
+      people:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><path d="M4 20c0-3 2.5-5 5-5s5 2 5 5"/><circle cx="17" cy="9" r="2.3"/><path d="M15.5 20c0-2 1-3.4 2.5-3.4s2.5 1.4 2.5 3.4"/></svg>'
+    };
+    const chips=[];
+    const off=(D.office||[]).length;
+    if(off){
+      const yr=(D.officeYear!=null)?(D.officeYear+' days in '+D.we.slice(0,4)+' so far. '):'';
+      chips.push('<span class="chip" title="'+yr+'Days badged in this week, out of a five day work week."><span>'+ICON.office+'</span><b>'+off+'</b> day'+(off>1?'s':'')+' in the office</span>');
+    }
+    const met=(D.conns||[]).filter(c=>!c.planned&&!c.superseded&&c.happened_on>=D.ws&&c.happened_on<=D.we).length;
+    if(met) chips.push('<span class="chip" title="People you logged seeing, calling or texting this week."><span>'+ICON.people+'</span><b>'+met+'</b> '+(met>1?'people':'person')+' this week</span>');
+    row.innerHTML=chips.join('');
+  })();
   el('dial').innerHTML=dial(118);el('dial2').innerHTML=dial(170);
   el('covN').innerHTML=C.coverage.toFixed(1)+'<small> of 7 a day</small>';
   /* v5.63, Oct 11, 2026, Scott wrote this line himself. The old one described the picture
