@@ -96,6 +96,10 @@
   .tgs{margin-top:5px}
   .tg{display:inline-block;font-size:10.5px;font-weight:700;background:var(--chip);color:var(--accent2);border-radius:999px;padding:2px 8px;margin:0 4px 0 0}
   .idea .t{cursor:pointer}
+  .drv{display:inline-block;font-size:10.5px;font-weight:700;color:#5b6472;background:#f1f4f8;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:0 4px 0 0;white-space:nowrap}
+  .legend .drvnote{flex-basis:100%;margin-top:2px;color:#9aa6b4}
+  .leaflet-tooltip.dtip{white-space:normal;width:max-content;max-width:230px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.4;padding:6px 9px;border-radius:8px;color:#1f2a44}
+  .leaflet-tooltip.dtip .dd{color:#5b6472}
   .idea.flash{box-shadow:0 0 0 3px rgba(163,90,78,.35)}
   .edit{position:absolute;top:9px;right:32px;font-size:14px;color:#c9cfd6;cursor:pointer;line-height:1}
   .edit:hover{color:var(--accent)}
@@ -127,7 +131,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>💛 Asa Activities</h1><span class="ver">v1.1</span><span class="date"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>💛 Asa Activities</h1><span class="ver">v1.2</span><span class="date"></span></div></div>
 
 <div class="wrap">
   <div class="intro">Two lists you and Åsa are building together. <b>Date Ideas</b> is the actionable one &mdash; things to go and do, ticked off as you do them. <b>Things we like to do together</b> is the reference list the ideas come from.</div>
@@ -163,7 +167,7 @@
     <div id="sugLike"></div>
   </div>
 </div>
-<div class="badge">Asa Activities v1.1</div>
+<div class="badge">Asa Activities v1.2</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -192,7 +196,7 @@ async function load(){
     .in('status',['active','suggested','done'])
     .order('position',{ascending:true}).order('created_at',{ascending:true});
   if(error){toast('Could not load: '+error.message);return;}
-  ROWS=data||[]; render();
+  ROWS=data||[]; render(); backfillDrive(ROWS);
 }
 
 /* An idea that has been done stays on the list, ticked, rather than vanishing.
@@ -230,6 +234,39 @@ const TAGS=['Food','Music','Museum','Art','Photography','Walk','Hiking','Biking'
 let FILTER='', EDIT=null, MAP=null, LAYER=null, MK={};
 const ADDTAGS=new Set();
 
+
+/* v1.2: driving time from 06870 (Old Greenwich CT). Typical, no traffic. Road routing by OSRM, free. */
+const HOME_LL=[41.03536,-73.56761];
+function fmtDrive(r){
+  if(!r||r.drive_min==null)return '';
+  const m=+r.drive_min, t=m<60?m+' min':Math.floor(m/60)+' h'+(m%60?' '+String(m%60).padStart(2,'0')+' min':'');
+  const mi=r.drive_mi==null?'':' · '+(+r.drive_mi>=10?Math.round(+r.drive_mi):(+r.drive_mi).toFixed(1))+' mi';
+  return t+mi;
+}
+async function driveFrom(lat,lng){
+  try{
+    const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),9000);
+    const r=await fetch('https://router.project-osrm.org/route/v1/driving/'+HOME_LL[1]+','+HOME_LL[0]+';'+lng+','+lat+'?overview=false',{signal:ctl.signal});
+    clearTimeout(to);const j=await r.json();
+    if(j&&j.routes&&j.routes[0])return {drive_min:Math.round(j.routes[0].duration/60),drive_mi:Math.round(j.routes[0].distance/1609.344*10)/10};
+  }catch(e){}
+  return null;
+}
+let BACKFILLING=false;
+async function backfillDrive(rows){
+  if(BACKFILLING)return;
+  const need=rows.filter(r=>r.lat!=null&&r.lng!=null&&r.drive_min==null);
+  if(!need.length)return;
+  BACKFILLING=true;
+  try{
+    for(const r of need){
+      const d=await driveFrom(r.lat,r.lng);
+      if(d){await sb.from('asa_activities').update(d).eq('id',r.id);r.drive_min=d.drive_min;r.drive_mi=d.drive_mi;}
+    }
+    render();
+  }catch(e){}
+  BACKFILLING=false;
+}
 function guessArea(t){t=(t||'').toLowerCase();
   if(/\bnyc\b|new york city|manhattan|brooklyn|queens|bronx|harlem|chelsea|tribeca/.test(t))return 'NYC';
   if(/white plains|peekskill|irvington|tarrytown|scarsdale|yonkers|westchester|mamaroneck|new rochelle|ossining|croton|rye\b/.test(t))return 'Westchester';
@@ -263,7 +300,8 @@ function drawFilters(rows){
 
 function ideaCard(r){
   const done=r.status==='done';
-  const tg=(r.tags||[]).length?'<div class="tgs">'+(r.tags||[]).map(t=>'<span class="tg">'+esc(t)+'</span>').join('')+'</div>':'';
+  const dv=fmtDrive(r);
+  const tg=((r.tags||[]).length||dv)?'<div class="tgs">'+(dv?'<span class="drv" title="Typical drive from 06870, no traffic">🚗 '+esc(dv)+'</span>':'')+(r.tags||[]).map(t=>'<span class="tg">'+esc(t)+'</span>').join('')+'</div>':'';
   return '<div class="idea'+(done?' done':'')+'" id="c-'+r.id+'">'+
     '<span class="tick" onclick="toggle(\''+r.id+'\','+(done?'true':'false')+')" title="'+(done?'Mark not done':'Mark done')+'"></span>'+
     '<div style="min-width:0;flex:1"><div class="t" onclick="panTo(\''+r.id+'\')">'+esc(r.item)+'</div>'+
@@ -309,6 +347,7 @@ async function findOnMap(id){
   if(!gc){toast('Could not find it. Try adding a town in the Where field.');return;}
   const a=document.getElementById('eArea');
   const patch={lat:gc.lat,lng:gc.lng,area:(a?a.value:EDIT&&EDIT.area)||r.area||guessArea((r.place||'')+' '+r.item)||null,tags:EDIT?Array.from(EDIT.tags):(r.tags||[]),updated_at:new Date().toISOString()};
+  const dd=await driveFrom(gc.lat,gc.lng);if(dd){patch.drive_min=dd.drive_min;patch.drive_mi=dd.drive_mi;}
   const {error}=await sb.from('asa_activities').update(patch).eq('id',id);
   if(error){toast(error.message);return;}
   EDIT=null;toast('Pinned'+how+'.');load();
@@ -340,7 +379,9 @@ function drawMap(active,sugg){
     pinned.forEach(({r,s})=>{
       const col=AREA_COL[AREAS.includes(r.area)?r.area:'Not placed yet'];
       const m=L.circleMarker([r.lat,r.lng],{radius:s?8:10,color:s?col:'#fff',weight:s?2.5:2,fillColor:col,fillOpacity:s?0.12:(r.status==='done'?0.45:0.95)}).addTo(LAYER);
-      m.bindPopup('<b style="font-weight:700">'+esc(r.item)+'</b>'+(r.place?'<br>'+esc(r.place):'')+(s?'<br><i>Suggested</i>':''));
+      const dv=fmtDrive(r);
+      m.bindPopup('<b style="font-weight:700">'+esc(r.item)+'</b>'+(r.place?'<br>'+esc(r.place):'')+(dv?'<br>🚗 '+esc(dv)+' from 06870':'')+(s?'<br><i>Suggested</i>':''));
+      m.bindTooltip('<b>'+esc(r.item)+'</b>'+(dv?'<br><span class="dd">🚗 '+esc(dv)+' from 06870</span>':''),{direction:'auto',offset:[12,0],className:'dtip',sticky:false});
       m.on('click',()=>focusIdea(r.id));
       MK[r.id]=m;
     });
@@ -349,7 +390,8 @@ function drawMap(active,sugg){
   }
   const seen={};pinned.concat(loose).forEach(x=>{seen[AREAS.includes(x.r.area)?x.r.area:'Not placed yet']=1;});
   lg.innerHTML=AREAS.concat(['Not placed yet']).filter(a=>seen[a]).map(a=>'<span class="lg"><span class="sw" style="background:'+AREA_COL[a]+'"></span>'+a+'</span>').join('')+
-    '<span class="lg"><span class="sw hol"></span>Suggested</span>';
+    '<span class="lg"><span class="sw hol"></span>Suggested</span>'+
+    '<span class="drvnote">🚗 Drive times are typical, no traffic, from 06870.</span>';
   np.innerHTML=loose.length?'<div class="nph">No pin yet · '+loose.length+'</div>'+
     loose.map(x=>'<div class="np">'+esc(x.r.item)+(x.s?' <i>(suggested)</i>':'')+'</div>').join('')+
     '<div class="hint">Tap the pencil on an idea, then Find on map.</div>':'';
@@ -370,7 +412,7 @@ function drawSug(hostId, rows, what){
   if(!rows.length){host.innerHTML='';return;}
   host.innerHTML='<div class="sug"><div class="sugh">Suggested '+what+' &mdash; '+rows.length+' waiting</div>'+
     rows.map(r=>'<div class="sugrow"><span class="st">'+esc(r.item)+
-      ((r.place||r.notes)?'<span class="sm">'+esc([r.place,r.notes].filter(Boolean).join(' · '))+'</span>':'')+
+      ((r.place||r.notes||r.drive_min!=null)?'<span class="sm">'+esc([r.place,(r.drive_min!=null?'🚗 '+fmtDrive(r):''),r.notes].filter(Boolean).join(' · '))+'</span>':'')+
       '</span>'+
       '<button class="keep" onclick="keep(\''+r.id+'\')">Keep</button>'+
       '<button class="drop" onclick="drop(\''+r.id+'\')">No</button></div>').join('')+
@@ -388,7 +430,7 @@ async function addItem(){
     row.area=document.getElementById('ar').value||guessArea(place+' '+item)||null;
     row.tags=Array.from(ADDTAGS);
     const gc=await geocode(place?item+', '+place:item) || (place?await geocode(place):null);
-    if(gc){row.lat=gc.lat;row.lng=gc.lng;pinned=true;}
+    if(gc){row.lat=gc.lat;row.lng=gc.lng;pinned=true;const dd=await driveFrom(gc.lat,gc.lng);if(dd){row.drive_min=dd.drive_min;row.drive_mi=dd.drive_mi;}}
   }
   const {error}=await sb.from('asa_activities').insert(row);
   if(error){toast('Could not add: '+error.message);return;}
