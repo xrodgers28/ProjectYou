@@ -54,7 +54,7 @@
 
   var C = {
     night: '#2b3552', astro: '#3b4570', nautical: '#575f98', civil: '#7d81c2', day: '#f4e6b4',
-    blue: '#3f6f8f', dst: '#4fa08a', dstText: '#5ba898', ink: '#1f2a44', muted: '#8a93a0', up: '#4fa08a', down: '#c05f7a'
+    blue: '#3f6f8f', dst: '#86a9a2', dstText: '#8aaba5', out: '#e0975a', ink: '#1f2a44', muted: '#8a93a0', up: '#4fa08a', down: '#c05f7a'
   };
 
   /* ---------- small helpers ---------- */
@@ -260,18 +260,17 @@
   }
 
   /* ---------- page pieces ---------- */
-  var host = null, tile, tileNum, tileChg, sunEl, chgEl, infoTimer = null, float, card, wrap, svg, tip, locBtn, backBtn, statsEl, legendEl, pop, msgEl, zipIn, cmpBox, xBtn, hoverT = null;
+  var host = null, tile, tileNum, outEl, sunEl, chgEl, infoTimer = null, float, card, wrap, svg, tip, locBtn, backBtn, statsEl, legendEl, pop, msgEl, zipIn, cmpBox, xBtn, hoverT = null;
 
   function injectCss() {
     if (document.getElementById('dl-css')) return;
     var s = document.createElement('style');
     s.id = 'dl-css';
     s.textContent =
-      '.dl-tile{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:80px;min-height:76px;padding:6px 8px;background:#fff;border:1.5px solid #3f6f8f;border-radius:12px;box-shadow:0 4px 12px rgba(31,42,68,.06);cursor:pointer;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
+      '.dl-tile{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:76px;height:76px;padding:6px;background:#fff;border:1.5px solid #3f6f8f;border-radius:12px;box-shadow:0 4px 12px rgba(31,42,68,.06);cursor:pointer;font-family:Arial,Helvetica,sans-serif;color:#1f2a44}' +
       '.dl-tile:hover,.dl-tile[aria-expanded="true"]{border-color:#3f6f8f}' +
       '.dl-tile:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px}' +
       '.dl-tl{font-size:9.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;line-height:1.15;color:#5b6472;text-align:center}' +
-      '.dl-td{font-size:9px;font-weight:800;line-height:1.1;white-space:nowrap;letter-spacing:.01em}' +
       '.dl-tn{font-size:28px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}' +
       '.dl-float{position:absolute;z-index:45;left:0;top:0;display:none}' +
       '.dl-float.on{display:block;animation:dlin .12s ease-out}' +
@@ -300,6 +299,10 @@
       '.dl-info b{color:#1f2a44;font-weight:800}' +
       '.dl-info .dl-up{color:#2f7a66}.dl-info .dl-dn{color:#a14560}' +
       '.dl-info:empty{display:none}' +
+      '.dl-out{display:flex;align-items:center;gap:7px;margin-top:2px;font-size:11.5px;font-weight:700;color:#5b6472}' +
+      '.dl-out i{display:inline-block;width:3px;height:11px;border-radius:2px;background:#e0975a;flex:none}' +
+      '.dl-out b{color:#1f2a44;font-weight:800;font-variant-numeric:tabular-nums}' +
+      '.dl-out:empty{display:none}' +
       '.dl-chart{position:relative;margin-top:2px}' +
       '.dl-chart svg{display:block;width:100%;touch-action:pan-y;user-select:none;-webkit-user-select:none;cursor:ew-resize;outline:none}' +
       '.dl-chart svg:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px;border-radius:4px}' +
@@ -328,7 +331,7 @@
       '.dl-msg{margin-top:8px;font-size:12px;font-weight:700;color:#5b6472;min-height:0}' +
       '.dl-msg:empty{display:none}' +
       '.dl-msg.bad{color:#c0392b}' +
-      '@media(max-width:600px){.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}.dl-tile{min-width:68px;min-height:64px}.dl-tn{font-size:24px}}';
+      '@media(max-width:600px){.dl-card{padding:9px 10px 6px}.dl-stats{align-items:flex-start;text-align:left}.dl-right{width:100%;justify-content:space-between}.dl-tile{width:64px;height:64px}.dl-tn{font-size:24px}}';
     document.head.appendChild(s);
   }
 
@@ -338,8 +341,8 @@
     tile.className = 'dl-tile';
     tile.setAttribute('aria-haspopup', 'dialog');
     tile.setAttribute('aria-expanded', 'false');
-    tile.innerHTML = '<span class="dl-tl">Hours of<br>daylight</span><span class="dl-tn"></span><span class="dl-td"></span>';
-    tileNum = tile.querySelector('.dl-tn'); tileChg = tile.querySelector('.dl-td');
+    tile.innerHTML = '<span class="dl-tl">Hours of<br>daylight</span><span class="dl-tn"></span>';
+    tileNum = tile.querySelector('.dl-tn');
     host.appendChild(tile);
 
     float = document.createElement('div');
@@ -376,7 +379,8 @@
       '<div class="dl-chart">' +
         '<svg role="slider" tabindex="0" aria-label="Date on the daylight chart. Use the left and right arrow keys to move it." aria-valuemin="1"></svg>' +
         '<div class="dl-tip" hidden></div>' +
-      '</div>';
+      '</div>' +
+      '<div class="dl-out"></div>';
     float.appendChild(card);
     document.body.appendChild(float);
 
@@ -392,6 +396,7 @@
     zipIn = card.querySelector('.dl-zipf input');
     cmpBox = card.querySelector('.dl-cmp');
     xBtn = card.querySelector('.dl-x');
+    outEl = card.querySelector('.dl-out');
     sunEl = card.querySelector('.dl-sunt');
     chgEl = card.querySelector('.dl-chg');
   }
@@ -478,10 +483,51 @@
     var th = series(S.loc.lat, S.loc.lon, S.t.y, S.n).day[S.todayIdx];
     tileNum.textContent = Math.floor(Math.round(th * 60) / 60);
     var tc = changeParts(S.todayIdx);
-    tileChg.textContent = tc.arrow + ' ' + tc.short;
-    tileChg.style.color = tc.color === C.muted ? '#5b6472' : (tc.color === C.down ? '#a14560' : '#2f7a66');
+
     tile.setAttribute('aria-label', 'Hours of daylight today in ' + S.loc.name + ': ' + fmtLong(th) + ', ' + (tc.amt ? tc.word.toLowerCase() + ' ' + tc.amt + ' a day' : 'holding steady') + '. Open the daylight meter.');
     backBtn.hidden = (S.sel == null || S.sel === S.todayIdx);
+  }
+
+  /* ---------- days outside: walks, rides and runs ----------
+     Two separate sources, both read-only here:
+     1. the live Strava rows in todos (from Jul 8, 2026), and
+     2. outdoor_days_backfill, a one-time Strava fill for Jan 2 to Jul 7.
+     Nothing is written to either. If the page's database is not ready, no marks show. */
+  var OUT = { year: 0, days: null, loading: false, at: 0 };
+  function dayKeyNY(iso) {
+    try { if (window.PY && typeof window.PY.day === 'function') { var k = window.PY.day(iso); if (/^\d{4}-\d{2}-\d{2}$/.test(k)) return k; } } catch (e) {}
+    var ms = Date.parse(iso); if (isNaN(ms)) return '';
+    return new Date(ms - 2 * 36e5).toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
+  }
+  function loadOutdoor(y, done) {
+    var db = window.sb;
+    if (!db || OUT.loading || (OUT.year === y && OUT.days && Date.now() - OUT.at < 300000)) return;
+    OUT.loading = true;
+    var days = {};
+    function mark(k) { if (k && k.slice(0, 4) === String(y)) days[k] = 1; }
+    var since = (y - 1) + '-12-30';
+    function strava(prefix) {
+      return db.from('todos').select('done_at').eq('source_project', 'strava').ilike('task', prefix + '%').gte('done_at', since).limit(3000);
+    }
+    Promise.all([
+      db.from('outdoor_days_backfill').select('day,walk,ride,run'),
+      strava('\ud83d\udeb6 Walk'), strava('\ud83d\udeb4 Ride'), strava('\ud83c\udfc3 Run')
+    ]).then(function (res) {
+      ((res[0] || {}).data || []).forEach(function (r) { if (r.walk || r.ride || r.run) mark(r.day); });
+      [1, 2, 3].forEach(function (q) { ((res[q] || {}).data || []).forEach(function (r) { mark(dayKeyNY(r.done_at)); }); });
+      OUT.year = y; OUT.days = days; OUT.at = Date.now(); OUT.loading = false;
+      done && done();
+    }, function () { OUT.loading = false; });
+  }
+  function outdoorIdx(y, n, todayIdx) {
+    var arr = [];
+    if (!OUT.days || OUT.year !== y) return arr;
+    for (var i = 0; i <= todayIdx && i < n; i++) {
+      var dt = new Date(Date.UTC(y, 0, 1 + i));
+      var k = dt.getUTCFullYear() + '-' + ('0' + (dt.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + dt.getUTCDate()).slice(-2);
+      if (OUT.days[k]) arr.push(i);
+    }
+    return arr;
   }
 
   /* ---------- the chart ---------- */
@@ -539,6 +585,15 @@
     /* the comparison places, then the main place on top */
     comps().forEach(function (c) { h += line(g, series(c.lat, c.lon, y, n).day, c.color, 1.8); });
     h += line(g, sr.day, C.ink, 2.3);
+
+    /* days you walked, rode or ran: a small orange tick hanging under the curve */
+    var od = outdoorIdx(y, n, S.todayIdx);
+    if (od.length) {
+      var tp = '';
+      od.forEach(function (i) { var tx = Xf(g, i), ty = Yf(g, sr.day[i]); tp += 'M' + f1(tx) + ',' + f1(ty + 3) + ' v6 '; });
+      h += '<path d="' + tp + '" stroke="' + C.out + '" stroke-width="1.5" stroke-linecap="round" fill="none"/>';
+    }
+    if (outEl) outEl.innerHTML = od.length ? '<i></i><span>Days you walked, rode or ran this year: <b>' + od.length + '</b></span>' : '';
 
     /* equinoxes and solstices */
     sunEvents(sr, n).forEach(function (e) {
@@ -779,6 +834,7 @@
     float.classList.add('on');
     tile.setAttribute('aria-expanded', 'true');
     requestAnimationFrame(drawAll);
+    loadOutdoor(S.t.y, function () { if (S.open) drawAll(); });
     clearInterval(infoTimer);
     infoTimer = setInterval(drawInfo, 30000);
   }
@@ -861,5 +917,5 @@
   else init();
 
   /* a tiny hook so a test or another page can read the numbers */
-  window.PYDaylight = { dayHours: function (lat, lon, y, m, d) { return hrs(lat, decl(y, doy0(y, m, d), lon), -0.833); }, fmtLong: fmtLong, fmtShort: fmtShort, sunMs: sunMs, dayChangeSec: dayChangeSec };
+  window.PYDaylight = { dayHours: function (lat, lon, y, m, d) { return hrs(lat, decl(y, doy0(y, m, d), lon), -0.833); }, fmtLong: fmtLong, fmtShort: fmtShort, sunMs: sunMs, dayChangeSec: dayChangeSec, _out: function () { return OUT; } };
 })();
