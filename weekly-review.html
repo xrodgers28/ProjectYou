@@ -188,6 +188,11 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .wsshadebtn:hover{color:var(--accent)}
 #shadeAllBtn.on{background:#1f2a44;color:#fff;border-color:#1f2a44}
 #habitGrid td.imp{text-align:center;width:1%;background:#fbfcfd}
+/* v5.64, Oct 11, 2026, Scott: Expand notes now takes this card out to the full width of the
+   window, because the Insight, Outcome and Identify columns are unreadable squeezed into the
+   page's normal column. Collapsing the notes puts it back. */
+#habitCard.wide{width:calc(100vw - 24px);max-width:calc(100vw - 24px);margin-left:calc(50% - 50vw + 12px);transition:width .2s ease,margin-left .2s ease}
+@media (prefers-reduced-motion: reduce){#habitCard.wide{transition:none}}
 /* v5.14: Scott wants the Impact box filled with his own icon when ticked,
    instead of the browser's plain checkmark. Native checkbox kept for click
    handling and screen readers, its own default tick just switched off and
@@ -914,7 +919,7 @@ html.py-embed .swshadebtn{display:none!important}
     </div>
 
     <!-- habit grid + right column -->
-    <div class="card block">
+    <div class="card block" id="habitCard">
       <div class="h2" style="display:flex;align-items:center;gap:8px"><img class="h2icon" data-ic="dots" alt="">The week, habit by habit<button class="btn" id="shadeAllBtn" style="margin-left:auto;font-size:11px" title="Open or close every Insight, Outcome and Identify box at once">Expand notes</button></div>
       <div class="gridrow">
         <div class="gridwrap"><table id="habitGrid"></table></div>
@@ -1027,7 +1032,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
    spelling, and a new spelling can no longer be added next to an old one. */
 /* v5.54, Oct 10, 2026, Scott: yellow names (already met) stay locked, but now carry an x that hides them from This
    Week. The meet up stays in his log. It is the same x the grey names have, so "bring them back" undoes it. */
-const VERSION='v5.63';
+const VERSION='v5.64';
 (function(){ /* v5.55: window shade on the meet ups card, remembered per browser */
   function wire(){
     const b=document.getElementById('swShadeBtn'), c=document.getElementById('swCard'); if(!b||!c)return;
@@ -3347,11 +3352,12 @@ function render(){
   ];
   const nDays=D.days.filter(d=>d<=PY.today()).length;
   /* v5.63: honest wording per lane. One day's work never reads as a daily average. */
+  /* v5.64, Oct 11, 2026, Scott set this wording himself: "54m a day (5h 24m over 6 days)". */
   function laneLine(k){
     const m=C[k]||0, n=(C.laneDays&&C.laneDays[k])||0;
     if(!m) return 'nothing logged';
-    if(n<=1) return hmin(m)+', all on one day';
-    return hmin(m)+' over '+n+' days, about '+hmin(m/n)+' a day';
+    if(n<=1) return hmin(m)+' on one day';
+    return hmin(m/n)+' a day ('+hmin(m)+' over '+n+' days)';
   }
   el('hoursSub').textContent=(nDays<7?'week so far, '+nDays+' of 7 days':'full week')+(D.tallyErr?' · calendar hours unavailable':'');
   /* v3.4: no figure beside the bar. Every one of them is in the donut legend. */
@@ -3812,20 +3818,32 @@ async function reorderRow(area,from,target,where){
   const insertAt=where==='after'?t2+1:t2;
   arr.splice(insertAt,0,item);
   render();
-  const w=C.wsOf[item];
-  if(!w||!w.id){status('Reordered here, but "'+item+'" has no Habit Worksheets row yet, so this will not stick after a refresh.',true);return;}
-  const prevW=arr[insertAt-1]?C.wsOf[arr[insertAt-1]]:null;
-  const nextW=arr[insertAt+1]?C.wsOf[arr[insertAt+1]]:null;
-  const prevPos=(prevW&&typeof prevW.position==='number')?prevW.position:null;
-  const nextPos=(nextW&&typeof nextW.position==='number')?nextW.position:null;
-  let newPos;
-  if(prevPos!=null&&nextPos!=null)newPos=(prevPos+nextPos)/2;
-  else if(prevPos!=null)newPos=prevPos+1;
-  else if(nextPos!=null)newPos=nextPos-1;
-  else newPos=0;
-  w.position=newPos;
-  const {error}=await sb.from('worksheet_rows').update({position:newPos,updated_at:new Date().toISOString()}).eq('id',w.id);
-  if(error)status('Could not save that order: '+error.message,true);
+  /* v5.64, Oct 11, 2026. Scott: "I just finished reordering the items in the table but when I
+     refreshed the page they had been forgotten." Two things were wrong.
+     1) Only the moved row was saved, as a midpoint between its neighbours. Over time that
+        drifts into negatives and halves, and any row whose neighbour had no saved position
+        landed on a number that did not mean what the drop meant. The whole section is now
+        renumbered 0,1,2... on every drop, so what is on screen is exactly what is stored.
+     2) A tracker with no Habit Worksheets row has nowhere to keep a position at all, so it
+        always snaps back to the bottom of its section on a refresh. That used to be a quiet
+        one-line message. It now names the row and says plainly that it will not stick. */
+  const noRow=arr.filter(t=>!(C.wsOf[t]&&C.wsOf[t].id));
+  const saves=[];
+  arr.forEach((t,idx)=>{
+    const w=C.wsOf[t];
+    if(!w||!w.id)return;
+    if(w.position!==idx){ w.position=idx; saves.push(sb.from('worksheet_rows').update({position:idx,updated_at:new Date().toISOString()}).eq('id',w.id)); }
+  });
+  const res=await Promise.all(saves);
+  const bad=res.filter(r=>r&&r.error);
+  if(bad.length){ status('Could not save that order: '+bad[0].error.message,true); return; }
+  if(!(C.wsOf[item]&&C.wsOf[item].id)){
+    status('"'+item+'" has no Habit Worksheets row, so its place in the list cannot be saved. It will sit at the bottom of '+area+' again after a refresh.',true);
+  }else if(noRow.length){
+    status('Order saved. '+noRow.length+' row'+(noRow.length>1?'s in this section have':' in this section has')+' no Habit Worksheets row ('+noRow.join(', ')+'), so '+(noRow.length>1?'they':'it')+' will sit at the bottom whatever you do.',true);
+  }else{
+    status('Order saved.');
+  }
 }
 
 /* Insight / Outcome / Identify: writes straight to worksheet_rows, the same
@@ -3949,6 +3967,8 @@ async function wrImpact(td){
     });
     btn.textContent=notesAllOpen?'Collapse notes':'Expand notes';
     btn.classList.toggle('on',notesAllOpen);
+    /* v5.64: the card itself goes full width while the notes are open. */
+    const card=el('habitCard'); if(card) card.classList.toggle('wide',notesAllOpen);
   });
 })();
 /* v5.63, Oct 11, 2026, Scott: a slice can now carry its own rollover, so hovering it
