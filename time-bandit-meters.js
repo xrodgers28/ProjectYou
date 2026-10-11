@@ -1,4 +1,29 @@
-/* BANDIT BLOCKS v1.2 (Oct 10, 2026)
+/* BANDIT BLOCKS v1.3 (Oct 11, 2026)
+   v1.3 fixes the thing Scott actually saw and adds the day he asked for.
+
+   THE BUG. "brick column and equak bricks are not filling in". They were
+   filling. They were twenty-eight pixels wide. The pile asked for width:100%
+   inside a plain host div, and that host is a flex item in a column that
+   centres its children, so the host shrank to its contents and 100% of nothing
+   is nothing. Thin Stacks and the Thermometer were fine because both set a real
+   width in pixels. So two of the four meters drew as a hairline down the middle
+   of a 364 pixel card and read as empty. The host is now a full width flex row
+   and every box is border-box, which also makes the brick arithmetic exact:
+   the pile's inner height is now the 316px the maths already assumed.
+   The lesson from v1.2 repeated itself and is now written down twice: check the
+   rendered size of the thing, not just that the numbers are right.
+
+   THE DAY. The meters can now show any past day, driven by the week strip at the
+   top of the Daily Habit Tracker. Today reads the live todos rows exactly as
+   before, so the number still agrees with the Time Bandit Wheel. A past day
+   reads habit_history, the morning snapshot, using the rule Todays Tasks already
+   settled on Sep 20 2026: ask for the stamped day AND the one after it, then keep
+   a tick only if the tick's OWN time falls on the day being shown under the 2am
+   rule. The snapshot runs at 4am and is stamped with the morning it ran, so the
+   stamp is a day ahead of the day it describes; matching on the tick's own time
+   is what makes that irrelevant. See loadDay below.
+   ---------------------------------------------------------------------------
+   BANDIT BLOCKS v1.2 (Oct 10, 2026)
    v1.2: the four meters sit in ONE ROW across the full width of the page, not in a
    narrow 2x2 panel down the side. In the side panel each brick came out about six
    pixels tall, which read as empty even when the day was two thirds done. Scott's
@@ -41,7 +66,7 @@
 (function () {
   'use strict';
 
-  var TBM = window.TBM = { version: '1.2', name: 'Bandit Blocks' };
+  var TBM = window.TBM = { version: '1.3', name: 'Bandit Blocks' };
   var BOX = 330;   /* how tall every meter is. Brick size is worked out from this. */
 
   /* ---------- the one definition ---------- */
@@ -107,6 +132,9 @@
     '  background:#fff;border:1px solid #e3e7ee;border-radius:16px;padding:14px 14px 16px;',
     '  box-shadow:0 8px 22px rgba(31,42,68,.06)}',
     '.tbm h2{font-size:17px;font-weight:800;color:#1f2a44;margin:0 0 2px;letter-spacing:-.01em}',
+    /* the day being shown, so a past day can never be mistaken for today */
+    '.tbm h2 .tbmday{margin-left:9px;font-size:12px;font-weight:700;color:#8a6d1f;background:#fdf4dc;',
+    '  border:1px solid #f0e2b8;border-radius:999px;padding:3px 9px;vertical-align:2px;letter-spacing:.01em}',
     '.tbm .tbmsub{font-size:13px;color:#5b6472;line-height:1.45;margin:0 0 12px}',
     /* ONE ROW, four across. Falls to two across on a narrow window, never to one
        column on a laptop, because the row is the comparison. */
@@ -121,7 +149,17 @@
     '  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;margin:1px 0 9px}',
     '.tbm .mname{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#5b6472;',
     '  font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;margin-top:9px;text-align:center;line-height:1.3}',
-    '.tbm .mwrap{position:relative}',
+    /* .mwrap is the link in the chain v1.3 first missed: it sits between the host
+       and the pile, so if IT shrinks to fit then the pile's width:100% is 100% of
+       nothing all over again. Full width, and it centres what it holds. */
+    '.tbm .mwrap{position:relative;width:100%;display:flex;flex-direction:column;align-items:center}',
+    /* THE v1.3 FIX. Without this the host is a shrink-to-fit flex item and the
+       pile's width:100% resolves against nothing, so the two brick meters drew
+       28px wide. The host is now a full width row that centres the meter in it. */
+    '.tbm .mhost{width:100%;display:flex;justify-content:center}',
+    /* border-box everywhere, so a box told to be 330px tall HAS 316px inside it,
+       which is exactly what the brick height arithmetic assumes. */
+    '.tbm .pile,.tbm .thermo,.tbm .stube,.tbm .stacks{box-sizing:border-box}',
     /* pile */
     '.tbm .pile{background:#eef2f8;border:1px solid #e3e7ee;border-radius:9px;display:flex;',
     '  flex-direction:column-reverse;padding:6px;gap:3px;overflow:hidden;position:relative}',
@@ -192,7 +230,7 @@
 
     var wrap = document.createElement('div'); wrap.className = 'mwrap';
     var pile = document.createElement('div'); pile.className = 'pile';
-    pile.style.width = '100%'; pile.style.maxWidth = '190px'; pile.style.height = H + 'px';
+    pile.style.width = '100%'; pile.style.maxWidth = '150px'; pile.style.height = H + 'px';
     wrap.appendChild(pile);
 
     /* the daily goal line: where the stack reaches when everything is done */
@@ -330,25 +368,91 @@
     }, function () { return TBM.refresh([]); });
   };
 
+  /* ---------- which day ---------- */
+  function today() { return (window.PY && window.PY.today) ? window.PY.today() : null; }
+  function addDays(ymd, k) {
+    var p = String(ymd).split('-').map(Number);
+    var d = new Date(Date.UTC(p[0], p[1] - 1, p[2], 12, 0, 0));
+    d.setUTCDate(d.getUTCDate() + k);
+    return d.toLocaleDateString('en-CA', { timeZone: 'UTC' });
+  }
+  function pretty(ymd) {
+    var p = String(ymd).split('-').map(Number);
+    return new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)).toLocaleDateString('en-US',
+      { timeZone: 'UTC', weekday: 'long', month: 'long', day: 'numeric' });
+  }
+
+  /* TODAY. The live rows, matched on the task name only. This is deliberately the
+     same narrow match the Time Bandit Wheel makes, because the big number here has
+     to be the wheel's number and a looser match here would quietly make them differ. */
+  function loadToday(sb, day) {
+    return sb.from('todos').select('task,done,skipped')
+      .eq('is_habit', true).eq('for_date', day)
+      .then(function (r) {
+        var keys = {};
+        (r.data || []).forEach(function (t) {
+          if (t.done && !t.skipped) keys[SEG.plain(t.task)] = 1;
+        });
+        return { keys: keys, byTracker: false };
+      });
+  }
+
+  /* A PAST DAY. habit_history is the morning snapshot of every habit row. It runs at
+     4am and is STAMPED WITH THE MORNING IT RAN, so the row describing Thursday is
+     stamped Friday. Todays Tasks settled how to handle that on Sep 20 2026 and this
+     copies it rather than inventing a second rule: ask for the day and the day after,
+     then keep a tick only if the tick's own time falls on the day being shown under
+     PY.day, the one definition of a day. Nothing depends on the stamp.
+
+     Two differences from Todays Tasks, both deliberate:
+     - A done row with no done_at keeps its tick here instead of being dropped. On the
+       wheel a tick with no time contributes no minutes so dropping it is harmless;
+       here a dropped tick is a missing brick. Such a row is credited to the day its
+       stamp describes, which is the stamp minus one.
+     - Matching uses the history row's task AND its tracker against the template row's
+       task AND its tracker, because history stores some habits under their tracker
+       name ("The Wall" for SparkBoard, "Time with Asa" for Asa: Time Spent) and a
+       task-only match finds almost nothing. */
+  function loadPast(sb, day) {
+    var stamp = addDays(day, 1);
+    return sb.from('habit_history').select('task,tracker,done,done_at,day')
+      .in('day', [day, stamp]).eq('done', true)
+      .then(function (r) {
+        var keys = {};
+        (r.data || []).forEach(function (h) {
+          var eff = h.done_at
+            ? ((window.PY && window.PY.day) ? window.PY.day(h.done_at) : null)
+            : (h.day === stamp ? day : null);
+          if (eff !== day) return;
+          if (h.task) keys[SEG.plain(h.task)] = 1;
+          if (h.tracker) keys[SEG.plain(h.tracker)] = 1;
+        });
+        return { keys: keys, byTracker: true };
+      });
+  }
+
+  /* TBM.setDay(null) goes back to today. The week strip calls this. */
+  TBM.setDay = function (day) {
+    TBM._day = (day && day !== today()) ? day : null;
+    return TBM.refresh();
+  };
+  TBM.day = function () { return TBM._day || today(); };
+
   TBM.refresh = function (rows) {
     var el = TBM._el, sb = TBM._sb;
     if (!el) return Promise.resolve();
     if (!rows) rows = TBM._rows || [];
-    var day = (window.PY && window.PY.today) ? window.PY.today() : null;
+    var day = TBM.day(), past = !!TBM._day;
     var counting = (rows || []).filter(SEG.counts);
-    return sb.from('todos').select('task,done,skipped')
-      .eq('is_habit', true).eq('for_date', day)
-      .then(function (r) {
-        var tick = {};
-        (r.data || []).forEach(function (t) {
-          if (t.done && !t.skipped) tick[SEG.plain(t.task)] = 1;
-        });
-        var done = {};
-        counting.forEach(function (row) {
-          if (tick[SEG.plain(row.task)]) done[row.id] = 1;
-        });
-        paint(el, { rows: counting, done: done, day: day });
-      }, function () { paint(el, { rows: counting, done: {}, day: day, err: true }); });
+    var load = past ? loadPast(sb, day) : loadToday(sb, day);
+    return load.then(function (got) {
+      var done = {};
+      counting.forEach(function (row) {
+        if (got.keys[SEG.plain(row.task)]) { done[row.id] = 1; return; }
+        if (got.byTracker && row.tracker && got.keys[SEG.plain(row.tracker)]) done[row.id] = 1;
+      });
+      paint(el, { rows: counting, done: done, day: day, past: past });
+    }, function () { paint(el, { rows: counting, done: {}, day: day, past: past, err: true }); });
   };
 
   function paint(el, data) {
@@ -359,15 +463,19 @@
 
     el.className = 'tbm';
     el.innerHTML =
-      '<h2>Bandit Blocks</h2>' +
-      '<p class="tbmsub">Every block is ten minutes of habit time you took back today. ' +
-      'The number is the same one in the middle of the Time Bandit Wheel. ' +
-      'The dashed line is the day\'s goal.</p>' +
+      '<h2>Bandit Blocks' + (data.past ? '<span class="tbmday">' + pretty(data.day) + '</span>' : '') + '</h2>' +
+      '<p class="tbmsub">Every block is ten minutes of habit time you took back' +
+      (data.past
+        ? ' that day. The bar is today\'s habits, so every day is measured against the' +
+          ' same thing and the stacks can be compared. Past days are read from the' +
+          ' morning snapshot, so a habit ticked but never timed still counts.'
+        : ' today. The number is the same one in the middle of the Time Bandit Wheel.') +
+      ' The dashed line is the day\'s goal.</p>' +
       '<div class="tbmgrid" id="tbmgrid"></div>' +
       '<div class="cap" id="tbmcap">Day complete</div>' +
       '<div class="foot"><b>' + habitsDone + ' of ' + data.rows.length + '</b> habits ticked &middot; ' +
       '<b>' + minsUsed + ' of ' + minsTotal + ' min</b>' +
-      (data.err ? ' &middot; could not read today\'s ticks' : '') + '</div>';
+      (data.err ? ' &middot; could not read the ticks for this day' : '') + '</div>';
 
     var grid = el.querySelector('#tbmgrid');
     METERS.forEach(function (m) {
@@ -375,7 +483,7 @@
       cell.innerHTML =
         '<div class="big">' + segUsed + '<span class="of"> / ' + (segTotal || '—') + '</span></div>' +
         '<div class="biglab">segments</div>';
-      var host = document.createElement('div');
+      var host = document.createElement('div'); host.className = 'mhost';
       cell.appendChild(host);
       var nm = document.createElement('div'); nm.className = 'mname'; nm.innerHTML = m.name;
       cell.appendChild(nm);
