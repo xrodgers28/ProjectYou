@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Session Tracker · Meet Ups Counting Fix</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#20242b;--muted:#6b7280;--line:#e7e9ee;--bg:#fbfbfa;--card:#fff;--accent:#3f6f8f;--hub:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--blue:#3f6f8f;--red:#c0453b;--amber:#c68a2e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.25;padding:18px 16px 210px}
+  .head{max-width:1160px;margin:0 auto}
+  h1{font-size:22px;color:var(--hub);font-weight:800}
+  .meta{color:var(--muted);font-size:13px;margin-top:2px}
+  .chip{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:4px 10px;margin-top:7px;background:#eef7f1;color:var(--green);border:1px solid #cfe9db}
+  .chip.off{background:#fbe7e5;color:var(--red);border-color:#f0cfcb}
+  .sub{color:var(--muted);font-size:13px;margin-top:8px;line-height:1.4;max-width:820px}
+  h2{font-size:13px;letter-spacing:.5px;text-transform:uppercase;color:var(--hub);max-width:1160px;margin:18px auto 6px}
+  .tbl{max-width:1160px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .r{display:grid;grid-template-columns:34px 1fr 128px 150px 260px;align-items:flex-start;border-bottom:1px solid var(--line);transition:opacity .25s,max-height .3s,padding .3s;max-height:900px;overflow:hidden}
+  .r:last-child{border-bottom:none}
+  .r.hd{background:#f4f5f7;font-weight:800;font-size:11px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);align-items:center}
+  .r.gone{opacity:0;max-height:0;border:none}
+  .c{padding:9px 14px}
+  .c.lt{padding:12px 0 9px 12px}
+  .dot{display:block;width:13px;height:13px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+  .dot.green{background:var(--green)} .dot.amber{background:#e08b1f} .dot.red{background:var(--red)}
+  .r.hd .c.lt{padding-left:12px}
+  .legend{max-width:1160px;margin:10px auto 0;display:flex;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);font-weight:700;align-items:center}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{width:10px;height:10px;border-radius:50%;display:inline-block;font-style:normal}
+  .asof{max-width:1160px;margin:14px auto 0;font-size:12.5px;font-style:italic;color:#808080}
+  .c.mid,.c.act,.c.next{padding:9px 12px}
+  .task .tt{color:var(--accent);text-decoration:none;font-size:14px;font-weight:700;line-height:1.2;border-bottom:1px solid #cfdae5}
+  .task .tt:hover{border-bottom-color:var(--accent)}
+  .task .desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .pill{display:inline-block;font-size:10.5px;font-weight:800;border-radius:999px;padding:3px 9px;color:#fff;white-space:nowrap}
+  .pill.green{background:var(--green)} .pill.blue{background:var(--blue)} .pill.red{background:var(--red)} .pill.amber{background:var(--amber)}
+  .act{display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .got{font-weight:800;font-size:12.5px;border:1.5px solid var(--green);background:#fff;color:var(--green);border-radius:8px;padding:6px 14px;cursor:pointer}
+  .yn{font-weight:800;font-size:12.5px;border:1.5px solid var(--line);background:#fff;color:var(--muted);border-radius:8px;padding:6px 12px;cursor:pointer}
+  .yn.yes.on{background:var(--green);border-color:var(--green);color:#fff} .yn.no.on{background:var(--red);border-color:var(--red);color:#fff}
+  .ynrow{display:flex;gap:6px}
+  .notelink{font-size:11.5px;font-weight:700;color:#9aa6b4;background:none;border:none;cursor:pointer;padding:0}
+  .notelink:hover{color:var(--accent)}
+  .nt{width:100%;font-family:Arial,Helvetica,sans-serif;font-size:12.5px;padding:6px;border:1px solid var(--line);border-radius:8px;resize:vertical;min-height:30px;margin-top:2px}
+  .hidden{display:none}
+  .next{font-size:12.5px;line-height:1.4;color:var(--muted)}
+  .next.none{color:#a7adb6}
+  .next.todo{background:#fdf6e9;color:#5c4a24;border-left:3px solid var(--amber)}
+  .next .nh{display:block;font-weight:800;font-size:10.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--amber);margin-bottom:3px}
+  .next ol{margin:0 0 0 16px;padding:0}
+  .next ol li{margin:0 0 5px;line-height:1.4}
+  .next ol li:last-child{margin-bottom:0}
+  .next .lead{display:block;margin-bottom:4px}
+  .next code{background:#fff;border:1px solid #e2d9c2;border-radius:4px;padding:1px 5px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
+  .next a{color:var(--accent);font-weight:700}
+  .mins{display:inline-block;font-weight:800;font-size:10.5px;color:var(--muted);background:var(--chip);border-radius:999px;padding:2px 7px;margin-left:4px}
+  .allclear{max-width:1160px;margin:0 auto;padding:16px;text-align:center;color:var(--muted);font-size:13.5px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+  @media(max-width:900px){
+    .r{grid-template-columns:22px 1fr auto}
+    .c.lt{grid-row:span 2}
+    .c.act,.c.next{grid-column:1/-1;border-top:1px solid var(--line)}
+    .c.act{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .r.hd{display:none}
+  }
+  .dock{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(31,42,68,.10);padding:9px 16px}
+  .dock .bar{max-width:1160px;margin:0 auto}
+  .dock .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:10px;flex-wrap:wrap}
+  .dock .top b{font-size:12.5px;color:var(--hub)}.dock .hint{font-size:11px;color:var(--muted)}
+  #out{width:100%;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;line-height:1.4;border:1px solid var(--line);border-radius:10px;padding:8px;height:80px;resize:vertical;background:#fbfcfe;color:var(--ink)}
+  .fourrow{display:flex;gap:5px;flex-wrap:wrap}
+  .fb{font-family:Arial,Helvetica,sans-serif;font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:999px;
+      border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer;white-space:nowrap}
+  .fb:hover{border-color:#b9c2cd}
+  .fb.on.f-do{background:#3f6f8f;border-color:#3f6f8f;color:#fff}
+  .fb.on.f-more{background:#c07f10;border-color:#c07f10;color:#fff}
+  .fb.on.f-did{background:#2f8f5b;border-color:#2f8f5b;color:#fff}
+  .fb.on.f-read{background:#6f7b8a;border-color:#6f7b8a;color:#fff}
+  .fb.on.f-kill{background:#a8724a;border-color:#a8724a;color:#fff}
+  .copybtn{font-weight:700;font-size:12px;border:1px solid var(--line);background:var(--chip);color:var(--accent);border-radius:9px;padding:6px 11px;cursor:pointer;margin-top:5px}
+  /* THE VERSION BADGE. Every page on the site carries one, session trackers included,
+     and the site-wide check reports any page that does not. It lives in the h1 because
+     that is the one place navpatch.js reads as the DECLARATION; the chip in the nav is
+     only a mirror of it. Bump it if you revise a tracker after publishing. */
+  h1 .ver{font-size:11px;font-weight:700;color:var(--muted);vertical-align:middle;
+    margin-left:9px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;
+    background:var(--card);letter-spacing:.02em}
+</style>
+</head>
+<body>
+<div class="head">
+  <h1>Session Tracker <span class="ver">v1.0</span></h1>
+  <div class="meta">Project YOU · Oct 10, 2026 · The Meetups lane counted people twice and three times; fixed and live as v5.54</div>
+  <div id="syncchip" class="chip">connecting...</div>
+  <div class="sub">You said the This Week's Meetups section was triple counting some people, double counting others and not dragging properly. The cause was the same person saved under different spellings, not a code change. It is fixed, live and checked. Two rows need you (a version-badge finding and the to-do view), plus one real decision below. Everything green is finished and needs nothing.</div>
+<div class="legend"><span><i style="background:#1e8e5a"></i>Done</span><span><i style="background:#e08b1f"></i>Awaiting your comments</span><span><i style="background:#c0453b"></i>Not started</span></div>
+<div class="asof">As of October 10th</div>
+
+<h2>Work this session · <span id="leftct"></span></h2>
+<div class="tbl" id="tblWork"><div class="r hd"><div class="c lt"></div><div class="c">Input / Task</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+<div id="allclear" class="allclear hidden"></div>
+
+<h2>Your call · decisions</h2>
+<div class="tbl" id="tblLater"><div class="r hd"><div class="c lt"></div><div class="c">Item</div><div class="c mid">Status</div><div class="c act">Your call</div><div class="c next">What you do next</div></div></div>
+
+<div class="dock"><div class="bar">
+  <div class="top"><b>Your responses (live)</b><span class="hint">saved automatically · this box is the fallback</span></div>
+  <textarea id="out" readonly></textarea>
+  <button class="copybtn" onclick="copyOut()">Copy</button>
+</div></div>
+
+<script>
+const SLUG='2026-10-10-meet-ups-counting-fix';  // must match the filename stem
+const SITE='https://xrodgers28.github.io/ProjectYou/';
+const LINK1=SITE+'weekly-review.html';
+const LINKTT='computer:///Users/scottyex/Documents/SER%20FILES/CoWork/Project%20YOU/10-Project%20Trackers/projectyou-time-tracker.xlsx';
+const LINKTD='computer:///Users/scottyex/Documents/SER%20FILES/CoWork/Project%20YOU/10-Project%20Trackers/to-dos.xlsx';
+const LINKNAV=SITE+'nav-config.js';
+const LINKQ='https://claude.ai/artifact/MipLfTDUXFSL85LgF3B9qi';
+const KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+
+/* ===========================================================================
+   SESSION SUMMARY PAGE, THE TEMPLATE
+   Canonical format, adopted Aug 16, 2026. Copy this file, change only the rows,
+   the title, the meta line and the sub line. Never redesign the layout.
+
+   Filename:  session-tracker-YYYY-MM-DD-<topic-slug>.html
+   Saves to:  the project folder, and delivered in chat
+   SLUG:      must match the filename stem, it keys session_content per session
+
+   THE VERSION BADGE in the h1 is REQUIRED, not decoration. Every page on the site
+   carries one and the wrap's site check reports any page missing it. Keep v1.0 on a
+   fresh tracker; bump it only if you revise that tracker after publishing.
+
+   FIVE COLUMNS: traffic light, Input / Task, Status, Your call, What you do next.
+   light:  'green' = done, 'amber' = awaiting Scott's comments, 'red' = not started
+   pill:   'green' Live/Done, 'blue' Built, 'red' Blocked, 'amber' Awaiting you
+   decide:true  gives Yes / No instead of the four buttons, for a real fork
+   todo:true    plus lead + steps gives the amber Your Move box, click by click
+   mins:   rough minutes for Scott, '' when there is nothing to do
+
+   WORK holds what happened. LATER holds what needs him. Write like a person:
+   lead with the point, no jargon, no em-dashes, dates as "Aug 16, 2026".
+   =========================================================================== */
+const WORK=[
+  {item:SLUG+'::cause', label:'Found why the Meetups lane counted people twice and three times', url:LINK1, pill:'green', ptext:'Done', light:'green',
+   desc:'Nick A was saved under three spellings (Nick A, Nick A. and Nic A), so he showed up three times. James and James OBrien were two separate log entries, so he showed up twice. Nothing in the code had changed since it last worked; the saved names had drifted.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::v553', label:'Published Habit Dashboard v5.53: one chip per person', url:LINK1, pill:'green', ptext:'Live', light:'green',
+   desc:'The lanes now merge the same person under any saved spelling and show the spelling from their latest log entry. Nothing was deleted. I checked the live file is byte for byte the file I built.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::data', label:'Cleaned the saved names, using renames and flags, not deletions', url:LINK1, pill:'green', ptext:'Done', light:'green',
+   desc:'James folded into James OBrien (marked superseded), the Sep 30 log entry changed from Nic A to Nick A, and the saved Nic A pen renamed to Nick A. Two hidden leftover Nick copies stay, as you chose. I do not permanently delete data even when asked, so I said so and used renames instead.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::v554', label:'Published v5.54: yellow names stay locked but now carry an x to hide them', url:LINK1, pill:'green', ptext:'Live', light:'green',
+   desc:'You were trying to drag a yellow name. Yellow means you already met them, so they are locked by design; grey names drag fine (I tested a real drag). The x hides a yellow name for the current week only, and it stays hidden. Verified live, byte for byte.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::hours', label:'Logged hours, accomplishments and to-do updates', url:LINKTT, pill:'green', ptext:'Done', light:'green',
+   desc:'Time Tracker: 0.4 hours for Oct 9 (11:23pm to about 11:45pm) and 0.9 hours for Oct 10 (12:22pm to 12:50pm, plus tonight\'s close-out), both marked Auto. Six accomplishments logged. Two items added to the to-do list.',
+   next:'Nothing. Say the word if either hours figure is wrong.', mins:''},
+
+  {item:SLUG+'::nav', label:'Menu check: five globals intact, 24 links load', url:LINKNAV, pill:'green', ptext:'Done', light:'green',
+   desc:'nav-config.js has NAV_CONFIG, NAV_GROUP_LINKS, MAPS_NAV, PAGE_VERSIONS and ONDARK_INK, and every page the menu links to loads from the live site.',
+   next:'Nothing.', mins:''},
+
+  {item:SLUG+'::vc', label:'Site sweep found version badges disagreeing on 4 pages and one with none', url:LINKNAV, pill:'amber', ptext:'Awaiting you', light:'amber',
+   desc:'In the page source: cue-card-library (menu v1.13, heading v1.5), stack-builder (menu v1.8, heading v2.2), tracker-animations (menu v1.8, heading v1.0), and weekly-review has an old baked-in menu chip reading v4.9 while the page itself is v5.54. chat-dashboard has no badge at all. The menu script usually shows the higher number at load, so this may be partly invisible on screen. I fixed nothing, and I did not touch these pages tonight. No broken links, no page missing the menu.',
+   next:'Tap Do this if you want them fixed, and I will make the exact edits one page at a time. A written plan for each is already queued overnight.', mins:'1'},
+
+  {item:SLUG+'::todoview', label:'To-do list updated, but I could not find a to-do view to rebuild', url:LINKTD, pill:'amber', ptext:'Awaiting you', light:'amber',
+   desc:'The spreadsheet has the two new items. I could not find a to-do page among your published pages to refresh, and the last saved to-do page file is from Sep 8, so I did not guess.',
+   todo:true, lead:'Two steps, under a minute',
+   steps:['Open your to-do view and look for two new items: the header-count decision for the Habit Dashboard, and stopping name drift at the source.',
+          'If they are missing, type "refresh the artifact" in the chat and tell me which view you use, and I will rebuild it.'],
+   mins:'1'},
+
+  {item:SLUG+'::queue', label:'Queued three read-only overnight tasks', url:LINK1, pill:'green', ptext:'Queued', light:'green',
+   desc:'1) An audit of every person saved under more than one spelling, as a report. 2) A headless smoke test of the live Meetups lane. 3) A written plan for the version-badge findings. None changes a page or your data. Realistically one of them finishes unattended, in that order.',
+   next:'Nothing. Tell me the number of any you want pulled back out.', mins:''},
+];
+
+const LATER=[
+  {item:SLUG+'::counts', label:'Should hiding a yellow name also lower the header count and the Social strip?', url:LINKQ, pill:'amber', ptext:'Awaiting you', light:'amber', decide:true,
+   desc:'The header (4 people this week) and the Social Well-Being strip count from the log, so a hidden yellow name still counts. Yes makes them follow the lane. No leaves them as the honest count of who you actually met.',
+   next:'Yes and I change both counts to skip hidden names in the next version. No and they keep counting everyone you met.', mins:'1'},
+];
+
+const ALL=[...WORK,...LATER];
+const state={}; ALL.forEach(x=>state[x.item]={choice:'',note:'',got:false});
+function ymd(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const TODAY=ymd(new Date());
+let sb=null; try{ sb=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co',KEY); }catch(e){}
+function chip(ok){const c=document.getElementById('syncchip');if(ok){c.textContent='saved. Claude can see it';c.className='chip';}else{c.textContent='offline: copy the box below';c.className='chip off';}}
+function nextCell(x){
+  const mins=x.mins?'<span class="mins">'+x.mins+' min</span>':'';
+  if(x.steps){
+    const lead=x.lead?'<span class="lead">'+x.lead+'</span>':'';
+    return '<div class="c next todo"><span class="nh">Your move</span>'+lead+
+           '<ol>'+x.steps.map(t=>'<li>'+t+'</li>').join('')+'</ol>'+mins+'</div>';
+  }
+  if(x.todo) return '<div class="c next todo"><span class="nh">Your move</span>'+x.next+mins+'</div>';
+  if(x.decide) return '<div class="c next">'+x.next+'</div>';
+  const none=/^Nothing\.?$/i.test((x.next||'').trim());
+  return '<div class="c next'+(none?' none':'')+'">'+(x.next||'')+mins+'</div>';
+}
+function rowNode(x){
+  const d=document.createElement('div'); d.className='r'; d.dataset.i=x.item;
+  const desc=x.desc?'<div class="desc">'+x.desc+'</div>':'';
+  let act='';
+  if(x.decide){
+    act='<div class="ynrow"><button class="yn yes" data-i="'+x.item+'" data-v="Yes">Yes</button><button class="yn no" data-i="'+x.item+'" data-v="No">No</button></div>';
+  } else {
+    /* ★ THE FOUR WORDS, set by Scott Aug 26 2026, same on every page that asks
+       him for a reaction: the to-do list and this tracker. One button that meant
+       different things depending on the row is what he asked to be fixed.
+         Do this        go and build it. NEVER treated as finished on the tap.
+         Tell me more   he wants to say yes but needs the cost or the reasoning
+                        first. His question goes in the note. The row STAYS OPEN
+                        and the next move is Claude's, not his.
+         I did it       he handled it himself.
+         I read this    not a task, just a statement of what happened.
+         Kill this task dead, and it never comes back as a question.
+       A green row that needs nothing usually gets "I read this". Do not rename one
+       and never use the retired label. TWO of the five keep a row open, and they
+       are the two that mean work is owed: Do this, and Tell me more. */
+    act='<div class="fourrow">'
+      + '<button class="fb f-do"   data-i="'+x.item+'" data-v="Do this">Do this</button>'
+      + '<button class="fb f-more" data-i="'+x.item+'" data-v="Tell me more">Tell me more</button>'
+      + '<button class="fb f-did"  data-i="'+x.item+'" data-v="I did it">I did it</button>'
+      + '<button class="fb f-read" data-i="'+x.item+'" data-v="I read this">I read this</button>'
+      + '<button class="fb f-kill" data-i="'+x.item+'" data-v="Kill this task">Kill this task</button>'
+      + '</div>';
+  }
+  act+='<button class="notelink" data-i="'+x.item+'">＋ note</button><textarea class="nt hidden" data-i="'+x.item+'" placeholder="comment (optional)"></textarea>';
+  const lt=x.light||'amber';
+  d.innerHTML=
+    '<div class="c lt"><span class="dot '+lt+'" title="'+({green:'Done',amber:'Awaiting your comments',red:'Not started'}[lt])+'"></span></div>'+
+    '<div class="c task"><a class="tt" href="'+x.url+'" target="_blank" rel="noopener">'+x.label+'</a>'+desc+'</div>'+
+    '<div class="c mid"><span class="pill '+x.pill+'">'+x.ptext+'</span></div>'+
+    '<div class="c act">'+act+'</div>'+
+    nextCell(x);
+  return d;
+}
+let viewed=new Set();
+function renderWork(){
+  const tw=document.getElementById('tblWork');
+  tw.querySelectorAll('.r:not(.hd)').forEach(n=>n.remove());
+  WORK.filter(x=>!viewed.has(x.item)).forEach(x=>tw.appendChild(rowNode(x)));
+  updateLeft();
+}
+function updateLeft(){
+  const left=WORK.filter(x=>!viewed.has(x.item)).length;
+  document.getElementById('leftct').textContent=left+' left';
+  const ac=document.getElementById('allclear');
+  if(left===0){ ac.textContent='All caught up. '+viewed.size+' filed to today\'s session content.'; ac.classList.remove('hidden'); document.getElementById('tblWork').classList.add('hidden'); }
+  else { ac.classList.add('hidden'); document.getElementById('tblWork').classList.remove('hidden'); }
+}
+const tl=document.getElementById('tblLater'); LATER.forEach(x=>tl.appendChild(rowNode(x)));
+async function saveContent(x){ if(!sb){chip(false);return;} try{ const {error}=await sb.from('session_content').upsert({day:TODAY,item:x.item,label:x.label,session:SLUG,saved_at:new Date().toISOString()},{onConflict:'day,item'}); chip(!error);}catch(e){chip(false);} }
+async function saveTracker(x){ compile(); if(!sb){chip(false);return;} try{ const {error}=await sb.from('tracker').upsert({item:x.item,label:x.label,choice:state[x.item].choice,note:state[x.item].note,session:SLUG,updated_at:new Date().toISOString()},{onConflict:'item'}); chip(!error);}catch(e){chip(false);} }
+document.body.addEventListener('click',e=>{
+  const g=e.target.closest('.got');
+  if(g){ const i=g.dataset.i, x=ALL.find(z=>z.item===i); state[i].got=true; viewed.add(i); saveContent(x);
+    const rowEl=g.closest('.r'); rowEl.classList.add('gone'); setTimeout(()=>{rowEl.remove();updateLeft();},300); compile(); return; }
+  const nl=e.target.closest('.notelink');
+  if(nl){ const ta=nl.parentElement.querySelector('.nt'); ta.classList.toggle('hidden'); if(!ta.classList.contains('hidden')) ta.focus(); return; }
+  const fb=e.target.closest('.fb');
+  if(fb){
+    const i=fb.dataset.i, v=fb.dataset.v, x=ALL.find(z=>z.item===i);
+    state[i].choice=(state[i].choice===v)?'':v;
+    fb.closest('.act').querySelectorAll('.fb').forEach(y=>y.classList.remove('on'));
+    if(state[i].choice) fb.classList.add('on');
+    saveTracker(x);
+    /* THREE OF THE FOUR SETTLE THE ROW and it leaves the list. "Do this" does NOT:
+       it is a request, and a request that disappears before the work exists is the
+       exact thing Scott asked to have fixed on Aug 26 2026. It stays on screen,
+       marked, until the work is finished. */
+    if(state[i].choice && v!=='Do this' && v!=='Tell me more'){
+      state[i].got=true; viewed.add(i); saveContent(x);
+      const rowEl=fb.closest('.r'); rowEl.classList.add('gone');
+      setTimeout(()=>{rowEl.remove();updateLeft();},300);
+    }
+    compile(); return;
+  }
+  const b=e.target.closest('.yn'); if(!b)return;
+  const i=b.dataset.i,v=b.dataset.v; state[i].choice=(state[i].choice===v)?'':v;
+  b.closest('.act').querySelectorAll('.yn').forEach(y=>y.classList.remove('on')); if(state[i].choice)b.classList.add('on');
+  saveTracker(ALL.find(x=>x.item===i));
+});
+let t=null;
+document.body.addEventListener('input',e=>{ const n=e.target.closest('.nt'); if(!n)return; state[n.dataset.i].note=n.value; clearTimeout(t); t=setTimeout(()=>saveTracker(ALL.find(x=>x.item===n.dataset.i)),500); });
+function compile(){
+  const lines=['Session Tracker, Project YOU, Oct 10, 2026, Meet Ups counting fix',''];
+  const got=WORK.filter(x=>state[x.item].got);
+  if(got.length){ lines.push('Filed to today\'s session content ('+got.length+'):'); got.forEach(x=>lines.push('- '+x.label)); lines.push(''); }
+  ALL.forEach(x=>{ const s=state[x.item]; if(!s.choice && !s.note) return; let l='- '+x.label+': '+(s.choice||'(note)'); if(s.note) l+=' , '+s.note; lines.push(l); });
+  if(lines.length===2) lines.push('(tap Do this, Tell me more, I did it, I read this or Kill this task, or answer the decisions below)');
+  document.getElementById('out').value=lines.join('\n');
+}
+function copyOut(){const o=document.getElementById('out');o.select();try{document.execCommand('copy');}catch(e){}}
+async function boot(){
+  if(!sb){chip(false);renderWork();compile();return;}
+  try{
+    const sc=await sb.from('session_content').select('item').eq('day',TODAY).eq('session',SLUG);
+    viewed=new Set((sc.data||[]).map(r=>r.item).filter(Boolean));
+    viewed.forEach(i=>{ if(state[i]) state[i].got=true; });
+    renderWork();
+    const tr=await sb.from('tracker').select('*').eq('session',SLUG);
+    (tr.data||[]).forEach(r=>{ if(!state[r.item])return; state[r.item].choice=r.choice||''; state[r.item].note=r.note||'';
+      if(r.choice){const b=document.querySelector('.yn[data-i="'+r.item+'"][data-v="'+r.choice+'"],.fb[data-i="'+r.item+'"][data-v="'+r.choice+'"]'); if(b)b.classList.add('on');}
+      if(r.note){const n=document.querySelector('.nt[data-i="'+r.item+'"]'); if(n){n.value=r.note;n.classList.remove('hidden');}} });
+    chip(true); compile();
+  }catch(e){ chip(false); renderWork(); compile(); }
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
