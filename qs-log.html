@@ -36,6 +36,11 @@
   #stripEditor button.save{background:#2b6cb0;color:#fff;border-color:#2b6cb0}
   #stripEditor .close{position:absolute;top:8px;right:10px;cursor:pointer;color:#9aa0aa;font-size:14px}
 
+  /* v2.6, Oct 10 2026: the week line. Same numbers as the Habit Dashboard (database py_week_hours). */
+  .weekband{font-size:12.5px;color:var(--muted);margin:0 0 12px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+  .weekband b{color:var(--ink);font-weight:600}
+  .weekband .wk i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:baseline}
+  .weekband .wkn{font-size:11px;color:#8a92a0}
   table{border-collapse:collapse}
   td,th{border:1px solid #eceef2;text-align:center;font-size:10.5px;height:28px;min-width:30px;padding:0}
   th.day{background:#fff;font-weight:700;color:var(--ink);min-width:30px}
@@ -115,8 +120,9 @@
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>Master Habit Tracker</h1><span class="ver">v2.5</span><span class="date"></span></div>
+  <div class="secbar"><h1>Master Habit Tracker</h1><span class="ver">v2.6</span><span class="date"></span></div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Connecting...</span> &nbsp;·&nbsp; <span id="monthlabel"></span> &nbsp;·&nbsp; <a class="btn" id="reload">refresh</a> &nbsp; <a class="btn" id="signout">sign out</a></div>
+  <div class="weekband" id="weekband" style="display:none"></div>
   <div class="gridwrap"><table id="grid"></table></div>
   <p class="legend" id="legend"></p>
 
@@ -301,6 +307,18 @@ const HIDE_ROWS = new Set([]);  /* v2.5, Oct 5 2026: Ride came back, Scott wants
 const ROW_FOLD = {'H2O':'Water', 'Exercise':'Walk', 'Social':'Social Fitness'};
 const ROW_LABEL = {'Date night':'Asa: Date Night', 'Time with Åsa':'Asa: Time Spent', 'Ride':'Bike Ride'};
 const PIN_LAST = new Set(['Cultural Moments']);
+function fmtHrs(m){ m = Math.round(Number(m)||0); return m < 60 ? m+'m' : (Math.round(m/6)/10)+'h'; }
+function paintWeekBand(h, ws){
+  const el = document.getElementById('weekband'); if(!el) return;
+  if(!h){ el.style.display = 'none'; return; }
+  const lanes = [['Work','#FF9900',h.work_min],['Project YOU','#e8a0b8',h.py_min],['TreadWell','#2e8b9a',h.treadwell_min],['Habits','#1e8e5a',h.habit_min],['Exercise','#c05f7a',h.exercise_min]];
+  const p = ws.split('-').map(Number), d0 = new Date(Date.UTC(p[0],p[1]-1,p[2],12));
+  const lbl = d0.toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric'});
+  el.innerHTML = '<b>This week</b> <span class="wkn">since Mon '+lbl+'</span>' +
+    lanes.map(l=>'<span class="wk"><i style="background:'+l[1]+'"></i>'+l[0]+' <b>'+fmtHrs(l[2])+'</b></span>').join('') +
+    '<span class="wkn">same numbers as the Habit Dashboard</span>';
+  el.style.display = 'flex';
+}
 function fmtMin(n){ return n < 60 ? n+'m' : Math.floor(n/60)+'h'+(n%60 ? String(n%60).padStart(2,'0') : ''); }
 function fmtVal(v, unit){
   if(v===null||v===undefined||v==='') return '';
@@ -342,6 +360,20 @@ async function loadMonth(){
     sb.from('qs_strip_notes').select('id,day,label,icon_url').gte('day', first).lte('day', last),
     sb.from('learning_log').select('happened_on,what,kind,minutes,while_doing,takeaway,start_min').gte('happened_on', first).lte('happened_on', last).order('start_min', { ascending: true, nullsFirst: false })
   ]);
+  /* v2.6, Oct 10 2026 (Scott: switch to the shared weekly rule): Walk / Ride / Run / Hike minutes per day come from
+     the database's merged outings (Apple Health and Strava counted once, Strava by moving time), the same list the
+     Habit Dashboard and the Habit Worksheets add up. A day with no outing keeps the minutes it was logged with. */
+  let exDay = null, wkHours = null, wkStart = null;
+  try {
+    const dt = new Date(last+'T12:00:00Z'); const back = (dt.getUTCDay()+6)%7; dt.setUTCDate(dt.getUTCDate()-back);
+    wkStart = dt.toISOString().slice(0,10);
+    const [er, wr] = await Promise.all([
+      sb.rpc('py_exercise_day_minutes', {p_from: first, p_to: last}),
+      sb.rpc('py_week_hours', {p_week_start: wkStart})
+    ]);
+    if(!er.error && er.data) exDay = er.data;
+    if(!wr.error && wr.data) wkHours = Array.isArray(wr.data) ? wr.data[0] : wr.data;
+  } catch(e){ exDay = null; wkHours = null; }
   const { data, error } = qsRes;
   const psMap = {}, cxMap = {}, snMap = {};
   (psRes.data||[]).forEach(r=>{ psMap[r.day]=r; });
@@ -383,6 +415,11 @@ async function loadMonth(){
     const n = (r.note||'').trim();
     if(n){ if(!noteMap[k]) noteMap[k] = []; if(noteMap[k].indexOf(n)<0) noteMap[k].push(n); }
   });
+  if(exDay){
+    Object.keys(minMap).forEach(k=>{ if(MIN_TRACKERS.has(k.split('|')[0])) delete minMap[k]; });
+    exDay.forEach(r=>{ if(MIN_TRACKERS.has(r.tracker) && r.minutes>0) minMap[r.tracker+'|'+r.day] = r.minutes; });
+  }
+  paintWeekBand(wkHours, wkStart);
   /* v2.2: folded rows. Fill only a day the target row has nothing on; either way the
      original shows on hover so no marker is lost. Folded minutes never feed the Walk time. */
   const fnMap = {};
