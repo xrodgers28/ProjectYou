@@ -15,7 +15,7 @@
    WHAT A SAVE DOES
    - Already happened (a past day, or today at or before now): a row in
      connections (who, what, where, note), a lasting note in person_notes if
-     "Keep on their card" is ticked, and the "Social" habit is ticked for that
+     "Add note to their profile" is ticked, and the "Social" habit is ticked for that
      day - today through the live habit row (its trigger files qs_log), a past
      day straight into qs_log, the same shape backfill.js writes.
    - Still to come (a later day, or later today): a to-do under Social Well-Being
@@ -59,9 +59,6 @@
    has its own tint (Is lilac, Circle slate, Source amber, What warm, When blue,
    Where green) and the chosen pill goes solid; Group keeps its year-grid colours.
 
-   v2.6, Oct 5 2026, Scott's answers: a new meet-up must say how long it was (Long is now required). Under 60 minutes
-   ticks the Social Fitness habit; 60 minutes or more counts on the Social Fitness 60mins+ row instead and does not tick it.
-
    v2.4, Sep 21 2026, the four taps. Scott picked six measures for the Year view
    and three of them were undercounting, because a room with six friends in it
    counted as one person seen. These four taps are what stop that:
@@ -95,7 +92,18 @@
    - Log It is 60% width and centred; the card, the rows and the pills all got
      more padding so the form breathes.
    - A Social Interactions link sits under Log It, opening connections.html in
-     a new tab. */
+     a new tab.
+
+   v2.7, Oct 9 2026, copy only: the note box now says "Add a quick note about the
+     convo" and the tick-box says "Add note to their profile". Nothing else changed.
+
+   v2.6, Oct 8 2026, Scott's two tweaks:
+   - PHOTO. A new row lets him attach a photo. On the iPhone the tap opens the
+     photo picker (Photo Library first, Take Photo also offered). The picture is
+     saved to the social_photos store and its address goes on the connection
+     (connections.photo_url). Not shown for a plan, same as Length and Felt.
+   - LENGTH. The row is renamed from Long. A fifth pill, Custom, opens a minutes
+     box so any length can be typed; the same connections.mins column holds it. */
 window.PYSocial = (function () {
   'use strict';
 
@@ -118,7 +126,7 @@ window.PYSocial = (function () {
   };
   /* v2.4. Fixed scales, not vocabulary: the same four lengths and the same 1 to 7
      every time, so they are not in people_vocab and neither row has a + or pencil. */
-  var LONGS = [[30,'30 min'],[60,'1 hour'],[120,'2 hours'],[240,'Longer']];
+  var LONGS = [[30,'30 min'],[60,'1 hour'],[120,'2 hours']];  /* v2.6: Longer removed, Custom covers it */
   var FELTS = [1,2,3,4,5,6,7];
   var FIELDS = ['is','source','what','where','group','circle'];
   /* Sep 27 2026, Scott's ask: the four Social Circle pills always wear the same
@@ -301,6 +309,11 @@ window.PYSocial = (function () {
          its own teal and runs 1 to 7 left to right, so the row reads as a scale. */
       '.pysl .sl-long .p{background:#e2ecf3;border-color:transparent;color:#2b3348}',
       '.pysl .sl-long .p.on{background:#4a7fa8;color:#fff}',
+      '.pysl .sl-long .sl-cust{width:84px;padding:7px 10px;border:1px solid #c2d3e0;border-radius:999px;font:inherit;font-size:14px;color:#2b3348;background:#fff}',
+      '.pysl .sl-photo .sl-shot{display:flex;align-items:center;gap:10px;margin-top:8px}',
+      '.pysl .sl-photo .sl-shot img{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid #d6dbe3}',
+      '.pysl .sl-photo .p.on{background:#4a7fa8;color:#fff}',
+      '.pysl .rph{display:block;width:56px;height:56px;object-fit:cover;border-radius:8px;margin-top:6px}',
       '.pysl .sl-felt{gap:2px}',
       '.pysl .sl-felt .p{min-width:20px;justify-content:center;text-align:center;background:#dcecec;border-color:transparent;color:#2b3348}',
       '.pysl .sl-felt .p.on{background:#37716f;color:#fff}',
@@ -375,16 +388,10 @@ window.PYSocial = (function () {
     this.kind = kindPill(this.o.title);
     this.who0 = guess.person; this.with0 = guess.others;
     this.place = ''; this.labels = []; this.labelsTouched = false; this.source = '';
-    this.mins = this.o.mins || null; this.felt = null;
+    this.mins = this.o.mins || null; this.felt = null; this.custom = false; this.photoFile = null; this.photoUrl = '';
     this.tidy = { is:false, source:false, what:false, where:false, group:false }; this.lastRm = null;
     this.group = ''; this.circle = ''; this.groupTouched = false; this.circleTouched = false;
     this.known = []; this.loaded = false; this.timer = null;
-    /* v2.5, Sep 29 2026, Scott's ask: a Done pill alongside Today, for the
-       moment a visit just wrapped up and he wants it logged without thinking
-       about which day -- same date (today), same save, just says what he
-       means. Tracked separately from Today only so the two pills never both
-       light up at once. */
-    this.whenDone = false;
   }
   Form.prototype.isFuture = function(){
     var DAY = today();
@@ -405,7 +412,7 @@ window.PYSocial = (function () {
     try { await loadPills(this.sb); } catch (e) {}
     try {
       var r = await this.sb.from('connections')
-        .select('id,person,person_key,circle,social_group,labels,age_band,entity_type,happened_on,kind,place,notes,planned')
+        .select('id,person,person_key,circle,social_group,labels,age_band,entity_type,happened_on,kind,place,notes,planned,photo_url')
         .eq('superseded', false).order('happened_on', { ascending: false }).limit(400);
       this.known = r.data || [];
     } catch (e) { this.known = []; }
@@ -449,9 +456,22 @@ window.PYSocial = (function () {
      again, and neither one is ever required to save. */
   Form.prototype.longHtml = function(){
     var self = this;
+    var fixed = LONGS.some(function(x){ return x[0] === self.mins; });
+    var isCust = this.custom || (this.mins && !fixed);
     return LONGS.map(function(x){
       return '<button type="button" class="p' + (self.mins === x[0] ? ' on' : '') + '" data-long="' + x[0] + '">' + esc(x[1]) + '</button>';
-    }).join('');
+    }).join('') +
+      '<button type="button" class="p' + (isCust ? ' on' : '') + '" data-longcustom="1">Custom</button>' +
+      (isCust ? '<input type="number" class="sl-cust" inputmode="numeric" min="1" max="1440" placeholder="Minutes" value="' + (this.mins && !fixed ? this.mins : '') + '" aria-label="Minutes">' : '');
+  };
+  /* v2.6. Photo. No capture attribute on purpose: on the iPhone that is what
+     makes it offer the Photo Library as well as the camera. */
+  Form.prototype.photoHtml = function(){
+    if (this.photoUrl) {
+      return '<div class="sl-shot"><img src="' + att(this.photoUrl) + '" alt="Attached photo"><button type="button" class="p" data-photo-clear="1">Remove</button></div>';
+    }
+    return '<button type="button" class="p" data-photo-pick="1">Add photo</button>' +
+      '<input type="file" class="sl-file" accept="image/*" hidden>';
   };
   Form.prototype.feltHtml = function(){
     var self = this;
@@ -467,6 +487,7 @@ window.PYSocial = (function () {
   };
   Form.prototype.repaint = function(field){
     if (field === 'long') { var l = this.box.querySelector('.sl-long'); if (l) l.innerHTML = this.longHtml(); return; }
+    if (field === 'photo') { var ph = this.box.querySelector('.sl-photo'); if (ph) ph.innerHTML = this.photoHtml(); return; }
     if (field === 'felt') { var f = this.box.querySelector('.sl-felt'); if (f) f.innerHTML = this.feltHtml(); return; }
     var c = this.box.querySelector('[data-picks="' + field + '"]');
     if (c) c.innerHTML = this.picksHtml(field);
@@ -535,23 +556,23 @@ window.PYSocial = (function () {
       '<div class="fld"><span class="lab">What</span><div class="picks sl-kinds" data-picks="what">' + this.picksHtml('what') +
       '</div>' + this.addHtml('what') + '</div>' +
       '<div class="fld"><span class="lab">When</span><div class="picks sl-when">' +
-        '<button type="button" class="p' + (this.when === DAY && !this.whenDone ? ' on' : '') + '" data-w="0">Today</button>' +
+        '<button type="button" class="p' + (this.when === DAY ? ' on' : '') + '" data-w="0">Today</button>' +
         '<button type="button" class="p' + (this.when === shift(DAY,-1) ? ' on' : '') + '" data-w="-1">Yesterday</button>' +
         '<button type="button" class="p' + (this.when === shift(DAY,1) ? ' on' : '') + '" data-w="1">Tomorrow</button>' +
         '<button type="button" class="p' + (quick.indexOf(this.when) < 0 ? ' on' : '') + '" data-w="pick">' + (quick.indexOf(this.when) < 0 ? esc(shortD(this.when)) : 'Pick date') + '</button>' +
-        '<button type="button" class="p' + (this.when === DAY && this.whenDone ? ' on' : '') + '" data-w="done">Done</button>' +
         '</div><input type="date" class="sl-date" value="' + att(this.when) + '"' + (quick.indexOf(this.when) > -1 ? ' style="display:none"' : '') + '></div>' +
       /* v2.4. Length sits with the date because it is a time question. Hidden for
          something still to come: a plan writes a to-do, and this would not save. */
-      '<div class="fld sl-longrow"' + (fut ? ' hidden' : '') + '><span class="lab">Long</span><div class="picks sl-long">' + this.longHtml() + '</div></div>' +
+      '<div class="fld sl-longrow"' + (fut ? ' hidden' : '') + '><span class="lab">Length</span><div class="picks sl-long">' + this.longHtml() + '</div></div>' +
+      '<div class="fld sl-photorow"' + (fut ? ' hidden' : '') + '><span class="lab">Photo</span><div class="sl-photo">' + this.photoHtml() + '</div></div>' +
       '<div class="fld"><span class="lab">Where</span><div class="picks sl-where" data-picks="where">' + this.picksHtml('where') + '</div>' + this.addHtml('where') +
         (this.usedPlaces().length ? '<div class="picks used">' + this.usedPlaces().map(function(x){ return '<button type="button" class="p" data-used="' + att(x) + '">' + esc(x) + '</button>'; }).join('') + '</div>' : '') +
         '<input type="text" class="sl-place" placeholder="Where exactly?" autocomplete="off"></div>' +
       /* v2.4. How it was, last, after the fact, and never required. */
       '<div class="fld sl-feltrow"' + (fut ? ' hidden' : '') + '><span class="lab">Felt</span><div class="picks sl-felt">' + this.feltHtml() + '</div>' +
         '<p class="why">1 draining, 7 the best kind. Leave it alone if you would rather not say.</p></div>' +
-      '<div class="fld"><span class="lab">Note</span><textarea class="sl-note" rows="1" placeholder="How it went"></textarea>' +
-        '<label class="keep"><input type="checkbox" class="sl-keep"> Keep on their card</label></div>' +
+      '<div class="fld"><span class="lab">Note</span><textarea class="sl-note" rows="1" placeholder="Add a quick note about the convo"></textarea>' +
+        '<label class="keep"><input type="checkbox" class="sl-keep"> Add note to their profile</label></div>' +
       '<button type="button" class="go' + (fut ? ' plan' : '') + '">' + (fut ? 'Add to what is coming up' : 'Log it') + '</button>' +
       '<a class="sl-social-link" href="https://xrodgers28.github.io/ProjectYou/connections.html" target="_blank" rel="noopener">Social Interactions &#8599;</a>' +
       '<p class="msg' + (cls ? ' ' + cls : '') + '">' + esc(msg || '') + '</p>';
@@ -570,7 +591,7 @@ window.PYSocial = (function () {
           var meta = [ww(k.happened_on), k.place].filter(Boolean).join(' · ');
           return '<div class="row" data-cid="' + att(k.id) + '" data-who="' + att(k.person || '') + '">' +
             '<span class="what">' + esc((k.kind ? (k.kind.charAt(0).toUpperCase() + k.kind.slice(1)) : 'Time') + ' with ' + (k.person || '')) +
-              '<span class="meta">' + esc(meta) + '</span>' + (k.notes ? '<span class="nt">' + esc(k.notes) + '</span>' : '') + '</span>' +
+              '<span class="meta">' + esc(meta) + '</span>' + (k.notes ? '<span class="nt">' + esc(k.notes) + '</span>' : '') + (k.photo_url ? '<img class="rph" src="' + att(k.photo_url) + '" alt="Photo">' : '') + '</span>' +
             '<span class="sp"><button class="an">Add note</button></span>' +
             '<div class="addn"><textarea placeholder="Add to the note"></textarea>' +
               '<label class="keep"><input type="checkbox" class="ak"> Also keep this on ' + esc(k.person || 'their') + '’s card</label>' +
@@ -605,6 +626,7 @@ window.PYSocial = (function () {
     /* v2.4. A plan writes a to-do, so length and how it felt have nowhere to go
        and should not be sitting there asking. Tapping back to today brings them. */
     var lr = this.$('.sl-longrow'), fr = this.$('.sl-feltrow');
+    var pr = this.$('.sl-photorow'); if (pr) pr.hidden = fut;
     if (lr) lr.hidden = fut;
     if (fr) fr.hidden = fut;
   };
@@ -656,10 +678,23 @@ window.PYSocial = (function () {
     var who = this.$('.sl-who'), date = this.$('.sl-date');
     date.addEventListener('change', function(){
       if (!date.value) return;
-      self.when = date.value; self.whenDone = false;
+      self.when = date.value;
       var ws = self.$('.sl-when'); ws.querySelectorAll('.p').forEach(function(x){ x.classList.remove('on'); });
       var pk = ws.querySelector('[data-w="pick"]'); pk.classList.add('on'); pk.textContent = shortD(self.when);
       self.refreshGo();
+    });
+    box.addEventListener('input', function(e){
+      if (e.target && e.target.classList && e.target.classList.contains('sl-cust')) {
+        var n = parseInt(e.target.value, 10);
+        self.mins = (n > 0 && n <= 1440) ? n : null;
+      }
+    });
+    box.addEventListener('change', function(e){
+      if (e.target && e.target.classList && e.target.classList.contains('sl-file')) {
+        var f = e.target.files && e.target.files[0]; if (!f) return;
+        if (self.photoUrl) { try { URL.revokeObjectURL(self.photoUrl); } catch (x) {} }
+        self.photoFile = f; self.photoUrl = URL.createObjectURL(f); self.repaint('photo');
+      }
     });
     who.addEventListener('input', function(){ self.labelsTouched = false; self.showCarry(); });
     who.addEventListener('change', function(){ self.labelsTouched = false; self.showCarry(); });
@@ -711,8 +746,23 @@ window.PYSocial = (function () {
       }
       if (b.hasAttribute('data-long')) {
         var lv = parseInt(b.getAttribute('data-long'), 10);
-        self.mins = (self.mins === lv) ? null : lv;
+        self.mins = (self.mins === lv) ? null : lv; self.custom = false;
         self.repaint('long'); return;
+      }
+      if (b.hasAttribute('data-longcustom')) {
+        /* v2.6. Custom toggles: open the minutes box, or tap again to clear it. */
+        var fx = LONGS.some(function(x){ return x[0] === self.mins; });
+        if (self.custom || (self.mins && !fx)) { self.custom = false; self.mins = null; }
+        else { self.custom = true; self.mins = null; }
+        self.repaint('long');
+        var ci = self.box.querySelector('.sl-cust'); if (ci) ci.focus();
+        return;
+      }
+      if (b.hasAttribute('data-photo-pick')) {
+        var fi = self.box.querySelector('.sl-file'); if (fi) fi.click(); return;
+      }
+      if (b.hasAttribute('data-photo-clear')) {
+        self.photoFile = null; self.photoUrl = ''; self.repaint('photo'); return;
       }
       if (b.hasAttribute('data-felt')) {
         var fv = parseInt(b.getAttribute('data-felt'), 10);
@@ -731,12 +781,7 @@ window.PYSocial = (function () {
       if (b.hasAttribute('data-w')) {
         var w = b.getAttribute('data-w');
         if (w === 'pick') { date.style.display = ''; date.focus(); if (date.showPicker) { try { date.showPicker(); } catch (x) {} } return; }
-        if (w === 'done') {
-          self.when = DAY; self.whenDone = true; date.value = self.when; date.style.display = 'none';
-          grp.querySelectorAll('.p').forEach(function(x){ x.classList.toggle('on', x === b); });
-          self.refreshGo(); return;
-        }
-        self.when = shift(DAY, +w); self.whenDone = false; date.value = self.when; date.style.display = 'none';
+        self.when = shift(DAY, +w); date.value = self.when; date.style.display = 'none';
         grp.querySelectorAll('.p').forEach(function(x){ x.classList.toggle('on', x === b); });
         self.refreshGo(); return;
       }
@@ -863,7 +908,6 @@ window.PYSocial = (function () {
     var tn = tidyName(raw), who = tn.name;
     if (!who) { this.say('Put a name in first. A first name is enough.', 'warn'); this.$('.sl-who').focus(); return; }
     if (!this.kind) { this.say('Pick what it was.', 'warn'); return; }
-    if (!this.isFuture() && !this.mins) { this.say('Tap how long it was. 60 minutes or more counts as Social Fitness 60mins+.', 'warn'); return; }
     var fut = this.isFuture(), carry = this.carry(who) || {};
     var others = String(this.$('.sl-with').value || '').trim();
     /* v2.4. One field, many people. Commas, "and", & and + all split, the same way
@@ -889,7 +933,20 @@ window.PYSocial = (function () {
     } else {
       /* v2.4. Who else was there is a column now, not a string in the note. */
       var notes = [typed, tn.note].filter(Boolean).join(' | ');
+      var photoPub = null;
+      if (this.photoFile) {
+        try {
+          var ext = (this.photoFile.name && this.photoFile.name.indexOf('.') > -1) ? this.photoFile.name.split('.').pop().toLowerCase().replace(/[^a-z0-9]/g, '') : 'jpg';
+          var path = this.when + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 7) + '.' + (ext || 'jpg');
+          var up = await sb.storage.from('social_photos').upload(path, this.photoFile, { contentType: this.photoFile.type || 'image/jpeg', upsert: false });
+          if (up.error) throw up.error;
+          photoPub = sb.storage.from('social_photos').getPublicUrl(path).data.publicUrl;
+        } catch (pe) {
+          go.disabled = false; this.say('The photo did not upload, so nothing was saved. Try again, or remove the photo.', 'warn'); return;
+        }
+      }
       r = await sb.from('connections').insert({
+        photo_url: photoPub,
         person: who, person_key: (carry.person_key || who), entity_type: 'person',
         kind: this.kind, channel: channelFor(this.kind), happened_on: this.when, planned: false,
         notes: notes || null, place: where,
@@ -901,7 +958,7 @@ window.PYSocial = (function () {
       if (!r.error && r.data) {
         res.connectionId = r.data.id;
         res.others = othersList.slice(); res.mins = this.mins || null; res.felt = this.felt || null;
-        res.habitId = (this.mins || 0) < 60 ? await tickHabit(sb, this.when, this.mins || o.mins || null) : null;
+        res.habitId = await tickHabit(sb, this.when, this.mins || o.mins || null);
       }
     }
     if (!r.error && keep && typed) { try { await this.keepNote(who, typed, res.connectionId); } catch (e) {} }
@@ -911,10 +968,10 @@ window.PYSocial = (function () {
        whole reason the Else row exists, so it should be visible at the save. */
     var head = 1 + othersList.length;
     var said = fut ? ('On your board under Social Well-Being: ' + title + ', ' + shortD(this.when) + '.')
-                   : ('Logged: ' + title + ', ' + shortD(this.when) + '. ' + ((this.mins || 0) < 60 ? 'Social Fitness ticked.' : 'Counted on Social Fitness 60mins+.') +
+                   : ('Logged: ' + title + ', ' + shortD(this.when) + '. Social habit ticked.' +
                       (head > 1 ? ' ' + head + ' people counted for today.' : ''));
     this.kind = ''; this.place = ''; this.labels = []; this.labelsTouched = false; this.source = ''; this.who0 = ''; this.with0 = '';
-    this.mins = null; this.felt = null;
+    this.mins = null; this.felt = null; this.custom = false; this.photoFile = null; this.photoUrl = '';
     this.tidy = { is:false, source:false, what:false, where:false, group:false }; this.lastRm = null;
     this.group = ''; this.circle = ''; this.groupTouched = false; this.circleTouched = false;
     this.loaded = false;
@@ -990,5 +1047,5 @@ window.PYSocial = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.5' };
+  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.6' };
 })();
