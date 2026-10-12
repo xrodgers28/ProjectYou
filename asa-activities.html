@@ -7,6 +7,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="py-icons.js" defer></script>
 <style>
   :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--accent:#3f6f8f;--accent2:#2f5a74;--chip:#eef2f8;--warm:#a35a4e;--warm2:#c07a6a;--green:#1e8e5a;--hot:#c0453b}
   *{box-sizing:border-box;margin:0;padding:0}
@@ -96,6 +97,10 @@
   .tgs{margin-top:5px}
   .tg{display:inline-block;font-size:10.5px;font-weight:700;background:var(--chip);color:var(--accent2);border-radius:999px;padding:2px 8px;margin:0 4px 0 0}
   .idea .t{cursor:pointer}
+  .lks{margin-top:5px;display:flex;flex-wrap:wrap;gap:5px}
+  .lks a{font-size:11.5px;font-weight:700;color:var(--accent,#3f6f8f);text-decoration:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 9px;white-space:nowrap}
+  .lks a:hover{background:#eef4f9;text-decoration:underline}
+  .leaflet-popup-content .lks{margin-top:6px}
   .drv{display:inline-block;font-size:10.5px;font-weight:700;color:#5b6472;background:#f1f4f8;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:0 4px 0 0;white-space:nowrap}
   .legend .drvnote{flex-basis:100%;margin-top:2px;color:#9aa6b4}
   .leaflet-tooltip.dtip{white-space:normal;width:max-content;max-width:230px;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:1.4;padding:6px 9px;border-radius:8px;color:#1f2a44}
@@ -131,7 +136,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>💛 Asa Activities</h1><span class="ver">v1.2</span><span class="date"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1><img id="hico" alt="" style="display:none;width:32px;height:32px;vertical-align:-8px;margin-right:6px">Asa Activities</h1><span class="ver">v1.3</span><span class="date"></span></div></div>
 
 <div class="wrap">
   <div class="intro">Two lists you and Åsa are building together. <b>Date Ideas</b> is the actionable one &mdash; things to go and do, ticked off as you do them. <b>Things we like to do together</b> is the reference list the ideas come from.</div>
@@ -167,7 +172,7 @@
     <div id="sugLike"></div>
   </div>
 </div>
-<div class="badge">Asa Activities v1.2</div>
+<div class="badge">Asa Activities v1.3</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -298,6 +303,11 @@ function drawFilters(rows){
     names.map(t=>'<button class="fbtn'+(FILTER===t?' on':'')+'" onclick="setFilter(\''+t+'\')">'+t+' <span>'+c[t]+'</span></button>').join('');
 }
 
+function linksHtml(r){
+  const L=Array.isArray(r.links)?r.links:[];
+  const ok=L.filter(l=>l&&/^https?:\/\//i.test(l.url||''));
+  return ok.length?'<div class="lks">'+ok.map(l=>'<a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(l.url)+'">\u2197 '+esc(l.label||'Website')+'</a>').join('')+'</div>':'';
+}
 function ideaCard(r){
   const done=r.status==='done';
   const dv=fmtDrive(r);
@@ -309,7 +319,7 @@ function ideaCard(r){
       (r.place?'<span class="pl">'+esc(r.place)+'</span>':'')+
       (r.place&&r.notes?' · ':'')+(r.notes?esc(r.notes):'')+
       (r.done_on?(r.place||r.notes?' · ':'')+'done '+r.done_on:'')+
-    '</div>':'')+tg+
+    '</div>':'')+tg+linksHtml(r)+
     ((EDIT&&EDIT.id===r.id)?editorHtml(r):'')+
     '</div><span class="edit" title="Edit area and tags" onclick="startEdit(\''+r.id+'\')">✎</span>'+
     '<span class="del" title="Remove" onclick="del(\''+r.id+'\')">✕</span></div>';
@@ -380,7 +390,7 @@ function drawMap(active,sugg){
       const col=AREA_COL[AREAS.includes(r.area)?r.area:'Not placed yet'];
       const m=L.circleMarker([r.lat,r.lng],{radius:s?8:10,color:s?col:'#fff',weight:s?2.5:2,fillColor:col,fillOpacity:s?0.12:(r.status==='done'?0.45:0.95)}).addTo(LAYER);
       const dv=fmtDrive(r);
-      m.bindPopup('<b style="font-weight:700">'+esc(r.item)+'</b>'+(r.place?'<br>'+esc(r.place):'')+(dv?'<br>🚗 '+esc(dv)+' from 06870':'')+(s?'<br><i>Suggested</i>':''));
+      m.bindPopup('<b style="font-weight:700">'+esc(r.item)+'</b>'+(r.place?'<br>'+esc(r.place):'')+(dv?'<br>🚗 '+esc(dv)+' from 06870':'')+(s?'<br><i>Suggested</i>':'')+linksHtml(r));
       m.bindTooltip('<b>'+esc(r.item)+'</b>'+(dv?'<br><span class="dd">🚗 '+esc(dv)+' from 06870</span>':''),{direction:'auto',offset:[12,0],className:'dtip',sticky:false});
       m.on('click',()=>focusIdea(r.id));
       MK[r.id]=m;
@@ -412,7 +422,7 @@ function drawSug(hostId, rows, what){
   if(!rows.length){host.innerHTML='';return;}
   host.innerHTML='<div class="sug"><div class="sugh">Suggested '+what+' &mdash; '+rows.length+' waiting</div>'+
     rows.map(r=>'<div class="sugrow"><span class="st">'+esc(r.item)+
-      ((r.place||r.notes||r.drive_min!=null)?'<span class="sm">'+esc([r.place,(r.drive_min!=null?'🚗 '+fmtDrive(r):''),r.notes].filter(Boolean).join(' · '))+'</span>':'')+
+      ((r.place||r.notes||r.drive_min!=null)?'<span class="sm">'+esc([r.place,(r.drive_min!=null?'🚗 '+fmtDrive(r):''),r.notes].filter(Boolean).join(' · '))+'</span>':'')+linksHtml(r)+
       '</span>'+
       '<button class="keep" onclick="keep(\''+r.id+'\')">Keep</button>'+
       '<button class="drop" onclick="drop(\''+r.id+'\')">No</button></div>').join('')+
@@ -459,5 +469,6 @@ async function del(id){
 boot();
 </script>
 <script>(function(){var e=document.querySelector('.secbar .date');if(e){var d=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];e.textContent=M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();}})();</script>
+<script>document.addEventListener("DOMContentLoaded",function(){try{var i=document.getElementById("hico");if(i&&window.ICONS&&ICONS.date){i.src=ICONS.date;i.style.display="inline-block"}}catch(e){}});</script>
 <script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
