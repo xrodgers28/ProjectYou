@@ -7,6 +7,8 @@
 <link rel="icon" href="project-you-logo.png">
 <script src="py-day.js"></script>
 <script src="wsicons-v2.js"></script>
+<script src="py-icons.js"></script>
+<script>(function(){var w=window.wsSrc;window.wsSrc=function(k){return (window.ICONS&&window.ICONS[k])||(w?w(k):"wsicons/"+k+".webp");};})();</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;font-family:Arial,Helvetica,sans-serif;gap:1px}
@@ -270,7 +272,7 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>Stack Builder</h1><span class="ver">v2.3</span><span class="date" id="builtOn"></span>
+  <div class="secbar"><h1>Stack Builder</h1><span class="ver">v2.5</span><span class="date" id="builtOn"></span>
     <span class="weeknav"><a class="btn" href="weekly-review.html">The PY Week in Review</a><a class="btn" href="habit-worksheets.html">Habit Worksheets</a><a class="btn" id="signout">sign out</a></span>
   </div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading your habits...</span></div>
@@ -333,7 +335,7 @@ const SUPABASE_URL='https://arnjntspmrhigodlssbn.supabase.co';
 const SUPABASE_KEY='sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
 const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('app'),_l=document.getElementById('login');if(_a){_a.classList.add('hidden');}if(_l){_l.classList.remove('hidden');var _e=document.getElementById('msg');if(_e)_e.textContent='Your session expired, please sign in again.';}}});
-const VERSION='v2.3';
+const VERSION='v2.5';
 const COMPASS=['Physical Health','Environmental Health','Social Well-Being','Recreational Health','Sense of Purpose','Mental Fitness','Emotional Health'];
 const ORDER=['Physical Health','Mental Fitness','Sense of Purpose','Emotional Health','Social Well-Being','Environmental Health','Recreational Health','Project YOU','Not sure yet'];
 const ADDABLE=COMPASS.concat(['Project YOU']);
@@ -425,7 +427,9 @@ async function load(){
     const areaOf={};Object.keys(gc).forEach(t=>{let best=null,n=-1;Object.keys(gc[t]).forEach(g=>{if(g==='Not sure yet')return;if(gc[t][g]>n){n=gc[t][g];best=g;}});areaOf[t]=best||Object.keys(gc[t])[0];});
     const seen={};HABITS=[];
     (wr.data||[]).forEach(w=>{if(w.is_active!==true)return;if(!w.qs_tracker||w.retired===true||w.count_on||COUNTERS.includes(w.qs_tracker))return;if(seen[w.qs_tracker])return;seen[w.qs_tracker]=1;HABITS.push({n:w.qs_tracker,ws:w.habit||'',a:w.area||areaOf[w.qs_tracker]||'Not sure yet',img:w.icon?wsSrc(w.icon):null,mine:w.from_stack_builder===true,rowId:w.id,tier:w.tier||null,sec:w.section||''});});
-    Object.keys(gc).forEach(t=>{if(seen[t]||COUNTERS.includes(t))return;const days=(qs.data||[]).filter(r=>r.tracker===t).map(r=>r.date);if(new Set(days).size<2)return;seen[t]=1;HABITS.push({n:t,a:areaOf[t]||'Not sure yet',img:null,mine:false,rowId:null});});
+    /* v2.5: a habit that comes only from the habit log still picks up the icon of the worksheet habit with the same name (Being a good dad). */
+    const ICONBYNAME={};(wr.data||[]).forEach(w=>{if(w.icon&&w.habit&&w.is_active===true&&w.retired!==true)ICONBYNAME[String(w.habit).trim().toLowerCase()]=w.icon;});
+    Object.keys(gc).forEach(t=>{if(seen[t]||COUNTERS.includes(t))return;const days=(qs.data||[]).filter(r=>r.tracker===t).map(r=>r.date);if(new Set(days).size<2)return;seen[t]=1;const ik=ICONBYNAME[String(t).trim().toLowerCase()];HABITS.push({n:t,a:areaOf[t]||'Not sure yet',img:ik?wsSrc(ik):null,mine:false,rowId:null});});
     HABITS.forEach(h=>{if(!COMPASS.includes(h.a)&&h.a!=='Project YOU')h.a='Not sure yet';});
     /* v1.8: habits Scott removed from the drawer that have no worksheet row to retire */
     HID=new Set((hid.data||[]).map(r=>r.name));
