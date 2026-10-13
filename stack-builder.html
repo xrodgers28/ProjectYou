@@ -258,31 +258,6 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .hab.mergeA .blk{outline:3px solid var(--bad);outline-offset:2px}
 .hab.mergeB .blk{outline:3px solid var(--good);outline-offset:2px}
 
-
-/* stack-builder.html v2.5, Oct 13, 2026: "Small Squares". Habit squares about 30% smaller, names in mid light grey, one stack per row, every library section still showing. */
-.palette{width:330px}
-.grp .row{gap:6px 4px}
-.hab{width:50px;gap:2px}
-.hab span{font-size:8.5px;color:#8d9390}
-.blk{width:38px;height:38px;border-radius:9px;border-width:1.5px}
-.blk img{width:28px;height:28px}
-.blk svg{width:24px;height:24px}
-.slot{width:38px;height:38px;border-radius:9px;border-width:1.5px;font-size:16px}
-.strip{gap:4px;min-height:52px}
-.arrow{width:12px;margin-top:19px}
-.arrow:after{top:-3px;border-width:4px;border-left-width:5px}
-.addhab{width:50px;min-height:38px;border-radius:9px;font-size:13px}
-.hab.deckin,.dchip{width:56px}
-.dbox{width:44px;height:38px;border-radius:9px}
-.dbox i{width:8px;height:8px}
-.dstrip{min-height:54px;gap:4px}
-.hab .undo,.hab .pull,.hab .ren{width:15px;height:15px;font-size:11px;top:-6px}
-.hab .undo{left:-5px}.hab .pull,.hab .ren{right:-5px}
-.hab .tier{width:15px;height:15px;font-size:9px;bottom:-5px;right:-5px}
-.hab .cnt{min-width:14px;height:14px;font-size:8.5px}
-.daypick .d{width:20px;height:20px}
-.stack{padding:8px 10px;gap:6px}
-.stacks{gap:8px}
 </style>
 </head>
 <body>
@@ -452,7 +427,9 @@ async function load(){
     const areaOf={};Object.keys(gc).forEach(t=>{let best=null,n=-1;Object.keys(gc[t]).forEach(g=>{if(g==='Not sure yet')return;if(gc[t][g]>n){n=gc[t][g];best=g;}});areaOf[t]=best||Object.keys(gc[t])[0];});
     const seen={};HABITS=[];
     (wr.data||[]).forEach(w=>{if(w.is_active!==true)return;if(!w.qs_tracker||w.retired===true||w.count_on||COUNTERS.includes(w.qs_tracker))return;if(seen[w.qs_tracker])return;seen[w.qs_tracker]=1;HABITS.push({n:w.qs_tracker,ws:w.habit||'',a:w.area||areaOf[w.qs_tracker]||'Not sure yet',img:w.icon?wsSrc(w.icon):null,mine:w.from_stack_builder===true,rowId:w.id,tier:w.tier||null,sec:w.section||''});});
-    Object.keys(gc).forEach(t=>{if(seen[t]||COUNTERS.includes(t))return;const days=(qs.data||[]).filter(r=>r.tracker===t).map(r=>r.date);if(new Set(days).size<2)return;seen[t]=1;HABITS.push({n:t,a:areaOf[t]||'Not sure yet',img:null,mine:false,rowId:null});});
+    /* v2.5: a habit that comes only from the habit log still picks up the icon of the worksheet habit with the same name (Being a good dad). */
+    const ICONBYNAME={};(wr.data||[]).forEach(w=>{if(w.icon&&w.habit&&w.is_active===true&&w.retired!==true)ICONBYNAME[String(w.habit).trim().toLowerCase()]=w.icon;});
+    Object.keys(gc).forEach(t=>{if(seen[t]||COUNTERS.includes(t))return;const days=(qs.data||[]).filter(r=>r.tracker===t).map(r=>r.date);if(new Set(days).size<2)return;seen[t]=1;const ik=ICONBYNAME[String(t).trim().toLowerCase()];HABITS.push({n:t,a:areaOf[t]||'Not sure yet',img:ik?wsSrc(ik):null,mine:false,rowId:null});});
     HABITS.forEach(h=>{if(!COMPASS.includes(h.a)&&h.a!=='Project YOU')h.a='Not sure yet';});
     /* v1.8: habits Scott removed from the drawer that have no worksheet row to retire */
     HID=new Set((hid.data||[]).map(r=>r.name));

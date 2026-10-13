@@ -9,7 +9,7 @@
 
    A design is a small plug-in: PYHT.register({id, name, render(state, size, PYHT) -> html string}).
    size is 'card' (cue card page) or 'phone' (one-tap iPhone view).
-   v1.5 (Oct 9, 2026): E.icon(h, true) prefers a camera-free small picture (ICONS[icon_key + '_sm']) when one exists; only Train platform has one today. Used by Stack Rings and the Two-Ring Wheel inner ring. v1.4 (Oct 6, 2026): E.art(h, true) prefers the latest Stack Builder icon (worksheet_rows.icon through wsicons-v2.js). v1.3 (Oct 5, 2026): four levels. core, secondary, bonus, weekly. Bonus counts like secondary. Weekly habits are NOT in state.habits (so no design counts them in today's lights); they are in state.weekly, done if ticked any day this week (Monday to Sunday, 2am days), counts.wt and counts.wd.
+   v1.6 (Oct 13, 2026): snooze. getState marks h.snz, snoozed habits leave the counts, E.setSnooze and E.reflectSnooze added. v1.5 (Oct 9, 2026): E.icon(h, true) prefers a camera-free small picture (ICONS[icon_key + '_sm']) when one exists; only Train platform has one today. Used by Stack Rings and the Two-Ring Wheel inner ring. v1.4 (Oct 6, 2026): E.art(h, true) prefers the latest Stack Builder icon (worksheet_rows.icon through wsicons-v2.js). v1.3 (Oct 5, 2026): four levels. core, secondary, bonus, weekly. Bonus counts like secondary. Weekly habits are NOT in state.habits (so no design counts them in today's lights); they are in state.weekly, done if ticked any day this week (Monday to Sunday, 2am days), counts.wt and counts.wd.
    state.habits[i] = {lvl, n, ic, sec, core(1/0), st(stack index), stack, pos, done, art, color, pastel, bg, secName}. */
 (function () {
   var TZ = 'America/New_York';
@@ -68,9 +68,11 @@
         : Promise.resolve({ data: [] });
       return q.then(function (r) {
         if (r.error) throw r.error;
-        var doneSet = {}, weekSet = {};
+        var doneSet = {}, weekSet = {}, snzSet = {};
         (r.data || []).forEach(function (t) {
           if (t.done && !t.skipped) { var k = norm(t.task); weekSet[k] = t.for_date; if (t.for_date === day) doneSet[k] = 1; }
+          /* v1.6 snooze: a habit row skipped today and not done is a snoozed habit. */
+          if (t.skipped && !t.done && t.for_date === day) snzSet[norm(t.task)] = 1;
         });
         var mid = (set.sample_mid || []).map(norm), secs = set.sections || {};
         /* Weekday-only stacks: Train (stack 1) is hidden on Saturdays and Sundays (the 2am-to-2am day). */
@@ -83,7 +85,9 @@
           else if (mode === 'mid') d = mid.indexOf(norm(c.habit)) >= 0;
           else d = (c.db_names || []).some(function (n) { return doneSet[norm(n)]; });
           var sc = secs[c.sec] || {};
+          var snz = mode === 'live' && !d && (c.db_names && c.db_names.length ? c.db_names : [c.habit]).some(function (n) { return snzSet[norm(n)]; });
           return {
+            snz: snz,
             n: c.habit, lvl: c.level, ic: c.icon_key, sec: c.sec, core: c.level === 'core' ? 1 : 0,
             st: c.stack_idx, stack: c.stack, pos: c.stack_pos, done: d,
             art: { kind: c.art_kind, key: c.art_key, color: c.art_color, color2: c.art_color2 },
@@ -111,17 +115,18 @@
     W = W || [];
     var c = { ct: 0, cd: 0, st: 0, sd: 0 };
     H.forEach(function (h) {
+      if (h.snz) return; /* snoozed habits leave today's count */
       if (h.core) { c.ct++; if (h.done) c.cd++; } else { c.st++; if (h.done) c.sd++; }
     });
     function byCore(a) { return a.slice().sort(function (x, y) { return y.core - x.core; }); }
-    var open = byCore(H.filter(function (h) { return !h.done; }));
+    var open = byCore(H.filter(function (h) { return !h.done && !h.snz; }));
     var done = byCore(H.filter(function (h) { return h.done; }));
     var names = set.stack_names || [], longs = set.stack_long_names || names;
     var stacks = names.map(function (nm, i) {
       var l = H.filter(function (h) { return h.st === i; });
-      return { idx: i, name: nm, long: longs[i] || nm, habits: l, total: l.length,
+      return { idx: i, name: nm, long: longs[i] || nm, habits: l, total: l.filter(function (h) { return !h.snz; }).length, snoozed: l.filter(function (h) { return h.snz; }).length,
         done: l.filter(function (h) { return h.done; }).length };
-    }).filter(function (s) { return s.total > 0; });
+    }).filter(function (s) { return s.habits.length > 0; });
     var next = null;
     open.forEach(function (h) { if (!next && h.core) next = h; });
     return {
@@ -226,6 +231,46 @@
         return sb.from('todos').update({ done: false, done_at: null })
           .in('id', ticked.map(function (t) { return t.id; })).then(function (x) { if (x.error) throw x.error; return 'undone'; });
         });
+      });
+    });
+  };
+
+  /* Snooze (v1.6, Oct 13, 2026). A snoozed habit is today's row marked skipped and not done, the same flag Today's Tasks already uses.
+     It leaves today's count and the day's streak is safe (habit_history keeps the skipped flag). The reason goes in the row's note. Sample modes are never saved. */
+  E.reflectSnooze = function (state, name, on) {
+    state.habits.forEach(function (h) { if (h.n === name) { h.snz = !!on; if (on) h.done = false; } });
+    var s2 = build(state.habits, state.mode, state.day, state.weekly);
+    s2.loadedAt = state.loadedAt;
+    return s2;
+  };
+  E.setSnooze = function (name, on, reason) {
+    return ready.then(function () {
+      var c = cfg.filter(function (x) { return x.habit === name; })[0];
+      if (!c) throw new Error('Habit not found: ' + name);
+      var day = (window.PY && window.PY.today) ? window.PY.today() : null;
+      if (!day) throw new Error('Could not work out today');
+      var all = (c.db_names && c.db_names.length ? c.db_names : [c.habit]), names = all.map(norm);
+      return sb.from('todos').select('id,task,done,skipped').eq('is_habit', true).eq('for_date', day).then(function (r) {
+        if (r.error) throw r.error;
+        var rows = (r.data || []).filter(function (t) { return names.indexOf(norm(t.task)) >= 0; });
+        var now = new Date().toISOString();
+        if (on) {
+          var note = 'Snoozed: ' + (reason || 'no reason given');
+          var open = rows.filter(function (t) { return !t.done; });
+          if (!rows.length) {
+            var sc = (set.sections || {})[c.sec] || {};
+            return sb.from('todos').insert({ section: 'Core To-Dos', subsection: 'HABIT BANDIT', category: 'HABIT BANDIT', task: all[0],
+              is_habit: true, for_date: day, bucket: 'today', status: 'todo', done: false, skipped: true, skipped_at: now, staging_note: note,
+              qs_group: sc.name || null }).then(function (x) { if (x.error) throw x.error; return 'created'; });
+          }
+          if (!open.length) return 'already';
+          return sb.from('todos').update({ skipped: true, skipped_at: now, done: false, done_at: null, staging_note: note })
+            .in('id', open.map(function (t) { return t.id; })).then(function (x) { if (x.error) throw x.error; return 'snoozed'; });
+        }
+        var sk = rows.filter(function (t) { return t.skipped; });
+        if (!sk.length) return 'already';
+        return sb.from('todos').update({ skipped: false, skipped_at: null, staging_note: null })
+          .in('id', sk.map(function (t) { return t.id; })).then(function (x) { if (x.error) throw x.error; return 'woke'; });
       });
     });
   };
