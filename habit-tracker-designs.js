@@ -1,10 +1,10 @@
-/* Daily Habit Tracker DESIGN REGISTRY v1.2 (Oct 9, 2026).
+/* Daily Habit Tracker DESIGN REGISTRY v1.3 (Oct 13, 2026: H renamed Habit Bandit Remote).
    One line per design. To add a design: add a line and publish its file.
    To remove one: delete its line. The page shows the order below, top to bottom; entries with more:true sit under a gap further down the page. file:null means not built yet (the page shows a placeholder).
    A design file only draws. It must never hold a habit name or any of Scott's data. */
 window.PYHT_REGISTRY = [
   { id: 'wheel',  letter: 'D', name: 'Two-Ring Wheel',                                 ref: '2', file: 'habit-tracker-d-wheel.js' },
-  { id: 'remote', letter: 'H', name: 'Remote Lights: Grid (7 lights still on)',        ref: '61', file: 'habit-tracker-d-remote.js' },
+  { id: 'remote', letter: 'H', name: 'Habit Bandit Remote',                            ref: '61', file: 'habit-tracker-d-remote.js' },
   { id: 'rings',  letter: 'E', name: 'Stack Rings: Outer Rim',                         ref: '8', file: 'habit-tracker-d-rings.js' },
   { id: 'grid',   letter: 'F', name: 'Icon Grid',                                      ref: '1', file: 'habit-tracker-d-grid.js' },
   { id: 'poster', letter: 'A', name: 'Poster Hourglass: Gravity Fill, Black on Beige', ref: '34B', file: 'habit-tracker-d-poster.js', more: true },
