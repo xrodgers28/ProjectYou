@@ -1,4 +1,4 @@
-/* v2.1 Oct 13, 2026: snoozed keys (blue, Zzz). */
+/* v2.2 Oct 13, 2026: snoozed blue made darker. v2.1: snoozed keys (blue, Zzz). */
 /* v2.0 Oct 13, 2026: sections now follow the Habit Stacker stacks. */
 /* Design H: Habit Bandit Remote (was Remote Lights, Grid; design file ref 61). v2.0 Oct 13, 2026 (sections follow the Habit Stacker); v1.9 Oct 13, 2026 (Scott: removed the headline, the 'are off' line and the CORE count line); v1.8 Oct 7, 2026 (own EVENING row between SECONDARY and BONUS for every Evening-stack habit; corner LED now very tiny and blurry with colour at 30% saturation; v1.7: uses the latest picked icons; v1.6: glow dimmed to 30% of v1.5; v1.5: a lit button is now one full disc with a coloured rim, no dark ring around it; v1.4: lights now use a soft glow: each light is a bright centre fading to nothing with a wide, gentle halo, like the green SIG light, instead of a hard-edged dot; v1.3: a section with no habits now still shows its label and a hint; four separate sections: CORE large keys in a 3 by 3 grid, then SECONDARY, BONUS and WEEKLY as smaller key rows, each with its own label and count. Bonus counts toward lights out like secondary; weekly never counts toward today's lights). Core habits are big round keys in a 3 by 3 grid, secondary habits a smaller row of keys. An open habit has its LED lit in its section colour and its key backlit; a finished habit has its LED off and its key grey. "Lights out" means all of them dark.
    Animation-ready: every key is tagged data-h, every LED data-led, every key face data-key. Draws only; every fact comes from the engine state. */
@@ -38,9 +38,9 @@
       function key(x, d, led) {
         if (x.snz) {
           /* v2.1 snoozed: dashed blue rim, dim face, a Zzz tag. Not lit, not done. */
-          return '<div data-h="' + e(x.n) + '" data-snz="1" style="position:relative;width:' + d + 'px;height:' + d + 'px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:#26304d;border:2px dashed #7fa8ff;cursor:pointer">' +
+          return '<div data-h="' + e(x.n) + '" data-snz="1" style="position:relative;width:' + d + 'px;height:' + d + 'px;flex:none;border-radius:50%;display:flex;align-items:center;justify-content:center;box-sizing:border-box;background:#121a3a;border:2px dashed #3b63d1;cursor:pointer">' +
             '<span data-key style="display:flex;align-items:center;justify-content:center;width:66%;height:66%;opacity:.55;filter:grayscale(1)">' + art(x, d) + '</span>' +
-            '<span style="position:absolute;right:-5px;top:-6px;font-size:9px;font-weight:800;background:#7fa8ff;color:#10162b;border-radius:99px;padding:0 5px;line-height:14px">Zzz</span></div>';
+            '<span style="position:absolute;right:-5px;top:-6px;font-size:9px;font-weight:800;background:#2f54b8;color:#fff;border-radius:99px;padding:0 5px;line-height:14px">Zzz</span></div>';
         }
         var lit = !x.done, c = x.color;
         if (lit) {
@@ -64,7 +64,7 @@
         shown[x.n] = 1;
         var badge = x.snz ? '' : '<span style="position:absolute;right:' + Math.round(-kd * .02) + 'px;bottom:' + Math.round(kd * .12) + 'px;width:15px;height:15px;border-radius:50%;background:' + (x.lvl === 'core' ? '#3d6a8a' : '#4a4f5e') + ';color:#fff;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1.5px #1a1b21">' + (x.lvl === 'core' ? 'C' : x.lvl === 'bonus' ? 'B' : 'S') + '</span>';
         return '<div style="display:flex;flex-direction:column;align-items:center;width:100%"><div style="position:relative">' + key(x, kd, Math.round(kd * .22)) + badge + '</div>' +
-          '<div style="font-size:' + fs + 'px;line-height:1.1;font-weight:700;text-align:center;margin-top:6px;color:' + (x.done ? '#5f6371' : x.snz ? '#7fa8ff' : '#fff') + '">' + e(x.n) + '</div></div>';
+          '<div style="font-size:' + fs + 'px;line-height:1.1;font-weight:700;text-align:center;margin-top:6px;color:' + (x.done ? '#5f6371' : x.snz ? "#6f93e6" : "#fff") + '">' + e(x.n) + '</div></div>';
       }
       function section(label, list, note) {
         if (!list.length) return '';

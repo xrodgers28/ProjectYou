@@ -13,8 +13,8 @@
     '#snzpop{position:fixed;z-index:9999;background:#0f1117;color:#fff;border:1px solid #3b3e48;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 28px #000a;min-width:176px;max-width:240px;font-family:Arial,Helvetica,sans-serif}' +
     '#snzpop b{font-size:11px;color:#9aa3c0;font-weight:700;padding:2px 4px;line-height:1.3}' +
     '#snzpop button{font-family:inherit;font-size:13px;font-weight:700;border:1px solid #3b3e48;background:#1b1e27;color:#fff;border-radius:8px;padding:9px 10px;text-align:left;cursor:pointer}' +
-    '#snzpop button:hover,#snzpop button:focus-visible{border-color:#7fa8ff;outline:none}' +
-    '#snzpop button.s{color:#7fa8ff}';
+    '#snzpop button:hover,#snzpop button:focus-visible{border-color:#6f93e6;outline:none}' +
+    '#snzpop button.s{color:#6f93e6}';
   document.head.appendChild(st);
 
   function say(m, err) { if (window.__pySay) window.__pySay(m, false, err); }
