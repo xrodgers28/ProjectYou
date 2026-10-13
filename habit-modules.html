@@ -15,6 +15,9 @@
      The Mini Habits tile opens it for the human moment habit. -->
 <script src="social-log.js"></script>
 <script src="safari-log.js"></script>
+<!-- v6.95 (Oct 12, 2026): the What gave me energy card now has a Park button and parks into the Parked area. -->
+<!-- v6.94 (Oct 12, 2026): Mini Habits tiles (Posture included) no longer lose their done look on reload when other days of the week have rows. -->
+<!-- v6.93 (Oct 12, 2026): the card deal animation now plays once a day, on the first open of the day. -->
 <!-- v6.90 (Oct 10, 2026): the Hours of Daylight tile in the header, which opens the daylight meter as a pop-up. Its own file, daylight-meter.js. -->
 <script src="daylight-meter.js" defer></script>
 <style>
@@ -132,7 +135,8 @@
 .rail-label{text-align:center;font-size:9px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#8b93a1;padding:2px 0 0}
 .pastbanner{max-width:1160px;margin:14px auto 0;padding:0 72px}
 .pastbanner.hidden{display:none}
-.pastbanner .pb-inner{background:#fbf3e2;border:1px solid #f0dfb2;border-left:4px solid #b8962f;border-radius:10px;padding:10px 14px;font-size:13px;color:#5c4b1e;font-weight:700;line-height:1.4}
+.pastbanner .pb-inner{background:#b8801f;border:1px solid #8f6317;border-radius:10px;padding:11px 14px;font-size:14px;color:#fff;font-weight:800;line-height:1.4;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.pastbanner .pb-back{font:inherit;font-size:13px;font-weight:800;background:#fff;color:#8f6317;border:0;border-radius:99px;padding:5px 14px;cursor:pointer}
   .rt{width:134px;height:42px;background:#fff;border:1px solid #e1e6ee;border-left:2px solid var(--ra);
       border-radius:9px;box-shadow:0 3px 9px rgba(31,42,68,.05);display:flex;align-items:center;gap:5px;
       padding:0 5px 0 6px;position:relative;user-select:none;overflow:hidden;transition:box-shadow .16s}
@@ -664,6 +668,9 @@
   .ecard .esent .esx{font-size:17px;padding:0 4px}
   .ecard .esent img{width:15px;height:15px;object-fit:contain}
   .ecard .ekey{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line)}
+  #board .ecard .park{top:10px;right:12px}
+  .ecard:hover .park{opacity:1}
+  #enMini{margin-top:10px}
   .ecard .ekey span{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--muted)}
   .ecard .ekey img{width:13px;height:13px;object-fit:contain}
   .gate{max-width:340px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(31,42,68,.07)}
@@ -939,13 +946,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.92</span>
+    <span class="pn-ver">v6.95</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.92</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.95</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -1288,7 +1295,13 @@ function renderDayNav(){
   document.getElementById("daynav").classList.toggle("past", VIEWDATE!==t);
   document.getElementById("dnToday").hidden = (VIEWDATE===t);
   var pb=document.getElementById("pastbanner");
-  if(pb){ pb.classList.add("hidden"); pb.innerHTML=""; }
+  /* v6.94 (Oct 12, 2026): a bold bar whenever the board is on a past day, so a tap is never filed on the wrong day by accident. */
+  if(pb){
+    if(VIEWDATE!==t){
+      pb.innerHTML='<div class="pb-inner">VIEWING '+fmtLong(VIEWDATE).toUpperCase()+'. Anything you tap is saved on this day, not today. <button type="button" class="pb-back" onclick="setViewDate(todayKey())">Back to today</button></div>';
+      pb.classList.remove("hidden");
+    } else { pb.classList.add("hidden"); pb.innerHTML=""; }
+  }
 }
 async function setViewDate(d){
   VIEWDATE=d;
@@ -1805,7 +1818,12 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
       exWalkReq
     ]);
     R.pastDone = res[12] || {};
-    R.mhWeek={}; ((res[13]||{}).data||[]).forEach(function(r){ R.mhWeek[r.tracker]=r; });
+    R.mhWeek={}; ((res[13]||{}).data||[]).forEach(function(r){
+      /* v6.94 (Oct 12, 2026): the week's rows come back in no set order, and a daily habit has one row per day, so the
+         LAST row used to win. A tile that was done today could show un-done after a reload because yesterday's row
+         landed last. Now the row for the day on screen always wins, then the newest day. */
+      var cur=R.mhWeek[r.tracker], vd=viewDay();
+      if(!cur || (r.date===vd) || (cur.date!==vd && String(r.date)>String(cur.date))) R.mhWeek[r.tracker]=r; });
     R.bdays=((res[14]||{}).data||[]);
     /* Bucket every walk/exercise session by its OWN day (PY.day on done_at,
        never the query range) so a session that lands just after midnight
@@ -3753,6 +3771,44 @@ var EN=(function(){
   var ORDER=['','py','tw','rel'], NAME={py:'Project YOU',tw:'TreadWell',rel:'Relationship'};
   var BOLT='<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"><path d="M27 5 11 27h11l-3 16 18-24H26z"/></svg>';
   var st={rows:[],sent:[],loaded:false,loading:false,busy:false,again:false,msg:'',ok:false,t:null};
+  /* v6.95 (Oct 12, 2026): the card can be parked like every other card. The flag is kept in
+     page_prefs (page 'habit-modules', key 'energy_parked') so the Mac and iPhone agree, with a
+     local copy so the card does not flicker on open. */
+  var parked=false;
+  try{ parked=localStorage.getItem('py_energy_parked')==='1'; }catch(e){}
+  var parkLoaded=false;
+  async function loadPark(){
+    if(parkLoaded||!sb) return; parkLoaded=true;
+    try{
+      var r=await sb.from('page_prefs').select('value').eq('page','habit-modules').eq('key','energy_parked').maybeSingle();
+      if(r.data){ var v=(r.data.value===true||r.data.value==='true'); if(v!==parked){ parked=v; try{localStorage.setItem('py_energy_parked',v?'1':'0');}catch(e){} mount(); } }
+    }catch(e){}
+  }
+  async function setParked(v){
+    parked=!!v;
+    try{localStorage.setItem('py_energy_parked',parked?'1':'0');}catch(e){}
+    mount();
+    var ok=false;
+    try{
+      if(sb){ var r=await sb.from('page_prefs').upsert({page:'habit-modules',key:'energy_parked',value:parked,updated_at:new Date().toISOString()},{onConflict:'page,key'}); ok=!r.error; }
+    }catch(e){}
+    toast('What gave me energy '+(parked?'is parked':'is back on the board')+(ok?'':', but it did not save'));
+  }
+  /* the small chip in the Parked area; tap it to put the card back */
+  function paintParkedChip(){
+    var shelf=document.getElementById('readshelf'); if(!shelf) return;
+    var chip=document.getElementById('enMini');
+    if(!parked){ if(chip) chip.remove(); return; }
+    if(!chip){
+      chip=document.createElement('div'); chip.id='enMini'; chip.className='rp-minis';
+      shelf.appendChild(chip);
+    }
+    chip.innerHTML='<div class="rp-mini" style="--ra:#d98a2b" title="Tap to put it back on the board">What gave me energy</div>';
+    chip.querySelector('.rp-mini').onclick=function(){ setParked(false); };
+    shelf.classList.remove('hidden');
+    var rc=document.getElementById('readcnt');
+    if(rc && !rc.textContent) rc.textContent='1 card';
+  }
   function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
   function day(){return PY.today();}
   function sleep(ms){return new Promise(function(r){setTimeout(r,ms);});}
@@ -3836,7 +3892,8 @@ var EN=(function(){
   }
   function paint(){
     var el=document.getElementById('energycard'); if(!el) return;
-    var h='<div class="ehd"><span class="badge">'+BOLT+'</span>'+
+    var h='<span class="park" id="enpark" role="button" tabindex="0" title="Park it \u2014 moves it to the Parked tray at the bottom">Park</span>'+
+      '<div class="ehd"><span class="badge">'+BOLT+'</span>'+
       '<div class="kick">Whenever it happens</div><div class="nm">What gave me energy</div>'+
       '<div class="esub">tap the square on a line to tag it</div></div>'+
       '<div class="elab">Energy givers</div><div class="elist">'+
@@ -3872,6 +3929,9 @@ var EN=(function(){
     });
     document.getElementById('eadd').onclick=add;
     document.getElementById('edone').onclick=done;
+    var pk=document.getElementById('enpark');
+    pk.onclick=function(e){e.preventDefault();e.stopPropagation();setParked(true);};
+    pk.onkeydown=function(e){if(e.key===' '||e.key==='Enter'){e.preventDefault();e.stopPropagation();setParked(true);}};
   }
   function add(){
     st.rows.push({id:null,t:'',g:''}); paint();
@@ -3882,11 +3942,14 @@ var EN=(function(){
   function mount(){
     var board=document.getElementById('board'); if(!board) return;
     var el=document.getElementById('energycard');
+    if(parked){ if(el) el.remove(); paintParkedChip(); loadPark(); return; }
+    paintParkedChip();
     if(!el){ el=document.createElement('div'); el.id='energycard'; el.className='card ecard'; el.style.setProperty('--acc','#d98a2b'); }
     var wrap=board.querySelector('a.card[href*="three-new-things"]');
     if(wrap) board.insertBefore(el,wrap); else board.appendChild(el);
     paint();
     load();
+    loadPark();
   }
   return {mount:mount};
 })();
@@ -4162,7 +4225,13 @@ var PYCARDS=(function(){
     p.style.boxShadow=sh.join(',');
   }
 
+  /* v6.93 (Oct 12, 2026): the deal plays once a day, on the first open of the day (the day runs 2am to 2am Eastern,
+     PY.today()). The day is stamped in this browser when the deal starts; every later open that day skips it. */
+  var DEAL_KEY='py-deal-day';
+  function dealtToday(){try{return localStorage.getItem(DEAL_KEY)===PY.today();}catch(e){return false;}}
+  function stampDeal(){try{localStorage.setItem(DEAL_KEY,PY.today());}catch(e){}}
   function hold(){
+    if(dealtToday()){ran=true;return;}   /* already dealt today: nothing hidden, no animation */
     document.documentElement.classList.add('py-predeal');
     holdT=setTimeout(deal,9000);   /* safety: cards are never hidden longer than this */
   }
@@ -4174,6 +4243,7 @@ var PYCARDS=(function(){
     var vh=window.innerHeight;
     var vis=all.filter(function(c){var r=c.getBoundingClientRect();return r.height>0&&r.top<vh-20&&r.bottom>0;});
     if(reduce||!vis.length||!vis[0].animate){reveal();return;}
+    stampDeal();
     var r0=vis[0].getBoundingClientRect(),w=r0.width,h=r0.height,right=0,bottom=0;
     vis.forEach(function(c){var r=c.getBoundingClientRect();right=Math.max(right,r.right);bottom=Math.max(bottom,r.bottom);});
     var L=right-w, T=Math.max(8,Math.min(vh-h-18,bottom+16));   /* bottom right, just under the board */
