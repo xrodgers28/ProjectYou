@@ -17,7 +17,7 @@
    page_prefs under page 'habit-modules', key 'flow-banner'.
    ========================================================================== */
 (function(){
-  var CSS = ":host{display:block;margin:9px 0;\n  --bg:#f4f6f9;--card:#fff;--sunk:#f1f3f8;--line:#e3e7ee;--hair:#eef0f5;\n  --ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--accent:#3f6f8f;\n  --flow:#A8841F;--flow-tint:#f0dd93;\n  --safari:#0F8A74;--safari-tint:#a4d6ca;\n  --nature:#2F7D53;--nature-tint:#cfe6d6;--mtn:#1C5B41;--lake:#4E93B8;--lake-tint:#cfe2ee;\n  --sky:#a6c4e8;--lilac:#c6b9e8;--peach:#f3c6a1;--neutral:#c3cbd8;\n  --warn:#a9741a;\n  --fh:Arial,Helvetica,sans-serif;--fb:Arial,Helvetica,sans-serif;\n  --fm:ui-monospace,'SF Mono',Menlo,Consolas,monospace;\n  font-family:var(--fb);font-size:14px;line-height:1.45;color:var(--ink)}\n*{box-sizing:border-box}\nbutton{font-family:inherit}\n\n/* the banner shell, folds like the travel banner */\n.bn{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}\n.face{all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;padding:9px 12px 0}\n.face:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}\n.fhead{display:flex;align-items:flex-start;gap:10px}\n.ftxt{min-width:0;flex:1 1 auto}\n.kick{font-family:var(--fm);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0 0 1px}\nh2.ft{font-family:var(--fh);font-weight:700;font-size:21px;line-height:1.15;margin:0;letter-spacing:-.01em}\n.creed{margin:2px 0 0;font-family:var(--fh);font-style:italic;font-weight:400;color:var(--faint);font-size:clamp(11px,2.5vw,14px);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.chv{flex:none;width:22px;height:22px;display:grid;place-items:center;color:var(--faint);transition:transform .25s ease;margin-top:3px}\n.bn.open .chv{transform:rotate(180deg);color:var(--ink)}\n.openhint{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:5px 0 0;text-align:right}\n\n/* the six numbers */\n.bar{display:flex;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:8px 0 9px}\n.cell{background:var(--card);padding:7px 10px;min-width:0;flex:1 1 150px;display:flex;align-items:center;gap:10px;\n  border-left:1px solid var(--line);border-top:1px solid var(--line);margin-left:-1px;margin-top:-1px}\n.cell img{width:34px;height:34px;flex:none}\n.cell b{display:block;font-family:var(--fh);font-weight:700;font-size:19px;line-height:.96;font-variant-numeric:tabular-nums;white-space:nowrap}\n.cell b .u{display:inline;font-weight:400;font-size:.72em;letter-spacing:0;text-transform:none;margin:0 0 0 .18em;color:var(--muted)}\n.cell span{display:block;font-family:var(--fm);font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-top:2px}\n.cell.phoneonly{display:none}\n@media(max-width:700px){\n  .cell{display:none}\n  .cell.keep,.cell.phoneonly{display:flex}\n  h2.ft{font-size:19px}\n}\n\n/* the fold */\n.drop{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s ease}\n.bn.open .drop{grid-template-rows:1fr}\n.drop>.in{overflow:hidden;min-height:0}\n.pad{padding:0 12px 11px;border-top:1px solid var(--line);margin-top:1px}\n@media(prefers-reduced-motion:reduce){.drop,.chv{transition:none}}\n\n/* the week */\n.wkhead{display:flex;align-items:baseline;gap:10px;padding:9px 0 5px}\n.wkhead h3{font-family:var(--fh);font-weight:700;font-size:15px;margin:0}\n.wkhead .cnt{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--faint)}\n.canvas svg{display:block;width:100%;height:auto}\n.t-hr{font-family:var(--fm);font-size:11px;fill:var(--faint)}\n.t-day{font-family:var(--fm);font-size:12px;fill:var(--muted)}\n.t-day.on{fill:var(--ink);font-weight:700}\n.t-note{font-family:var(--fm);font-size:8.5px;fill:var(--faint);letter-spacing:.05em}\n\n/* layers, attached under the week */\n.layrow{display:flex;align-items:flex-start;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--hair)}\n.allbtns{display:flex;flex-direction:column;gap:5px;flex:none}\n.allbtns .tiny{width:100%;text-align:center;padding:4px 10px}\n.layers{display:flex;gap:6px 7px;flex-wrap:wrap;flex:1 1 auto;min-width:0}\n.lay{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card);\n  border-radius:999px;padding:5px 12px 5px 6px;font:inherit;font-size:13px;cursor:pointer;color:var(--muted)}\n.lay img{width:25px;height:25px;display:block;opacity:.4}\n.lay[aria-pressed=\"true\"]{border-color:var(--ink);color:var(--ink);font-weight:700;background:var(--sunk)}\n.lay[aria-pressed=\"true\"] img{opacity:1}\n.lay .mins{font-family:var(--fm);font-size:11px;color:var(--faint)}\n.tiny{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:var(--ink)}\nbutton:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}\n\n/* the two shades under the week */\ndetails.shade{background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:8px}\ndetails.shade>summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;\n  font-family:var(--fh);font-weight:700;font-size:14px;user-select:none}\ndetails.shade>summary::-webkit-details-marker{display:none}\ndetails.shade>summary::before{content:\"\";width:7px;height:7px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);\n  transform:rotate(-45deg);margin:0 2px;transition:transform .15s;flex:none}\ndetails.shade[open]>summary::before{transform:rotate(45deg)}\ndetails.shade>summary .cnt{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--faint);font-weight:400}\n.sbody{padding:0 14px 13px}\n\n.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}\nblockquote{margin:0;padding-top:5px;border-top:2px solid var(--ink);min-width:0}\nblockquote p{margin:0 0 7px;font-size:15px;line-height:1.35;font-weight:700}\nblockquote cite{font-style:normal;font-family:var(--fm);font-size:9.5px;letter-spacing:.06em;color:var(--faint);display:block;line-height:1.5}\n.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:16px}\n.step{background:var(--card);padding:12px 14px;min-width:0}\n.step i{font-family:var(--fm);font-style:normal;font-size:9.5px;letter-spacing:.1em;color:var(--flow);display:block;margin-bottom:5px}\n.step b{display:block;font-size:13.5px;margin-bottom:2px}.step span{font-size:12.5px;color:var(--muted)}\n.callout{background:var(--flow-tint);color:var(--ink);padding:12px 15px;border-radius:9px;font-family:var(--fh);font-weight:700;font-size:15px;margin:15px 0 0}\n\ntable{width:100%;border-collapse:collapse;min-width:560px}\nth{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:400}\ntd{padding:7px 10px;border-bottom:1px solid var(--hair);font-size:13px;vertical-align:middle}\ntr:last-child td{border-bottom:0}\n.scroll{overflow-x:auto}\n.tico{width:21px;height:21px;vertical-align:-6px;margin-right:7px}\n.empty{padding:16px;color:var(--faint);text-align:center;font-size:13px}\n.lbl{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}\n.readonly{font-family:var(--fm);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin:6px 0 0;text-align:right}\n.foot{font-size:11.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:9px}\n.foot .mono{font-family:var(--fm)}\n/* planned blocks: promises, never facts. Dotted, dim, no icon, italic label. */\n.t-plan{font-family:var(--fm);font-size:9px;font-style:italic;fill:var(--faint);letter-spacing:.03em}\n.ghost rect.inv{animation:gpulse 2.6s ease-in-out 3}\n@keyframes gpulse{0%,100%{stroke-opacity:.38;fill-opacity:.14}50%{stroke-opacity:.95;fill-opacity:.40}}\n.ghost{cursor:pointer}\n.ghost:hover rect.inv{stroke-opacity:1;fill-opacity:.42}\n.plan{cursor:pointer}\n@media(prefers-reduced-motion:reduce){.ghost rect.inv{animation:none;stroke-opacity:.72;fill-opacity:.26}}\n/* the Monday moment */\n.setwk{display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--sunk);border:1px solid var(--line);\n  border-radius:10px;padding:9px 12px;margin:9px 0 0}\n.setwk.show{display:flex}\n.setwk b{font-family:var(--fh);font-size:13.5px}\n.setwk span{font-size:12.5px;color:var(--muted);min-width:0}\n.setwk .tiny{margin-left:auto;flex:none}\n.planline{font-family:var(--fm);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:7px 0 0}\n.nosrc{font-family:var(--fm);font-size:11px;color:var(--faint);font-style:italic}\n";
+  var CSS = ":host{display:block;margin:9px 0;\n  --bg:#f4f6f9;--card:#fff;--sunk:#f1f3f8;--line:#e3e7ee;--hair:#eef0f5;\n  --ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--accent:#3f6f8f;\n  --flow:#A8841F;--flow-tint:#f0dd93;\n  --safari:#0F8A74;--safari-tint:#a4d6ca;\n  --nature:#2F7D53;--nature-tint:#cfe6d6;--mtn:#1C5B41;--lake:#4E93B8;--lake-tint:#cfe2ee;\n  --sky:#a6c4e8;--lilac:#c6b9e8;--peach:#f3c6a1;--neutral:#c3cbd8;\n  --warn:#a9741a;\n  --fh:Arial,Helvetica,sans-serif;--fb:Arial,Helvetica,sans-serif;\n  --fm:ui-monospace,'SF Mono',Menlo,Consolas,monospace;\n  font-family:var(--fb);font-size:14px;line-height:1.45;color:var(--ink)}\n*{box-sizing:border-box}\nbutton{font-family:inherit}\n\n/* the banner shell, folds like the travel banner */\n.bn{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}\n.face{all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;padding:9px 12px 0}\n.face:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}\n.fhead{display:flex;align-items:flex-start;gap:10px}\n.ftxt{min-width:0;flex:1 1 auto}\n.kick{font-family:var(--fm);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0 0 1px}\nh2.ft{font-family:var(--fh);font-weight:700;font-size:21px;line-height:1.15;margin:0;letter-spacing:-.01em}\n.creed{margin:2px 0 0;font-family:var(--fh);font-style:italic;font-weight:400;color:var(--faint);font-size:clamp(11px,2.5vw,14px);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.chv{flex:none;width:22px;height:22px;display:grid;place-items:center;color:var(--faint);transition:transform .25s ease;margin-top:3px}\n.bn.open .chv{transform:rotate(180deg);color:var(--ink)}\n.openhint{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:5px 0 0;text-align:right}\n\n/* the six numbers */\n.bar{display:flex;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:8px 0 9px}\n.cell{background:var(--card);padding:7px 10px;min-width:0;flex:1 1 150px;display:flex;align-items:center;gap:10px;\n  border-left:1px solid var(--line);border-top:1px solid var(--line);margin-left:-1px;margin-top:-1px}\n.cell img{width:34px;height:34px;flex:none}\n.cell b{display:block;font-family:var(--fh);font-weight:700;font-size:19px;line-height:.96;font-variant-numeric:tabular-nums;white-space:nowrap}\n.cell b .u{display:inline;font-weight:400;font-size:.72em;letter-spacing:0;text-transform:none;margin:0 0 0 .18em;color:var(--muted)}\n.cell span{display:block;font-family:var(--fm);font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-top:2px}\n.cell.phoneonly{display:none}\n@media(max-width:700px){\n  .cell{display:none}\n  .cell.keep,.cell.phoneonly{display:flex}\n  h2.ft{font-size:19px}\n}\n\n/* the fold */\n.drop{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s ease}\n.bn.open .drop{grid-template-rows:1fr}\n.drop>.in{overflow:hidden;min-height:0}\n.pad{padding:0 12px 11px;border-top:1px solid var(--line);margin-top:1px}\n@media(prefers-reduced-motion:reduce){.drop,.chv{transition:none}}\n\n/* the week */\n.wkhead{display:flex;align-items:baseline;gap:10px;padding:9px 0 5px}\n.wkhead h3{font-family:var(--fh);font-weight:700;font-size:15px;margin:0}\n.wkhead .cnt{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--faint)}\n.canvas svg{display:block;width:100%;height:auto}\n.t-hr{font-family:var(--fm);font-size:11px;fill:var(--faint)}\n.t-day{font-family:var(--fm);font-size:12px;fill:var(--muted)}\n.t-day.on{fill:var(--ink);font-weight:700}\n.t-note{font-family:var(--fm);font-size:8.5px;fill:var(--faint);letter-spacing:.05em}\n\n/* layers, attached under the week */\n.layrow{display:flex;align-items:flex-start;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--hair)}\n.allbtns{display:flex;flex-direction:column;gap:5px;flex:none}\n.allbtns .tiny{width:100%;text-align:center;padding:4px 10px}\n.layers{display:flex;gap:6px 7px;flex-wrap:wrap;flex:1 1 auto;min-width:0}\n.lay{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card);\n  border-radius:999px;padding:5px 12px 5px 6px;font:inherit;font-size:13px;cursor:pointer;color:var(--muted)}\n.lay img{width:25px;height:25px;display:block;opacity:.4}\n.lay[aria-pressed=\"true\"]{border-color:var(--ink);color:var(--ink);font-weight:700;background:var(--sunk)}\n.lay[aria-pressed=\"true\"] img{opacity:1}\n.lay .mins{font-family:var(--fm);font-size:11px;color:var(--faint)}\n.tiny{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:var(--ink)}\nbutton:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}\n\n/* the two shades under the week */\ndetails.shade{background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:8px}\ndetails.shade>summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;\n  font-family:var(--fh);font-weight:700;font-size:14px;user-select:none}\ndetails.shade>summary::-webkit-details-marker{display:none}\ndetails.shade>summary::before{content:\"\";width:7px;height:7px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);\n  transform:rotate(-45deg);margin:0 2px;transition:transform .15s;flex:none}\ndetails.shade[open]>summary::before{transform:rotate(45deg)}\ndetails.shade>summary .cnt{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--faint);font-weight:400}\n.sbody{padding:0 14px 13px}\n\n.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}\nblockquote{margin:0;padding-top:5px;border-top:2px solid var(--ink);min-width:0}\nblockquote p{margin:0 0 7px;font-size:15px;line-height:1.35;font-weight:700}\nblockquote cite{font-style:normal;font-family:var(--fm);font-size:9.5px;letter-spacing:.06em;color:var(--faint);display:block;line-height:1.5}\n.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:16px}\n.step{background:var(--card);padding:12px 14px;min-width:0}\n.step i{font-family:var(--fm);font-style:normal;font-size:9.5px;letter-spacing:.1em;color:var(--flow);display:block;margin-bottom:5px}\n.step b{display:block;font-size:13.5px;margin-bottom:2px}.step span{font-size:12.5px;color:var(--muted)}\n.callout{background:var(--flow-tint);color:var(--ink);padding:12px 15px;border-radius:9px;font-family:var(--fh);font-weight:700;font-size:15px;margin:15px 0 0}\n\ntable{width:100%;border-collapse:collapse;min-width:560px}\nth{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:400}\ntd{padding:7px 10px;border-bottom:1px solid var(--hair);font-size:13px;vertical-align:middle}\ntr:last-child td{border-bottom:0}\n.scroll{overflow-x:auto}\n.tico{width:21px;height:21px;vertical-align:-6px;margin-right:7px}\n.empty{padding:16px;color:var(--faint);text-align:center;font-size:13px}\n.lbl{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}\n.readonly{font-family:var(--fm);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin:6px 0 0;text-align:right}\n.foot{font-size:11.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:9px}\n.foot .mono{font-family:var(--fm)}\n/* planned blocks: promises, never facts. Dotted, dim, no icon, italic label. */\n.t-plan{font-family:var(--fm);font-size:9px;font-style:italic;fill:var(--faint);letter-spacing:.03em}\n.ghost rect.inv{animation:gpulse 2.6s ease-in-out 3}\n@keyframes gpulse{0%,100%{stroke-opacity:.38;fill-opacity:.14}50%{stroke-opacity:.95;fill-opacity:.40}}\n.ghost{cursor:pointer}\n.ghost:hover rect.inv{stroke-opacity:1;fill-opacity:.42}\n.plan{cursor:pointer}\n@media(prefers-reduced-motion:reduce){.ghost rect.inv{animation:none;stroke-opacity:.72;fill-opacity:.26}}\n/* the Monday moment */\n.setwk{display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--sunk);border:1px solid var(--line);\n  border-radius:10px;padding:9px 12px;margin:9px 0 0}\n.setwk.show{display:flex}\n.setwk b{font-family:var(--fh);font-size:13.5px}\n.setwk span{font-size:12.5px;color:var(--muted);min-width:0}\n.setwk .tiny{margin-left:auto;flex:none}\n.planline{font-family:var(--fm);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:7px 0 0}\n.nosrc{font-family:var(--fm);font-size:11px;color:var(--faint);font-style:italic}\n/* drag a pill onto the week to place time */\n.lay.drg{cursor:grab;touch-action:none}\n.lay.drg:active{cursor:grabbing}\n.lay.lifted{opacity:.35}\n.plan,.ghost{touch-action:none}\n.flyer{position:fixed;z-index:9999;pointer-events:none;display:inline-flex;align-items:center;gap:7px;\n  border:1px solid var(--ink);background:var(--card);border-radius:999px;padding:5px 12px 5px 6px;\n  font-family:var(--fb);font-size:13px;font-weight:700;color:var(--ink);box-shadow:0 6px 18px rgba(31,42,68,.22);\n  transform:translate(-50%,-165%);opacity:.96}\n.flyer img{width:25px;height:25px;display:block}\n.flyer .when{font-family:var(--fm);font-size:11px;font-weight:400;color:var(--muted)}\n.dropping .canvas svg{outline:2px dashed var(--accent);outline-offset:3px;border-radius:6px}\n";
   var HTML = "<div class=\"bn\" id=\"bn\">\n  <button class=\"face\" id=\"face\" type=\"button\" aria-expanded=\"false\" aria-controls=\"drop\">\n    <div class=\"fhead\">\n      <div class=\"ftxt\">\n        <p class=\"kick\" id=\"kick\">Project YOU</p>\n        <h2 class=\"ft\">Flow Time</h2>\n        <p class=\"creed\" id=\"creed\"></p>\n      </div>\n      <span class=\"chv\" aria-hidden=\"true\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 15 15\"><path d=\"M3 5.5 L7.5 10 L12 5.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></span>\n    </div>\n    <div class=\"bar\" id=\"bar\"></div>\n    <p class=\"openhint\" id=\"openhint\">Tap to open the week</p>\n  </button>\n  <div class=\"drop\" id=\"drop\"><div class=\"in\"><div class=\"pad\">\n\n    <div class=\"setwk\" id=\"setwk\">\n      <b>Set the week</b>\n      <span id=\"setwk-sub\">Tap a dotted slot to promise yourself the time.</span>\n      <button class=\"tiny\" id=\"samelast\" type=\"button\" style=\"display:none\">Same as last week</button>\n    </div>\n\n    <div class=\"wkhead\"><h3>The week</h3><span class=\"cnt\" id=\"cnt-cal\"></span></div>\n    <div class=\"canvas\" id=\"grid\"></div>\n    <div class=\"layrow\">\n      <div class=\"allbtns\">\n        <button class=\"tiny\" id=\"all-on\" type=\"button\">All on</button>\n        <button class=\"tiny\" id=\"all-off\" type=\"button\">All off</button>\n      </div>\n      <div class=\"layers\" id=\"layers\"></div>\n    </div>\n    <p class=\"planline\" id=\"planline\"></p>\n    <p class=\"readonly\" id=\"ro\">Logged blocks are read only here. Change them on the Flow Time page.</p>\n\n    <details class=\"shade\" id=\"sh-why\">\n      <summary>Why this page exists</summary>\n      <div class=\"sbody\">\n        <div class=\"quotes\">\n          <blockquote><p>&ldquo;I get in the zone when I&rsquo;m interested in something, often focusing so deeply that everything else falls away.&rdquo;</p><cite>Your own ADHD Characteristics sheet</cite></blockquote>\n          <blockquote><p>&ldquo;Our minds are lost in useless thoughts almost 47 percent of the time.&rdquo;</p><cite>Project YOU deck, after Killingsworth and Gilbert, Science, 2010</cite></blockquote>\n          <blockquote><p>&ldquo;Work expands to fill the time available for its completion.&rdquo;</p><cite>Parkinson&rsquo;s Law, Reference Library</cite></blockquote>\n        </div>\n        <div class=\"steps\">\n          <div class=\"step\"><i>STEP 01</i><b>Ask &ldquo;when?&rdquo;</b><span>Every intention gets a time, not just a wish. Ali Alqaraghuli, in your Project YOU notes.</span></div>\n          <div class=\"step\"><i>STEP 02</i><b>Put it in a calendar slot</b><span>Timeboxing: assign the work to a named block. Zao-Sanders, Harvard Business Review, 2018.</span></div>\n          <div class=\"step\"><i>STEP 03</i><b>Shape the room for deep work</b><span>Phone away, door closed, same place each time. Environmental Health, Knowledge Base.</span></div>\n        </div>\n        <p class=\"callout\" id=\"callout\"></p>\n      </div>\n    </details>\n\n    <details class=\"shade\" id=\"sh-blk\">\n      <summary>Every block, by type <span class=\"cnt\" id=\"cnt-blk\"></span></summary>\n      <div class=\"sbody\">\n        <div class=\"scroll\"><div id=\"log-wrap\"></div></div>\n        <p class=\"lbl\" style=\"margin:15px 0 7px\">Parking lot</p>\n        <div class=\"scroll\"><div id=\"park-wrap\"></div></div>\n      </div>\n    </details>\n\n    <p class=\"foot\"><span>Times Eastern. Days run 2 a.m. to 2 a.m., so a Saturday night block stays on Saturday past midnight.</span><span class=\"mono\" id=\"vstamp\"></span></p>\n  </div></div></div>\n</div>\n";
 
   function mount(){
@@ -31,7 +31,7 @@
   }
 
   function build(R){
-    var VER='Flow Time banner v2.0';
+    var VER='Flow Time banner v2.1';
     /* A different line each time the page loads. Written here rather than quoted from a
        book, so nothing is reproduced; say the word and I will swap in sourced quotations. */
     var LINES=[
@@ -181,7 +181,11 @@
          1. a planned block is drawn dotted and dim, never like a logged one
          2. planned minutes are kept out of every figure in the number bar and the rail
          3. plans are scoped to their own week, so they expire instead of becoming history */
-    var PLANNABLE=['flow','studio','asa','dad'];
+    /* Layers you can plan. Commute and Transport are left out on purpose: those
+       happen to you and get measured, they are not something you choose in advance. */
+    var PLANNABLE=['flow','studio','asa','dad','safari','nature'];
+    /* How long a block lands when you drag its pill onto the week. */
+    var DROPMINS={flow:90,studio:180,asa:180,dad:120,safari:180,nature:30};
     var INVITE={
       flow:   {s:480, m:90,  days:[0,1,2,3,4], why:'Three of four flow sessions started at 8 a.m.'},
       asa:    {s:1140,m:180, days:[5,6],       why:'Asa Date lands on a weekend.'},
@@ -224,6 +228,115 @@
       }
       return null;
     }
+
+    /* ---------- drag a pill onto the week, or a placed block to a new slot ----------
+       One engine for both. A short press is still a tap, so tapping a placed block
+       to take it back keeps working. Nothing here can create a logged block: every
+       drop writes a promise, never a fact. */
+    var DRAG=null, DROPPED=0, SNAP=15;
+
+    function gridSvg(){ var b=R.getElementById('grid'); return b?b.querySelector('svg'):null; }
+    function toSvg(cx,cy){
+      var sv=gridSvg(); if(!sv||!sv.getScreenCTM)return null;
+      var m=sv.getScreenCTM(); if(!m)return null;
+      var pt=sv.createSVGPoint(); pt.x=cx; pt.y=cy;
+      try{ var o=pt.matrixTransform(m.inverse()); return {x:o.x,y:o.y}; }catch(e){ return null; }
+    }
+    /* where on the week is the pointer, snapped to a day and a quarter hour */
+    function slotAt(cx,cy,mins){
+      var pnt=toSvg(cx,cy); if(!pnt)return null;
+      if(pnt.x<GL-8||pnt.x>GR+8||pnt.y<GT-14||pnt.y>GB+14)return null;
+      var d=Math.floor((pnt.x-GL)/COLW); if(d<0)d=0; if(d>6)d=6;
+      var mn=WIN0+((pnt.y-GT)/(GB-GT))*(WIN1-WIN0);
+      mn=Math.round(mn/SNAP)*SNAP;
+      if(mn+mins>WIN1)mn=WIN1-mins;
+      if(mn<WIN0)mn=WIN0;
+      return {day:d,s:mn};
+    }
+    function clearPreview(){ var g=R.getElementById('prevg'); if(g&&g.parentNode)g.parentNode.removeChild(g); }
+    function showPreview(k,slot,mins){
+      clearPreview();
+      var sv=gridSvg(); if(!sv||!slot)return;
+      var l=LMAP[k]||{col:'var(--neutral)',n:k};
+      var g=mk('g',{id:'prevg','pointer-events':'none'},sv);
+      var y0=Y(slot.s), bh=Math.max(Y(slot.s+mins)-y0,9);
+      var bx=colX(slot.day)+3, bw=COLW-8;
+      var gone=WEEKD&&WEEKD[slot.day]<todayISO();
+      mk('rect',{x:bx.toFixed(1),y:y0.toFixed(1),width:bw.toFixed(1),height:bh.toFixed(1),rx:4,
+        fill:gone?'var(--neutral)':l.col,'fill-opacity':gone?.12:.30,
+        stroke:gone?'var(--neutral)':l.col,'stroke-width':1.6,'stroke-dasharray':'4 3'},g);
+      if(bh>=13)mk('text',{x:(bx+5).toFixed(1),y:(y0+11).toFixed(1),class:'t-plan'},g,
+        gone?'that day has gone':fmtT(slot.s));
+    }
+    function makeFlyer(k){
+      var l=LMAP[k]||{n:k,ic:null};
+      var el=document.createElement('div'); el.className='flyer';
+      if(ICONS[l.ic]){var im=document.createElement('img');im.src=ICONS[l.ic];im.alt='';el.appendChild(im);}
+      el.appendChild(h('span',{text:SHORT[k]||l.n}));
+      var w=h('span',{class:'when',text:''}); el.appendChild(w);
+      R.appendChild(el);
+      return {el:el,when:w};
+    }
+
+    function beginDrag(opt,ev){
+      if(DRAG)return;
+      ev.stopPropagation();
+      DRAG={k:opt.k,mins:opt.mins,plan:opt.plan||null,src:opt.src||null,
+            x0:ev.clientX,y0:ev.clientY,moved:false,slot:null,fly:null};
+      window.addEventListener('pointermove',dragMove,true);
+      window.addEventListener('pointerup',dragUp,true);
+      window.addEventListener('pointercancel',dragUp,true);
+    }
+    function dragMove(ev){
+      if(!DRAG)return;
+      var dx=ev.clientX-DRAG.x0, dy=ev.clientY-DRAG.y0;
+      if(!DRAG.moved&&dx*dx+dy*dy<36)return;      /* under 6px is still a tap */
+      if(!DRAG.moved){
+        DRAG.moved=true;
+        DRAG.fly=makeFlyer(DRAG.k);
+        var bn=R.getElementById('bn'); if(bn)bn.classList.add('dropping');
+        if(DRAG.src)DRAG.src.classList.add('lifted');
+      }
+      if(ev.cancelable)ev.preventDefault();
+      DRAG.fly.el.style.left=ev.clientX+'px';
+      DRAG.fly.el.style.top=ev.clientY+'px';
+      var sl=slotAt(ev.clientX,ev.clientY,DRAG.mins);
+      DRAG.slot=sl;
+      DRAG.fly.when.textContent = sl ? (DAYS[sl.day]+' '+fmtT(sl.s)) : 'drop it on the week';
+      showPreview(DRAG.k,sl,DRAG.mins);
+    }
+    function dragUp(ev){
+      if(!DRAG)return;
+      var d=DRAG; DRAG=null;
+      window.removeEventListener('pointermove',dragMove,true);
+      window.removeEventListener('pointerup',dragUp,true);
+      window.removeEventListener('pointercancel',dragUp,true);
+      if(d.fly&&d.fly.el.parentNode)d.fly.el.parentNode.removeChild(d.fly.el);
+      if(d.src)d.src.classList.remove('lifted');
+      var bn=R.getElementById('bn'); if(bn)bn.classList.remove('dropping');
+      clearPreview();
+      if(!d.moved)return;                      /* a tap: let the click handler have it */
+      DROPPED=Date.now();                      /* and swallow the click that follows a drag */
+      ev.stopPropagation(); if(ev.cancelable)ev.preventDefault();
+      if(!d.slot){ if(d.plan)render(); return; }
+      if(WEEKD&&WEEKD[d.slot.day]<todayISO()){ render(); return; }   /* never into a day that has gone */
+      if(d.plan) planMove(d.plan,d.slot.day,d.slot.s,function(){render();});
+      else planAdd(d.slot.day,d.slot.s,d.mins,d.k,null,false,function(){render();});
+    }
+    function justDragged(){ return (Date.now()-DROPPED)<350; }
+
+    function planMove(x,day,st,then){
+      var iso=WEEKD[day], od=x.day, os=x.s;
+      x.day=day; x.s=st; x.iso=iso;
+      if(!window.sb||String(x.pid).indexOf('tmp')===0){ if(then)then(); return; }
+      try{
+        window.sb.from('flow_plan').update({day:iso,start_min:st,week_start:WEEKD[0],
+          updated_at:new Date().toISOString()}).eq('id',x.pid).then(
+          function(r){ if(r&&r.error){x.day=od;x.s=os;} if(then)then(); },
+          function(){ x.day=od; x.s=os; if(then)then(); });
+      }catch(e){ if(then)then(); }
+    }
+
     function planMinutes(){var t=0;state.plan.forEach(function(x){t+=x.m;});return t;}
 
     function planAdd(d,st,m,k,label,auto,then){
@@ -379,8 +492,19 @@
       if(bh>=13&&!gone)mk('text',{x:(bx+5).toFixed(1),y:(y0+11).toFixed(1),class:'t-plan'},g,
         'planned'+(bh>=26?' · '+(SHORT[x.k]||l.n):''));
       mk('title',{},g,'Planned, not counted · '+l.n+' · '+FULL[x.day]+' '+fmtT(x.s)+' to '+fmtT(x.s+x.m)+
-        ' · '+fmtLong(x.m)+(gone?' · the day has gone':' · tap to take it back'));
-      if(!gone)g.addEventListener('click',function(ev){ev.stopPropagation();planDel(x,function(){render();});});
+        ' · '+fmtLong(x.m)+(gone?' · the day has gone':' · drag to move it, tap to take it back'));
+      if(!gone){
+        g.addEventListener('click',function(ev){
+          ev.stopPropagation();
+          if(justDragged())return;           /* it was moved, not tapped away */
+          planDel(x,function(){render();});
+        });
+        g.addEventListener('pointerdown',function(ev){
+          if(ev.button)return;
+          beginDrag({k:x.k,mins:x.m,plan:x},ev);
+        });
+        g.setAttribute('title','');
+      }
     }
 
     /* The invitation. One slot, pulsing three times and then resting. */
@@ -538,8 +662,21 @@
         var mn=h('span',{class:'mins',text:lab});
         if(!real&&prom)mn.setAttribute('style','font-style:italic');
         btn.appendChild(mn);
-        btn.setAttribute('title','Tap to show or hide this layer.'+(prom?' '+fmtLong(prom)+' planned here, which is not counted.':''));
-        btn.addEventListener('click',function(){P.on[l.k]=!P.on[l.k];savePrefs();render();});
+        var canPlan=PLANNABLE.indexOf(l.k)>=0;
+        btn.setAttribute('title','Tap to show or hide this layer.'
+          +(canPlan?' Drag it onto the week to plan '+fmtLong(DROPMINS[l.k]||60)+' of it.':'')
+          +(prom?' '+fmtLong(prom)+' planned here, which is not counted.':''));
+        btn.addEventListener('click',function(){
+          if(justDragged())return;            /* the drag already did the work */
+          P.on[l.k]=!P.on[l.k];savePrefs();render();
+        });
+        if(canPlan){
+          btn.classList.add('drg');
+          btn.addEventListener('pointerdown',function(ev){
+            if(ev.button)return;
+            beginDrag({k:l.k,mins:DROPMINS[l.k]||60,src:btn},ev);
+          });
+        }
         lw.appendChild(btn);
       });
 
@@ -575,8 +712,8 @@
       sl.style.display = (showStrip&&copyable.length) ? '' : 'none';
       sl.textContent = copyable.length ? ('Same as last week ('+copyable.length+')') : 'Same as last week';
       R.getElementById('setwk-sub').textContent = copyable.length
-        ? 'Take last week’s blocks, or tap a dotted slot.'
-        : 'Tap the dotted slot to promise yourself the time.';
+        ? 'Take last week’s blocks, or drag a pill below onto the week.'
+        : 'Drag any pill below onto the week, or tap the dotted slot.';
 
       R.getElementById('vstamp').textContent=VER;
     }
