@@ -1,8 +1,9 @@
-/* Daily Habit Tracker: snooze, v1.0 (Oct 13, 2026). Scott's pick: Mock A, press and hold.
+/* Daily Habit Tracker: snooze, v1.1 (Oct 13, 2026: starts after the page is ready, v1.0 started too early and did nothing). Scott's pick: Mock A, press and hold.
    Press and hold a key on the Habit Bandit Remote (or right-click) to open a small menu.
    Core habits ask for a reason first; Secondary and Bonus snooze in one tap. Tap a snoozed key to wake it.
    A snoozed habit leaves today's count and the streak is safe. Saved through PYHT.setSnooze; sample views are never saved. */
 (function () {
+  function boot() {
   var HOLD_MS = 450, MOVE_PX = 8, REASONS = ['Busy day', 'Traveling', 'Out of energy', 'Plans changed'];
   var box = document.getElementById('designs'); if (!box || !window.PYHT) return;
   var E = window.PYHT, timer = null, startX = 0, startY = 0, swallow = false, pop = null, inflight = 0;
@@ -84,4 +85,7 @@
 
   document.addEventListener('pointerdown', function (ev) { if (pop && !pop.contains(ev.target)) closePop(); }, true);
   document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') closePop(); });
+  }
+  /* v1.1: this file loads in the page head, before #designs exists, so start once the page body is ready. */
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
