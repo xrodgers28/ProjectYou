@@ -17,8 +17,8 @@
    page_prefs under page 'habit-modules', key 'flow-banner'.
    ========================================================================== */
 (function(){
-  var CSS = ":host{display:block;margin:9px 0;\n  --bg:#f4f6f9;--card:#fff;--sunk:#f1f3f8;--line:#e3e7ee;--hair:#eef0f5;\n  --ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--accent:#3f6f8f;\n  --flow:#A8841F;--flow-tint:#f0dd93;\n  --safari:#0F8A74;--safari-tint:#a4d6ca;\n  --nature:#2F7D53;--nature-tint:#cfe6d6;--mtn:#1C5B41;--lake:#4E93B8;--lake-tint:#cfe2ee;\n  --sky:#a6c4e8;--lilac:#c6b9e8;--peach:#f3c6a1;--neutral:#c3cbd8;\n  --warn:#a9741a;\n  --fh:Arial,Helvetica,sans-serif;--fb:Arial,Helvetica,sans-serif;\n  --fm:ui-monospace,'SF Mono',Menlo,Consolas,monospace;\n  font-family:var(--fb);font-size:14px;line-height:1.45;color:var(--ink)}\n*{box-sizing:border-box}\nbutton{font-family:inherit}\n\n/* the banner shell, folds like the travel banner */\n.bn{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}\n.face{all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;padding:9px 12px 0}\n.face:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}\n.fhead{display:flex;align-items:flex-start;gap:10px}\n.ftxt{min-width:0;flex:1 1 auto}\n.kick{font-family:var(--fm);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0 0 1px}\nh2.ft{font-family:var(--fh);font-weight:700;font-size:21px;line-height:1.15;margin:0;letter-spacing:-.01em}\n.creed{margin:2px 0 0;font-family:var(--fh);font-style:italic;font-weight:400;color:var(--faint);font-size:clamp(11px,2.5vw,14px);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.chv{flex:none;width:22px;height:22px;display:grid;place-items:center;color:var(--faint);transition:transform .25s ease;margin-top:3px}\n.bn.open .chv{transform:rotate(180deg);color:var(--ink)}\n.openhint{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:5px 0 0;text-align:right}\n\n/* the six numbers */\n.bar{display:flex;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:8px 0 9px}\n.cell{background:var(--card);padding:7px 10px;min-width:0;flex:1 1 150px;display:flex;align-items:center;gap:10px;\n  border-left:1px solid var(--line);border-top:1px solid var(--line);margin-left:-1px;margin-top:-1px}\n.cell img{width:34px;height:34px;flex:none}\n.cell b{display:block;font-family:var(--fh);font-weight:700;font-size:19px;line-height:.96;font-variant-numeric:tabular-nums;white-space:nowrap}\n.cell b .u{display:inline;font-weight:400;font-size:.72em;letter-spacing:0;text-transform:none;margin:0 0 0 .18em;color:var(--muted)}\n.cell span{display:block;font-family:var(--fm);font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-top:2px}\n.cell.phoneonly{display:none}\n@media(max-width:700px){\n  .cell{display:none}\n  .cell.keep,.cell.phoneonly{display:flex}\n  h2.ft{font-size:19px}\n}\n\n/* the fold */\n.drop{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s ease}\n.bn.open .drop{grid-template-rows:1fr}\n.drop>.in{overflow:hidden;min-height:0}\n.pad{padding:0 12px 11px;border-top:1px solid var(--line);margin-top:1px}\n@media(prefers-reduced-motion:reduce){.drop,.chv{transition:none}}\n\n/* the week */\n.wkhead{display:flex;align-items:baseline;gap:10px;padding:9px 0 5px}\n.wkhead h3{font-family:var(--fh);font-weight:700;font-size:15px;margin:0}\n.wkhead .cnt{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--faint)}\n.canvas svg{display:block;width:100%;height:auto}\n.t-hr{font-family:var(--fm);font-size:11px;fill:var(--faint)}\n.t-day{font-family:var(--fm);font-size:12px;fill:var(--muted)}\n.t-day.on{fill:var(--ink);font-weight:700}\n.t-note{font-family:var(--fm);font-size:8.5px;fill:var(--faint);letter-spacing:.05em}\n\n/* layers, attached under the week */\n.layrow{display:flex;align-items:flex-start;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--hair)}\n.allbtns{display:flex;flex-direction:column;gap:5px;flex:none}\n.allbtns .tiny{width:100%;text-align:center;padding:4px 10px}\n.layers{display:flex;gap:6px 7px;flex-wrap:wrap;flex:1 1 auto;min-width:0}\n.lay{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card);\n  border-radius:999px;padding:5px 12px 5px 6px;font:inherit;font-size:13px;cursor:pointer;color:var(--muted)}\n.lay img{width:25px;height:25px;display:block;opacity:.4}\n.lay[aria-pressed=\"true\"]{border-color:var(--ink);color:var(--ink);font-weight:700;background:var(--sunk)}\n.lay[aria-pressed=\"true\"] img{opacity:1}\n.lay .mins{font-family:var(--fm);font-size:11px;color:var(--faint)}\n.tiny{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:var(--ink)}\nbutton:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}\n\n/* the two shades under the week */\ndetails.shade{background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:8px}\ndetails.shade>summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;\n  font-family:var(--fh);font-weight:700;font-size:14px;user-select:none}\ndetails.shade>summary::-webkit-details-marker{display:none}\ndetails.shade>summary::before{content:\"\";width:7px;height:7px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);\n  transform:rotate(-45deg);margin:0 2px;transition:transform .15s;flex:none}\ndetails.shade[open]>summary::before{transform:rotate(45deg)}\ndetails.shade>summary .cnt{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--faint);font-weight:400}\n.sbody{padding:0 14px 13px}\n\n.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}\nblockquote{margin:0;padding-top:5px;border-top:2px solid var(--ink);min-width:0}\nblockquote p{margin:0 0 7px;font-size:15px;line-height:1.35;font-weight:700}\nblockquote cite{font-style:normal;font-family:var(--fm);font-size:9.5px;letter-spacing:.06em;color:var(--faint);display:block;line-height:1.5}\n.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:16px}\n.step{background:var(--card);padding:12px 14px;min-width:0}\n.step i{font-family:var(--fm);font-style:normal;font-size:9.5px;letter-spacing:.1em;color:var(--flow);display:block;margin-bottom:5px}\n.step b{display:block;font-size:13.5px;margin-bottom:2px}.step span{font-size:12.5px;color:var(--muted)}\n.callout{background:var(--flow-tint);color:var(--ink);padding:12px 15px;border-radius:9px;font-family:var(--fh);font-weight:700;font-size:15px;margin:15px 0 0}\n\ntable{width:100%;border-collapse:collapse;min-width:560px}\nth{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:400}\ntd{padding:7px 10px;border-bottom:1px solid var(--hair);font-size:13px;vertical-align:middle}\ntr:last-child td{border-bottom:0}\n.scroll{overflow-x:auto}\n.tico{width:21px;height:21px;vertical-align:-6px;margin-right:7px}\n.empty{padding:16px;color:var(--faint);text-align:center;font-size:13px}\n.lbl{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}\n.readonly{font-family:var(--fm);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin:6px 0 0;text-align:right}\n.foot{font-size:11.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:9px}\n.foot .mono{font-family:var(--fm)}\n";
-  var HTML = "<div class=\"bn\" id=\"bn\">\n  <button class=\"face\" id=\"face\" type=\"button\" aria-expanded=\"false\" aria-controls=\"drop\">\n    <div class=\"fhead\">\n      <div class=\"ftxt\">\n        <p class=\"kick\">Project YOU &middot; Oct 5 to Oct 11, 2026</p>\n        <h2 class=\"ft\">Flow Time</h2>\n        <p class=\"creed\" id=\"creed\"></p>\n      </div>\n      <span class=\"chv\" aria-hidden=\"true\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 15 15\"><path d=\"M3 5.5 L7.5 10 L12 5.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></span>\n    </div>\n    <div class=\"bar\" id=\"bar\"></div>\n    <p class=\"openhint\" id=\"openhint\">Tap to open the week</p>\n  </button>\n  <div class=\"drop\" id=\"drop\"><div class=\"in\"><div class=\"pad\">\n\n    <div class=\"wkhead\"><h3>The week</h3><span class=\"cnt\" id=\"cnt-cal\"></span></div>\n    <div class=\"canvas\" id=\"grid\"></div>\n    <div class=\"layrow\">\n      <div class=\"allbtns\">\n        <button class=\"tiny\" id=\"all-on\" type=\"button\">All on</button>\n        <button class=\"tiny\" id=\"all-off\" type=\"button\">All off</button>\n      </div>\n      <div class=\"layers\" id=\"layers\"></div>\n    </div>\n    <p class=\"readonly\">Showing only. Add and change blocks on the Flow Time page.</p>\n\n    <details class=\"shade\" id=\"sh-why\">\n      <summary>Why this page exists</summary>\n      <div class=\"sbody\">\n        <div class=\"quotes\">\n          <blockquote><p>&ldquo;I get in the zone when I&rsquo;m interested in something, often focusing so deeply that everything else falls away.&rdquo;</p><cite>Your own ADHD Characteristics sheet</cite></blockquote>\n          <blockquote><p>&ldquo;Our minds are lost in useless thoughts almost 47 percent of the time.&rdquo;</p><cite>Project YOU deck, after Killingsworth and Gilbert, Science, 2010</cite></blockquote>\n          <blockquote><p>&ldquo;Work expands to fill the time available for its completion.&rdquo;</p><cite>Parkinson&rsquo;s Law, Reference Library</cite></blockquote>\n        </div>\n        <div class=\"steps\">\n          <div class=\"step\"><i>STEP 01</i><b>Ask &ldquo;when?&rdquo;</b><span>Every intention gets a time, not just a wish. Ali Alqaraghuli, in your Project YOU notes.</span></div>\n          <div class=\"step\"><i>STEP 02</i><b>Put it in a calendar slot</b><span>Timeboxing: assign the work to a named block. Zao-Sanders, Harvard Business Review, 2018.</span></div>\n          <div class=\"step\"><i>STEP 03</i><b>Shape the room for deep work</b><span>Phone away, door closed, same place each time. Environmental Health, Knowledge Base.</span></div>\n        </div>\n        <p class=\"callout\" id=\"callout\"></p>\n      </div>\n    </details>\n\n    <details class=\"shade\" id=\"sh-blk\">\n      <summary>Every block, by type <span class=\"cnt\" id=\"cnt-blk\"></span></summary>\n      <div class=\"sbody\">\n        <div class=\"scroll\"><div id=\"log-wrap\"></div></div>\n        <p class=\"lbl\" style=\"margin:15px 0 7px\">Parking lot</p>\n        <div class=\"scroll\"><div id=\"park-wrap\"></div></div>\n      </div>\n    </details>\n\n    <p class=\"foot\"><span>Times Eastern. Days run 2 a.m. to 2 a.m., so a Saturday night block stays on Saturday past midnight.</span><span class=\"mono\" id=\"vstamp\"></span></p>\n  </div></div></div>\n</div>\n";
+  var CSS = ":host{display:block;margin:9px 0;\n  --bg:#f4f6f9;--card:#fff;--sunk:#f1f3f8;--line:#e3e7ee;--hair:#eef0f5;\n  --ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--accent:#3f6f8f;\n  --flow:#A8841F;--flow-tint:#f0dd93;\n  --safari:#0F8A74;--safari-tint:#a4d6ca;\n  --nature:#2F7D53;--nature-tint:#cfe6d6;--mtn:#1C5B41;--lake:#4E93B8;--lake-tint:#cfe2ee;\n  --sky:#a6c4e8;--lilac:#c6b9e8;--peach:#f3c6a1;--neutral:#c3cbd8;\n  --warn:#a9741a;\n  --fh:Arial,Helvetica,sans-serif;--fb:Arial,Helvetica,sans-serif;\n  --fm:ui-monospace,'SF Mono',Menlo,Consolas,monospace;\n  font-family:var(--fb);font-size:14px;line-height:1.45;color:var(--ink)}\n*{box-sizing:border-box}\nbutton{font-family:inherit}\n\n/* the banner shell, folds like the travel banner */\n.bn{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden}\n.face{all:unset;box-sizing:border-box;display:block;width:100%;cursor:pointer;padding:9px 12px 0}\n.face:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}\n.fhead{display:flex;align-items:flex-start;gap:10px}\n.ftxt{min-width:0;flex:1 1 auto}\n.kick{font-family:var(--fm);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin:0 0 1px}\nh2.ft{font-family:var(--fh);font-weight:700;font-size:21px;line-height:1.15;margin:0;letter-spacing:-.01em}\n.creed{margin:2px 0 0;font-family:var(--fh);font-style:italic;font-weight:400;color:var(--faint);font-size:clamp(11px,2.5vw,14px);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}\n.chv{flex:none;width:22px;height:22px;display:grid;place-items:center;color:var(--faint);transition:transform .25s ease;margin-top:3px}\n.bn.open .chv{transform:rotate(180deg);color:var(--ink)}\n.openhint{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin:5px 0 0;text-align:right}\n\n/* the six numbers */\n.bar{display:flex;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin:8px 0 9px}\n.cell{background:var(--card);padding:7px 10px;min-width:0;flex:1 1 150px;display:flex;align-items:center;gap:10px;\n  border-left:1px solid var(--line);border-top:1px solid var(--line);margin-left:-1px;margin-top:-1px}\n.cell img{width:34px;height:34px;flex:none}\n.cell b{display:block;font-family:var(--fh);font-weight:700;font-size:19px;line-height:.96;font-variant-numeric:tabular-nums;white-space:nowrap}\n.cell b .u{display:inline;font-weight:400;font-size:.72em;letter-spacing:0;text-transform:none;margin:0 0 0 .18em;color:var(--muted)}\n.cell span{display:block;font-family:var(--fm);font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin-top:2px}\n.cell.phoneonly{display:none}\n@media(max-width:700px){\n  .cell{display:none}\n  .cell.keep,.cell.phoneonly{display:flex}\n  h2.ft{font-size:19px}\n}\n\n/* the fold */\n.drop{display:grid;grid-template-rows:0fr;transition:grid-template-rows .45s ease}\n.bn.open .drop{grid-template-rows:1fr}\n.drop>.in{overflow:hidden;min-height:0}\n.pad{padding:0 12px 11px;border-top:1px solid var(--line);margin-top:1px}\n@media(prefers-reduced-motion:reduce){.drop,.chv{transition:none}}\n\n/* the week */\n.wkhead{display:flex;align-items:baseline;gap:10px;padding:9px 0 5px}\n.wkhead h3{font-family:var(--fh);font-weight:700;font-size:15px;margin:0}\n.wkhead .cnt{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--faint)}\n.canvas svg{display:block;width:100%;height:auto}\n.t-hr{font-family:var(--fm);font-size:11px;fill:var(--faint)}\n.t-day{font-family:var(--fm);font-size:12px;fill:var(--muted)}\n.t-day.on{fill:var(--ink);font-weight:700}\n.t-note{font-family:var(--fm);font-size:8.5px;fill:var(--faint);letter-spacing:.05em}\n\n/* layers, attached under the week */\n.layrow{display:flex;align-items:flex-start;gap:10px;margin-top:8px;padding-top:8px;border-top:1px solid var(--hair)}\n.allbtns{display:flex;flex-direction:column;gap:5px;flex:none}\n.allbtns .tiny{width:100%;text-align:center;padding:4px 10px}\n.layers{display:flex;gap:6px 7px;flex-wrap:wrap;flex:1 1 auto;min-width:0}\n.lay{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--card);\n  border-radius:999px;padding:5px 12px 5px 6px;font:inherit;font-size:13px;cursor:pointer;color:var(--muted)}\n.lay img{width:25px;height:25px;display:block;opacity:.4}\n.lay[aria-pressed=\"true\"]{border-color:var(--ink);color:var(--ink);font-weight:700;background:var(--sunk)}\n.lay[aria-pressed=\"true\"] img{opacity:1}\n.lay .mins{font-family:var(--fm);font-size:11px;color:var(--faint)}\n.tiny{border:1px solid var(--line);background:var(--card);border-radius:7px;padding:5px 11px;font-size:12.5px;cursor:pointer;color:var(--ink)}\nbutton:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}\n\n/* the two shades under the week */\ndetails.shade{background:var(--card);border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-top:8px}\ndetails.shade>summary{list-style:none;cursor:pointer;padding:9px 13px;display:flex;align-items:center;gap:10px;\n  font-family:var(--fh);font-weight:700;font-size:14px;user-select:none}\ndetails.shade>summary::-webkit-details-marker{display:none}\ndetails.shade>summary::before{content:\"\";width:7px;height:7px;border-right:2px solid var(--faint);border-bottom:2px solid var(--faint);\n  transform:rotate(-45deg);margin:0 2px;transition:transform .15s;flex:none}\ndetails.shade[open]>summary::before{transform:rotate(45deg)}\ndetails.shade>summary .cnt{margin-left:auto;font-family:var(--fm);font-size:11px;color:var(--faint);font-weight:400}\n.sbody{padding:0 14px 13px}\n\n.quotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:18px}\nblockquote{margin:0;padding-top:5px;border-top:2px solid var(--ink);min-width:0}\nblockquote p{margin:0 0 7px;font-size:15px;line-height:1.35;font-weight:700}\nblockquote cite{font-style:normal;font-family:var(--fm);font-size:9.5px;letter-spacing:.06em;color:var(--faint);display:block;line-height:1.5}\n.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:16px}\n.step{background:var(--card);padding:12px 14px;min-width:0}\n.step i{font-family:var(--fm);font-style:normal;font-size:9.5px;letter-spacing:.1em;color:var(--flow);display:block;margin-bottom:5px}\n.step b{display:block;font-size:13.5px;margin-bottom:2px}.step span{font-size:12.5px;color:var(--muted)}\n.callout{background:var(--flow-tint);color:var(--ink);padding:12px 15px;border-radius:9px;font-family:var(--fh);font-weight:700;font-size:15px;margin:15px 0 0}\n\ntable{width:100%;border-collapse:collapse;min-width:560px}\nth{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);font-weight:400}\ntd{padding:7px 10px;border-bottom:1px solid var(--hair);font-size:13px;vertical-align:middle}\ntr:last-child td{border-bottom:0}\n.scroll{overflow-x:auto}\n.tico{width:21px;height:21px;vertical-align:-6px;margin-right:7px}\n.empty{padding:16px;color:var(--faint);text-align:center;font-size:13px}\n.lbl{font-family:var(--fm);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}\n.readonly{font-family:var(--fm);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);margin:6px 0 0;text-align:right}\n.foot{font-size:11.5px;color:var(--faint);border-top:1px solid var(--line);padding-top:8px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:9px}\n.foot .mono{font-family:var(--fm)}\n/* planned blocks: promises, never facts. Dotted, dim, no icon, italic label. */\n.t-plan{font-family:var(--fm);font-size:9px;font-style:italic;fill:var(--faint);letter-spacing:.03em}\n.ghost rect.inv{animation:gpulse 2.6s ease-in-out 3}\n@keyframes gpulse{0%,100%{stroke-opacity:.38;fill-opacity:.14}50%{stroke-opacity:.95;fill-opacity:.40}}\n.ghost{cursor:pointer}\n.ghost:hover rect.inv{stroke-opacity:1;fill-opacity:.42}\n.plan{cursor:pointer}\n@media(prefers-reduced-motion:reduce){.ghost rect.inv{animation:none;stroke-opacity:.72;fill-opacity:.26}}\n/* the Monday moment */\n.setwk{display:none;align-items:center;gap:10px;flex-wrap:wrap;background:var(--sunk);border:1px solid var(--line);\n  border-radius:10px;padding:9px 12px;margin:9px 0 0}\n.setwk.show{display:flex}\n.setwk b{font-family:var(--fh);font-size:13.5px}\n.setwk span{font-size:12.5px;color:var(--muted);min-width:0}\n.setwk .tiny{margin-left:auto;flex:none}\n.planline{font-family:var(--fm);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:7px 0 0}\n.nosrc{font-family:var(--fm);font-size:11px;color:var(--faint);font-style:italic}\n";
+  var HTML = "<div class=\"bn\" id=\"bn\">\n  <button class=\"face\" id=\"face\" type=\"button\" aria-expanded=\"false\" aria-controls=\"drop\">\n    <div class=\"fhead\">\n      <div class=\"ftxt\">\n        <p class=\"kick\" id=\"kick\">Project YOU</p>\n        <h2 class=\"ft\">Flow Time</h2>\n        <p class=\"creed\" id=\"creed\"></p>\n      </div>\n      <span class=\"chv\" aria-hidden=\"true\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 15 15\"><path d=\"M3 5.5 L7.5 10 L12 5.5\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg></span>\n    </div>\n    <div class=\"bar\" id=\"bar\"></div>\n    <p class=\"openhint\" id=\"openhint\">Tap to open the week</p>\n  </button>\n  <div class=\"drop\" id=\"drop\"><div class=\"in\"><div class=\"pad\">\n\n    <div class=\"setwk\" id=\"setwk\">\n      <b>Set the week</b>\n      <span id=\"setwk-sub\">Tap a dotted slot to promise yourself the time.</span>\n      <button class=\"tiny\" id=\"samelast\" type=\"button\" style=\"display:none\">Same as last week</button>\n    </div>\n\n    <div class=\"wkhead\"><h3>The week</h3><span class=\"cnt\" id=\"cnt-cal\"></span></div>\n    <div class=\"canvas\" id=\"grid\"></div>\n    <div class=\"layrow\">\n      <div class=\"allbtns\">\n        <button class=\"tiny\" id=\"all-on\" type=\"button\">All on</button>\n        <button class=\"tiny\" id=\"all-off\" type=\"button\">All off</button>\n      </div>\n      <div class=\"layers\" id=\"layers\"></div>\n    </div>\n    <p class=\"planline\" id=\"planline\"></p>\n    <p class=\"readonly\" id=\"ro\">Logged blocks are read only here. Change them on the Flow Time page.</p>\n\n    <details class=\"shade\" id=\"sh-why\">\n      <summary>Why this page exists</summary>\n      <div class=\"sbody\">\n        <div class=\"quotes\">\n          <blockquote><p>&ldquo;I get in the zone when I&rsquo;m interested in something, often focusing so deeply that everything else falls away.&rdquo;</p><cite>Your own ADHD Characteristics sheet</cite></blockquote>\n          <blockquote><p>&ldquo;Our minds are lost in useless thoughts almost 47 percent of the time.&rdquo;</p><cite>Project YOU deck, after Killingsworth and Gilbert, Science, 2010</cite></blockquote>\n          <blockquote><p>&ldquo;Work expands to fill the time available for its completion.&rdquo;</p><cite>Parkinson&rsquo;s Law, Reference Library</cite></blockquote>\n        </div>\n        <div class=\"steps\">\n          <div class=\"step\"><i>STEP 01</i><b>Ask &ldquo;when?&rdquo;</b><span>Every intention gets a time, not just a wish. Ali Alqaraghuli, in your Project YOU notes.</span></div>\n          <div class=\"step\"><i>STEP 02</i><b>Put it in a calendar slot</b><span>Timeboxing: assign the work to a named block. Zao-Sanders, Harvard Business Review, 2018.</span></div>\n          <div class=\"step\"><i>STEP 03</i><b>Shape the room for deep work</b><span>Phone away, door closed, same place each time. Environmental Health, Knowledge Base.</span></div>\n        </div>\n        <p class=\"callout\" id=\"callout\"></p>\n      </div>\n    </details>\n\n    <details class=\"shade\" id=\"sh-blk\">\n      <summary>Every block, by type <span class=\"cnt\" id=\"cnt-blk\"></span></summary>\n      <div class=\"sbody\">\n        <div class=\"scroll\"><div id=\"log-wrap\"></div></div>\n        <p class=\"lbl\" style=\"margin:15px 0 7px\">Parking lot</p>\n        <div class=\"scroll\"><div id=\"park-wrap\"></div></div>\n      </div>\n    </details>\n\n    <p class=\"foot\"><span>Times Eastern. Days run 2 a.m. to 2 a.m., so a Saturday night block stays on Saturday past midnight.</span><span class=\"mono\" id=\"vstamp\"></span></p>\n  </div></div></div>\n</div>\n";
 
   function mount(){
     var host=document.getElementById('flowBannerHost');
@@ -31,7 +31,7 @@
   }
 
   function build(R){
-    var VER='Flow Time banner v1.2';
+    var VER='Flow Time banner v2.0';
     /* A different line each time the page loads. Written here rather than quoted from a
        book, so nothing is reproduced; say the word and I will swap in sourced quotations. */
     var LINES=[
@@ -70,29 +70,196 @@
     ];
     var LMAP={}; LAYERS.forEach(function(l){LMAP[l.k]=l;});
 
-    /* Oct 5 to Oct 11, 2026, as Scott gave it in chat. Not read from the database yet. */
-    function b(d,s,m,k,t,note){return {id:k+'-'+d+'-'+s,day:d,s:s,m:m,k:k,t:t,note:note||''};}
-    var state={log:[
-      b(1,480,360,'flow','Flow'), b(2,480,45,'flow','Flow','Train ride'),
-      b(5,1260,240,'flow','Flow','Saturday night'), b(6,480,120,'flow','Flow','Sunday morning'),
-      b(1,660,120,'commute','Commute to Red Hook'),
-      b(1,840,120,'safari','Local Safari · Red Hook'),
-      b(1,960,120,'commute','Reverse commute'),
-      b(1,1080,180,'dad','Being a Good Dad'), b(2,1080,150,'dad','Being a Good Dad'),
-      b(6,720,120,'asa','Asa Date'),
-      b(0,600,30,'nature','Morning Walk 2.35 mi'), b(0,1017,30,'nature','Walk Outdoor 1.72 mi'),
-      b(0,1024,21,'nature','Afternoon Walk 1.06 mi'), b(1,424,20,'nature','Morning Walk 1.06 mi'),
-      b(2,437,27,'nature','Morning Walk 1.26 mi'), b(2,549,28,'nature','Morning Walk 1.21 mi'),
-      b(2,904,18,'nature','Walk New York 1.17 mi'), b(3,424,28,'nature','Morning Walk 1.30 mi'),
-      b(3,550,34,'nature','Walk Outdoor 1.63 mi'), b(3,959,33,'nature','Afternoon Walk 1.21 mi'),
-      b(4,436,23,'nature','Walk Old Greenwich 1.23 mi'), b(4,548,24,'nature','Walk New York 1.10 mi'),
-      b(5,511,24,'nature','Walk Old Greenwich 1.31 mi'),
-      b(0,490,9,'transport','Ride 1.03 mi'), b(0,1104,7,'transport','Ride 0.88 mi'),
-      b(0,1244,10,'transport','Train platform'), b(1,480,9,'transport','Ride 1.60 mi'),
-      b(1,734,5,'transport','Ride 0.39 mi'), b(2,472,10,'transport','Train platform'),
-      b(3,1194,10,'transport','Train platform'), b(4,1381,10,'transport','Train platform'),
-      b(3,450,30,'commute','Commute'), b(3,570,30,'commute','Commute'), b(4,480,30,'commute','Commute')
-    ],park:[]};
+    function b(d,s,m,k,t,note){return {id:k+'-'+d+'-'+s+'-'+(uid2++),day:d,s:s,m:m,k:k,t:t,note:note||''};}
+    var uid2=0;
+
+    /* Logged blocks are facts, read from day_blocks.
+       Planned blocks are promises, read from flow_plan, a table of their own so that
+       no total, wheel or streak anywhere can ever pick planned minutes up. */
+    var state={log:[],plan:[],park:[]};
+    var WEEKD=null;          /* the seven dates the board is showing, Monday first */
+    var OWNWEEK=false;       /* true when we had to work the week out ourselves */
+    var LASTWK=[];           /* copyable blocks from the week before, for Same as last week */
+    var LOADED=false, LOADERR='';
+
+    /* ---------- which week is the board on ---------- */
+    function isoOf(dt){return dt.getFullYear()+'-'+pad(dt.getMonth()+1)+'-'+pad(dt.getDate());}
+    function boardWeek(){
+      /* weekDays() is the dashboard's own helper. Both files are plain scripts, so it is
+         shared. Using it means this banner can never disagree with the week picker. */
+      try{
+        if(typeof weekDays==='function'){
+          var a=weekDays();
+          if(a&&a.length===7&&/^\d{4}-\d{2}-\d{2}$/.test(a[0])){OWNWEEK=false;return a;}
+        }
+      }catch(e){}
+      OWNWEEK=true;
+      var t=new Date(), off=(t.getDay()+6)%7, out=[];
+      for(var i=0;i<7;i++)out.push(isoOf(new Date(t.getFullYear(),t.getMonth(),t.getDate()-off+i)));
+      return out;
+    }
+    function dayIdx(iso){ if(!WEEKD)return -1; for(var i=0;i<7;i++)if(WEEKD[i]===iso)return i; return -1; }
+    function shortDate(iso){
+      var p=String(iso).split('-'),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return M[(+p[1])-1]+' '+(+p[2]);
+    }
+    function todayISO(){
+      try{ if(window.PY&&typeof PY.today==='function')return PY.today(); }catch(e){}
+      return isoOf(new Date());
+    }
+
+    /* ---------- which layer does a logged block belong to ---------- */
+    function layerOf(r){
+      var lt=String(r.title||'').toLowerCase(), p=String(r.pill||'').toLowerCase();
+      if(p==='commute'||/\bcommute\b/.test(lt))return 'commute';
+      if(/safari/.test(lt))return 'safari';
+      /* Walk and Run are both outdoor foot time, so both land in Time in Nature */
+      if(/\bwalk\b|\brun\b|\u{1F6B6}|\u{1F3C3}/u.test(lt))return 'nature';
+      if(/\bride\b|\u{1F6B4}/u.test(lt)||/train platform|subway|\bbus\b|ferry|omny/.test(lt))return 'transport';
+      if(p==='asa'||/åsa|\basa\b|date night/.test(lt))return 'asa';
+      /* time with Max is logged on its own pill, and it is the Being a Good Dad layer */
+      if(p==='max'||/good dad|\bdad\b/.test(lt))return 'dad';
+      if(/\bflow\b|deep work|focus block/.test(lt))return 'flow';
+      if(/remote creative studio/.test(lt))return 'studio';
+      return null;
+    }
+
+    /* ---------- loading ---------- */
+    function rowsToLog(rows){
+      var out=[];
+      (rows||[]).forEach(function(r){
+        var k=layerOf(r); if(!k)return;
+        var d=dayIdx(r.day); if(d<0)return;
+        var st=+r.start_min, mn=+r.mins;
+        if(!(st>=0)||!(mn>0))return;
+        out.push(b(d,st,mn,k,String(r.title||'').replace(/^[^\wÀ-ɏ(]*\s*/,'').trim()||LMAP[k].n));
+      });
+      return out;
+    }
+    function loadWeek(done){
+      WEEKD=boardWeek();
+      state.log=[]; state.plan=[]; LASTWK=[]; LOADED=false; LOADERR='';
+      if(!window.sb){LOADERR='no database connection';LOADED=true;done();return;}
+      var W=WEEKD, prevA=addISO(W[0],-7), prevB=addISO(W[0],-1);
+      var qs=[
+        window.sb.from('day_blocks').select('day,start_min,mins,title,cat,pill,tag')
+          .gte('day',W[0]).lte('day',W[6]).not('start_min','is',null).limit(2000),
+        window.sb.from('flow_plan').select('id,day,start_min,mins,kind,label,auto')
+          .eq('week_start',W[0]).limit(500),
+        window.sb.from('day_blocks').select('day,start_min,mins,title,cat,pill,tag')
+          .gte('day',prevA).lte('day',prevB).not('start_min','is',null).limit(2000)
+      ];
+      Promise.all(qs.map(function(q){return Promise.resolve(q).then(function(r){return r;},function(e){return {error:e};});}))
+      .then(function(res){
+        if(res[0]&&res[0].error)LOADERR='could not read the logged blocks';
+        state.log=rowsToLog(res[0]&&res[0].data);
+        var pr=(res[1]&&res[1].data)||[];
+        state.plan=pr.map(function(r){
+          var d=dayIdx(r.day); if(d<0)return null;
+          return {pid:r.id,day:d,s:+r.start_min,m:+r.mins,k:r.kind,t:r.label||'',auto:!!r.auto,
+                  id:'plan-'+r.id,iso:r.day};
+        }).filter(Boolean);
+        /* last week, only the layers worth copying forward */
+        var lw=(res[2]&&res[2].data)||[];
+        lw.forEach(function(r){
+          var k=layerOf(r); if(PLANNABLE.indexOf(k)<0)return;
+          var p=String(r.day).split('-'), dt=new Date(Date.UTC(+p[0],+p[1]-1,+p[2]));
+          var d=(dt.getUTCDay()+6)%7;
+          if(+r.start_min>=0&&+r.mins>0)LASTWK.push({day:d,s:+r.start_min,m:+r.mins,k:k,t:String(r.title||'')});
+        });
+        LOADED=true; done();
+      },function(){LOADERR='could not reach the database';LOADED=true;done();});
+    }
+    function addISO(iso,n){
+      var p=String(iso).split('-').map(Number);
+      var d=new Date(Date.UTC(p[0],p[1]-1,p[2]+n));
+      return d.toISOString().slice(0,10);
+    }
+
+    /* ---------- planning ----------
+       Three guardrails, built in rather than remembered:
+         1. a planned block is drawn dotted and dim, never like a logged one
+         2. planned minutes are kept out of every figure in the number bar and the rail
+         3. plans are scoped to their own week, so they expire instead of becoming history */
+    var PLANNABLE=['flow','studio','asa','dad'];
+    var INVITE={
+      flow:   {s:480, m:90,  days:[0,1,2,3,4], why:'Three of four flow sessions started at 8 a.m.'},
+      asa:    {s:1140,m:180, days:[5,6],       why:'Asa Date lands on a weekend.'},
+      studio: {s:600, m:180, days:[0,1,2,3,4], why:'The studio day only happens if it has a slot.'},
+      dad:    {s:1080,m:120, days:[0,1,2,3,4], why:'Evening time with Max.'}
+    };
+    /* Exactly one invitation on the board at a time. Thirty blinking slots is thirty
+       competing cues; one is a cue. The queue decides which. */
+    var INVORDER=['flow','studio','asa'];
+    var SHORT={flow:'Flow Time',studio:'Studio day',asa:'Asa Date',dad:'Dad time'};
+    function hasAny(k,d){
+      var f=state.log.some(function(x){return x.k===k&&(d==null||x.day===d);});
+      var p=state.plan.some(function(x){return x.k===k&&(d==null||x.day===d);});
+      return f||p;
+    }
+    function dayBusyAt(d,st,m){
+      function hit(x){return x.day===d&&x.s<st+m&&st<x.s+x.m;}
+      return state.log.some(hit)||state.plan.some(hit);
+    }
+    function nowMin(){
+      try{
+        var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date());
+        var p=f.split(':'); return (+p[0])*60+(+p[1]);
+      }catch(e){var d=new Date();return d.getHours()*60+d.getMinutes();}
+    }
+    function theInvitation(){
+      if(!WEEKD)return null;
+      var tISO=todayISO(), nm=nowMin();
+      for(var i=0;i<INVORDER.length;i++){
+        var k=INVORDER[i], cfg=INVITE[k];
+        if(!P.on[k])continue;
+        if(hasAny(k,null))continue;               /* already real or already promised this week */
+        for(var j=0;j<cfg.days.length;j++){
+          var d=cfg.days[j];
+          if(WEEKD[d]<tISO)continue;              /* never invite into a day that has gone */
+          if(WEEKD[d]===tISO&&cfg.s+cfg.m<=nm)continue;  /* nor into an hour that has gone */
+          if(dayBusyAt(d,cfg.s,cfg.m))continue;
+          return {day:d,s:cfg.s,m:cfg.m,k:k,why:cfg.why};
+        }
+      }
+      return null;
+    }
+    function planMinutes(){var t=0;state.plan.forEach(function(x){t+=x.m;});return t;}
+
+    function planAdd(d,st,m,k,label,auto,then){
+      var iso=WEEKD[d];
+      var row={week_start:WEEKD[0],day:iso,start_min:st,mins:m,kind:k,label:label||LMAP[k].n,auto:!!auto};
+      if(!window.sb){ if(then)then(false); return; }
+      window.sb.from('flow_plan').upsert(row,{onConflict:'day,start_min,kind'}).select('id').then(function(r){
+        var id=(r&&r.data&&r.data[0]&&r.data[0].id)||('tmp'+Date.now());
+        state.plan.push({pid:id,day:d,s:st,m:m,k:k,t:row.label,auto:row.auto,id:'plan-'+id,iso:iso});
+        if(then)then(true);
+      },function(){ if(then)then(false); });
+    }
+    function planDel(x,then){
+      if(!window.sb||String(x.pid).indexOf('tmp')===0){
+        state.plan=state.plan.filter(function(y){return y!==x;}); if(then)then(true); return;
+      }
+      window.sb.from('flow_plan').delete().eq('id',x.pid).then(function(){
+        state.plan=state.plan.filter(function(y){return y!==x;}); if(then)then(true);
+      },function(){ if(then)then(false); });
+    }
+    /* Asa Date is the one near-certain thing with no source of its own, so a fresh
+       week gets it laid down for you. Being a Good Dad is NOT seeded: it does not repeat. */
+    function seedWeek(then){
+      if(!WEEKD||state.plan.length){ then(); return; }
+      if(WEEKD[6]<todayISO()){ then(); return; }      /* never seed a week that has gone */
+      if(hasAny('asa',null)){ then(); return; }
+      planAdd(5,INVITE.asa.s,INVITE.asa.m,'asa','Asa Date',true,function(){then();});
+    }
+    function sameAsLastWeek(then){
+      var pick=LASTWK.filter(function(x){return x.k==='flow'||x.k==='studio';});
+      if(!pick.length){then(0);return;}
+      var n=0, left=pick.length;
+      pick.forEach(function(x){
+        planAdd(x.day,x.s,x.m,x.k,x.t,false,function(ok){ if(ok)n++; if(!--left)then(n); });
+      });
+    }
 
     /* what the banner remembers: whether it was open, and which layers are showing */
     var P={open:false, on:{}};
@@ -137,7 +304,10 @@
       state.log.forEach(function(x){byLayer[x.k]=(byLayer[x.k]||0)+x.m; all+=x.m; if(x.s+x.m>WIN1)clip+=x.s+x.m-WIN1;});
       var fd=DAYS.map(function(){return 0;});
       state.log.filter(function(x){return x.k==='flow';}).forEach(function(x){fd[x.day]+=x.m;});
-      return {byLayer:byLayer,fd:fd,total:byLayer.flow||0,all:all,clip:clip};
+      /* planned minutes are deliberately NOT added to byLayer, total or all */
+      var pLayer={}; LAYERS.forEach(function(l){pLayer[l.k]=0;});
+      state.plan.forEach(function(x){pLayer[x.k]=(pLayer[x.k]||0)+x.m;});
+      return {byLayer:byLayer,fd:fd,total:byLayer.flow||0,all:all,clip:clip,pLayer:pLayer,planned:planMinutes()};
     }
 
     /* ---------- geometry ---------- */
@@ -167,7 +337,7 @@
         if(d%2)mk('rect',{x:x.toFixed(1),y:GT,width:COLW.toFixed(1),height:GB-GT,fill:'var(--sunk)'},s);
         mk('line',{x1:x.toFixed(1),y1:GT,x2:x.toFixed(1),y2:GB,stroke:'var(--hair)','stroke-width':1},s);
         mk('text',{x:(x+COLW/2).toFixed(1),y:16,'text-anchor':'middle',class:'t-day'+(M.fd[d]?' on':'')},s,DAYS[d]);
-        mk('text',{x:(x+COLW/2).toFixed(1),y:29,'text-anchor':'middle',class:'t-hr'},s,'Oct '+(5+d));
+        mk('text',{x:(x+COLW/2).toFixed(1),y:29,'text-anchor':'middle',class:'t-hr'},s,WEEKD?shortDate(WEEKD[d]):'');
       }
       mk('rect',{x:GL,y:GT,width:GR-GL,height:GB-GT,fill:'none',stroke:'var(--line)','stroke-width':1},s);
 
@@ -188,7 +358,45 @@
       if(P.on.safari)state.log.filter(function(x){return x.k==='safari'&&pos[x.id];}).forEach(function(x){drawSafari(s,x,pos[x.id]);});
       if(P.on.flow)state.log.filter(function(x){return x.k==='flow'&&pos[x.id];}).forEach(function(x){drawFlow(s,defs,x,pos[x.id]);});
 
+      /* promises sit under the facts, so a fact always reads on top */
+      state.plan.forEach(function(x){ if(P.on[x.k])drawPlan(s,x); });
+      var inv=theInvitation(); if(inv)drawGhost(s,inv);
+
       mk('text',{x:GR,y:HT-7,'text-anchor':'end',class:'t-note'},s,fmtLong(M.total).toUpperCase()+' IN FLOW');
+    }
+
+    /* A planned block. Dotted, dim, no icon, italic label: it must never be
+       mistaken for something that happened. Tap it to take the promise back. */
+    function drawPlan(s,x){
+      var l=LMAP[x.k]||{col:'var(--neutral)',n:x.k};
+      var y0=Y(x.s), y1=Y(x.s+x.m), bh=Math.max(y1-y0,6);
+      var bx=colX(x.day)+3, bw=COLW-8;
+      var gone=WEEKD&&WEEKD[x.day]<todayISO();
+      var g=mk('g',{class:'plan'},s);
+      mk('rect',{x:bx.toFixed(1),y:y0.toFixed(1),width:bw.toFixed(1),height:bh.toFixed(1),rx:4,
+        fill:l.col,'fill-opacity':gone?.07:.15,stroke:l.col,'stroke-width':1.2,
+        'stroke-dasharray':'4 3','stroke-opacity':gone?.3:.7},g);
+      if(bh>=13&&!gone)mk('text',{x:(bx+5).toFixed(1),y:(y0+11).toFixed(1),class:'t-plan'},g,
+        'planned'+(bh>=26?' · '+(SHORT[x.k]||l.n):''));
+      mk('title',{},g,'Planned, not counted · '+l.n+' · '+FULL[x.day]+' '+fmtT(x.s)+' to '+fmtT(x.s+x.m)+
+        ' · '+fmtLong(x.m)+(gone?' · the day has gone':' · tap to take it back'));
+      if(!gone)g.addEventListener('click',function(ev){ev.stopPropagation();planDel(x,function(){render();});});
+    }
+
+    /* The invitation. One slot, pulsing three times and then resting. */
+    function drawGhost(s,inv){
+      var l=LMAP[inv.k]||{col:'var(--neutral)',n:inv.k};
+      var y0=Y(inv.s), y1=Y(inv.s+inv.m), bh=Math.max(y1-y0,18);
+      var bx=colX(inv.day)+3, bw=COLW-8;
+      var g=mk('g',{class:'ghost',role:'button',tabindex:'0'},s);
+      mk('rect',{x:bx.toFixed(1),y:y0.toFixed(1),width:bw.toFixed(1),height:bh.toFixed(1),rx:4,class:'inv',
+        fill:l.col,stroke:l.col,'stroke-width':1.4,'stroke-dasharray':'5 4'},g);
+      mk('text',{x:(bx+bw/2).toFixed(1),y:(y0+bh/2-2).toFixed(1),'text-anchor':'middle',class:'t-plan'},g,'+ '+(SHORT[inv.k]||l.n));
+      if(bh>=34)mk('text',{x:(bx+bw/2).toFixed(1),y:(y0+bh/2+10).toFixed(1),'text-anchor':'middle',class:'t-plan'},g,fmtT(inv.s));
+      mk('title',{},g,'Tap to plan '+l.n+' here · '+FULL[inv.day]+' '+fmtT(inv.s)+' to '+fmtT(inv.s+inv.m)+' · '+inv.why);
+      function take(ev){ev.stopPropagation();planAdd(inv.day,inv.s,inv.m,inv.k,null,false,function(){render();});}
+      g.addEventListener('click',take);
+      g.addEventListener('keydown',function(ev){if(ev.key==='Enter'||ev.key===' ')take(ev);});
     }
 
     function drawSoft(s,x,l,Pp){
@@ -325,15 +533,51 @@
         btn.setAttribute('aria-pressed',P.on[l.k]?'true':'false');
         if(ICONS[l.ic]){var im=document.createElement('img');im.src=ICONS[l.ic];im.alt='';btn.appendChild(im);}
         btn.appendChild(h('span',{text:l.n}));
-        btn.appendChild(h('span',{class:'mins',text:M.byLayer[l.k]?fmtShort(M.byLayer[l.k]):'none'}));
-        btn.setAttribute('title','Tap to show or hide this layer.');
+        var real=M.byLayer[l.k]||0, prom=M.pLayer[l.k]||0;
+        var lab = real ? fmtShort(real) : (prom ? fmtShort(prom)+' planned' : (PLANNABLE.indexOf(l.k)>=0?'nothing yet':'none'));
+        var mn=h('span',{class:'mins',text:lab});
+        if(!real&&prom)mn.setAttribute('style','font-style:italic');
+        btn.appendChild(mn);
+        btn.setAttribute('title','Tap to show or hide this layer.'+(prom?' '+fmtLong(prom)+' planned here, which is not counted.':''));
         btn.addEventListener('click',function(){P.on[l.k]=!P.on[l.k];savePrefs();render();});
         lw.appendChild(btn);
       });
 
+      /* the week, named from the board itself so the two can never disagree */
+      var kick=R.getElementById('kick');
+      if(WEEKD){
+        var yr=String(WEEKD[6]).slice(0,4);
+        kick.textContent='Project YOU · '+shortDate(WEEKD[0])+' to '+shortDate(WEEKD[6])+', '+yr+
+          (OWNWEEK?' · this week':'');
+      }
       R.getElementById('cnt-cal').textContent=fmtLong(M.total)+' in flow';
-      R.getElementById('cnt-blk').textContent=state.log.length+' blocks, '+state.park.length+' parked';
+      R.getElementById('cnt-blk').textContent=state.log.length+' logged'+(state.plan.length?', '+state.plan.length+' planned':'');
       R.getElementById('callout').textContent='Before Monday: your flow keeps starting at 8 a.m. Put a standing block there on the mornings that are empty.';
+      /* planned minutes, kept visibly apart from everything that is counted */
+      var pl=R.getElementById('planline');
+      pl.textContent = M.planned ? (fmtLong(M.planned)+' planned, not counted in any total') : '';
+
+      var ro=R.getElementById('ro');
+      var missing=PLANNABLE.filter(function(k){return !M.byLayer[k];}).map(function(k){return LMAP[k].n;});
+      ro.textContent = LOADERR
+        ? ('Showing nothing: '+LOADERR+'.')
+        : (missing.length
+            ? ('Nothing logged this week for '+missing.join(', ')+'. Those are the ones you can plan.')
+            : 'Logged blocks are read only here. Change them on the Flow Time page.');
+
+      /* the Monday moment: only on a week you can still act on, and only before you have planned it */
+      var strip=R.getElementById('setwk'), sl=R.getElementById('samelast');
+      var liveWeek = WEEKD && WEEKD[6]>=todayISO();
+      var mine = state.plan.filter(function(x){return !x.auto;}).length;
+      var showStrip = liveWeek && !mine && LOADED;
+      strip.classList.toggle('show',!!showStrip);
+      var copyable=LASTWK.filter(function(x){return x.k==='flow'||x.k==='studio';});
+      sl.style.display = (showStrip&&copyable.length) ? '' : 'none';
+      sl.textContent = copyable.length ? ('Same as last week ('+copyable.length+')') : 'Same as last week';
+      R.getElementById('setwk-sub').textContent = copyable.length
+        ? 'Take last week’s blocks, or tap a dotted slot.'
+        : 'Tap the dotted slot to promise yourself the time.';
+
       R.getElementById('vstamp').textContent=VER;
     }
 
@@ -368,7 +612,7 @@
         td0.setAttribute('style','color:var(--faint);font-family:var(--fm);font-size:11px;padding-left:20px');
         td0.appendChild(document.createTextNode('└'));
         tr.appendChild(td0);
-        tr.appendChild(h('td',{text:DAYS[x.day]+' Oct '+(5+x.day)}));
+        tr.appendChild(h('td',{text:DAYS[x.day]+(WEEKD?' '+shortDate(WEEKD[x.day]):'')}));
         tr.appendChild(h('td',{text:fmtT(x.s)+' to '+fmtT(x.s+x.m)}));
         tr.appendChild(h('td',{text:fmtLong(x.m)}));
         tr.appendChild(h('td',{text:(x.t||'')+(x.note?'  ('+x.note+')':'')}));
@@ -401,7 +645,43 @@
     });
 
     R.getElementById('creed').textContent=LINES[Math.floor(Math.random()*LINES.length)];
-    loadPrefs(function(){ setOpen(P.open); render(); });
+
+    /* Same as last week: one tap instead of five drags. Dragging five blocks onto an
+       empty week is five decisions on a Monday; tapping one and nudging it is one. */
+    R.getElementById('samelast').addEventListener('click',function(ev){
+      ev.stopPropagation();
+      var btn=ev.currentTarget; btn.disabled=true; btn.textContent='Laying it down...';
+      sameAsLastWeek(function(n){ btn.disabled=false; render(); });
+    });
+    R.getElementById('setwk').addEventListener('click',function(e){e.stopPropagation();});
+
+    var BUSY=false;
+    function refresh(){
+      if(BUSY)return; BUSY=true;
+      loadWeek(function(){ seedWeek(function(){ BUSY=false; render(); }); });
+    }
+
+    /* The board owns the week. When the picker moves, its label changes, and this
+       follows it. Nothing in the dashboard had to be touched to make that work. */
+    function watchWeek(){
+      var lab=document.getElementById('weekLabel');
+      if(!lab)return;
+      var seen=lab.textContent;
+      try{
+        new MutationObserver(function(){
+          if(lab.textContent===seen)return;
+          seen=lab.textContent;
+          setTimeout(refresh,250);   /* let the board finish its own load first */
+        }).observe(lab,{childList:true,characterData:true,subtree:true});
+      }catch(e){}
+    }
+
+    loadPrefs(function(){
+      setOpen(P.open);
+      render();          /* frame first, so the banner never flashes empty */
+      refresh();
+      watchWeek();
+    });
 
   }
 
