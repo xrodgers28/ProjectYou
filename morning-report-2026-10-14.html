@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f7f6f3; --panel:#ffffff; --ink:#23201b; --soft:#5f5c55; --faint:#8d897f;
+  --line:#e4e2db; --amber-tint:#fdf4e3; --red-tint:#fbecea; --green-tint:#eaf5ee; --grey-tint:#f0f1f2;
+  --do:#3f6f8f; --tell:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+  --dot-green:#2f8f5b; --dot-amber:#c07f10; --dot-red:#c0392b; --dot-grey:#b4b3a8;
+}
+:root:not([data-theme="light"]){
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#17181a; --panel:#1f2124; --ink:#e9e7e1; --soft:#b3b0a8; --faint:#8b887f;
+      --line:#34363a; --amber-tint:#2a2418; --red-tint:#2c1e1c; --green-tint:#1b2a21; --grey-tint:#24262a;
+    }
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#17181a; --panel:#1f2124; --ink:#e9e7e1; --soft:#b3b0a8; --faint:#8b887f;
+  --line:#34363a; --amber-tint:#2a2418; --red-tint:#2c1e1c; --green-tint:#1b2a21; --grey-tint:#24262a;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:860px;margin:0 auto;padding:22px 16px 80px}
+.topline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.daydate{font-size:13px;color:var(--faint);letter-spacing:.2px}
+.chip{font-size:11px;font-weight:bold;color:#fff;background:var(--do);border-radius:6px;padding:2px 7px}
+h1{font-size:27px;margin:6px 0 4px;letter-spacing:-.2px}
+.shape{font-size:15px;color:var(--soft);margin:0 0 14px}
+.habit{font-size:13px;color:var(--soft);background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--tell);border-radius:8px;padding:9px 12px;margin:0 0 18px}
+.habit b{color:var(--ink)}
+
+.keybox{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 14px}
+.keybox h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin:0 0 8px}
+.keyrow{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--soft)}
+.keyrow span b{color:var(--ink)}
+
+.transport{position:sticky;top:0;z-index:5;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:0 0 20px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.transport h2{font-size:12px;text-transform:uppercase;letter-spacing:.6px;color:var(--faint);margin:0 0 8px;display:flex;justify-content:space-between;align-items:center}
+.transport textarea{width:100%;min-height:74px;resize:vertical;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:13px;padding:9px 10px}
+.copybtn{font-size:11px;font-weight:bold;color:var(--do);background:none;border:1px solid var(--do);border-radius:6px;padding:3px 9px;cursor:pointer}
+.hint{font-size:11.5px;color:var(--faint);margin-top:6px}
+
+.section-h{font-size:13px;text-transform:uppercase;letter-spacing:.7px;color:var(--faint);margin:26px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px}
+
+.row{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:14px 15px;margin:0 0 12px}
+.row.settled{opacity:.62}
+.rowhead{display:flex;align-items:flex-start;gap:10px}
+.dot{width:12px;height:12px;border-radius:50%;flex:0 0 auto;margin-top:5px}
+.dot.green{background:var(--dot-green)} .dot.amber{background:var(--dot-amber)}
+.dot.red{background:var(--dot-red)} .dot.grey{background:var(--dot-grey)}
+.head{font-size:16px;font-weight:bold;margin:0}
+.body{font-size:14px;color:var(--soft);margin:8px 0 0}
+.next{font-size:13.5px;color:var(--ink);margin:10px 0 0}
+.next b{color:var(--ink)}
+.proof{font-size:11.5px;color:var(--faint);margin:9px 0 0;font-style:italic}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+.btn{font-size:13px;font-weight:bold;color:#fff;border:none;border-radius:8px;padding:9px 15px;cursor:pointer}
+.btn.do{background:var(--do)} .btn.tell{background:var(--tell)} .btn.did{background:var(--did)}
+.btn.read{background:var(--read)} .btn.kill{background:var(--kill)}
+.btn[aria-pressed="true"]{outline:3px solid var(--ink);outline-offset:1px}
+.state{font-size:12px;font-weight:bold;margin:9px 0 0}
+.state.open{color:var(--tell)} .state.settled{color:var(--faint)}
+.cmt{width:100%;margin-top:9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:12.5px;padding:7px 9px}
+.foot{font-size:11.5px;color:var(--faint);text-align:center;margin-top:30px}
+@media(max-width:640px){h1{font-size:23px}.btns{gap:6px}.btn{padding:9px 12px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topline">
+    <span class="daydate" id="daydate">Wednesday, Oct 14, 2026</span>
+    <span class="chip">v1.0</span>
+  </div>
+  <h1>Good morning, Scott.</h1>
+  <p class="shape">Today is wide open, no meetings on the books. Six things are waiting on a tap from you, most of them small. Two are worth a look first: the overnight helper went quiet, and the site publisher is tripping over four old pages.</p>
+
+  <div class="habit">
+    <b>Atomic Habits, the Two-Minute Rule.</b> Shrink a stalled task until it takes two minutes to begin. The frozen overnight queue has a two-minute version: just start it by hand once, tonight. Starting is the habit; finishing follows.
+  </div>
+
+  <div class="keybox">
+    <h2>What each button means</h2>
+    <div class="keyrow">
+      <span><b>Do this</b> &middot; go build it. Stays open until done.</span>
+      <span><b>Tell me more</b> &middot; yes, but tell me the cost first. Stays open.</span>
+      <span><b>I did it</b> &middot; you handled it. Settles.</span>
+      <span><b>I read this</b> &middot; just noting it. Settles.</span>
+      <span><b>Kill this task</b> &middot; drop it for good. Settles.</span>
+    </div>
+  </div>
+
+  <div class="transport">
+    <h2>Your answers <button class="copybtn" onclick="copyOut()">Copy</button></h2>
+    <textarea id="out" readonly placeholder="Tap buttons below. Your answers gather here. Select this text and paste it back into the chat."></textarea>
+    <div class="hint">This box is how your answers travel back. Select the text and copy it into the chat. The Copy button is a shortcut, not the only way. Nothing is saved anywhere until you paste it back.</div>
+  </div>
+
+  <div id="board"></div>
+
+  <div class="foot" id="foot"></div>
+
+</div>
+
+<script>
+// Eastern time stamp, derived explicitly, never the browser clock
+(function(){
+  try{
+    var d=new Date();
+    var opt={weekday:'long',month:'short',day:'numeric',year:'numeric',timeZone:'America/New_York'};
+    document.getElementById('daydate').textContent=new Intl.DateTimeFormat('en-US',opt).format(d);
+    var t=new Date().toLocaleString('en-US',{hour:'numeric',minute:'2-digit',hour12:true,timeZone:'America/New_York'});
+    document.getElementById('foot').textContent='Morning Report v1.0 · built '+new Intl.DateTimeFormat('en-US',opt).format(d)+' · '+t.toLowerCase()+' EST';
+  }catch(e){}
+})();
+
+var ROWS=[
+ {g:'Needs you',light:'red',head:"Last night's overnight helper never started",
+  body:"The helper that quietly works through your approved build list did not clock in last night, and it has now missed three nights in a row. The last time it truly ran was Oct 11, when it finished three jobs. Three approved jobs have sat untouched since Oct 10. None of your pages are broken because of this. The list is just frozen.",
+  next:"Tap <b>Do this</b> to have tonight's run restarted and the list cleared, or <b>Tell me more</b> for why it keeps stalling.",
+  proof:"Technical: no run_log row for Oct 12, 13 or 14; session_todos queue_run items 691-693 still unworked."},
+
+ {g:'Needs you',light:'red',head:"The site publisher is stuck on four old pages",
+  body:"Four pages keep trying to publish an older version on top of the newer one already live, so the safety guard blocks them and marks the run as failed. That is what the four failure emails overnight were. It is the stale-copy problem: a source somewhere keeps firing yesterday's version. Your other pages, including this report, still publish normally. The four stuck ones are your habit cue cards, the QS wheel, the stack builder and the well screen.",
+  next:"Tap <b>Do this</b> to republish those four from their current versions and clear the block, or <b>Tell me more</b> first.",
+  proof:"Technical: PUBLISH-BLOCKED.md on origin/main lists habit-cue-cards v1.0<2.0, qs-wheel v1.4<1.5, stack-builder v2.8<2.10, well v2.1<2.2."},
+
+ {g:'Needs you',light:'amber',head:"Three finished reports from Oct 11 were never handed to you",
+  body:"The last overnight run produced three write-ups and left them in the store without flagging them. One checked people saved under two spellings and found three real duplicates. One tested the Meetups screen and found it healthy. One is a plan for tidying page version tags. I checked the duplicate-people finding against your live list this morning and it holds up.",
+  next:"Tap <b>Do this</b> to action all three, or <b>Tell me more</b> to read them first.",
+  proof:"Technical: overnight_build rows for todo_id 691, 692, 693, run_date 2026-10-11; connections shows Neil and Neil Onsdorf, Nick A and Nick Tebbutt, James OBrien."},
+
+ {g:'Needs you',light:'amber',head:"Twelve new AI finds are waiting for keep or discard",
+  body:"Your Rundown scan pulled twelve new items this week, and fifty-one in all are still unsorted. The two newest are a retiree who turned ChatGPT into a car-repair advisor, and a hands-on guide to Meta's new workshop planner. None are time-sensitive. They simply stack up until you sort them.",
+  next:"Tap <b>Do this</b> to have me pre-sort all of them into keep or discard with a reason each, or <b>I did it</b> once you have cleared them.",
+  proof:"Technical: rundown_items, 51 rows seen_on null, 12 from the last 7 days."},
+
+ {g:'Needs you',light:'amber',head:"One screen still has no proper version tag",
+  body:"The Chat Dashboard shows a number typed into its footer, not the real version tag every other page carries, so a check can never trust it. Two other screens carry an old number in their heading, but the site quietly corrects it on screen, so you never see the wrong one. This came out of the Oct 11 check and is still open only because the overnight helper has not run since.",
+  next:"Tap <b>Do this</b> to give the Chat Dashboard a real tag and tidy the two leftovers, or <b>Kill this task</b> if it is not worth it.",
+  proof:"Technical: version-badge report, overnight_build todo_id 693."},
+
+ {g:'Needs you',light:'amber',head:"Your database host flagged a security issue",
+  body:"Supabase sent a warning that a large group of your tables have their row-level lock turned off. In plain terms, anyone who got hold of your public access key could read or change those tables. Most are old dated backups, but a few are live. Turning the lock on without the right rules would block your own pages, so this needs a careful pass, not a one-click fix.",
+  next:"Tap <b>Tell me more</b> and I will lay out which tables matter and the safe order to lock them, or <b>I read this</b> to park it.",
+  proof:"Technical: advisor rls_disabled, 43 tables; plus the Supabase security email at 4:42pm EST Oct 13."},
+
+ {g:'Your projects',light:'green',head:"Project YOU is moving, with travel on your plate",
+  body:"This is your busiest project and it is healthy underneath the two red items above, which are its real next steps. Your to-do list has sixty-three core items, seven starred. The starred ones are mostly travel: Antigua restaurants and rental car, voting early, and Boston on Oct 23.",
+  next:"Nothing extra here. Clearing the two red items above is the project's next step.",
+  proof:""},
+
+ {g:'Your projects',light:'green',head:"AI Intelligence is ticking along",
+  body:"The scan is running and collecting on its own. The only open loop is the sorting backlog, which is the twelve new finds in the row above. Nothing here is stuck or failing.",
+  next:"Nothing beyond sorting the finds above.",
+  proof:""},
+
+ {g:'Your projects',light:'grey',head:"TreadWell has one open item and has been quiet",
+  body:"Only one open to-do shows for TreadWell in the shared database, and there has been no recent movement on it here. The fuller picture lives in your TreadWell folder, which this run could not reach.",
+  next:"Nothing now. Its real status is pending your computer, below.",
+  proof:""},
+
+ {g:'Your projects',light:'grey',head:"Two projects are pending your computer",
+  body:"CrushingIt and Clever Phrases keep their work in folders on your Mac, not in the shared database. This run was scheduled and ran in the cloud with no link to your computer, so I could not open either folder. Everything else in this report is from live sources and is current.",
+  next:"Nothing you can do from here. Open the task on your computer to pull these two in.",
+  proof:""},
+
+ {g:'Good to know',light:'grey',head:"I could not read your Claude weekly usage",
+  body:"There is no connector that exposes your subscription usage to a scheduled cloud run, so I will not guess a number. You can see where you stand on the weekly limit in the usage meter inside the Claude app or on the web, under settings.",
+  next:"Nothing. Check the in-app usage meter when you want the figure.",
+  proof:""},
+
+ {g:'Good to know',light:'grey',head:"Today is open, tomorrow has one evening thing",
+  body:"Nothing is on your calendar today. Tomorrow evening you have one private event from 6 to 10pm. Your inbox overnight was all newsletters and automatic notices, with nothing that needs a reply from you.",
+  next:"Nothing. A rare clear day to spend on the thing that has been waiting.",
+  proof:""}
+];
+
+var board=document.getElementById('board'),out=document.getElementById('out');
+var state={}; var lastG=null;
+ROWS.forEach(function(r,i){
+  if(r.g!==lastG){var h=document.createElement('div');h.className='section-h';h.textContent=r.g;board.appendChild(h);lastG=r.g;}
+  var row=document.createElement('div');row.className='row';row.id='row'+i;
+  var proofHtml=r.proof?'<p class="proof">'+r.proof+'</p>':'';
+  row.innerHTML=
+    '<div class="rowhead"><span class="dot '+r.light+'"></span><div style="flex:1">'+
+      '<p class="head">'+r.head+'</p>'+
+      '<p class="body">'+r.body+'</p>'+
+      '<p class="next">'+r.next+'</p>'+
+      proofHtml+
+    '</div></div>'+
+    '<div class="btns">'+
+      '<button class="btn do"   aria-pressed="false" onclick="pick('+i+",'Do this',true,'do')\">Do this</button>"+
+      '<button class="btn tell" aria-pressed="false" onclick="pick('+i+",'Tell me more',true,'tell')\">Tell me more</button>"+
+      '<button class="btn did"  aria-pressed="false" onclick="pick('+i+",'I did it',false,'did')\">I did it</button>"+
+      '<button class="btn read" aria-pressed="false" onclick="pick('+i+",'I read this',false,'read')\">I read this</button>"+
+      '<button class="btn kill" aria-pressed="false" onclick="pick('+i+",'Kill this task',false,'kill')\">Kill this task</button>"+
+    '</div>'+
+    '<div class="state" id="st'+i+'"></div>'+
+    '<input class="cmt" id="cmt'+i+'" placeholder="Add a note (optional)" oninput="note('+i+',this.value)">';
+  board.appendChild(row);
+  state[i]={title:r.head,choice:null,open:null,note:'',color:null};
+});
+
+var COLOR={do:'#3f6f8f',tell:'#c07f10',did:'#2f8f5b',read:'#6f7b8a',kill:'#a8724a'};
+function pick(i,label,keepsOpen,key){
+  var s=state[i];s.choice=label;s.open=keepsOpen;s.color=COLOR[key];
+  var row=document.getElementById('row'+i);
+  row.style.borderLeftColor=s.color;
+  var btns=row.querySelectorAll('.btn');
+  btns.forEach(function(b){b.setAttribute('aria-pressed', b.textContent===label?'true':'false');});
+  var st=document.getElementById('st'+i);
+  if(keepsOpen){row.classList.remove('settled');st.className='state open';st.textContent='Still open — work owed';}
+  else{row.classList.add('settled');st.className='state settled';st.textContent='Settled';}
+  compile();
+}
+function note(i,v){state[i].note=v;compile();}
+function compile(){
+  var lines=[];
+  Object.keys(state).forEach(function(k){
+    var s=state[k];
+    if(s.choice||s.note){
+      var line='- '+s.title+': '+(s.choice||'(no button)');
+      if(s.note)line+=' | note: '+s.note;
+      lines.push(line);
+    }
+  });
+  out.value=lines.length?('MORNING REPORT, Oct 14 2026 — my answers:\n'+lines.join('\n')):'';
+}
+function copyOut(){
+  out.select();
+  try{document.execCommand('copy');}catch(e){}
+  if(navigator.clipboard){try{navigator.clipboard.writeText(out.value);}catch(e){}}
+}
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
