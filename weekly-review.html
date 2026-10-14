@@ -166,6 +166,20 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 
 /* v1.1 */
 @media(max-width:760px){.wheel{flex-direction:row}}
+
+/* v5.85, Oct 12 2026, Scott: the Habit stacks section rolls up and down like a window shade. Tap the header or the pull cord. */
+.shade{display:grid;grid-template-rows:1fr;transition:grid-template-rows .55s cubic-bezier(.3,.7,.2,1)}
+.shade>.shadein{overflow:hidden;min-height:0;transition:opacity .35s ease,transform .55s cubic-bezier(.3,.7,.2,1);transform-origin:top}
+.shade.down{grid-template-rows:0fr}
+.shade.down>.shadein{opacity:.15;transform:scaleY(.96)}
+.shadepull{display:flex;flex-direction:column;align-items:center;height:0;overflow:visible;position:relative}
+.shadepull i{display:block;width:30px;height:5px;border-radius:3px;background:var(--line);margin-top:2px;cursor:pointer}
+.shadebtn{margin-left:auto;background:none;border:1px solid var(--line);border-radius:999px;width:30px;height:30px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;color:inherit;flex:none}
+.shadebtn:hover{border-color:var(--accent)}
+.shadebtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.shadearrow{width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-135deg) translate(-1px,-1px);transition:transform .45s ease}
+.shadebtn.down .shadearrow{transform:rotate(45deg) translate(-1px,-1px)}
+@media (prefers-reduced-motion: reduce){.shade,.shade>.shadein,.shadearrow{transition:none}}
 /* v1.2 stacks */
 .stacks{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
 .stk{flex:1;min-width:220px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
@@ -1007,8 +1021,8 @@ html.py-embed .swshadebtn{display:none!important}
 
     <!-- stacks -->
     <div class="card block">
-      <div class="h2row hasicon"><svg class="h2icon" style="width:30px;height:30px" viewBox="0 0 28 28" aria-hidden="true"><g fill="#fff" stroke-width="1.6"><rect x="3" y="8" width="9" height="9" rx="2" stroke="#4fa08a" transform="rotate(-7 7.5 12.5)"/><rect x="10" y="6" width="9" height="9" rx="2" stroke="#7d81c2" transform="rotate(5 14.5 10.5)"/><rect x="17" y="8" width="9" height="9" rx="2" stroke="#c6a63f" transform="rotate(-4 21.5 12.5)"/></g><g fill="#1f2a44"><rect x="4" y="21" width="4" height="4" rx="1"/><rect x="10" y="21" width="4" height="4" rx="1"/><rect x="16" y="21" width="4" height="4" rx="1" fill="#c7cedb"/><rect x="22" y="21" width="4" height="4" rx="1"/></g></svg><div class="h2">Habit stacks</div><div class="sub" id="stacksSub"></div></div>
-      <div class="stacks" id="stacks"></div>
+      <div class="h2row hasicon"><svg class="h2icon" style="width:30px;height:30px" viewBox="0 0 28 28" aria-hidden="true"><g fill="#fff" stroke-width="1.6"><rect x="3" y="8" width="9" height="9" rx="2" stroke="#4fa08a" transform="rotate(-7 7.5 12.5)"/><rect x="10" y="6" width="9" height="9" rx="2" stroke="#7d81c2" transform="rotate(5 14.5 10.5)"/><rect x="17" y="8" width="9" height="9" rx="2" stroke="#c6a63f" transform="rotate(-4 21.5 12.5)"/></g><g fill="#1f2a44"><rect x="4" y="21" width="4" height="4" rx="1"/><rect x="10" y="21" width="4" height="4" rx="1"/><rect x="16" y="21" width="4" height="4" rx="1" fill="#c7cedb"/><rect x="22" y="21" width="4" height="4" rx="1"/></g></svg><div class="h2">Habit stacks</div><div class="sub" id="stacksSub"></div><button type="button" class="shadebtn" id="stacksShadeBtn" aria-expanded="true" aria-controls="stacksShade" title="Roll the shade up or down"><span class="shadearrow" aria-hidden="true"></span></button></div>
+      <div class="shade" id="stacksShade"><div class="shadein"><div class="stacks" id="stacks"></div></div><div class="shadepull" aria-hidden="true"><i></i></div></div>
           </div>
 
     <!-- Local Safari (Environmental Health), v2.2 -->
@@ -1084,7 +1098,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
    spelling, and a new spelling can no longer be added next to an old one. */
 /* v5.54, Oct 10, 2026, Scott: yellow names (already met) stay locked, but now carry an x that hides them from This
    Week. The meet up stays in his log. It is the same x the grey names have, so "bring them back" undoes it. */
-const VERSION='v5.83';
+const VERSION='v5.88';
 /* v5.80, Oct 11, 2026, Scott: Sleep Synopsis layout matched to his screenshot, rollover quote moved to the right of the week chart, full-width shade bar */
 (function(){ /* v5.55: window shade on the meet ups card, remembered per browser */
   function wire(){
@@ -3238,6 +3252,7 @@ function swWireDrag(box){
       if(d.over)d.over.classList.remove('over');
       if(!d.moved)return;              /* a tap, the click handler takes it */
       chip._swSkip=true;               /* a drag, so swallow the click that follows */
+      if(Date.now()-(window.PY_FLOW_TOOK||0)<500)return;   /* v5.87: it was dropped on the Flow week, not on a lane */
       if(d.over)swPlace(d.person,d.over.dataset.k,d.over.dataset.state);
     };
     chip.addEventListener('pointerup',finish);
@@ -3942,7 +3957,8 @@ async function reorderRow(area,from,target,where){
    without this a tracker that already had ticks logged this week would keep
    reappearing right after being removed, whether or not it had a Habit
    Worksheets row to park. See parkTracker below. */
-const REMOVED=new Set();
+/* v5.86, Oct 12 2026, Scott: the "Exercise minutes" row (a tick the Apple Health sync files every night) keeps coming back, so it is hidden here for good. Display only: every record stays saved and nothing else reads this list. */
+const REMOVED=new Set(['Exercise minutes']);
 const wsOpen=new Set();
 const wsSaveT={};
 function wsEdited(box){
@@ -5084,5 +5100,23 @@ async function whChartLoad(ws,we){
 
 </script>
 <script src="flow-banner.js"></script>
-<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<script src="nav-config.js"></script><script src="navpatch.js">
+/* v5.85: Habit stacks window shade. Remembers up or down on this device. */
+(function(){
+  const sh=document.getElementById('stacksShade'),btn=document.getElementById('stacksShadeBtn');
+  if(!sh||!btn)return;
+  const pull=sh.querySelector('.shadepull');
+  function set(down,save){
+    sh.classList.toggle('down',down);btn.classList.toggle('down',down);
+    btn.setAttribute('aria-expanded',down?'false':'true');
+    if(save){try{localStorage.setItem('py_stacks_shade',down?'down':'up');}catch(e){}}
+  }
+  try{if(localStorage.getItem('py_stacks_shade')==='down')set(true,false);}catch(e){}
+  function flip(){set(!sh.classList.contains('down'),true);}
+  btn.addEventListener('click',flip);
+  if(pull)pull.addEventListener('click',flip);
+  const row=btn.parentElement;
+  if(row){row.style.cursor='pointer';row.addEventListener('click',function(e){if(e.target.closest('a,button'))return;flip();});}
+})();
+</script></body>
 </html>
