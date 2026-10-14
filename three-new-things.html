@@ -674,7 +674,7 @@ textarea.box:focus-visible{outline:2px solid var(--ember);outline-offset:1px;bor
     <!-- The ONLY place this page's version is written. The publish guard
          reads class="ver" and navpatch reads #ver, so both see this one
          literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v2.26</span>
+    <span id="ver" class="ver">v2.29</span>
   </div>
 </div>
 
@@ -698,8 +698,8 @@ var EXTRAS=[
   {k:'wonder', kick:'Wonder', q:'What made you stop and look today?', ph:'Anything. The sky, a face, a sound.', btn:'Done'},
   {k:'thanks', kick:'Someone', q:'Who showed up for you?', sub:'Say thank you in one line. You can send it now.', ph:'Thanks for…', btn:'Send it', alt:'Keep it to myself'},
   {k:'bright', kick:'The bright side', q:'What could have gone wrong today, and didn’t?', ph:'The near miss you barely noticed.', btn:'Done'},
-  {k:'help', kick:'Tomorrow', q:'Who could you help tomorrow?', sub:'Planning it is enough. It counts on its own.', ph:'One person, one small thing.', btn:'Done'},
-  {k:'letter', kick:'The letter', q:'Someone who changed things for you, and never got told.', letter:true, btn:'Ready to read it to them'}
+  {k:'help', kick:'Tomorrow', q:'Who could you help tomorrow?', sub:'Planning it is enough. It counts on its own.', ph:'One person, one small thing.', btn:'Done'}
+  /* v2.29 (Oct 12 2026), Scott: "The letter" step removed, he never filled it out. */
 ];
 
 /* ==========================================================
@@ -951,7 +951,7 @@ function latelyDue(){ return (S.nights>0) && (S.nights % 14 === 0); }
 function stepList(){
   return (S.mode==='quick')
     ? ['insight','three','eight']
-    : ['insight','words','tags','energy','hard','three','relationship','extra','eight'];
+    : ['insight','tags','energy','hard','three','relationship','extra','eight'];
 }
 function stepDots(){
   var L=stepList(), at=L.indexOf(view==='savor'?'three':(view==='lately'?'eight':view));
@@ -1626,7 +1626,7 @@ function mark(k){ if(N.skipped.indexOf(k)<0) N.skipped.push(k); }
    The done screen has no way back: by then the night is signed off, the
    streak has moved and the habit is ticked on the board.
    ========================================================== */
-var BACKTO={words:'insight', tags:'words', energy:'tags', hard:'energy', three:'hard',
+var BACKTO={words:'insight', tags:'insight', energy:'tags', hard:'energy', three:'hard',
             savor:'three', relationship:'three', extra:'relationship',
             lately:'extra', eight:'extra'};
 var BACKLAB={insight:'tonight\u2019s insight', words:'the words',
@@ -1713,17 +1713,16 @@ function seenBefore(t){
 }
 
 /* progress pips. The three things are ONE step now, not three. */
-var STEPS=['insight','words','tags','energy','three','relationship','extra','eight'];
+var STEPS=['insight','tags','energy','three','relationship','extra','eight'];
 function stepIndex(){
   if(view==='insight')return 0;
-  if(view==='words')return 1;
-  if(view==='tags')return 2;
-  if(view==='energy')return 3;
-  if(view==='three'||view==='savor')return 4;
-  if(view==='relationship')return 5;
-  if(view==='extra')return 6;
-  if(view==='eight')return 7;
-  if(view==='done')return 8;
+  if(view==='tags')return 1;
+  if(view==='energy')return 2;
+  if(view==='three'||view==='savor')return 3;
+  if(view==='relationship')return 4;
+  if(view==='extra')return 5;
+  if(view==='eight')return 6;
+  if(view==='done')return 7;
   return -1;
 }
 /* v2.12 (Sep 17 2026): a quiet way through to the history page, on every step of
@@ -1980,7 +1979,9 @@ function render(){
     h+='<div class="qcard res"><button class="heart'+(hearted('r')?' on':'')+'" data-heart="r" title="Bring this one round more often" aria-label="Bring this one round more often">&#9829;</button>';
     h+='<p class="lab">What you get out of it</p><h4>'+G.r.t+'</h4><p>'+G.r.b+'</p><button type="button" class="nohide" data-nohide="r">Don&rsquo;t show again</button></div>';
     h+='</div>';
-    h+='<div class="h2ico">'+STARS+'<h2>Write down three moments that felt genuinely good today.</h2></div>';
+    h+='<div class="h2ico">'+STARS+'<h2>What are you grateful for today?</h2></div>';
+    /* v2.28 (Oct 12 2026), Scott: the bold headline names gratitude; the old headline is now the quiet line under it. */
+    h+='<p class="sub" style="margin:8px 0 14px">Write down three moments that felt genuinely good today.</p>';
     /* v2.15: the nudges, out in the open. Tap one and it opens the next empty box. */
     h+='<div class="starters">';
     starters().forEach(function(p){ h+='<button type="button" data-starter="'+esc(p)+'">'+esc(p)+'</button>'; });
@@ -2098,13 +2099,7 @@ function render(){
     var x=N.extra;
     h+='<p class="kick">'+x.kick+'</p><div class="h2ico">'+BRUSH+'<h2>'+x.q+'</h2></div>';
     if(x.sub) h+='<p class="sub">'+x.sub+'</p>';
-    if(x.letter){
-      h+='<ul class="prompts"><li>What happened?</li><li>How did it impact you?</li><li>How did it make you feel?</li></ul>';
-      h+='<textarea class="box" id="tx" style="min-height:170px" placeholder="About three hundred words. Take your time.">'+esc(N.etext)+'</textarea>';
-      h+='<div class="note">Then read it to them. Out loud, face to face. That is the whole exercise.</div>';
-    }else{
-      h+='<textarea class="box" id="tx" placeholder="'+x.ph+'">'+esc(N.etext)+'</textarea>';
-    }
+    h+='<textarea class="box" id="tx" placeholder="'+x.ph+'">'+esc(N.etext)+'</textarea>';
     h+='<div class="foot"><button class="btn" data-go="edone"'+(N.etext.trim().length<3?' disabled':'')+'>'+x.btn+'</button>';
     h+='<button class="btn ghost" data-go="skip">'+(x.alt||'Skip tonight')+'</button></div>';
   }
@@ -2812,7 +2807,7 @@ function act(a){
   settleSkip();
   if(a==='begin'){ N=newNight(); view='insight'; render(); return; }
   /* v2.15: Quick goes straight to the good things. Guided walks the lot. */
-  if(a==='skipinsight'){ mark('insight'); view=(S.mode==='quick'?'three':'words'); render(); return; }
+  if(a==='skipinsight'){ mark('insight'); view=(S.mode==='quick'?'three':'tags'); render(); return; }
 
   /* skips - the section is simply left out of tonight */
   if(a==='skipwords'){ mark('words'); N.words=[]; view='tags'; render(); return; }
@@ -2824,9 +2819,8 @@ function act(a){
     view=(S.mode==='quick'?(latelyDue()?'lately':'eight'):'relationship'); render(); return;
   }
 
-  if(a==='words'){ view=(S.mode==='quick'?'three':'words'); render(); return; }
+  if(a==='words'){ view=(S.mode==='quick'?'three':'tags'); render(); return; }
   if(a==='tags'){
-    if(!N.words.length){ gateSay('Catch at least one word, or skip this one.'); return; }
     view='tags'; render(); return;
   }
   if(a==='energy'){ view='energy'; render(); return; }
@@ -2880,7 +2874,7 @@ function act(a){
   }
 
     if(a==='edone'||a==='skip'){
-    if(a==='edone'&&(N.extra.k==='thanks'||N.extra.k==='letter')){ S.told++; N.a.__told=1; }
+    if(a==='edone'&&N.extra.k==='thanks'){ S.told++; N.a.__told=1; }
     view=(latelyDue()?'lately':'eight'); render();
     return;
   }
@@ -3008,7 +3002,7 @@ function applyDraft(x){
   if(!n.a8||typeof n.a8!=='object') n.a8={};
   if(!n.sleepNums||typeof n.sleepNums!=='object') n.sleepNums=base.sleepNums;
   N=n;
-  view=VALID_VIEWS[x.v]?x.v:'insight';
+  view=VALID_VIEWS[x.v]?(x.v==='words'?'tags':x.v):'insight';
   if(view==='extra'&&!N.extra){ try{ pickExtra(); }catch(e){} }
   __revealedMins=x.mins||null;
   draftAt=x.at||Date.now();
@@ -3049,8 +3043,7 @@ function rebuildFromRecord(row,things){
   n.items=[]; (things||[]).slice().sort(function(x,y){ return (x.slot||0)-(y.slot||0); }).forEach(function(t){ n.items.push({k:t.category,t:t.body}); });
   if(!any) return null;
   var v='relationship';
-  if(!n.words.length) v='words';
-  else if(!n.presel.length&&!n.withw.length&&n.wherew===null) v='tags';
+  if(!n.presel.length&&!n.withw.length&&n.wherew===null) v='tags';
   else if(!String(n.energyNote||'').trim()) v='energy';
   else if(!String(n.hardText||'').trim()) v='hard';
   else if(!n.items.length) v='three';
