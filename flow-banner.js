@@ -308,7 +308,7 @@
         if(ev.button)return;
         var f=friendChip(ev.target); if(!f)return;
         if(!P.open)return;               /* nowhere to drop while the banner is folded */
-        beginDrag({k:'social',mins:DROPMINS.social,label:f.name,src:f.el,pass:true},ev);   /* Oct 13, 2026: pass:true so the meet ups lanes still see this press */
+        beginDrag({k:'social',mins:DROPMINS.social,label:f.name,src:f.el},ev);
       },true);
       /* a name chip is ordinary text, so the browser tries to start its own
          drag of it. That fights ours, so it is turned off while we are dragging. */
@@ -319,10 +319,8 @@
 
     function beginDrag(opt,ev){
       if(DRAG)return;
-      /* Oct 13, 2026, Scott: a name chip in This week's meet ups has its own lane drag. Swallowing the press here
-         is what stopped it moving to Next week, so name chips now let the press through. */
-      if(!opt.pass)ev.stopPropagation();
-      DRAG={pass:!!opt.pass,k:opt.k,mins:opt.mins,plan:opt.plan||null,src:opt.src||null,label:opt.label||null,
+      ev.stopPropagation();
+      DRAG={k:opt.k,mins:opt.mins,plan:opt.plan||null,src:opt.src||null,label:opt.label||null,
             x0:ev.clientX,y0:ev.clientY,moved:false,slot:null,fly:null};
       window.addEventListener('pointermove',dragMove,true);
       window.addEventListener('pointerup',dragUp,true);
@@ -358,10 +356,6 @@
       clearPreview();
       if(!d.moved)return;                      /* a tap: let the click handler have it */
       DROPPED=Date.now();                      /* and swallow the click that follows a drag */
-      /* Oct 13, 2026: a name chip dropped on the Flow week belongs to the week; anywhere else it belongs to the
-         meet ups lanes (This Week / Next week / Next month), so we step aside and let their drop run. */
-      if(d.pass&&!d.slot){ return; }
-      if(d.pass){ try{ window.PY_FLOW_TOOK=Date.now(); }catch(e){} }
       ev.stopPropagation(); if(ev.cancelable)ev.preventDefault();
       if(!d.slot){ if(d.plan)render(); return; }
       if(WEEKD&&WEEKD[d.slot.day]<todayISO()){ render(); return; }   /* never into a day that has gone */
@@ -897,9 +891,7 @@
       render();          /* frame first, so the banner never flashes empty */
       refresh();
       watchWeek();
-      /* Oct 13, 2026, Scott: names in This week's meet ups only move between the three meet ups lanes again.
-         Dragging a name onto the Flow Week is switched off (watchFriends left in place, just not started). */
-      /* watchFriends(); */
+      watchFriends();
     });
 
   }
