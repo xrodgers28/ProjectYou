@@ -16,6 +16,7 @@
 <script src="social-log.js"></script>
 <script src="safari-log.js"></script>
 <!-- v6.95 (Oct 12, 2026): the What gave me energy card now has a Park button and parks into the Parked area. -->
+<!-- v6.97 (Oct 14, 2026): the meet ups pop-up is only as big as its card and grows out of the coffee cups you tapped. -->
 <!-- v6.96 (Oct 13, 2026): the Meet up tile on Mini Habits now shows the hands holding coffee cups instead of the clock. -->
 <!-- v6.94 (Oct 12, 2026): Mini Habits tiles (Posture included) no longer lose their done look on reload when other days of the week have rows. -->
 <!-- v6.93 (Oct 12, 2026): the card deal animation now plays once a day, on the first open of the day. -->
@@ -512,11 +513,24 @@
   .rmhi{display:block;width:23px;height:23px;object-fit:contain;
       transition:filter .16s,opacity .16s}
   .rmk.on .rmhi{filter:grayscale(1);opacity:.3}
-  /* v6.87: the meet ups pop-up (the real card, shown in a frame) */
-  .meetsh{width:min(1040px,100%);height:min(92vh,920px);background:#fff;border-radius:14px;padding:10px 12px 12px;
-      display:flex;flex-direction:column;box-shadow:0 18px 50px rgba(20,28,44,.32);font-family:Arial,Helvetica,sans-serif;color:#1f2a44}
-  .meetfr{flex:1;width:100%;min-height:0;border:0;border-radius:10px;background:#fff}
-  @media(max-width:700px){ .meetov{padding:8px} .meetsh{height:94vh;padding:8px} }
+  /* v6.97 (Oct 14, 2026): the meet ups pop-up is only as big as the card inside it (no dead white
+     space), sits just under the coffee cups you tapped, and grows out of them. The card is still the
+     real one from the Habit Dashboard, shown in a frame; the frame is resized to fit it. */
+  .meetov{display:block;padding:0;background:rgba(20,28,44,.22)}
+  .meetsh{position:fixed;box-sizing:border-box;background:#fff;border-radius:14px;padding:6px 8px 8px;
+      box-shadow:0 18px 50px rgba(20,28,44,.30),0 0 0 1px rgba(91,143,206,.28);font-family:Arial,Helvetica,sans-serif;color:#1f2a44;
+      transform-origin:var(--ox,50%) var(--oy,0);animation:meetgrow .24s cubic-bezier(.2,.9,.3,1.04) both}
+  .meetsh.up{transform-origin:var(--ox,50%) var(--oy,100%)}
+  @keyframes meetgrow{from{opacity:0;transform:scale(.4)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){.meetsh{animation:none}}
+  .meetsh:before{content:"";position:absolute;top:-6px;left:var(--cx,40px);width:12px;height:12px;margin-left:-6px;
+      background:#fff;transform:rotate(45deg);border-radius:2px;box-shadow:-1px -1px 0 rgba(91,143,206,.28)}
+  .meetsh.up:before{top:auto;bottom:-6px;box-shadow:1px 1px 0 rgba(91,143,206,.28)}
+  .meetfr{display:block;width:100%;height:240px;border:0;border-radius:10px;background:#fff;transition:height .16s ease}
+  .meetsh .sx{position:absolute;top:2px;right:6px;z-index:2;font-size:22px;width:28px;height:28px;border-radius:50%;
+      display:flex;align-items:center;justify-content:center;padding:0;background:#fff}
+  .meetsh .sx:hover{background:#eef2f7}
+  @media(max-width:700px){ .meetsh{padding:4px 4px 6px} }
   .rmhw{position:relative;display:block}
   /* the day it was done, for the weekly ones. A daily habit just fades. */
   .rmhday{position:absolute;right:-2px;bottom:-3px;min-width:11px;height:11px;border-radius:999px;
@@ -947,13 +961,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.96</span>
+    <span class="pn-ver">v6.97</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.96</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.97</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -2878,16 +2892,64 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
       R.meetToday=((r&&r.data)||[]).filter(function(c){return !c.superseded;}).length;
     }catch(e){ R.meetToday=R.meetToday||0; }
   }
-  function meetOpen(){
+  function meetPlace(){
+    var sh=document.getElementById('meetsh'), a=R.meetAnchor; if(!sh) return;
+    var vw=window.innerWidth, vh=window.innerHeight, M=12;
+    var w=Math.min(1040, vw-2*M);
+    var r=a && a.isConnected ? a.getBoundingClientRect() : {left:vw/2-20,right:vw/2+20,top:80,bottom:100,width:40};
+    var left=Math.max(M, Math.min(r.left-14, vw-w-M));
+    var cx=Math.max(26, Math.min(w-26, r.left+r.width/2-left));
+    var below=vh-r.bottom-M-10, above=r.top-M-10;
+    var up = below<300 && above>below;          /* only if there is clearly more room above */
+    var maxH=Math.max(160,(up?above:below));
+    sh.style.width=w+'px'; sh.style.left=left+'px';
+    sh.style.setProperty('--cx',cx+'px'); sh.style.setProperty('--ox',cx+'px');
+    sh.classList.toggle('up',up);
+    if(up){ sh.style.top='auto'; sh.style.bottom=(vh-r.top+10)+'px'; sh.style.setProperty('--oy','100%'); }
+    else  { sh.style.bottom='auto'; sh.style.top=(r.bottom+10)+'px'; sh.style.setProperty('--oy','0'); }
+    sh.style.maxHeight=maxH+'px';
+    meetFit();
+  }
+  /* size the frame to the card inside it, so the pop-up has no empty space. When the Year View
+     opens inside the card (the + day pills), the frame grows to show it, then shrinks back. */
+  function meetFit(){
+    var fr=document.getElementById('meetfr'), sh=document.getElementById('meetsh'); if(!fr||!sh) return;
+    try{
+      var d=fr.contentDocument, card=d && d.getElementById('swCard'); if(!card) return;
+      var h=Math.ceil(card.getBoundingClientRect().bottom + (d.defaultView.pageYOffset||0)) + 2;
+      var ov=d.getElementById('swOvl');
+      if(ov && ov.classList.contains('on')){
+        var yv=ov.querySelector('.swyv'); if(yv) h=Math.max(h, Math.ceil(yv.getBoundingClientRect().height)+60);
+      }
+      var cap=(parseFloat(sh.style.maxHeight)||600)-14;
+      fr.style.height=Math.max(120,Math.min(h,cap))+'px';
+    }catch(e){}
+  }
+  function meetOpen(btn){
     if(document.getElementById('meetov')) return;
+    R.meetAnchor=btn||null;
     var ov=document.createElement('div'); ov.id='meetov'; ov.className='socov meetov';
-    ov.innerHTML='<div class="meetsh"><div class="sshd"><b>This week\u2019s meet ups</b>'+
-      '<button class="sx" id="meetx" title="Close">&times;</button></div>'+
+    ov.innerHTML='<div class="meetsh" id="meetsh"><button class="sx" id="meetx" title="Close">&times;</button>'+
       '<iframe id="meetfr" class="meetfr" title="This week\u2019s meet ups" src="weekly-review.html?embed=meetups"></iframe></div>';
     document.body.appendChild(ov);
     ov.onclick=function(e){ if(e.target===ov) meetClose(); };
     document.getElementById('meetx').onclick=meetClose;
+    meetPlace();
+    var fr=document.getElementById('meetfr');
+    fr.addEventListener('load',function(){
+      try{
+        var d=fr.contentDocument, card=d.getElementById('swCard');
+        if(window.ResizeObserver && card){
+          var ro=new ResizeObserver(meetFit); ro.observe(card);
+          var yv=d.querySelector('.swyv'); if(yv) ro.observe(yv);
+          var ovl=d.getElementById('swOvl');
+          if(ovl) new MutationObserver(meetFit).observe(ovl,{attributes:true,attributeFilter:['class']});
+        }
+      }catch(e){}
+      meetFit(); setTimeout(meetFit,400); setTimeout(meetFit,1500);
+    });
   }
+  window.addEventListener('resize',function(){ if(document.getElementById('meetov')) meetPlace(); });
   async function meetClose(){
     var ov=document.getElementById('meetov'); if(ov) ov.remove();
     await mhLoadMeet(); draw();
@@ -2898,10 +2960,10 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
   });
   document.addEventListener('keydown',function(e){ if(e.key==='Escape' && document.getElementById('meetov')) meetClose(); });
 
-  async function mhTap(id){
+  async function mhTap(id,btn){
     var x=null; R.mh.forEach(function(y){ if(String(y.id)===String(id)) x=y; });
     if(!x) return;
-    if(x.tile_rule==='meetups'){ meetOpen(); return; }   /* v6.87: grey or not, the cups open the meet ups */
+    if(x.tile_rule==='meetups'){ meetOpen(btn); return; }   /* v6.87: grey or not, the cups open the meet ups */
     if(mhDone(x)){ await mhUndo(x); return; }
     if(x.tile_rule==='birthday'){ R.mhOpen=x; R.mhStep='bday'; mhDraw(); return; }
     /* the human moment opens the one social log form rather than logging a bare
@@ -3443,7 +3505,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     });
     var vu=el.querySelector('.rundoVice'); if(vu) vu.onclick=undoVice;
     var sc=el.querySelector('[data-soc]'); if(sc) sc.onclick=socOpen;
-    el.querySelectorAll('[data-mh]').forEach(function(b){b.onclick=function(){mhTap(b.dataset.mh);};});
+    el.querySelectorAll('[data-mh]').forEach(function(b){b.onclick=function(){mhTap(b.dataset.mh,b);};});
 
     el.querySelectorAll('[data-molog]').forEach(function(b){b.onclick=function(){ moLog(b.dataset.molog); };});
     /* Weekly Items bindings */
