@@ -134,6 +134,10 @@
   .lib .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
   .lib .chips{display:flex;gap:7px;flex-wrap:wrap;margin:4px 0 10px}
   .lib .chip .n{opacity:.7;font-weight:700;margin-left:4px}
+  /* v1.6: one AI Workout bucket, type pills nested underneath */
+  .lib .subrow{flex-basis:100%;display:flex;gap:6px;flex-wrap:wrap;margin:0 0 2px 10px;padding-left:12px;border-left:3px solid #2f6f6a}
+  .lib .chip.sub{font-size:12px;padding:5px 12px}
+  .lib .chip.sub.on{background:#2f6f6a;border-color:#2f6f6a}
   .lib .chip.on .n{opacity:.9}
   .lib .count{font-size:12px;color:var(--muted);margin:2px 0 12px}
   .lib .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(285px,1fr));gap:12px}
@@ -172,14 +176,14 @@
 <div id="app" class="hidden">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.13</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
 
-  <div class="hdrow-wrap"><div class="hdrow"><div class="secbar"><h1>Cue Card Library</h1><span class="ver">v1.5</span><span class="date"></span></div><div class="libtabs" role="navigation" aria-label="Cue cards"><a href="habit-modules.html">Habit Cue Cards</a><a href="habit-modules.html#projects">Projects</a><a class="on" href="cue-card-library.html" aria-current="page">Cue Card Library</a></div><span class="hdspacer"></span></div></div>
+  <div class="hdrow-wrap"><div class="hdrow"><div class="secbar"><h1>Cue Card Library</h1><span class="ver">v1.6</span><span class="date"></span></div><div class="libtabs" role="navigation" aria-label="Cue cards"><a href="habit-modules.html">Habit Cue Cards</a><a href="habit-modules.html#projects">Projects</a><a class="on" href="cue-card-library.html" aria-current="page">Cue Card Library</a></div><span class="hdspacer"></span></div></div>
   <div class="lib">
     <div class="tools"><input id="q" placeholder="Search every star you have kept…" oninput="draw()" aria-label="Search the library"></div>
     <div class="chips" id="chips"></div>
     <div class="count" id="bcount"></div>
     <div class="grid" id="grid"></div>
   </div>
-  <div class="badge">Cue Card Library v1.5</div>
+  <div class="badge">Cue Card Library v1.6</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -212,8 +216,20 @@ const MODS=[
  ['ai-workout','AI Workout','rundown.html','#2f6f6a']
 ];
 const MOD={}; MODS.forEach(function(m){MOD[m[0]]={label:m[1],href:m[2],acc:m[3]};});
-let FAVS=[], HIDDEN=[], filter='all';
-(function(){try{var p=new URLSearchParams(location.search);if(p.get('module'))filter=p.get('module');else if(p.get('filter'))filter=p.get('filter');}catch(e){}})();
+let FAVS=[], HIDDEN=[], filter='all', sub='all';
+/* v1.6: everything AI is one bucket (rundown, shown as AI Workout). Older stars tagged ai-deck or ai-workout fold in here, and the type pills sit under it. */
+const AISUB=[['tip','Tips'],['platform','Platforms'],['workflow','Workflows'],['training','AI Training'],['insight','Insights'],['roundtable','Roundtables']];
+function aiType(f){
+  let t=String(f.content_type||'').toLowerCase();
+  if(t==='rundown'&&f.tags&&f.tags[0]) t=String(f.tags[0]).toLowerCase();
+  if(t==='quote') return 'insight';
+  if(t==='workflow of the day') return 'workflow';
+  if(t==='ai training') return 'training';
+  return t;
+}
+function aiLabel(k){ for(let i=0;i<AISUB.length;i++){ if(AISUB[i][0]===k) return AISUB[i][1]; } return k; }
+function foldAI(){ FAVS.forEach(function(f){ if(f.source_module==='ai-deck'||f.source_module==='ai-workout') f.source_module='rundown'; }); }
+(function(){try{var p=new URLSearchParams(location.search);if(p.get('module'))filter=p.get('module');else if(p.get('filter'))filter=p.get('filter');if(filter==='ai-deck'||filter==='ai-workout')filter='rundown';if(p.get('sub'))sub=p.get('sub');}catch(e){}})();
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2600);}
@@ -234,12 +250,13 @@ async function onLogin(session){try{await sb.realtime.setAuth(session.access_tok
 async function load(){
   const {data,error}=await sb.from('favorites').select('*').order('created_at',{ascending:false}).limit(3000);
   if(error){document.getElementById('grid').innerHTML='<div class="empty">Could not load your library: '+esc(error.message)+'</div>';return;}
-  FAVS=data||[];
+  FAVS=data||[]; foldAI();
   try{ const h=await sb.from('tile_hidden').select('*').order('hidden_at',{ascending:false}).limit(3000); HIDDEN=h.data||[]; }catch(e){ HIDDEN=[]; }
   if(filter!=='all'&&filter!=='doit'&&filter!=='hidden'&&!FAVS.some(function(f){return f.source_module===filter;}))filter='all';
   drawChips(); draw();
 }
-function setFilter(f){filter=f;try{var u=new URL(location.href);u.search='';if(f!=='all')u.searchParams.set(f==='doit'?'filter':'module',f);history.replaceState(null,'',u.toString());}catch(e){}drawChips();draw();}
+function setFilter(f){filter=f;sub='all';try{var u=new URL(location.href);u.search='';if(f!=='all')u.searchParams.set(f==='doit'?'filter':'module',f);history.replaceState(null,'',u.toString());}catch(e){}drawChips();draw();}
+function setSub(k){sub=k;try{var u=new URL(location.href);u.search='';u.searchParams.set('module','rundown');if(k!=='all')u.searchParams.set('sub',k);history.replaceState(null,'',u.toString());}catch(e){}drawChips();draw();}
 function drawChips(){
   const cnt={}; FAVS.forEach(function(f){cnt[f.source_module]=(cnt[f.source_module]||0)+1;});
   const doit=FAVS.filter(function(f){return f.do_this;}).length;
@@ -248,7 +265,17 @@ function drawChips(){
   h+='<button class="chip'+(filter==='hidden'?' on':'')+'" onclick="setFilter(\'hidden\')">Don&rsquo;t show again<span class="n">'+HIDDEN.length+'</span></button>';
   const seen={};
   MODS.forEach(function(m){ if(cnt[m[0]]){seen[m[0]]=1;h+='<button class="chip'+(filter===m[0]?' on':'')+'" onclick="setFilter(\''+m[0]+'\')">'+esc(m[1])+'<span class="n">'+cnt[m[0]]+'</span></button>';} });
+  let subHTML='';
+  if(cnt['rundown']&&filter==='rundown'){
+    const sc={}; FAVS.forEach(function(f){ if(f.source_module==='rundown'){ const k=aiType(f); sc[k]=(sc[k]||0)+1; } });
+    let sh='<div class="subrow"><button class="chip sub'+(sub==='all'?' on':'')+'" onclick="setSub(\'all\')">All AI Workout<span class="n">'+cnt['rundown']+'</span></button>';
+    AISUB.forEach(function(x){ if(sc[x[0]]){ sh+='<button class="chip sub'+(sub===x[0]?' on':'')+'" onclick="setSub(\''+x[0]+'\')">'+esc(x[1])+'<span class="n">'+sc[x[0]]+'</span></button>'; } });
+    Object.keys(sc).forEach(function(k){ if(!AISUB.some(function(x){return x[0]===k;})) sh+='<button class="chip sub'+(sub===k?' on':'')+'" onclick="setSub(\''+esc(k)+'\')">'+esc(k)+'<span class="n">'+sc[k]+'</span></button>'; });
+    sh+='</div>';
+    subHTML=sh;
+  }
   Object.keys(cnt).forEach(function(k){ if(!seen[k]) h+='<button class="chip'+(filter===k?' on':'')+'" onclick="setFilter(\''+esc(k)+'\')">'+esc(k)+'<span class="n">'+cnt[k]+'</span></button>'; });
+  h+=subHTML;
   document.getElementById('chips').innerHTML=h;
 }
 function hidLabel(mod){ const m=MOD[mod]; return m?m.label:mod; }
@@ -296,6 +323,7 @@ function draw(){
   const rows=FAVS.filter(function(f){
     if(filter==='doit'&&!f.do_this)return false;
     if(filter!=='all'&&filter!=='doit'&&f.source_module!==filter)return false;
+    if(filter==='rundown'&&sub!=='all'&&aiType(f)!==sub)return false;
     if(q&&((f.title||'')+' '+(f.body||'')+' '+(f.source||'')+' '+modOf(f).label).toLowerCase().indexOf(q)<0)return false;
     return true;
   });
@@ -304,7 +332,7 @@ function draw(){
     const m=modOf(f), u=safeUrl(f.url);
     return '<div class="pcard" style="--acc:'+m.acc+'">'+
       '<button class="star" title="Take out of favorites" aria-label="Take out of favorites" onclick="unstar(\''+f.id+'\')">&#9733;</button>'+
-      '<div class="ptag">'+esc(m.label)+(f.content_type&&f.content_type!=='card'?' · '+esc(f.content_type):'')+'</div>'+
+      '<div class="ptag">'+esc(m.label)+(f.source_module==='rundown'?' · '+esc(aiLabel(aiType(f))):(f.content_type&&f.content_type!=='card'?' · '+esc(f.content_type):''))+'</div>'+
       '<div class="ttl">'+esc(f.title||'(no title)')+'</div>'+
       (/^https?:\/\/\S+\.(webp|png|jpe?g)(\?.*)?$/i.test(f.url||'')?'<img class="thumb" loading="lazy" alt="'+esc(f.title||'')+'" src="'+esc(f.url)+'">':'')+
       (f.body?'<div class="bd">'+esc(f.body)+'</div>':'')+
