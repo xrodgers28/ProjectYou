@@ -10,7 +10,7 @@
 
   var st = document.createElement('style');
   st.textContent =
-    '#d-remote [data-h]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}' +
+    '#d-remote [data-h],#d-wheel [data-h],#d-rings [data-h],#d-rings-badges [data-h]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation}' +
     '#snzpop{position:fixed;z-index:9999;background:#0f1117;color:#fff;border:1px solid #3b3e48;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;box-shadow:0 10px 28px #000a;min-width:176px;max-width:240px;font-family:Arial,Helvetica,sans-serif}' +
     '#snzpop b{font-size:11px;color:#9aa3c0;font-weight:700;padding:2px 4px;line-height:1.3}' +
     '#snzpop button{font-family:inherit;font-size:13px;font-weight:700;border:1px solid #3b3e48;background:#1b1e27;color:#fff;border-radius:8px;padding:9px 10px;text-align:left;cursor:pointer}' +
@@ -60,7 +60,7 @@
   }
 
   function target(ev) {
-    var el = ev.target.closest && ev.target.closest('#d-remote [data-h]'); if (!el || !box.contains(el)) return null;
+    var el = ev.target.closest && ev.target.closest('#d-remote [data-h],#d-wheel [data-h],#d-rings [data-h],#d-rings-badges [data-h]'); if (!el || !box.contains(el)) return null;
     var h = find(el.getAttribute('data-h')); if (!h || h.lvl === 'weekly') return null;
     return { el: el, h: h };
   }

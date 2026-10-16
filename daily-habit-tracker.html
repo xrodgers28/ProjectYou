@@ -394,7 +394,7 @@ boot();
 </script>
 <div id="htip" role="tooltip"></div><div id="undobar" role="status" aria-live="polite"><span id="undotxt"></span><button id="undobtn" type="button">Undo</button></div>
 <script>
-/* Tap to complete, v1.6 (animations hook in here). One handler for all eight designs. Tap a habit: it flips on screen at once, then saves to Today's Tasks; a 4-second Undo bar can reverse it. */
+/* Tap to complete, v1.7 (Oct 15, 2026: names and badges tap too; Bandit Blocks follow at once). v1.6 (animations hook in here). One handler for all eight designs. Tap a habit: it flips on screen at once, then saves to Today's Tasks; a 4-second Undo bar can reverse it. */
 (function(){
   var box=document.getElementById('designs'),bar=document.getElementById('undobar'),txt=document.getElementById('undotxt'),btn=document.getElementById('undobtn');
   var inflight=0,barT=null,last=null,E=PYHT;
@@ -408,7 +408,7 @@ boot();
   async function apply(name,want,viaUndo){
     var s=window.STATE,h=find(name);if(!s||!h)return;
     var prev=h.done;
-    var go=function(){STATE=E.reflect(s,name,want);drawStat();drawDesigns();};
+    var go=function(){STATE=E.reflect(s,name,want);drawStat();drawDesigns();try{drawBandit();}catch(e){}};
     if(want&&!viaUndo&&window.PYHT_ANIM)await PYHT_ANIM.tap(name,go);else go();
     if(s.mode!=='live'){say('Sample view: '+name+' not saved',false);return;}
     inflight++;
@@ -424,8 +424,9 @@ boot();
     }finally{inflight--;if(!inflight)setTimeout(function(){redraw();},600);}
   }
   box.addEventListener('click',function(ev){
-    var el=ev.target.closest&&ev.target.closest('[data-h]');if(!el||!box.contains(el))return;
-    var n=el.getAttribute('data-h'),h=find(n);if(!h)return;
+    var el=ev.target.closest&&ev.target.closest('[data-h],[data-tap]');if(!el||!box.contains(el))return;
+    var n=el.getAttribute('data-h')||el.getAttribute('data-tap'),h=find(n);if(!h)return;
+    if(!el.hasAttribute('data-h')&&h.snz)return; /* a snoozed habit is woken from its key, never ticked from its label */
     if(h.lvl==='weekly'&&h.done&&!h.doneToday){say(n+' was already done this week'+(h.doneOn?' ('+P.fmtDay(h.doneOn)+')':'')+', nothing to undo today',false);return;}
     apply(n,!h.done,false);
   });

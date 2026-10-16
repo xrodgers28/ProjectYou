@@ -9,7 +9,7 @@
 
    A design is a small plug-in: PYHT.register({id, name, render(state, size, PYHT) -> html string}).
    size is 'card' (cue card page) or 'phone' (one-tap iPhone view).
-   v1.7 (Oct 14, 2026): every design except the Habit Bandit Remote is drawn without snoozed habits (E.withoutSnoozed). v1.6 (Oct 13, 2026): snooze. getState marks h.snz, snoozed habits leave the counts, E.setSnooze and E.reflectSnooze added. v1.5 (Oct 9, 2026): E.icon(h, true) prefers a camera-free small picture (ICONS[icon_key + '_sm']) when one exists; only Train platform has one today. Used by Stack Rings and the Two-Ring Wheel inner ring. v1.4 (Oct 6, 2026): E.art(h, true) prefers the latest Stack Builder icon (worksheet_rows.icon through wsicons-v2.js). v1.3 (Oct 5, 2026): four levels. core, secondary, bonus, weekly. Bonus counts like secondary. Weekly habits are NOT in state.habits (so no design counts them in today's lights); they are in state.weekly, done if ticked any day this week (Monday to Sunday, 2am days), counts.wt and counts.wd.
+   v1.8 (Oct 15, 2026): the Wheel and both Stack Rings also draw snoozed habits (greyed, Zzz); counts still leave them out. v1.7 (Oct 14, 2026): every design except the Habit Bandit Remote is drawn without snoozed habits (E.withoutSnoozed). v1.6 (Oct 13, 2026): snooze. getState marks h.snz, snoozed habits leave the counts, E.setSnooze and E.reflectSnooze added. v1.5 (Oct 9, 2026): E.icon(h, true) prefers a camera-free small picture (ICONS[icon_key + '_sm']) when one exists; only Train platform has one today. Used by Stack Rings and the Two-Ring Wheel inner ring. v1.4 (Oct 6, 2026): E.art(h, true) prefers the latest Stack Builder icon (worksheet_rows.icon through wsicons-v2.js). v1.3 (Oct 5, 2026): four levels. core, secondary, bonus, weekly. Bonus counts like secondary. Weekly habits are NOT in state.habits (so no design counts them in today's lights); they are in state.weekly, done if ticked any day this week (Monday to Sunday, 2am days), counts.wt and counts.wd.
    state.habits[i] = {lvl, n, ic, sec, core(1/0), st(stack index), stack, pos, done, art, color, pastel, bg, secName}. */
 (function () {
   var TZ = 'America/New_York';
@@ -178,7 +178,7 @@
   E.render = function (state, id, size) {
     var d = E._designs[id];
     if (!d) return '';
-    try { return d.render(id === 'remote' ? state : E.withoutSnoozed(state), size, E); }
+    try { return d.render(({ remote: 1, wheel: 1, rings: 1, 'rings-badges': 1 })[id] ? state : E.withoutSnoozed(state), size, E); }
     catch (e) { return '<div style="padding:12px;color:#c0453b;font:12px Arial">This design could not draw: ' + E.esc(e.message) + '</div>'; }
   };
   E.esc = function (s) {

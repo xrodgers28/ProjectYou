@@ -1,4 +1,4 @@
-/* Design E: Stack Rings (design file ref 8). v1.4 Oct 9, 2026 (icons ask for the small picture when one exists). v1.3 Oct 5, 2026 (four levels shown without touching the wheel: E = outer rim, thick for Core, thin for Secondary, dotted for Bonus; I = letter badges C, S, B. Rings stay one per stack. Weekly habits sit in a small This week strip, never counted in a ring. A short Features note sits at the bottom of each card.)
+/* Design E: Stack Rings (design file ref 8). v1.5 Oct 15, 2026 (Anytime ring now shown; snoozed habits drawn greyed with Zz).  v1.4 Oct 9, 2026 (icons ask for the small picture when one exists). v1.3 Oct 5, 2026 (four levels shown without touching the wheel: E = outer rim, thick for Core, thin for Secondary, dotted for Bonus; I = letter badges C, S, B. Rings stay one per stack. Weekly habits sit in a small This week strip, never counted in a ring. A short Features note sits at the bottom of each card.)
    Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
 (function () {
   function pt(cx, cy, r, deg) { var t = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; }
@@ -20,14 +20,14 @@
     PYHT.register({
       id: id,
       render: function (st, size, P) {
-        var W = size === 'phone' ? 112 : 150, hide = P.setting('ring_hide_stacks', [4]);
+        var W = size === 'phone' ? 112 : 150, hide = P.setting('ring_hide_stacks', []);
         var list = st.stacks.filter(function (s) { return hide.indexOf(s.idx) < 0; })
           .sort(function (a, b) { return (b.total - a.total) || (a.idx - b.idx); });
         var h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:6px;font-family:Arial,Helvetica,sans-serif">';
         list.forEach(function (s) {
-          var n = s.total, d = s.done, full = d === n, svg = '';
+          var n = s.habits.length, tot = s.total, d = s.done, full = tot > 0 && d === tot, svg = '';
           s.habits.forEach(function (x, i) {
-            var gap = n > 1 ? 3 : 0, a1 = i * 360 / n + gap, a2 = (i + 1) * 360 / n - gap, lit = !x.done, am = (a1 + a2) / 2, lv = x.lvl === 'core' ? 'core' : (x.lvl === 'bonus' ? 'bonus' : 'secondary'), extra = '';
+            var gap = n > 1 ? 3 : 0, a1 = i * 360 / n + gap, a2 = (i + 1) * 360 / n - gap, lit = !x.done && !x.snz, am = (a1 + a2) / 2, lv = x.lvl === 'core' ? 'core' : (x.lvl === 'bonus' ? 'bonus' : 'secondary'), extra = '';
             if (n === 1) { a1 = 0; a2 = 359.9; am = 180; }
             if (mode === 'rim') {
               var c = lit ? x.color : '#cfd5de';
@@ -41,13 +41,13 @@
             }
             svg += '<g data-h="' + P.esc(x.n) + '"><path d="' + arc(60, 60, 34, 52, a1, a2) + '" fill="' + (lit ? x.pastel : '#eef1f6') + '"/>';
             var p = pt(60, 60, 43, am);
-            svg += '<image href="' + P.icon(x, true) + '" x="' + (p[0] - 7) + '" y="' + (p[1] - 7) + '" width="14" height="14" ' + (lit ? '' : 'style="filter:grayscale(1);opacity:.38"') + '/>' + extra + '</g>';
+            svg += '<image href="' + P.icon(x, true) + '" x="' + (p[0] - 7) + '" y="' + (p[1] - 7) + '" width="14" height="14" ' + (lit ? '' : 'style="filter:grayscale(1);opacity:.38"') + '/>' + (x.snz ? '<text x="' + f(p[0] + 4) + '" y="' + f(p[1] - 3) + '" font-size="7" font-weight="800" fill="#3b63d1" data-zz="1">Zz</text>' : '') + extra + '</g>';
           });
-          svg += '<text x="60" y="68" text-anchor="middle" font-size="22" font-weight="300" fill="' + (full ? '#c68a2e' : '#3f6f8f') + '">' + d + '/' + n + '</text>';
+          svg += '<text x="60" y="68" text-anchor="middle" font-size="22" font-weight="300" fill="' + (full ? '#c68a2e' : '#3f6f8f') + '">' + d + '/' + tot + '</text>';
           h += '<div style="text-align:center;border:1px solid ' + (full ? '#c68a2e' : '#e3e7ee') + ';border-radius:12px;padding:8px 4px;background:#fff;' +
             (full ? 'box-shadow:0 0 0 3px rgba(198,138,46,.18)' : '') + '"><svg viewBox="-6 -6 132 132" width="' + W + '" style="max-width:100%">' + svg + '</svg>' +
             '<div style="font-weight:800;font-size:12.5px;color:#1f2a44">' + P.esc(s.long) + '</div>' +
-            '<div style="font-size:11px;color:#5b6472">' + (full ? 'Complete' : (n - d) + ' to go') + '</div></div>';
+            '<div style="font-size:11px;color:#5b6472">' + (full ? 'Complete' : (tot - d) + ' to go') + '</div></div>';
         });
         var wk = st.weekly || [];
         if (wk.length) {

@@ -3,7 +3,7 @@
    Tap a habit: a short animation (about one second) on each design below.
    Last habit of the day: a bigger finish, once a day (every time in the Sample views so it can be previewed).
    Designs with animations: D Two-Ring Wheel, H Remote Lights, F Icon Grid, C Color Blocks, G Steel Plate Tubes, I Letter Badges.
-   E, A and B have none yet. The Animations On/Off switch on the page turns all of this off. */
+   E now matches D (v1.1). A and B have none yet. The Animations On/Off switch on the page turns all of this off. */
 (function () {
   'use strict';
   var KEY = 'pyht-anim', running = 0, layer = null;
@@ -121,7 +121,7 @@
       await A(el, [{ transform: 'scale(1)', filter: 'brightness(1)' }, { transform: 'scale(1.22)', filter: 'brightness(1.2) drop-shadow(0 0 7px ' + c + ')' }], { duration: 280, fill: 'forwards' });
     },
     post: function (nel, rt) {
-      var t = rt.mount.querySelector('svg text'); if (t) tick(t);
+      var t = rt.mount.querySelector('svg text:not([data-zz])'); if (t) tick(t);
       return A(nel, [{ transform: 'scale(1.22)', opacity: .5 }, { transform: 'scale(1)', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.3,1.6,.5,1)' });
     },
     done: async function (rt) {
@@ -130,7 +130,7 @@
       burst(b.cx, b.cy, 34, GOLD, 120, 1400);
       segs.forEach(function (el, i) { A(el, [{ filter: 'brightness(1)' }, { filter: 'sepia(1) saturate(4) brightness(1.15)' }, { filter: 'brightness(1)' }], { duration: 700, delay: i * 45 }); });
       await Promise.all(segs.map(function (el) { return A(el, [{ transform: 'rotate(0deg)' }, { transform: 'rotate(360deg)' }], { pivot: '160px 160px', duration: 1500, easing: 'cubic-bezier(.65,0,.25,1)' }); }));
-      await pop(rt.mount.querySelector('svg text'), 1.3);
+      await pop(rt.mount.querySelector('svg text:not([data-zz])'), 1.3);
     }
   };
 
@@ -211,6 +211,26 @@
       Array.prototype.slice.call(rt.mount.querySelectorAll('[data-flap]')).forEach(function (f, i) { ps.push(A(f, [{ transform: 'rotate(0deg)' }, { transform: 'rotate(-14deg)' }, { transform: 'rotate(10deg)' }, { transform: 'rotate(0deg)' }], { duration: 700, delay: i * 120 })); });
       var b = box(first);
       ps.push(burst(b.cx, b.y + b.h * .5, 26, GOLD, 120, 1300));
+      await Promise.all(ps);
+    }
+  };
+
+  /* E Stack Rings: Outer Rim (v1.1, Oct 15, 2026): same glow-then-settle as the Two-Ring Wheel, so a tap looks the same everywhere. Its own ring count ticks; a finished ring flashes gold. */
+  SPEC.rings = {
+    pre: SPEC.wheel.pre,
+    post: function (nel) {
+      var svg = nel.ownerSVGElement, t = svg && svg.querySelector('text:not([data-zz])'); if (t) tick(t);
+      return A(nel, [{ transform: 'scale(1.22)', opacity: .5 }, { transform: 'scale(1)', opacity: 1 }], { duration: 420, easing: 'cubic-bezier(.3,1.6,.5,1)' });
+    },
+    done: async function (rt) {
+      var ps = [];
+      fullCards(rt).forEach(function (card) {
+        var b = box(card);
+        Array.prototype.slice.call(card.querySelectorAll('[data-h]')).forEach(function (g, i) {
+          ps.push(A(g, [{ filter: 'brightness(1)' }, { filter: 'sepia(1) saturate(4) brightness(1.2)' }, { filter: 'brightness(1)' }], { duration: 520, delay: i * 90 }));
+        });
+        ps.push(burst(b.cx, b.y + b.h * .45, 18, GOLD, 70, 1100));
+      });
       await Promise.all(ps);
     }
   };

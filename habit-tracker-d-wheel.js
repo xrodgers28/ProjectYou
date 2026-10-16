@@ -1,4 +1,4 @@
-/* Design D: Two-Ring Wheel (design file ref 2). v1.2 Oct 9, 2026 (inner ring asks for the small picture when one exists). v1.1 Oct 3, 2026. Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
+/* Design D: Two-Ring Wheel (design file ref 2). v1.3 Oct 15, 2026 (snoozed habits drawn greyed with Zz; counts leave them out).  v1.2 Oct 9, 2026 (inner ring asks for the small picture when one exists). v1.1 Oct 3, 2026. Animation-ready: each habit piece is tagged data-h. Draws only; every fact comes from the engine state. */
 (function () {
   var CX = 160, CY = 160;
   function pt(cx, cy, r, deg) { var t = (deg - 90) * Math.PI / 180; return [cx + r * Math.cos(t), cy + r * Math.sin(t)]; }
@@ -20,10 +20,10 @@
       [[core, 98, 132, 22], [sec, 70, 90, 16]].forEach(function (q) {
         var list = q[0], n = list.length;
         list.forEach(function (h, i) {
-          var a1 = i * 360 / n + 1, a2 = (i + 1) * 360 / n - 1, lit = !h.done;
+          var a1 = i * 360 / n + 1, a2 = (i + 1) * 360 / n - 1, lit = !h.done && !h.snz;
           s += '<g data-h="' + P.esc(h.n) + '"><path d="' + arc(CX, CY, q[1], q[2], a1, a2) + '" fill="' + (lit ? h.pastel : '#eef1f6') + '" stroke="#fff" stroke-width="1"/>';
           var p = pt(CX, CY, (q[1] + q[2]) / 2, (a1 + a2) / 2);
-          s += ic(h, p[0], p[1], q[3], lit) + '</g>';
+          s += ic(h, p[0], p[1], q[3], lit) + (h.snz ? '<text x="' + (p[0] + q[3] * .3).toFixed(1) + '" y="' + (p[1] - q[3] * .15).toFixed(1) + '" font-size="7.5" font-weight="800" fill="#3b63d1" data-zz="1">Zz</text>' : '') + '</g>';
         });
       });
       var total = c.ct + c.st, done = c.cd + c.sd, s1 = 28, s2 = 28, lw = dw(done) * s1, rw = dw(total) * s2, gap = 14,
