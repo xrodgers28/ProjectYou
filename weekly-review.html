@@ -687,6 +687,26 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
   color:var(--accent);cursor:pointer;border-radius:999px;padding:3px 10px;min-height:22px}
 .swadd:hover{border-style:solid}
 .swaddbox{display:none;gap:5px;align-items:center;flex:1;min-width:0}
+/* v5.94, Oct 15, 2026, Scott: cultural events sit in the same lanes as names. Look B: a light purple chip with a ticket and who is going. */
+.swp .tix{display:inline-flex;align-items:center;color:#8a5a9c;flex:none}
+.swp.evt{background:#f4ecf7;border-color:#cfb6dc}
+.swp.evt.conf{background:#efe3f5;border-color:#b997cb;font-weight:700}
+.swp.seen.evt{background:#f7f0d8;border-color:#ddc98a}
+.swp.seen .tix{color:#8a6d1f}
+.swp .avs{display:inline-flex;margin-left:1px}
+.swp .avs .av{width:15px;height:15px;border-radius:50%;color:#fff;font-size:8px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;border:1.5px solid #f4ecf7;margin-left:-3px}
+.swp .avs .av:first-child{margin-left:0}
+.swaddbox.wrapit{flex-wrap:wrap}
+.swaddbox .seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;flex:none}
+.swaddbox .seg button{font-family:inherit;font-size:10.5px;font-weight:700;border:0;background:#fff;color:var(--muted);padding:3px 9px;cursor:pointer;min-height:24px}
+.swaddbox .seg button.on{background:var(--accent);color:#fff}
+.swaddbox.evmode .seg button.on{background:#8a5a9c}
+.swaddbox .kindrow{display:none;flex-wrap:wrap;gap:4px;flex-basis:100%;margin-top:3px}
+.swaddbox.evmode .kindrow{display:flex}
+.swaddbox .kindrow button{font-family:inherit;font-size:10.5px;border:1px solid #d8c2e0;background:#fff;color:#6a3f7c;border-radius:999px;padding:2px 8px;cursor:pointer}
+.swaddbox .kindrow button.on{background:#8a5a9c;border-color:#8a5a9c;color:#fff}
+.swaddbox .evwith{display:none}
+.swaddbox.evmode .evwith{display:block;flex-basis:100%}
 .swaddbox.open{display:flex}
 .swaddbox input{font-family:inherit;font-size:11.5px;padding:3px 9px;border:1px solid var(--line);
   border-radius:999px;color:var(--ink);background:#fff;flex:1;min-width:0;min-height:24px}
@@ -1106,7 +1126,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
    Week. The meet up stays in his log. It is the same x the grey names have, so "bring them back" undoes it. */
 /* v5.92, Oct 13, 2026, Scott: the "Birthday next week" line above This week's meet ups is gone. A birthday now shows as a light blue strip with the cake at the bottom of the box for its week (This Week, or Who's next week). No label. */
 /* v5.93, Oct 14, 2026, Scott: the birthday strip stacked into three lines because an older style had the same name. Renamed so it stays on one line. */
-const VERSION='v5.93';
+const VERSION='v5.94';
 /* v5.80, Oct 11, 2026, Scott: Sleep Synopsis layout matched to his screenshot, rollover quote moved to the right of the week chart, full-width shade bar */
 (function(){ /* v5.55: window shade on the meet ups card, remembered per browser */
   function wire(){
@@ -1343,7 +1363,7 @@ async function load(){
          names in one week and found empty lanes the next, because a row was
          filed under the week it was made in. A plan to see someone ends when he
          sees them or waves them away, never because the calendar turned over. */
-      q('social_bullpen','week_start,kind,person,state,day_tag,updated_at',r=>r.neq('kind','never')),
+      q('social_bullpen','week_start,kind,person,state,day_tag,updated_at,item_type,ev_kind,ev_with,ev_logged_on',r=>r.neq('kind','never')),
       /* v3.5: this year in full, for the sweep and the beam. Small, about 50 rows. */
       q('connections','id,person,kind,place,happened_on,social_group,direction,superseded',
         r=>r.gte('happened_on','2026-01-01').order('happened_on',{ascending:false})),
@@ -2476,7 +2496,7 @@ function swCloseGrids(box){
 function swRenderCards(){
   const box=el('swCards'); if(!box)return;
   box.innerHTML=SW.cards.map(swCardHtml).join('');
-  el('swCount').textContent=SW.cards.filter(c=>!c.wife).length+' people this week';
+  el('swCount').textContent=swCountText();
   box.querySelectorAll('.swc').forEach(card=>{
     const i=+card.dataset.i, c=SW.cards[i];
     const inp=card.querySelector('input');
@@ -2669,6 +2689,11 @@ function swSeenSince(person,since){
    it did not happen, which is why it asks rather than deciding. */
 function swStale(r){
   const w=swWs(r);
+  /* v5.94: an event is stale when its week has gone and no cultural moment was logged against it */
+  if(r&&r.item_type==='event'){
+    if(r.kind==='week'&&w&&w===addDays(D.ws,-7))return false;
+    return !!(r.state==='confirmed'&&w&&w<D.ws&&!r.ev_logged_on);
+  }
   if(r&&r.kind==='week'&&w&&w===addDays(D.ws,-7))return false; /* v5.46: carried over into this week, still to come */
   return !!(r&&r.state==='confirmed'&&w&&w<D.ws&&!swSeenSince(r.person,w));
 }
@@ -2676,7 +2701,97 @@ function swSlotState(kind,person){
   const r=swSlot(person);
   return (r&&swEffKind(r)===kind)?r.state:'idea';
 }
+/* ---------- v5.94, Oct 15, 2026, Scott: cultural events in This week's meet ups ----------
+   An event is a row in the same saved list as a name (item_type 'event'), so it drags, takes a day tag and hides
+   exactly like a name. Tapping a Confirmed event in This Week opens the Log Safari Moment form set to Cultural
+   Moment (safari-log.js), which ticks Cultural Moments. Only things that happened are counted: the chip turns
+   yellow once a log is saved against it. */
+const SWEV_KINDS=['Museum','Gallery','Concert','Live show','Festival','Film','Talk','Other'];
+const SWEV_FORM={'Museum':'Museum','Gallery':'Gallery','Concert':'Concert','Live show':'Show','Festival':'Festival','Other':'Other'};
+const SWEV_KNOWN_WITH=['\u00c5sa','Family','Friend','Colleague'];
+const SWEV_TICKET='<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M1.5 4.5h13v2.2a1.4 1.4 0 0 0 0 2.6v2.2h-13V9.3a1.4 1.4 0 0 0 0-2.6z" fill="currentColor"/></svg>';
+const SWEV_AVC=['#4e7a96','#7a6aa0','#3f8a6e','#b07a3c','#9a5a63','#5f7f4a'];
+function swIsEvent(person){
+  const r=(D.slots||[]).filter(x=>x.person===person)[0];
+  return !!(r&&r.item_type==='event');
+}
+function swEvWith(w){ return String(w||'').split(',').map(x=>x.trim()).filter(Boolean); }
+function swEvAvatars(w){
+  const list=swEvWith(w); if(!list.length)return '';
+  return '<span class="avs">'+list.map(n=>{
+    let h=0; for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))|0;
+    return '<span class="av" title="'+esc(n)+'" style="background:'+SWEV_AVC[Math.abs(h)%SWEV_AVC.length]+'">'+esc(n.charAt(0).toUpperCase())+'</span>';
+  }).join('')+'</span>';
+}
+function swEvChipHtml(p,kind){
+  const st=swSlotState(kind,p.person);
+  if(p.seen){
+    const curWk=!(D.ws<addDays(defaultWeekEnd(),-6));
+    return '<span class="swp seen evt" data-n="'+esc(p.person)+'" title="You logged this on '+esc(fmt(p.seen))+'">'+
+      '<span class="tix">'+SWEV_TICKET+'</span>'+esc(p.person)+' <span class="tk">\u2713</span>'+
+      (curWk?'<button class="swx" type="button" title="Hide from This Week (the cultural moment stays in your log)" data-swx="'+esc(p.person)+'">&times;</button>':'')+
+      '</span>';
+  }
+  const showDay=((kind==='now'||kind==='week')&&st==='confirmed')||st==='asked';
+  return '<span class="swp evt'+(st==='confirmed'?' conf':'')+(p.stale?' stale':'')+
+    '" data-k="'+kind+'" data-n="'+esc(p.person)+'"'+
+    (p.stale?' title="Confirmed for the week of '+esc(fmt(p.ws))+', nothing logged yet"':((kind==='now'&&st==='confirmed')?' title="Tap to log that you went"':''))+'>'+
+    '<span class="tix">'+SWEV_TICKET+'</span>'+esc(p.person)+
+    (p.stale?' <span class="qm">?</span>':'')+
+    swEvAvatars(p.ev_with)+
+    ' <span class="gp">'+esc((p.ev_kind||'event').toLowerCase())+'</span>'+
+    (showDay?swDayTagHtml(p.person,p.day_tag):'')+
+    '<button class="swx" type="button" title="Not this week" data-swx="'+esc(p.person)+'">&times;</button>'+
+    '</span>';
+}
+async function swPlaceEvent(name,kind,state,evKind,evWith){
+  const old=(D.slots||[]).filter(x=>x.person===name)[0]||{};
+  const was=old.item_type==='event'?old:null;
+  if(was&&was.kind===kind&&was.state===state&&was.week_start===D.ws&&evKind===undefined&&evWith===undefined)return;
+  const row={week_start:D.ws,kind:kind,person:name,state:state,item_type:'event',
+    ev_kind:evKind!==undefined?evKind:(old.ev_kind||null),
+    ev_with:evWith!==undefined?evWith:(old.ev_with||null),
+    ev_logged_on:old.ev_logged_on||null,day_tag:old.day_tag||null,
+    updated_at:new Date().toISOString()};
+  D.slots=(D.slots||[]).filter(x=>x.person!==name); D.slots.push(row);
+  D.slotsRaw=(D.slotsRaw||[]).filter(x=>x.person!==name).concat([row]);
+  swRenderPens(); swSay('Saving...');
+  await sb.from('social_bullpen').delete().eq('person',name).neq('kind','never').neq('week_start',D.ws);
+  if(was&&was.kind!==kind){
+    await sb.from('social_bullpen').delete().eq('week_start',D.ws).eq('kind',was.kind).eq('person',name);
+  }
+  const {error}=await sb.from('social_bullpen')
+    .upsert({week_start:D.ws,kind:kind,person:name,state:state,item_type:'event',ev_kind:row.ev_kind,ev_with:row.ev_with,
+             ev_logged_on:row.ev_logged_on,day_tag:row.day_tag,updated_at:row.updated_at},
+            {onConflict:'week_start,kind,person'});
+  swSay(error?('Could not save: '+error.message):'Saved');
+}
+function swLogEvent(name){
+  const r=(D.slots||[]).filter(x=>x.person===name)[0]||{};
+  if(!window.PYSafari){ swSay('The cultural moment form did not load. Reload the page and try again.'); return; }
+  const withs=swEvWith(r.ev_with).filter(w=>SWEV_KNOWN_WITH.indexOf(w)>-1);
+  PYSafari.open({sb:sb,which:'Cultural',place:name,category:SWEV_FORM[r.ev_kind]||'',withs:withs,
+    onSaved:function(res){ swEventLogged(name,(res&&res.date)||null); }});
+}
+async function swEventLogged(name,date){
+  const r=(D.slots||[]).filter(x=>x.person===name)[0];
+  if(r&&date){ r.ev_logged_on=date; }
+  swRenderPens(); swSay('Saving...');
+  if(date){
+    const {error}=await sb.from('social_bullpen').update({ev_logged_on:date,updated_at:new Date().toISOString()})
+      .eq('person',name).neq('kind','never');
+    swSay(error?('Could not save: '+error.message):'Logged');
+  }
+  try{ swReloadConns(); }catch(e){}
+}
+function swCountText(){
+  const n=SW.cards.filter(c=>!c.wife).length;
+  /* only events that already happened count, the same as people: a cultural moment logged this week */
+  const e=(D.slots||[]).filter(x=>x.item_type==='event'&&x.state!=='hidden'&&x.ev_logged_on&&x.ev_logged_on>=D.ws&&x.ev_logged_on<=D.we).length;
+  return n+' people'+(e?', '+e+(e===1?' event':' events'):'')+' this week';
+}
 async function swPlace(person,kind,state){
+  if(swIsEvent(person))return swPlaceEvent(person,kind,state);
   /* v5.53: if this name is already known under another spelling (his log first, then the lanes), use that spelling,
      so a new variant can never sit next to the old one. */
   try{
@@ -2748,6 +2863,7 @@ async function swReloadConns(){
   try{ if(window.parent!==window) window.parent.postMessage({py:'meetups-changed'},location.origin); }catch(e){}
 }
 function swLogDone(person){
+  if(swIsEvent(person)){ swLogEvent(person); return; }
   if(window.PYSocial){
     PYSocial.open({sb:sb,auto:false,title:'with '+person,onSaved:function(){swReloadConns();}});
   }else{
@@ -2786,6 +2902,7 @@ async function swSetDay(person,day){
   swSay(error?('Could not save: '+error.message):'Saved');
 }
 function swChipHtml(p,kind){
+  if(p.isEvent)return swEvChipHtml(p,kind);
   const g=swGroupOf(p.person), st=swSlotState(kind,p.person);
   /* v5.0: a chip can now carry two extra marks. A tick means he logged the
      meet-up this week, so the name is on its way out. Amber means it was
@@ -2909,6 +3026,16 @@ function swWireLabels(box){
     });
   });
 }
+/* v5.94: one add box for both. The Name or Event switch decides what gets added; Event shows the kind pills. */
+function swAddBoxHtml(kind,ph){
+  return '<span class="swaddbox wrapit" data-swaddbox="'+kind+'" data-swph="'+esc(ph)+'">'+
+    '<span class="seg"><button type="button" class="on" data-swmode="person">Name</button><button type="button" data-swmode="event">Event</button></span>'+
+    '<input type="text" list="swNames" placeholder="'+esc(ph)+'" data-swaddin="'+kind+'">'+
+    '<button class="swaddgo" type="button" data-swaddgo="'+kind+'">Add</button>'+
+    '<span class="kindrow">'+SWEV_KINDS.map(k=>'<button type="button" data-swevkind="'+esc(k)+'">'+esc(k)+'</button>').join('')+'</span>'+
+    '<input type="text" class="evwith" placeholder="Who is going? (optional, commas between names)" data-swevwith="'+kind+'">'+
+  '</span>';
+}
 function swPenBox(titleKey,fallbackTitle,kind,list){
   /* v5.24: a name he's already seen this week keeps its spot in Confirmed
      (the checkmark chip in swChipHtml), but sorts below everyone still
@@ -2925,11 +3052,8 @@ function swPenBox(titleKey,fallbackTitle,kind,list){
     '<div class="swhrow">'+(rows.length?rows.map(p=>swChipHtml(p,kind)).join(''):'<span class="swnone">'+empty+'</span>')+'</div></div>';
   return '<div class="swpen" data-swkind="'+kind+'">'+
     '<div class="swpenhd"><h4>'+swEditableHtml(titleKey,fallbackTitle)+'</h4><span class="sp"></span>'+
-      '<button class="swadd" type="button" data-swaddbtn="'+kind+'">+ Add a name</button>'+
-      '<span class="swaddbox" data-swaddbox="'+kind+'">'+
-        '<input type="text" list="swNames" placeholder="Who are you seeing?" data-swaddin="'+kind+'">'+
-        '<button class="swaddgo" type="button" data-swaddgo="'+kind+'">Add</button>'+
-      '</span>'+
+      '<button class="swadd" type="button" data-swaddbtn="'+kind+'">+ Add</button>'+
+      swAddBoxHtml(kind,'Who are you seeing?')+
     '</div>'+
     '<div class="swhalves">'+
       lane('l','confirmed','lbl_confirmed','Confirmed',L,'drop a name here')+
@@ -2940,11 +3064,8 @@ function swDugoutBox(list){
   const rows=list.map(p=>swChipHtml(p,'dugout'));
   return '<div class="swpen swdugout" data-swkind="dugout">'+
     '<div class="swpenhd"><h4>'+swEditableHtml('dugout_title','In the Dugout')+'</h4><span class="sp"></span>'+
-      '<button class="swadd" type="button" data-swaddbtn="dugout">+ Add a name</button>'+
-      '<span class="swaddbox" data-swaddbox="dugout">'+
-        '<input type="text" list="swNames" placeholder="Who are you thinking about?" data-swaddin="dugout">'+
-        '<button class="swaddgo" type="button" data-swaddgo="dugout">Add</button>'+
-      '</span>'+
+      '<button class="swadd" type="button" data-swaddbtn="dugout">+ Add</button>'+
+      swAddBoxHtml('dugout','Who are you thinking about?')+
     '</div>'+
     '<div class="swhalves swduglist">'+
       '<div class="swhalf full" data-k="dugout" data-state="idea"><div class="swhl">'+swEditableHtml('lbl_dugout_sub','Not tied to a week yet')+'</div>'+
@@ -2962,7 +3083,7 @@ function swRenderPens(){
     if(hidden.indexOf(x.person)>=0)return;
     /* Q5: seen in an earlier week means the plan is finished and the name is
        gone. Seen this week means it shows with a tick until the week turns. */
-    const seen=swSeenSince(x.person,swWs(x));
+    const seen=(x.item_type==='event')?(x.ev_logged_on||null):swSeenSince(x.person,swWs(x));
     if(seen&&seen<D.ws)return;
     x.seen=seen||null;
     placed[x.person]=x;
@@ -3007,7 +3128,9 @@ function swRenderPens(){
   Object.keys(placed).forEach(n=>{
     if(used[n])return;
     const pl=placed[n];
-    const row={person:n,days_since:swDaysSince(n),seen:pl.seen,stale:swStale(pl),ws:swWs(pl),day_tag:pl.day_tag||null};
+    const row=(pl.item_type==='event')
+      ?{person:n,isEvent:true,ev_kind:pl.ev_kind||null,ev_with:pl.ev_with||null,days_since:null,seen:pl.seen,stale:swStale(pl),ws:swWs(pl),day_tag:pl.day_tag||null}
+      :{person:n,days_since:swDaysSince(n),seen:pl.seen,stale:swStale(pl),ws:swWs(pl),day_tag:pl.day_tag||null};
     const doneNow=!!(pl.seen&&pl.seen>=D.ws);
     if(doneNow)row.done=true;
     bucket(doneNow?'now':swEffKind(pl)).push(row);
@@ -3037,7 +3160,7 @@ function swRenderPens(){
   const staleHtml=stale.length?'<div class="swask">'+stale.map(r=>
     '<div class="swaskr"><span><b>'+esc(r.person)+'</b> was confirmed for the week of '+
     esc(fmt(swWs(r)))+' and nothing is logged. Did it happen?</span>'+
-    '<a class="swaskb go" href="connections.html">Yes, log it</a>'+
+    (r.item_type==='event'?'<button class="swaskb go" type="button" data-swevlog="'+esc(r.person)+'">Yes, log it</button>':'<a class="swaskb go" href="connections.html">Yes, log it</a>')+
     '<button class="swaskb" type="button" data-swnot="'+esc(r.person)+'">Not yet</button></div>').join('')+
     '</div>':'';
   box.innerHTML='<datalist id="swNames">'+swKnownNames().map(n=>'<option value="'+esc(n)+'">').join('')+'</datalist>'+
@@ -3059,6 +3182,7 @@ function swRenderPens(){
   swWireLabels(box);
   swPlaceBirthdays();
   if(titleEl)swWireLabels(titleEl.parentElement);
+  try{ const ce=el('swCount'); if(ce&&SW&&SW.cards&&SW.cards.length)ce.textContent=swCountText(); }catch(e){}
 }
 /* the x, the add field, and the undo. Kept apart from the drag handler so a
    tap on the x never reads as the start of a drag. */
@@ -3088,6 +3212,16 @@ function swWirePens(box){
     const inp=box.querySelector('[data-swaddin="'+k+'"]');
     const n=(inp.value||'').trim();
     if(!n)return;
+    /* v5.94: Event mode adds a cultural event, then opens the Log Safari Moment form (Cultural Moment) the way a name opens the social log */
+    const bxm=box.querySelector('[data-swaddbox="'+k+'"]');
+    if(bxm&&bxm.classList.contains('evmode')){
+      const kb=bxm.querySelector('[data-swevkind].on');
+      const wi=bxm.querySelector('[data-swevwith]');
+      D.slots=(D.slots||[]).filter(x=>x.person!==n||x.item_type==='event');
+      swPlaceEvent(n,k,k==='dugout'?'idea':'asked',kb?kb.dataset.swevkind:null,wi?(wi.value||'').trim()||null:null);
+      swLogEvent(n);
+      return;
+    }
     D.slots=(D.slots||[]).filter(x=>x.person!==n);
     swPlace(n,k,k==='dugout'?'idea':'asked');
     /* v5.25: Scott's ask, Sep 29 2026 -- typing a name and tapping Add now
@@ -3111,6 +3245,26 @@ function swWirePens(box){
     if(ev.key==='Escape')swRenderPens();
   }));
   const u=el('swUndo'); if(u)u.onclick=swUndismissAll;
+  /* v5.94: Name or Event switch, kind pills, and the Did it happen? log button */
+  box.querySelectorAll('[data-swmode]').forEach(b=>b.onclick=()=>{
+    const bx=b.closest('.swaddbox'); const ev=b.dataset.swmode==='event';
+    bx.classList.toggle('evmode',ev);
+    bx.querySelectorAll('[data-swmode]').forEach(x=>x.classList.toggle('on',x===b));
+    const inp=bx.querySelector('[data-swaddin]');
+    if(ev){ inp.removeAttribute('list'); inp.placeholder='What are you going to?'; }
+    else{ inp.setAttribute('list','swNames'); inp.placeholder=bx.dataset.swph||''; }
+    inp.focus();
+  });
+  box.querySelectorAll('[data-swevkind]').forEach(b=>b.onclick=()=>{
+    const was=b.classList.contains('on');
+    b.closest('.kindrow').querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+    if(!was)b.classList.add('on');
+  });
+  box.querySelectorAll('[data-swevwith]').forEach(inp=>inp.addEventListener('keydown',ev=>{
+    if(ev.key==='Enter'){ev.preventDefault();go(inp.dataset.swevwith);}
+    if(ev.key==='Escape')swRenderPens();
+  }));
+  box.querySelectorAll('[data-swevlog]').forEach(b=>b.onclick=()=>swLogEvent(b.dataset.swevlog));
 }
 /* ---------- v3.5: who started it, across the year ---------- */
 /* Scott, Sep 20 2026: "Leave family out, this is about friendships." So the
@@ -3262,7 +3416,7 @@ function swWireDrag(box){
            fallback above possible. */
         swDrag.halves=[...box.querySelectorAll('.swhalf')].map(h=>({el:h,r:h.getBoundingClientRect()}));
         const g=chip.cloneNode(true);
-        g.className='swp swghost'+(chip.classList.contains('conf')?' conf':'');
+        g.className='swp swghost'+(chip.classList.contains('conf')?' conf':'')+(chip.classList.contains('evt')?' evt':'');
         document.body.appendChild(g);
         swDrag.ghost=g; chip.classList.add('dragging');
       }

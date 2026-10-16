@@ -27,6 +27,9 @@
 
    Change the form here and every page gets the change. Do not copy it into a page.
 
+   v1.7, Oct 15, 2026, Scott's ask: a Cultural Event chip in This week's meet ups opens this form already filled in. opts.withs (a list of
+   names, e.g. ['Åsa']) now pre-ticks the With row. Nothing else changes.
+
    v1.6, Oct 5 2026, Scott's answer: with company, the Log Social Moment form opens after the save (length carried over) instead of a quiet
    background write. Pages without that form fall back to the quiet write.
 
@@ -55,7 +58,7 @@
    v1.0, Oct 3 2026. First version. Custom words added with + are kept in this browser. */
 window.PYSafari = (function () {
   'use strict';
-  var VERSION = '1.6';
+  var VERSION = '1.7';
   var HOME_STATES = ['ct', 'connecticut', 'ny', 'new york'];
   var KINDS = ['Library','Park','Museum','Cafe','Gallery','Concert','Show','Festival','Hotel lobby','Waterfront','Trail','Town','Landmark','Other'];
   var WHYS = ['Work from here','Explore','Both'];
@@ -269,6 +272,7 @@ window.PYSafari = (function () {
                  when: er.happened_on, mins: er.mins || null, felt: er.felt || null, note: er.note || '', fav: !!er.favourite, lat: null, lng: null };
     }
     if (o.lat) this.s.lat = o.lat; if (o.lng) this.s.lng = o.lng;
+    if (o.withs && o.withs.length && !o.edit) this.s.withs = o.withs.slice();
     if (o.category) { var kw = String(o.category).toLowerCase(); for (var i = 0; i < KINDS.length; i++) if (kw.indexOf(KINDS[i].toLowerCase()) > -1) { this.s.kind = KINDS[i]; break; } }
     if (o.town && !o.which) this.autoWhich();
   }
