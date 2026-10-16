@@ -66,10 +66,15 @@
   .sechd h2{font-size:16px;margin:0;color:var(--onbg)}
   .sechd .n{font-size:11px;color:var(--muted)}
   .wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-  .wit{position:relative;border-radius:12px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:var(--card);box-shadow:var(--shadow)}
+  .wit{position:relative;border-radius:12px;overflow:hidden;border:2px solid transparent;background:var(--card);box-shadow:var(--shadow)}
+  .wit a{display:block}
   .wit img{width:100%;height:110px;object-fit:cover;display:block;background:var(--line)}
   .wit.picked{border-color:var(--star)}
-  .wit .pk{position:absolute;top:6px;right:6px;width:24px;height:24px;border-radius:50%;background:rgba(0,0,0,.35);color:#fff;display:grid;place-items:center;padding:0}
+  .wit .pk{position:absolute;top:6px;left:6px;width:24px;height:24px;border-radius:50%;border:0;cursor:pointer;background:rgba(0,0,0,.35);color:#fff;display:grid;place-items:center;padding:0;z-index:2}
+  .x{position:absolute;top:5px;right:5px;width:18px;height:18px;border-radius:50%;border:0;background:rgba(255,255,255,.75);color:#aab2bf;cursor:pointer;display:grid;place-items:center;padding:0;z-index:3}
+  .x::after{content:"";position:absolute;inset:-8px}
+  .x svg{width:9px;height:9px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round}
+  .x:hover,.x:focus-visible{color:var(--bad);background:#fff}
   .wit.picked .pk{background:var(--star)}
   .wit .pk svg{width:12px;height:12px;fill:currentColor;stroke:currentColor;stroke-width:1.9}
   .tally{display:flex;flex-wrap:wrap;gap:8px}
@@ -92,7 +97,7 @@
       <div class="kick">Kept off the wall</div>
       <h1>Saved</h1>
     <!-- The ONLY place this page's version is written. The publish guard reads class="ver" and navpatch reads #ver, so both see this one literal. Do not add a second one anywhere. -->
-    <span id="ver" class="ver">v1.3</span>
+    <span id="ver" class="ver">v1.4</span>
       <div class="sub" id="sub">Loading</div>
     </div>
     <a class="tool" href="wall.html">Back to the wall</a>
@@ -112,7 +117,7 @@
   <input type="search" class="ksearch" id="ksearch" placeholder="Search what you've kept" autocomplete="off">
   <div id="body"></div>
   <div id="err"></div>
-  <div class="stamp" id="stamp">v1.3</div>
+  <div class="stamp" id="stamp">v1.4</div>
 </div>
 
 <script>
@@ -129,6 +134,7 @@ function api(path,opts){
 }
 function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
 var TICK='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
+var XSVG='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8"/></svg>';
 var ROWS=[];
 var WK=null, WKEND=null, WROWS=[], FAVS={};
 var Q="";
@@ -176,9 +182,10 @@ function paintWeek(){
   WROWS.forEach(function(r){
     var it=r.wall_items||{};
     var on=FAVS[r.item_id]!=null;
-    h+='<div class="wit'+(on?" picked":"")+'" data-pick="'+r.item_id+'">'+
-       '<img src="'+esc(it.img)+'" alt="" decoding="async">'+
-       '<span class="pk">'+TICK+'</span></div>';
+    h+='<div class="wit'+(on?" picked":"")+'">'+
+       '<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer" title="'+esc(it.title)+'"><img src="'+esc(it.img)+'" alt="'+esc(it.title)+'" decoding="async"></a>'+
+       '<button class="pk" type="button" data-pick="'+r.item_id+'" aria-label="Pick for this week">'+TICK+'</button>'+
+       '<button class="x" type="button" data-rm="'+r.item_id+'" aria-label="Remove from saved">'+XSVG+'</button></div>';
   });
   b.innerHTML=h+"</div>";
 }
@@ -227,7 +234,7 @@ function paint(){
     h+='<div class="catsec"><div class="cathd"><h3>'+esc(cat)+'</h3><span class="n">'+rows.length+(rows.length===1?" thing":" things")+'</span></div><div class="grid">';
     rows.forEach(function(r){
       var it=r.wall_items||{};
-      h+='<div class="it"><button class="rm" type="button" data-rm="'+r.item_id+'" aria-label="Remove from saved">'+TICK+'</button>'+
+      h+='<div class="it"><button class="x" type="button" data-rm="'+r.item_id+'" aria-label="Remove from saved">'+XSVG+'</button>'+
          '<a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer"><img src="'+esc(it.img)+'" alt="" decoding="async"></a>'+
          '<div class="t"><a href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer">'+esc(it.title)+'</a></div>'+
          '<div class="m">'+esc(it.source_key)+' · kept '+esc(String(r.saved_at).slice(0,10))+'</div>';
@@ -248,11 +255,15 @@ document.addEventListener("click",function(e){
   if(!b) return;
   e.preventDefault();
   var id=+b.getAttribute("data-rm");
-  var keep=ROWS;
+  var keepR=ROWS, keepW=WROWS, keepF=FAVS[id];
   ROWS=ROWS.filter(function(r){ return r.item_id!==id; });
-  paint();
-  api("wall_saved?item_id=eq."+id,{method:"DELETE"}).catch(function(err){
-    ROWS=keep; paint();
+  WROWS=WROWS.filter(function(r){ return r.item_id!==id; });
+  delete FAVS[id];
+  paint(); paintWeek(); paintTally();
+  var first=keepF!=null ? api("wall_favorites?item_id=eq."+id,{method:"DELETE"}) : Promise.resolve();
+  first.then(function(){ return api("wall_saved?item_id=eq."+id,{method:"DELETE"}); }).catch(function(err){
+    ROWS=keepR; WROWS=keepW; if(keepF!=null) FAVS[id]=keepF;
+    paint(); paintWeek(); paintTally();
     document.getElementById("err").innerHTML='<div class="err">Could not remove that one: '+esc(err.message)+'</div>';
   });
 });
@@ -309,7 +320,7 @@ document.addEventListener("input",function(e){
 api("wall_saved?select=item_id,saved_at,category_override,wall_items(title,link,img,source_key)&order=saved_at.desc&limit=400")
   .then(function(rows){
     ROWS=rows||[];
-    document.getElementById("stamp").textContent="v1.3 · this week's picks, your top sources, everything you've kept sorted into sections, and search";
+    document.getElementById("stamp").textContent="v1.4 · this week's picks, your top sources, everything you've kept sorted into sections, and search";
     paint();
     WK=mondayOf(PY.today());
     WKEND=addDays(WK,7);
