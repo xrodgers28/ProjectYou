@@ -1,4 +1,4 @@
-/* BANDIT BLOCKS v1.4 (Oct 11, 2026)
+/* BANDIT BLOCKS v1.5 (Oct 14, 2026: snoozed habits leave the meters). v1.4 (Oct 11, 2026)
    v1.4 makes the meters follow the page's View switcher (Live today, Sample: start
    of day, Sample: mid day, Sample: all done) the way the eight designs already do.
    Scott asked for it so he can see what "finished" actually looks like.
@@ -77,7 +77,7 @@
 (function () {
   'use strict';
 
-  var TBM = window.TBM = { version: '1.4', name: 'Bandit Blocks' };
+  var TBM = window.TBM = { version: '1.5', name: 'Bandit Blocks' };
   var BOX = 330;   /* how tall every meter is. Brick size is worked out from this. */
 
   /* ---------- the one definition ---------- */
@@ -402,11 +402,13 @@
     return sb.from('todos').select('task,done,skipped')
       .eq('is_habit', true).eq('for_date', day)
       .then(function (r) {
-        var keys = {};
+        var keys = {}, snz = {};
         (r.data || []).forEach(function (t) {
           if (t.done && !t.skipped) keys[SEG.plain(t.task)] = 1;
+          /* v1.5 (Oct 14, 2026): a habit snoozed on the Habit Bandit Remote is a row skipped and not done. It leaves the meters. */
+          else if (t.skipped && !t.done) snz[SEG.plain(t.task)] = 1;
         });
-        return { keys: keys, byTracker: false };
+        return { keys: keys, snz: snz, byTracker: false };
       });
   }
 
@@ -481,6 +483,7 @@
              : past ? loadPast(sb, day) : loadToday(sb, day);
     return load.then(function (got) {
       var done = {};
+      if (got.snz) counting = counting.filter(function (row) { return !got.snz[SEG.plain(row.task)] || got.keys[SEG.plain(row.task)]; });
       counting.forEach(function (row) {
         if (got.keys[SEG.plain(row.task)]) { done[row.id] = 1; return; }
         if (got.byTracker && row.tracker && got.keys[SEG.plain(row.tracker)]) done[row.id] = 1;
