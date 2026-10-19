@@ -9,6 +9,7 @@
 <script>/* v5.50: the Cue Cards page shows the meet ups card in a pop-up by loading this page with ?embed=meetups */
 try{ if(/[?&]embed=meetups\b/.test(location.search)) document.documentElement.classList.add('py-embed'); }catch(e){}</script>
 <script src="py-day.js"></script>
+<script src="waking-hours-auto.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="py-icons.js"></script>
 <script src="wsicons-v2.js"></script>
@@ -1008,7 +1009,7 @@ html.py-embed .swshadebtn{display:none!important}
         <a class="whedit" href="waking-hours.html">Edit the list &rarr;</a>
       </div>
       <div class="whstage" id="whStage"><div id="whSvgHost"></div></div>
-      <div class="whempty" id="whEmpty" style="display:none">No list for this week yet. <a href="waking-hours.html">Open the list page</a> once and it builds itself.</div>
+      <div class="whempty" id="whEmpty" style="display:none">Nothing logged for this week yet. The scoreboard fills itself in as the week is logged. <a href="waking-hours.html">See the list</a></div>
       <div class="whlegend" id="whLegend"></div>
       <ul class="whstats" id="whStats"></ul>
     </div>
@@ -1130,7 +1131,8 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
 /* v5.92, Oct 13, 2026, Scott: the "Birthday next week" line above This week's meet ups is gone. A birthday now shows as a light blue strip with the cake at the bottom of the box for its week (This Week, or Who's next week). No label. */
 /* v5.93, Oct 14, 2026, Scott: the birthday strip stacked into three lines because an older style had the same name. Renamed so it stays on one line. */
 /* v5.96, Oct 16, 2026, Scott: Sleep Synopsis bars are twice as tall (Option B). Each night is a wide bar filled all the way with green, orange or red, sitting in a pale 4h to 10h track, hours printed inside in a regular (not bold) weight. The old blue shades and the line joining the bars are gone. Orange is a brighter #e08a2e for the bar only. */
-const VERSION='v5.97';
+/* v5.98, Oct 18, 2026, Scott: the Time Bandit Scoreboard fills itself in. When the week has no list, or its lines are still waiting for numbers, the dashboard builds the list and works out every line from what is already logged (waking-hours-auto.js). Lines you typed on the list page are never changed. */
+const VERSION='v5.98';
 /* v5.80, Oct 11, 2026, Scott: Sleep Synopsis layout matched to his screenshot, rollover quote moved to the right of the week chart, full-width shade bar */
 (function(){ /* v5.55: window shade on the meet ups card, remembered per browser */
   function wire(){
@@ -5266,8 +5268,10 @@ async function whChartLoad(ws,we){
   WHC.ws=ws;
   var card=document.getElementById('whCard');if(!card)return;
   document.getElementById('whSub').textContent=fmt(ws)+' to '+fmt(we,true);
-  var r=await sb.from('waking_hours_items').select('id,label,parent_id,zone,hours,source_note,confidence,sort').eq('week_start',ws).order('sort');
-  WHC.rows=(r&&r.data)||[];
+  var rows=null;
+  try{rows=await WHAuto.run(sb,ws);}catch(e){try{console.warn('Scoreboard auto-fill failed',e);}catch(_){}}
+  if(!rows){var r=await sb.from('waking_hours_items').select('id,label,parent_id,zone,hours,source_note,confidence,sort').eq('week_start',ws).order('sort');rows=(r&&r.data)||[];}
+  WHC.rows=rows;
   whDraw();
 }
 (function(){
