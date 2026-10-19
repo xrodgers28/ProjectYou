@@ -1,3 +1,4 @@
+/* v2.4 Oct 18, 2026: each habit cell is tagged data-cell and each stack grid data-stack, so habits can be dragged to reorder or move between sections (habit-tracker-drag.js). */
 /* v2.3 Oct 15, 2026: tapping a habit's name or its C/S badge now ticks it, same as tapping the key. */
 /* v2.2 Oct 13, 2026: snoozed blue made darker. v2.1: snoozed keys (blue, Zzz). */
 /* v2.0 Oct 13, 2026: sections now follow the Habit Stacker stacks. */
@@ -64,13 +65,13 @@
       function cell(x) {
         shown[x.n] = 1;
         var badge = x.snz ? '' : '<span data-tap="' + e(x.n) + '" style="position:absolute;right:' + Math.round(-kd * .02) + 'px;bottom:' + Math.round(kd * .12) + 'px;width:15px;height:15px;border-radius:50%;background:' + (x.lvl === 'core' ? '#3d6a8a' : '#4a4f5e') + ';color:#fff;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1.5px #1a1b21">' + (x.lvl === 'core' ? 'C' : x.lvl === 'bonus' ? 'B' : 'S') + '</span>';
-        return '<div style="display:flex;flex-direction:column;align-items:center;width:100%"><div style="position:relative">' + key(x, kd, Math.round(kd * .22)) + badge + '</div>' +
+        return '<div data-cell style="display:flex;flex-direction:column;align-items:center;width:100%"><div style="position:relative">' + key(x, kd, Math.round(kd * .22)) + badge + '</div>' +
           '<div data-tap="' + e(x.n) + '" style="cursor:pointer;font-size:' + fs + 'px;line-height:1.1;font-weight:700;text-align:center;margin-top:6px;color:' + (x.done ? '#5f6371' : x.snz ? "#6f93e6" : "#fff") + '">' + e(x.n) + '</div></div>';
       }
-      function section(label, list, note) {
+      function section(label, list, note, idx) {
         if (!list.length) return '';
         return '<div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:' + GOLD + ';margin:16px 0 10px;text-transform:uppercase">' + e(label) + ' &middot; ' + note + '</div>' +
-          '<div style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:' + (phone ? 12 : 14) + 'px 4px;justify-items:center">' + list.map(cell).join('') + '</div>';
+          '<div ' + (idx == null ? '' : 'data-stack="' + idx + '" ') + 'style="display:grid;grid-template-columns:repeat(' + cols + ',1fr);gap:' + (phone ? 12 : 14) + 'px 4px;justify-items:center">' + list.map(cell).join('') + '</div>';
       }
       function onNote(l) {
         var sn = l.filter(function (x) { return x.snz; }).length;
@@ -78,7 +79,7 @@
       }
       var body = '';
       (st.stacks || []).forEach(function (s) {
-        body += section(s.long || s.name, s.habits, onNote(s.habits));
+        body += section(s.long || s.name, s.habits, onNote(s.habits), s.idx);
       });
       var rest = st.habits.filter(function (x) { return !shown[x.n]; });
       body += section('Other', rest, onNote(rest));

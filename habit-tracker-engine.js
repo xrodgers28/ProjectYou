@@ -251,6 +251,38 @@
     s2.loadedAt = state.loadedAt;
     return s2;
   };
+  /* v1.7 (Oct 18, 2026): E.saveOrder saves a drag on the Habit Bandit Remote. plans = [{idx, names:[habit names in their new order]}]. Writes stack_idx / stack_pos / stack on habit_tracker_config, the same list Stack Builder uses, so the new order shows on every later day. Habits hidden today (weekly, weekend Train) keep their place. */
+  E.saveOrder = function (plans, movedName) {
+    return ready.then(function () {
+      var stackName = {}; cfg.forEach(function (c) { stackName[c.stack_idx] = c.stack; });
+      var old = {}, ups = [];
+      plans.forEach(function (p) {
+        var inNew = {}; p.names.forEach(function (n) { inNew[n] = 1; });
+        var L = cfg.filter(function (c) { return c.stack_idx === p.idx; }).sort(function (a, b) { return (a.stack_pos - b.stack_pos) || (a.id - b.id); });
+        var anchor = {}, pend = [];
+        L.forEach(function (c) { if (c.habit === movedName) return; if (inNew[c.habit]) { pend.forEach(function (h) { anchor[h.habit] = c.habit; }); pend = []; } else pend.push(c); });
+        var hidden = L.filter(function (c) { return c.habit !== movedName && !inNew[c.habit]; });
+        var out = [];
+        p.names.forEach(function (n) {
+          hidden.filter(function (h) { return anchor[h.habit] === n; }).forEach(function (h) { out.push(h.habit); });
+          out.push(n);
+        });
+        hidden.filter(function (h) { return !anchor[h.habit]; }).forEach(function (h) { out.push(h.habit); });
+        out.forEach(function (n, i) {
+          var c = cfg.filter(function (x) { return x.habit === n; })[0]; if (!c) return;
+          if (c.stack_idx !== p.idx || c.stack_pos !== i + 1) {
+            if (!old[c.id]) old[c.id] = { stack_idx: c.stack_idx, stack_pos: c.stack_pos, stack: c.stack };
+            c.stack_idx = p.idx; c.stack_pos = i + 1; c.stack = stackName[p.idx]; ups.push(c);
+          }
+        });
+      });
+      function revert() { ups.forEach(function (c) { var o = old[c.id]; if (o) { c.stack_idx = o.stack_idx; c.stack_pos = o.stack_pos; c.stack = o.stack; } }); }
+      if (!ups.length) return 0;
+      return Promise.all(ups.map(function (c) {
+        return sb.from('habit_tracker_config').update({ stack_idx: c.stack_idx, stack_pos: c.stack_pos, stack: c.stack }).eq('id', c.id).then(function (r) { if (r.error) throw r.error; });
+      })).then(function () { return ups.length; }, function (e) { revert(); throw e; });
+    });
+  };
   E.setSnooze = function (name, on, reason) {
     return ready.then(function () {
       var c = cfg.filter(function (x) { return x.habit === name; })[0];
