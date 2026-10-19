@@ -1,4 +1,4 @@
-/* Daily Habit Tracker: snooze, v1.1 (Oct 13, 2026: starts after the page is ready, v1.0 started too early and did nothing). Scott's pick: Mock A, press and hold.
+/* Daily Habit Tracker: snooze, v1.2 (Oct 18, 2026: menu now opens next to the key you held, not the top-left corner; v1.1 Oct 13: starts after the page is ready). Scott's pick: Mock A, press and hold.
    Press and hold a key on the Habit Bandit Remote (or right-click) to open a small menu.
    Core habits ask for a reason first; Secondary and Bonus snooze in one tap. Tap a snoozed key to wake it.
    A snoozed habit leaves today's count and the streak is safe. Saved through PYHT.setSnooze; sample views are never saved. */
@@ -6,7 +6,7 @@
   function boot() {
   var HOLD_MS = 450, MOVE_PX = 8, REASONS = ['Busy day', 'Traveling', 'Out of energy', 'Plans changed'];
   var box = document.getElementById('designs'); if (!box || !window.PYHT) return;
-  var E = window.PYHT, timer = null, startX = 0, startY = 0, swallow = false, pop = null, inflight = 0;
+  var E = window.PYHT, timer = null, startX = 0, startY = 0, lastX = 0, lastY = 0, swallow = false, pop = null, inflight = 0;
 
   var st = document.createElement('style');
   st.textContent =
@@ -46,7 +46,9 @@
     else html += '<button type="button" class="s" data-a="snooze" data-r="No reason given">Snooze today</button>';
     html += '<button type="button" data-a="close">Cancel</button>';
     pop.innerHTML = html; document.body.appendChild(pop);
-    var b = el.getBoundingClientRect(), pw = pop.offsetWidth, ph = pop.offsetHeight;
+    /* v1.2: the page redraws its keys every few seconds, so the key held 450ms ago may be gone from the page (its box reads as all zeros, which put the menu in the top-left corner). If the key is gone, open the menu right where the finger or mouse is. */
+    var b = el.isConnected && el.getBoundingClientRect().width ? el.getBoundingClientRect() : { left: lastX, right: lastX, top: lastY, bottom: lastY, width: 0, height: 0 };
+    var pw = pop.offsetWidth, ph = pop.offsetHeight;
     var x = Math.max(8, Math.min(window.innerWidth - pw - 8, b.left + b.width / 2 - pw / 2));
     var y = b.bottom + 8; if (y + ph > window.innerHeight - 8) y = Math.max(8, b.top - ph - 8);
     pop.style.left = x + 'px'; pop.style.top = y + 'px';
@@ -69,12 +71,12 @@
   box.addEventListener('pointerdown', function (ev) {
     if (ev.button > 0) return;
     var t = target(ev); if (!t || t.h.done) return;
-    startX = ev.clientX; startY = ev.clientY; cancel();
+    startX = lastX = ev.clientX; startY = lastY = ev.clientY; cancel();
     timer = setTimeout(function () { timer = null; swallow = true; setTimeout(function () { swallow = false; }, 600); openPop(t.el, t.h); }, HOLD_MS);
   });
-  box.addEventListener('pointermove', function (ev) { if (timer && (Math.abs(ev.clientX - startX) > MOVE_PX || Math.abs(ev.clientY - startY) > MOVE_PX)) cancel(); });
+  box.addEventListener('pointermove', function (ev) { lastX = ev.clientX; lastY = ev.clientY; if (timer && (Math.abs(ev.clientX - startX) > MOVE_PX || Math.abs(ev.clientY - startY) > MOVE_PX)) cancel(); });
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (n) { box.addEventListener(n, cancel); });
-  box.addEventListener('contextmenu', function (ev) { var t = target(ev); if (!t || t.h.done) return; ev.preventDefault(); cancel(); openPop(t.el, t.h); });
+  box.addEventListener('contextmenu', function (ev) { var t = target(ev); if (!t || t.h.done) return; lastX = ev.clientX; lastY = ev.clientY; ev.preventDefault(); cancel(); openPop(t.el, t.h); });
 
   /* Capture phase: runs before the page's tap-to-complete handler. A hold must not also tick; a tap on a snoozed key opens the wake menu. */
   box.addEventListener('click', function (ev) {
