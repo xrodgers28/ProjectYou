@@ -1,5 +1,5 @@
 /* ============================================================================
-   Time Bandit Scoreboard: automatic weekly fill, v1.0, Oct 18, 2026
+   Time Bandit Scoreboard: automatic weekly fill, v1.1, Oct 18, 2026. Friend box counts only Social entries of 60 minutes or more. The list page uses these same rules.
    Builds the week's list if it does not exist yet, then fills in every line from what
    Project YOU has already logged (day blocks, habit log, day tallies, tagged calendar events).
    Used by the Habit Dashboard so nobody has to open the list page and press Calculate.
@@ -88,7 +88,9 @@ async function compute(sb,wk){
   var comm=tsum('commute');var train=Math.max(comm-plat.m-sm(cb)-sm(cw),0);
   put('c_train',train,'worked',comm?'Commute time tallied ('+comm+' min) minus the platform, station rides and office walks.':'No commute time tallied this week.');
   /* social */
-  var soc=qm(/^social$/i);put('s_friend',soc.m,'worked',soc.m?soc.m+' min logged as Social in your habit log, '+soc.n+' entr'+(soc.n>1?'ies':'y')+'.':'Nothing logged as Social.');
+  var socAll=qs.filter(function(q){return /^social$/i.test(q.tracker||'');}),socBig=socAll.filter(function(q){return q.minutes>=60;});
+  var socM=socBig.reduce(function(a,q){return a+q.minutes;},0);
+  put('s_friend',socM,'worked',socM?socM+' min from '+socBig.length+' Social entr'+(socBig.length>1?'ies':'y')+' of 60 minutes or more (shorter ticks are not counted).':'No Social entries of 60 minutes or more this week.');
   var asaB=bm(/(^|\s)(åsa|asa)\b/i);
   if(ta.n)put('s_asa',ta.h*60,'worked',ta.n+' event'+(ta.n>1?'s':'')+' you tagged "With Åsa" on Today\'s Todos.');
   else put('s_asa',asaB.m,'measured',asaB.m?'Time with Åsa blocks, '+asaB.m+' min.':'Nothing tagged or blocked as time with Åsa.');
@@ -140,5 +142,5 @@ async function run(sb,wk){
   }
   return rows;
 }
-window.WHAuto={run:run};
+window.WHAuto={run:run,compute:compute,stamp:stamp};
 })();

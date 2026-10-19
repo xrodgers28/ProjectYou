@@ -105,7 +105,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 </div>
 
 <div id="app" class="hidden">
-  <div class="secbar"><h1>How I Spend My Waking Hours</h1><span class="ver">v0.3</span>
+  <div class="secbar"><h1>How I Spend My Waking Hours</h1><span class="ver">v0.4</span>
     <div class="weeknav"><button class="btn" id="prev">&larr; Previous</button><span class="weeklabel" id="weeklabel"></span><button class="btn" id="next">Next &rarr;</button></div>
   </div>
   <div class="page">
@@ -154,6 +154,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 </div>
 <div id="flash" class="flash hidden"></div>
 
+<script src="waking-hours-auto.js"></script>
 <script>
 const SUPABASE_URL='https://arnjntspmrhigodlssbn.supabase.co';
 const SUPABASE_KEY='sb_publishable_c570L9svjlGd4bHyJClkFA_gNWv1b6v';
@@ -324,7 +325,19 @@ $('calcAll').onclick=async()=>{const b=$('calcAll');b.disabled=true;b.textConten
 
 /* ---------- Calculate: look in the data for this week ---------- */
 const STOP=new Set(['with','time','from','that','this','your','the','and','for','what','when','into','about','walk','walking']);
+/* v0.4: Calculate uses the same rules as the Habit Dashboard (waking-hours-auto.js). Lines you added yourself still use the looser matching below. */
+let RULES={wk:null,at:0,vals:null};
+async function sharedRules(wk){
+  if(RULES.wk===wk&&RULES.vals&&Date.now()-RULES.at<20000)return RULES.vals;
+  RULES={wk,at:Date.now(),vals:await WHAuto.compute(sb,wk)};return RULES.vals;
+}
 async function calcItem(it){
+  const key=String(it.id).split(':').slice(1).join(':');
+  let v=null;try{v=(await sharedRules(S.week))[key];}catch(e){v=null;}
+  if(v&&!it.custom){it.hours=v.h;it.conf=v.conf;it.note='Calculated '+fmtDate(todayET())+': '+v.note;return v.h>0;}
+  return calcItemLoose(it);
+}
+async function calcItemLoose(it){
   const wk=S.week,end=addDays(wk,6);
   if(/:meet$/.test(it.id)||/:s_asa$/.test(it.id)){
     const isMeet=/:meet$/.test(it.id),tag=isMeet?'meeting':'asa';
