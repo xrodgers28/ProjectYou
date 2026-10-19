@@ -54,10 +54,11 @@ async function compute(sb,wk){
     sb.from('qs_log').select('date,tracker,minutes').gte('date',wk).lte('date',end).limit(3000),
     sb.from('day_tally').select('day,py,treadwell,commute,eating').gte('day',wk).lte('day',end).limit(50),
     tagged(sb,wk,'meeting'),tagged(sb,wk,'asa')]);
-  var blocks=((res[0]&&res[0].data)||[]).filter(function(b){return b.done!==false&&b.mins>0;});
+  var allBlocks=((res[0]&&res[0].data)||[]).filter(function(b){return b.mins>0;});
+  var blocks=allBlocks.filter(function(b){return b.done!==false;});   /* habits and walks count once done; work and place blocks are saved as planned, so they count as they stand */
   var qs=((res[1]&&res[1].data)||[]).filter(function(q){return q.minutes>0;});
   var tally=(res[2]&&res[2].data)||[],tm=res[3],ta=res[4];
-  var bm=function(re){var l=blocks.filter(function(b){return re.test(b.title||'');});return {m:l.reduce(function(a,b){return a+b.mins;},0),n:l.length,l:l};};
+  var bm=function(re,all){var l=(all?allBlocks:blocks).filter(function(b){return re.test(b.title||'');});return {m:l.reduce(function(a,b){return a+b.mins;},0),n:l.length,l:l};};
   var qm=function(re){var l=qs.filter(function(q){return re.test(q.tracker||'');});var days={};l.forEach(function(q){days[q.date]=1;});return {m:l.reduce(function(a,q){return a+q.minutes;},0),n:l.length,d:Object.keys(days).length};};
   var tsum=function(f){return tally.reduce(function(a,t){return a+(+t[f]||0);},0);};
   var out={};
@@ -65,12 +66,12 @@ async function compute(sb,wk){
   function fromQs(k,re,what){var q=qm(re);put(k,q.m,'measured',q.m?q.m+' min logged'+(q.d?', '+q.d+' day'+(q.d>1?'s':''):'')+' in your habit log.':'Nothing logged for '+what+' this week.');}
 
   /* desk and meetings */
-  var amz=bm(/^amazon$/i);put('d_amz',amz.m,'worked',amz.m?'Your own Amazon blocks, '+amz.m+' min.':'No Amazon blocks this week.');
+  var amz=bm(/^amazon$/i,true);put('d_amz',amz.m,'worked',amz.m?'Your own Amazon blocks, '+amz.m+' min.':'No Amazon blocks this week.');
   var py=tsum('py');put('d_py',py,'measured',py?'Day tally, '+py+' min.':'No Project YOU time tallied this week.');
   var tw=tsum('treadwell');put('tw',tw,'measured',tw?'Day tally, '+tw+' min.':'No TreadWell time tallied this week.');
   put('meet',tm.h*60,'worked',tm.n?tm.n+' event'+(tm.n>1?'s':'')+' you tagged "Meeting" on Today\'s Todos, overlaps removed.':'No events tagged "Meeting" this week.');
   /* commute */
-  var plat=bm(/train platform/i);put('c_plat',plat.m,'measured',plat.m?'Train platform blocks, '+plat.m+' min.':'No platform blocks.');
+  var plat=bm(/train platform/i,true);put('c_plat',plat.m,'measured',plat.m?'Train platform blocks, '+plat.m+' min.':'No platform blocks.');
   var officeDays={};tally.forEach(function(t){if(+t.commute>0)officeDays[t.day]=1;});blocks.forEach(function(b){if(/train platform|^commute$/i.test(b.title||''))officeDays[b.day]=1;});
   var walks=blocks.filter(function(b){return /^🚶/.test(b.title||'');});
   var ny=walks.filter(function(b){return /new york/i.test(b.title);}),gw=walks.filter(function(b){return !/new york/i.test(b.title);});
@@ -98,7 +99,7 @@ async function compute(sb,wk){
   fromQs('m_mf',/^mental fitness$/i,'Mental Fitness');fromQs('m_ai',/^ai workout$/i,'AI Workout');fromQs('m_mc',/masterclass/i,'MasterClass');
   fromQs('m_med',/^meditat/i,'meditation');fromQs('m_str',/^stretch/i,'stretching');
   /* the rest */
-  var irv=bm(/irvine/i);put('home',irv.m,'measured',irv.m?'Irvine blocks, '+irv.m+' min.':'No Irvine blocks this week.');
+  var irv=bm(/irvine/i,true);put('home',irv.m,'measured',irv.m?'Irvine blocks, '+irv.m+' min.':'No Irvine blocks this week.');
   var eat=tsum('eating');put('eat',eat,'rule',eat?'Only '+eat+' min logged, probably under-counted.':'No eating time logged, so this is under-counted.');
   fromQs('balance',/^balance$/i,'balance practice');
   put('travel',0,'measured','No trips tracked this week.');
