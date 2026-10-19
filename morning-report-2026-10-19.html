@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f6f5f1; --panel:#ffffff; --ink:#23262b; --soft:#565a61; --faint:#8b8f96;
+  --hair:#e3e1da; --chip:#eceae3;
+  --green:#2f8f5b; --amber:#c07f10; --red:#b5452f;
+  --do:#3f6f8f; --tell:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+  --shadow:0 1px 2px rgba(0,0,0,.05), 0 6px 18px rgba(0,0,0,.04);
+}
+:root:not([data-theme="light"]) {}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15171a; --panel:#1e2024; --ink:#e9e8e3; --soft:#b3b6bb; --faint:#878b91;
+    --hair:#30343a; --chip:#2a2e34;
+    --green:#4bb07b; --amber:#d99a2b; --red:#d2694f;
+    --do:#5b93b5; --tell:#d99a2b; --did:#4bb07b; --read:#92a0b0; --kill:#c58a60;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15171a; --panel:#1e2024; --ink:#e9e8e3; --soft:#b3b6bb; --faint:#878b91;
+  --hair:#30343a; --chip:#2a2e34;
+  --green:#4bb07b; --amber:#d99a2b; --red:#d2694f;
+  --do:#5b93b5; --tell:#d99a2b; --did:#4bb07b; --read:#92a0b0; --kill:#c58a60;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif;
+  line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:820px; margin:0 auto; padding:22px 16px 60px}
+header.top{padding:4px 2px 10px}
+.daydate{color:var(--faint); font-size:13px; letter-spacing:.02em}
+h1{font-size:27px; margin:4px 0 0; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.vchip{font-size:11px; font-weight:700; color:var(--soft); background:var(--chip);
+  border:1px solid var(--hair); border-radius:999px; padding:2px 9px; letter-spacing:.03em}
+.lede{color:var(--soft); font-size:15px; margin:10px 2px 0}
+
+/* key */
+.key{background:var(--panel); border:1px solid var(--hair); border-radius:12px;
+  padding:12px 14px; margin:16px 0; box-shadow:var(--shadow)}
+.key h2{font-size:13px; margin:0 0 8px; color:var(--faint); font-weight:700; letter-spacing:.04em; text-transform:uppercase}
+.key ul{margin:0; padding:0; list-style:none; display:grid; gap:6px}
+.key li{font-size:13.5px; color:var(--soft)}
+.key b{color:var(--ink)}
+.kdot{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:7px; vertical-align:middle}
+
+/* transport */
+.transport{position:sticky; top:0; z-index:20; background:var(--bg); padding:10px 0 12px; border-bottom:1px solid var(--hair); margin-bottom:8px}
+.transport .hd{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px}
+.transport .lbl{font-size:12px; font-weight:700; color:var(--faint); letter-spacing:.04em; text-transform:uppercase}
+.copybtn{font-size:12px; font-weight:700; border:1px solid var(--hair); background:var(--panel); color:var(--soft);
+  border-radius:8px; padding:6px 11px; cursor:pointer}
+.copybtn:active{transform:translateY(1px)}
+#answers{width:100%; min-height:72px; resize:vertical; font-family:ui-monospace, Menlo, Consolas, monospace;
+  font-size:12.5px; line-height:1.5; color:var(--ink); background:var(--panel);
+  border:1px solid var(--hair); border-radius:10px; padding:10px 12px}
+.hint{font-size:11.5px; color:var(--faint); margin-top:5px}
+
+/* sections */
+.sec{font-size:12px; font-weight:700; color:var(--faint); letter-spacing:.06em; text-transform:uppercase;
+  margin:22px 2px 8px}
+
+/* rows */
+.row{background:var(--panel); border:1px solid var(--hair); border-left:4px solid transparent;
+  border-radius:12px; padding:14px 15px; margin:10px 0; box-shadow:var(--shadow); transition:border-color .15s, opacity .15s}
+.row.settled{opacity:.62}
+.row .rowhead{display:flex; align-items:flex-start; gap:10px}
+.light{flex:0 0 auto; width:12px; height:12px; border-radius:50%; margin-top:5px}
+.light.green{background:var(--green)} .light.amber{background:var(--amber)} .light.red{background:var(--red)}
+.rtitle{font-size:16px; font-weight:700; margin:0}
+.rbody{color:var(--soft); font-size:14px; margin:7px 0 0}
+.rnext{font-size:13.5px; margin:9px 0 0; color:var(--ink)}
+.rnext b{color:var(--faint); font-weight:700; font-size:12px; letter-spacing:.03em; text-transform:uppercase; margin-right:6px}
+.btns{display:flex; flex-wrap:wrap; gap:7px; margin:12px 0 0}
+.btns button{border:1px solid transparent; color:#fff; border-radius:8px; padding:8px 13px;
+  font-family:inherit; font-weight:600; font-size:12.5px; cursor:pointer; line-height:1}
+.btns button:active{transform:translateY(1px)}
+.b-do{background:var(--do)} .b-tell{background:var(--tell)} .b-did{background:var(--did)}
+.b-read{background:var(--read)} .b-kill{background:var(--kill)}
+.btns button[aria-pressed="true"]{outline:2px solid var(--ink); outline-offset:1px}
+.chosen{font-size:12px; color:var(--faint); margin:8px 0 0; min-height:0}
+.chosen b{color:var(--ink)}
+.cmt{width:100%; margin-top:9px; border:1px solid var(--hair); background:var(--bg); color:var(--ink);
+  border-radius:8px; padding:8px 10px; font-family:inherit; font-size:13px}
+.cmt::placeholder{color:var(--faint)}
+
+/* edge colors applied on tap */
+.row[data-pick="do"]{border-left-color:var(--do)}
+.row[data-pick="tell"]{border-left-color:var(--tell)}
+.row[data-pick="did"]{border-left-color:var(--did)}
+.row[data-pick="read"]{border-left-color:var(--read)}
+.row[data-pick="kill"]{border-left-color:var(--kill)}
+
+.tech{background:var(--panel); border:1px solid var(--hair); border-radius:12px; padding:14px 15px; margin-top:24px}
+.tech h3{font-size:13px; margin:0 0 8px; color:var(--faint); font-weight:700; letter-spacing:.04em; text-transform:uppercase}
+.tech p{font-size:12.5px; color:var(--soft); margin:0 0 7px; font-family:ui-monospace, Menlo, Consolas, monospace; line-height:1.55}
+.foot{color:var(--faint); font-size:12px; text-align:center; margin-top:22px}
+
+@media (max-width:640px){
+  h1{font-size:23px}
+  .btns button{flex:1 1 auto}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="daydate">Monday &middot; October 19 2026</div>
+    <h1>Your Morning Report <span class="vchip">v1.0</span></h1>
+    <p class="lede">A calm look at the day. Two things actually need fixing, your feeds are piling up, and last night's run did real work. Everything you decide is collected at the top for you to copy back to me.</p>
+  </header>
+
+  <div class="transport">
+    <div class="hd">
+      <span class="lbl">Your answers (copy this back to me)</span>
+      <button class="copybtn" id="copy">Copy</button>
+    </div>
+    <textarea id="answers" spellcheck="false" aria-label="Your answers, as plain text to copy back"></textarea>
+    <div class="hint">Tap a button on any row and it shows up here. Select the text and copy it, or use the Copy button, then paste it into our chat. Nothing is saved on this page.</div>
+  </div>
+
+  <div class="key">
+    <h2>What the five buttons mean</h2>
+    <ul>
+      <li><span class="kdot" style="background:var(--do)"></span><b>Do this</b>: go and build it, run it, ship it. This stays open until the work is finished.</li>
+      <li><span class="kdot" style="background:var(--tell)"></span><b>Tell me more</b>: you lean yes but want the cost or reasoning first. Stays open, next move is mine.</li>
+      <li><span class="kdot" style="background:var(--did)"></span><b>I did it</b>: you handled it yourself. Settles the row.</li>
+      <li><span class="kdot" style="background:var(--read)"></span><b>I read this</b>: just noting it, nothing owed. Settles the row.</li>
+      <li><span class="kdot" style="background:var(--kill)"></span><b>Kill this task</b>: drop it, and it does not come back. Settles the row.</li>
+    </ul>
+  </div>
+
+  <div id="rows"></div>
+
+  <div class="tech">
+    <h3>The technical bit, for when you want it</h3>
+    <p>Overnight run: logged its heartbeat and wrap to board_meta (midnight_run_heartbeat / _last_result / _wrap), not run_log. run_log's newest row is Oct 16 and is the separate feed-ingest log, so an empty run_log for last night is expected, not a dead run. Heartbeat 06:21 UTC, wrap 06:48 UTC (2:21 to 2:48am EST).</p>
+    <p>Verified against live data: parked row session_todos #714 exists (Swarm roll-up); pages table 306 rows, 0 empty; correction plan saved to overnight_build key draft:map-pages-correction-oct19.</p>
+    <p>Publisher: the "Publish pages from Supabase" GitHub Action failed on runs aa420ed, 77efe24, 162e541 and e2a9660 (Oct 18 to 19). publish_hook_log shows repository_dispatch still queuing ok, so the break is on the GitHub build side, not the Supabase poke. Live site (xrodgers28.github.io) last changed Oct 9.</p>
+    <p>Check-ins: two-hourly Swarm roll-up, 21 consecutive failures with a duplicate-key error since Oct 17 10:15am ET (last good run 8:15am ET Oct 17). Raw checkins healthy, newest written 11:04pm ET Oct 18.</p>
+    <p>Feeds awaiting keep/discard: news_queue status=new 88; rundown_items unseen 44; jc_321 newest issue Oct 8 (4 cards), Oct 15 issue unread (needed an approval).</p>
+    <p>This report: saved as morning-report-2026-10-19.html in public.pages. The live link may lag or not appear until the publisher above is fixed.</p>
+  </div>
+
+  <div class="foot">Generated for Scott &middot; scheduled 5am run &middot; nothing on this page is stored</div>
+</div>
+
+<script>
+var ROWS = [
+  {s:"Today", light:"green", title:"Today is a normal work day, no meetings to prep",
+   body:"Your main calendar shows the usual morning run: a walk, breakfast, the bike to the train, the ride in, and the walk to the office. Nothing is booked after you arrive, so the day is yours to shape once you are at your desk. No one is waiting on you for anything scheduled.",
+   next:"Nothing."},
+  {s:"Today", light:"green", title:"Nothing in your inbox needs a reply",
+   body:"The unread mail from the last few days is campaign asks, store newsletters, and automatic notices. The only items that are not junk are the alerts about your website build failing, which are covered below, and a routine sign-in alert for an account that lists you as its backup. No real person is waiting on an answer from you.",
+   next:"Nothing."},
+
+  {s:"Needs a fix", light:"red", title:"Your website has stopped updating",
+   body:"The step that pushes your pages onto the live web has been failing over and over for the last two days. Your changes are being saved safely on your side, but the final hand-off to the web keeps erroring, so nothing new has actually reached the live site since October 9. This is the single most important thing to fix, because every page you build right now looks published but is not. It is also why several of your map pages look stale.",
+   next:"Fix the publisher so saved pages reach the live site again."},
+  {s:"Needs a fix", light:"red", title:"Your check-ins stopped counting toward your habits",
+   body:"Since October 10, the places you check into have not been turning into marks on your habit log. The check-ins themselves are arriving fine, one landed at eleven last night, so you have not lost anything. The piece that adds them up has been failing every single time it runs, more than twenty times in a row. Last night's run caught it and set it aside for you.",
+   next:"Fix the step that turns check-ins into habit marks."},
+  {s:"Needs a fix", light:"amber", title:"Your system map pages are out of date",
+   body:"None of the six map pages has refreshed since October 9, so they still describe how things worked before this week. That is mostly a side effect of the publisher problem above, so fixing that comes first. Last night's run wrote a full plan for correcting the maps once publishing is healthy again. One map also still says a steady check-in count means things are working, which is now misleading given the problem above.",
+   next:"Hold until the publisher is fixed, then apply the saved correction plan."},
+
+  {s:"Your projects", light:"amber", title:"Project YOU and Quantified Self are steady, two things stuck",
+   body:"This is your biggest project by far, with hundreds of open items and a nightly queue working through map upkeep, cleaning up people saved under more than one spelling, and tidying page labels. The queue did not advance last night because it is waiting on decisions from you, not because anything is wrong. The two live problems are the check-in counting and the publisher, both above.",
+   next:"Clear the check-in fix first, since other things lean on it."},
+  {s:"Your projects", light:"amber", title:"TreadWell has one thing waiting on you",
+   body:"TreadWell is quiet. The one open item has been sitting since early September: Mike Cann left you a feedback recording from your August 7 call that has not been opened yet. Everything else for TreadWell lives in your CoWork folder, which was not reachable on this early run. Worth fifteen minutes to finally hear what Mike said.",
+   next:"Listen to Mike Cann's August 7 feedback recording."},
+  {s:"Your projects", light:"amber", title:"AI Intelligence, your feeds are piling up",
+   body:"The reading feeds behind this have a real backlog waiting for a keep or skip from you: roughly ninety items in The Feed and forty in the AI roundup, plus a fresh James Clear issue from October 8. One October 15 issue could not be pulled overnight because it needed your approval while you were asleep. Atomic Habits would say make the choice easy: skim, keep three, let the rest go.",
+   next:"Triage the feeds, or tell me to keep the best few and clear the rest."},
+  {s:"Your projects", light:"green", title:"2026 Calendar moved a little overnight",
+   body:"One of your 2026 pages was rebuilt last night, so this is alive. The fuller working detail for this project lives in your CoWork folder, which was offline for this scheduled run, so I am not going to guess at its status from the outside. Nothing looks wrong. Reconnect the folder and I can give you a real next step.",
+   next:"Reconnect your CoWork folder when you want the full picture."},
+  {s:"Your projects", light:"green", title:"CrushingIt was not reachable this run",
+   body:"There was no CrushingIt activity I could see from the systems that were online this morning. Its files live in your CoWork folder, which was not connected for this scheduled run, so I will not invent a status for it. If it has been quiet on purpose, nothing is wrong. Reconnect the folder and I can report properly.",
+   next:"Reconnect your CoWork folder if you want a real status."},
+  {s:"Your projects", light:"green", title:"Clever Phrases has been quiet since August",
+   body:"The one Clever Phrases document I can reach was last touched on August 9, so nothing has moved there in a while. That may be exactly right if it is parked. Any further working detail sits in your offline CoWork folder. No action needed unless you want to pick it back up.",
+   next:"Nothing, unless you want to restart it."},
+
+  {s:"Loose ends", light:"amber", title:"Your Fun Facts card is barely showing up",
+   body:"The little Fun Facts tiles almost stopped appearing. A weekly supply check found they served just once in a long stretch, when they should serve twice a day, so the automatic refill thinks the shelf is full and never tops it up. It is recovering a little on its own, but it is worth one proper look at how that card picks its fact. Low stakes, easy to lose track of.",
+   next:"Have me check the Fun Facts card next time you are at your desk."},
+  {s:"Loose ends", light:"amber", title:"Your dictated notes are not landing",
+   body:"Anything you have spoken into your notes app has not reached your to-do list in forty-three days, since early September, even though the sweep that collects them keeps reporting success. This one is already written down and set aside, so it is not lost. Part of the fix lives on your phone, so it needs you present. Until then, type quick to-dos straight in.",
+   next:"Set aside time with me to fix the dictation capture."},
+
+  {s:"Good to know", light:"green", title:"What last night's run actually did",
+   body:"It ran cleanly from 2:21 to 2:48 in the morning. It did not build anything new, because the whole queue is waiting on your decisions, and it raised no new questions. Its real work was checking the live data behind your maps, where it caught the two broken feeds above and set one aside for you. Your data came back clean and all your pages are present.",
+   next:"Nothing. This is just so you know it ran, and it did."},
+  {s:"Good to know", light:"amber", title:"Your Claude usage, I cannot see the meter from here",
+   body:"There is no connection in this setup that lets me read your weekly Claude usage number, so I will not guess at one. The only rough signal I have is how much you worked with me this week, which looks light, but the counter that tracks that is itself undercounting, so I would not trust it. Treat this as a known blind spot in the brief for now.",
+   next:"Nothing, unless you want to make usage readable here."}
+];
+
+var BTN = [
+  {k:"do",   cls:"b-do",   label:"Do this",        out:"Do this",        keep:true},
+  {k:"tell", cls:"b-tell", label:"Tell me more",   out:"Tell me more",   keep:true},
+  {k:"did",  cls:"b-did",  label:"I did it",        out:"I did it",       keep:false},
+  {k:"read", cls:"b-read", label:"I read this",     out:"I read this",    keep:false},
+  {k:"kill", cls:"b-kill", label:"Kill this task",  out:"Kill this task", keep:false}
+];
+var OUT = {do:"Do this", tell:"Tell me more", did:"I did it", read:"I read this", kill:"Kill this task"};
+
+var state = {}; // id -> {pick, comment}
+
+function esc(t){var d=document.createElement("div"); d.textContent=t; return d.innerHTML;}
+
+function render(){
+  var host = document.getElementById("rows");
+  host.innerHTML = "";
+  var lastSec = null;
+  ROWS.forEach(function(r, i){
+    if(r.s !== lastSec){
+      var sh = document.createElement("div"); sh.className="sec"; sh.textContent=r.s; host.appendChild(sh); lastSec=r.s;
+    }
+    var st = state[i] || {};
+    var row = document.createElement("div");
+    row.className = "row" + (st.pick && !isKeep(st.pick) ? " settled" : "");
+    if(st.pick) row.setAttribute("data-pick", st.pick);
+
+    var head = '<div class="rowhead"><span class="light '+r.light+'"></span>'+
+               '<div><p class="rtitle">'+esc(r.title)+'</p></div></div>'+
+               '<p class="rbody">'+esc(r.body)+'</p>'+
+               '<p class="rnext"><b>Next</b>'+esc(r.next)+'</p>';
+
+    var btns = '<div class="btns">';
+    BTN.forEach(function(b){
+      var pressed = st.pick===b.k ? ' aria-pressed="true"' : '';
+      btns += '<button class="'+b.cls+'" data-row="'+i+'" data-k="'+b.k+'"'+pressed+'>'+b.label+'</button>';
+    });
+    btns += '</div>';
+
+    var chosen = '<p class="chosen">'+(st.pick ? 'You chose: <b>'+OUT[st.pick]+'</b>'+(isKeep(st.pick)?' (stays open)':' (settled)') : '')+'</p>';
+    var cmt = '<input class="cmt" data-rowc="'+i+'" placeholder="Add a note for me (optional)" value="'+(st.comment?esc(st.comment):'')+'">';
+
+    row.innerHTML = head + btns + chosen + cmt;
+    host.appendChild(row);
+  });
+  bind();
+  compile();
+}
+
+function isKeep(k){ for(var j=0;j<BTN.length;j++){ if(BTN[j].k===k) return BTN[j].keep; } return false; }
+
+function bind(){
+  document.querySelectorAll(".btns button").forEach(function(b){
+    b.onclick = function(){
+      var i = +this.getAttribute("data-row");
+      var k = this.getAttribute("data-k");
+      if(!state[i]) state[i] = {};
+      state[i].pick = (state[i].pick===k ? null : k);
+      render();
+    };
+  });
+  document.querySelectorAll(".cmt").forEach(function(c){
+    c.oninput = function(){
+      var i = +this.getAttribute("data-rowc");
+      if(!state[i]) state[i] = {};
+      state[i].comment = this.value;
+      compile();
+    };
+  });
+}
+
+function compile(){
+  var lines = ["Morning report answers - Scott - 2026-10-19", ""];
+  var any = false;
+  ROWS.forEach(function(r,i){
+    var st = state[i];
+    if(st && (st.pick || (st.comment && st.comment.trim()))){
+      any = true;
+      var line = "- [" + r.title + "]";
+      if(st.pick) line += " " + OUT[st.pick];
+      lines.push(line);
+      if(st.comment && st.comment.trim()) lines.push("    note: " + st.comment.trim());
+    }
+  });
+  if(!any) lines.push("(tap a button on any row and it appears here)");
+  document.getElementById("answers").value = lines.join("\n");
+}
+
+document.getElementById("copy").onclick = function(){
+  var ta = document.getElementById("answers");
+  ta.focus(); ta.select();
+  var ok=false;
+  try{ ok = document.execCommand("copy"); }catch(e){ ok=false; }
+  this.textContent = ok ? "Copied" : "Select the text to copy";
+  var self=this; setTimeout(function(){ self.textContent="Copy"; }, 1800);
+};
+
+render();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
