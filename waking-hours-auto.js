@@ -1,5 +1,5 @@
 /* ============================================================================
-   Time Bandit Scoreboard: automatic weekly fill, v1.1, Oct 18, 2026. Friend box counts only Social entries of 60 minutes or more. The list page uses these same rules.
+   Time Bandit Scoreboard: automatic weekly fill, v1.2, Oct 18, 2026. Train time is office days x 2 trips x 69 minutes; city bike and taxi lines added. v1.1, Oct 18, 2026. Friend box counts only Social entries of 60 minutes or more. The list page uses these same rules.
    Builds the week's list if it does not exist yet, then fills in every line from what
    Project YOU has already logged (day blocks, habit log, day tallies, tagged calendar events).
    Used by the Habit Dashboard so nobody has to open the list page and press Calculate.
@@ -26,12 +26,12 @@ var SEED=[
  ['desk','At my desk',1,'chart'],['d_amz','Amazon work (not in meetings)','desk','chart'],['d_py','Project YOU','desk','chart'],['tw','TreadWell','desk','chart'],
  ['meet','In meetings (Amazon)',0,'chart'],
  ['commute','Commuting',1,'chart'],['c_train','On the train','commute','chart'],['c_plat','Waiting on the platform','commute','chart'],['c_bike','On my bike to the stations','commute','chart'],['c_walk','Walking to and from the office','commute','chart'],
- ['bike','On a bike (not commuting)',0,'chart'],['zingo','Zingo walks (any time of day)',0,'chart'],['walks','Other walks',0,'chart'],['runs','Runs',0,'chart'],
+ ['bike','On a bike (city bike, not commuting)',0,'chart'],['zingo','Zingo walks (any time of day)',0,'chart'],['walks','Other walks',0,'chart'],['runs','Runs',0,'chart'],
  ['social','Social',1,'chart'],['s_friend','Face to face with a friend','social','chart'],['s_asa','Time with Åsa','social','chart'],['s_son','Being a good dad','social','chart'],['s_culture','Culture events','social','chart'],
  ['safari','Safaris (new places)',0,'chart'],
  ['mind','Mind and body habits',1,'chart'],['m_mf','Mental Fitness apps (Elevate, Imprint, Impulse)','mind','chart'],['m_ai','AI Workout','mind','chart'],['m_mc','MasterClass','mind','chart'],['m_med','Meditation','mind','chart'],['m_str','Stretching','mind','chart'],
  ['home','Home and household (Irvine)',0,'chart'],['eat','Eating',0,'chart'],['balance','Balance practice',0,'chart'],['travel','Travel (flights, trips)',0,'chart'],
- ['p_sleep','Sleep',0,'parking'],['p_day','Time in daylight',0,'parking'],['p_wall','The Wall (Sparkboard)',0,'parking'],['p_wrap',"It's a wrap",0,'parking'],['p_photo','Photo Booth',0,'parking'],
+ ['taxi','Taxi and car rides',0,'chart'],['p_sleep','Sleep',0,'parking'],['p_day','Time in daylight',0,'parking'],['p_wall','The Wall (Sparkboard)',0,'parking'],['p_wrap',"It's a wrap",0,'parking'],['p_photo','Photo Booth',0,'parking'],
  ['p_things','Things Worth Knowing, Takeaways, The Feed',0,'parking'],['p_atomic','Atomic Habits card',0,'parking'],['p_med','Medicine, What I Woke Up To, Posture',0,'parking'],['p_coffee','Coffee making',0,'parking']
 ];
 function seedRows(wk){return SEED.map(function(s,i){return {id:wk+':'+s[0],week_start:wk,label:s[1],parent_id:(typeof s[2]==='string')?wk+':'+s[2]:null,zone:s[3],hours:0,source_note:'Not filled in yet.',confidence:'need',sort:i,is_custom:false,updated_at:new Date().toISOString()};});}
@@ -72,7 +72,7 @@ async function compute(sb,wk){
   put('meet',tm.h*60,'worked',tm.n?tm.n+' event'+(tm.n>1?'s':'')+' you tagged "Meeting" on Today\'s Todos, overlaps removed.':'No events tagged "Meeting" this week.');
   /* commute */
   var plat=bm(/train platform/i,true);put('c_plat',plat.m,'measured',plat.m?'Train platform blocks, '+plat.m+' min.':'No platform blocks.');
-  var officeDays={};tally.forEach(function(t){if(+t.commute>0)officeDays[t.day]=1;});blocks.forEach(function(b){if(/train platform|^commute$/i.test(b.title||''))officeDays[b.day]=1;});
+  var officeDays={};tally.forEach(function(t){if(+t.commute>0)officeDays[t.day]=1;});allBlocks.forEach(function(b){if(/train platform|^commute$/i.test(b.title||''))officeDays[b.day]=1;});
   var walks=blocks.filter(function(b){return /^🚶/.test(b.title||'');});
   var ny=walks.filter(function(b){return /new york/i.test(b.title);}),gw=walks.filter(function(b){return !/new york/i.test(b.title);});
   var sm=function(l){return l.reduce(function(a,b){return a+b.mins;},0);};
@@ -83,10 +83,16 @@ async function compute(sb,wk){
   var rides=blocks.filter(function(b){return /^🚴/.test(b.title||'');});
   var cb=rides.filter(function(b){return /greenwich/i.test(b.title);}),ob=rides.filter(function(b){return !/greenwich/i.test(b.title);});
   put('c_bike',sm(cb),'worked',cb.length?cb.length+' Greenwich ride'+(cb.length>1?'s':'')+' to or from the station.':'No station rides recorded.');
-  put('bike',sm(ob),'measured',ob.length?ob.length+' other ride'+(ob.length>1?'s':'')+'.':'No other rides recorded.');
+  var citiB=bm(/citi ?bike/i),citiQ=qm(/citi ?bike/i);
+  var bikeM=sm(ob)+citiB.m+citiQ.m;
+  put('bike',bikeM,'measured',bikeM?'City bike and other rides, '+bikeM+' min.':'No city bike ride recorded yet. Tell me the minutes and it goes in.');
   var runs=bm(/^🏃/);put('runs',runs.m,'measured',runs.m?runs.n+' run'+(runs.n>1?'s':'')+'.':'No runs recorded.');
-  var comm=tsum('commute');var train=Math.max(comm-plat.m-sm(cb)-sm(cw),0);
-  put('c_train',train,'worked',comm?'Commute time tallied ('+comm+' min) minus the platform, station rides and office walks.':'No commute time tallied this week.');
+  /* train: every office day is two Metro-North trips at 69 minutes each (confirmed rule). An office day is a weekday with commute time, a platform block or a Manhattan walk. */
+  var wkday=function(d){var g=new Date(d+'T12:00:00Z').getUTCDay();return g>=1&&g<=5;};
+  var offDays=Object.keys(officeDays).filter(wkday);
+  ny.forEach(function(b){if(wkday(b.day)&&offDays.indexOf(b.day)<0)offDays.push(b.day);});
+  var trips=offDays.length*2;
+  put('c_train',trips*69,'rule',trips?trips+' train trips ('+offDays.length+' office days x 2) at 69 minutes each.':'No office days found this week.');
   /* social */
   var socAll=qs.filter(function(q){return /^social$/i.test(q.tracker||'');}),socBig=socAll.filter(function(q){return q.minutes>=60;});
   var socM=socBig.reduce(function(a,q){return a+q.minutes;},0);
@@ -105,6 +111,8 @@ async function compute(sb,wk){
   var eat=tsum('eating');put('eat',eat,'rule',eat?'Only '+eat+' min logged, probably under-counted.':'No eating time logged, so this is under-counted.');
   fromQs('balance',/^balance$/i,'balance practice');
   put('travel',0,'measured','No trips tracked this week.');
+  var taxB=bm(/\b(taxi|cab|uber|lyft|curb|waymo)\b/i),taxQ=qm(/^(taxi|cab|uber|lyft|curb|waymo)/i);var taxM=taxB.m+taxQ.m;
+  put('taxi',taxM,'measured',taxM?'Taxi and car rides, '+taxM+' min.':'No taxi ride recorded yet. Tell me the minutes and it goes in.');
   /* parking lot (not drawn) */
   fromQs('p_wall',/^the wall$/i,'The Wall');fromQs('p_wrap',/wrap/i,"It's a wrap");fromQs('p_photo',/photo booth/i,'Photo Booth');
   fromQs('p_things',/^(takeaways|things worth knowing|the feed)$/i,'those cards');fromQs('p_atomic',/^atomic habits/i,'Atomic Habits');
@@ -118,6 +126,10 @@ async function run(sb,wk){
   var rows=(r&&r.data)||[];
   var created=false;
   if(!rows.length){rows=seedRows(wk);created=true;}
+  else if(addDays(wk,9)>=todayET()){   /* weeks still being filled get any line added since the list was made */
+    var have={};rows.forEach(function(x){have[String(x.id).split(':').slice(1).join(':')]=1;});
+    seedRows(wk).forEach(function(x){var k=String(x.id).split(':').slice(1).join(':');if(!have[k]&&/^taxi$/.test(k)){x.sort=100;rows.push(x);}});
+  }
   var weekEnded=addDays(wk,6)<todayET();
   var fresh=addDays(wk,9)>=todayET();   /* ended within 3 days, or still running */
   var todo=rows.filter(function(x){
