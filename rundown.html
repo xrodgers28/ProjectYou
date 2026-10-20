@@ -91,12 +91,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; your daily AI workout</div>
-  <h1>AI Workout <span class="ver">v3.0</span></h1>
+  <h1>AI Workout <span class="ver">v3.1</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
-  <div class="note">Each day: one tip, one insight, four new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable, two stories as two tiles (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That (three of the four).</div>
-  <div class="stamp" id="stamp">v3.0</div>
+  <div class="note">Each day: one tip, one insight, one GenAI Works pick, four new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable, two stories as two tiles (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That (three of the four).</div>
+  <div class="stamp" id="stamp">v3.1</div>
 </div>
 
 <script>
@@ -153,8 +153,8 @@ var __cueTickId=setInterval(__cueHandTick,250);
    Once a week: 1 AI Training guide (first visit from Monday) and 1 Roundtable (first visit from Friday).
    Tips, insights and platforms are dealt into ai_cards by the database; workflows, guides and
    roundtables come from rundown_items, where seen_on is the ledger. */
-var ORDER={"tip":0,"insight":1,"platform":2,"AI Training":3,"Roundtable":4,"Workflow of the Day":5};
-var KICKS={"tip":"Working with AI","insight":"Industry insight","platform":"New platform","AI Training":"AI Training · weekly guide","Roundtable":"Roundtable · weekly","Workflow of the Day":"Workflow of the Day"};
+var ORDER={"tip":0,"insight":1,"genai":1.5,"platform":2,"AI Training":3,"Roundtable":4,"Workflow of the Day":5};
+var KICKS={"tip":"Working with AI","insight":"Industry insight","genai":"GenAI Works \u00b7 today's pick","platform":"New platform","AI Training":"AI Training · weekly guide","Roundtable":"Roundtable · weekly","Workflow of the Day":"Workflow of the Day"};
 var STAR='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l2.6 5.3 5.8.85-4.2 4.1 1 5.75L12 16.9l-5.2 2.7 1-5.75-4.2-4.1 5.8-.85z" stroke-linejoin="round"/></svg>';
 var HID={};
 function hidQ(){ var ids=Object.keys(HID).filter(function(k){ return k.charAt(0)==="r"; }).map(function(k){ return k.slice(1); }); return ids.length?"&id=not.in.("+ids.join(",")+")":""; }
@@ -274,7 +274,8 @@ function pickAi(rows){
   var tip=main.filter(function(r){ return r.card_type==="tip"; })[0];
   var ins=main.filter(function(r){ return r.card_type==="insight"; })[0];
   var pl=main.filter(function(r){ return r.card_type==="platform"; }).slice(0,4);
-  if(tip) out.push(tip); if(ins) out.push(ins);
+  var gw=main.filter(function(r){ return r.card_type==="genai"; })[0];
+  if(tip) out.push(tip); if(ins) out.push(ins); if(gw) out.push(gw);
   pl.forEach(function(p,i){ p.__n=i+1; p.__of=pl.length; out.push(p); });
   return out;
 }
@@ -327,6 +328,15 @@ function aiBody(t){
     var pb=noEcho(r.platform_name||r.title,r.body);
     if(pb) h+='<p>'+hl(pb,r.highlight)+'</p>';
     return {title:r.platform_name||r.title,html:h,link:r.platform_url?'<a class="more" href="'+esc(r.platform_url)+'" target="_blank" rel="noopener noreferrer">Check it out</a>':''};
+  }
+  if(r.card_type==="genai"){
+    /* v3.1 (Oct 20, 2026): GenAI Works daily tile. Body lines: what happened / Why it matters: / Try this: */
+    String(r.body||"").split(/\n+/).forEach(function(ln,i){
+      var m=ln.match(/^(Why it matters|Try this):\s*(.*)$/);
+      if(m) h+='<span class="wfl">'+(m[1]==="Try this"?"Try this today":m[1])+'</span><p>'+esc(m[2])+'</p>';
+      else if(ln.trim()) h+='<p'+(i===0?' class="wflog" style="font-style:normal;color:inherit"':'')+'>'+esc(ln)+'</p>';
+    });
+    return {title:r.title,html:h,link:r.source_url?'<a class="more" href="'+esc(r.source_url)+'" target="_blank" rel="noopener noreferrer">Open the original story</a>':''};
   }
   var mb=noEcho(r.title,r.body); if(mb) h+='<p>'+esc(mb)+'</p>';
   return {title:r.title,html:h,link:''};
@@ -544,7 +554,7 @@ loadHidden().then(function(){ return Promise.all([dealAi().catch(function(){ ret
     var wf=rdRows.filter(function(r){ return r.section==="Workflow of the Day"; }).length;
     var plats=tiles.filter(function(t){ return t.type==="platform"; }).length;
     document.getElementById("sub").textContent=tiles.length+" tiles · about 10 minutes"+(plats?" · "+plats+" new platforms":"")+(wf?" · "+wf+" workflows":"");
-    document.getElementById("stamp").textContent="v3.0 · "+nice(today());
+    document.getElementById("stamp").textContent="v3.1 · "+nice(today());
     render();
   });
 }).catch(function(e){
