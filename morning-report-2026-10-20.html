@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f5f3ee; --panel:#ffffff; --ink:#23262b; --soft:#565d66; --mut:#8b9098;
+  --line:#e3ddd0; --box:#fbfaf6; --chipbg:#ece7da; --chipink:#565d66;
+  --green:#2f8f5b; --amber:#c07f10; --red:#b4453a;
+  --do:#3f6f8f; --more:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+  --btnink:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1b1d20; --panel:#24272c; --ink:#e9e7e1; --soft:#b2b7bf; --mut:#878c94;
+    --line:#343840; --box:#1e2126; --chipbg:#30343b; --chipink:#b2b7bf;
+    --green:#49a773; --amber:#d9942a; --red:#d06155;
+    --do:#5b89a8; --more:#d9942a; --did:#49a773; --read:#8a95a3; --kill:#c08860;
+    --btnink:#15171a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1b1d20; --panel:#24272c; --ink:#e9e7e1; --soft:#b2b7bf; --mut:#878c94;
+  --line:#343840; --box:#1e2126; --chipbg:#30343b; --chipink:#b2b7bf;
+  --green:#49a773; --amber:#d9942a; --red:#d06155;
+  --do:#5b89a8; --more:#d9942a; --did:#49a773; --read:#8a95a3; --kill:#c08860;
+  --btnink:#15171a;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif; line-height:1.5;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:820px; margin:0 auto; padding:20px 16px 60px;}
+header.top{padding:6px 0 2px;}
+.titlerow{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+h1{font-size:27px; margin:0; letter-spacing:.2px;}
+.vchip{font-size:11px; font-weight:700; color:var(--chipink); background:var(--chipbg);
+  border-radius:6px; padding:3px 7px; letter-spacing:.3px;}
+.date{color:var(--soft); font-size:13px; margin:6px 0 0;}
+.intro{color:var(--soft); font-size:14px; margin:14px 0 4px;}
+.habit{background:var(--box); border:1px solid var(--line); border-radius:10px;
+  padding:11px 13px; margin:12px 0 4px; font-size:13.5px; color:var(--soft);}
+.habit b{color:var(--ink);}
+
+/* pinned answer panel */
+.pin{position:sticky; top:0; z-index:20; background:var(--bg); padding-top:10px;
+  margin-top:16px; border-bottom:1px solid var(--line);}
+.pinbox{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:13px 14px 14px; box-shadow:0 2px 8px rgba(0,0,0,.05);}
+.pinhd{font-size:12.5px; font-weight:700; color:var(--ink); margin:0 0 4px; letter-spacing:.2px;}
+.pinsub{font-size:12px; color:var(--soft); margin:0 0 9px;}
+textarea#out{width:100%; min-height:92px; resize:vertical; background:var(--box);
+  color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:10px;
+  font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:1.5;}
+.pinbtns{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;}
+.util{border:1px solid var(--line); background:var(--box); color:var(--soft);
+  border-radius:7px; padding:7px 12px; font-size:12.5px; font-weight:600; cursor:pointer;}
+.util:hover{color:var(--ink);}
+.copynote{font-size:11.5px; color:var(--mut); margin-top:7px;}
+
+/* button key */
+.key{margin:16px 0 6px;}
+.key h2{font-size:13px; margin:0 0 8px; color:var(--ink); letter-spacing:.3px;}
+.keygrid{display:grid; grid-template-columns:1fr; gap:6px;}
+.keyrow{font-size:12.5px; color:var(--soft);}
+.kw{display:inline-block; min-width:118px; font-weight:700; color:var(--btnink);
+  border-radius:6px; padding:2px 8px; margin-right:8px; font-size:11.5px;}
+.k-do{background:var(--do);} .k-more{background:var(--more);} .k-did{background:var(--did);}
+.k-read{background:var(--read);} .k-kill{background:var(--kill);}
+
+/* rows */
+.rows{margin-top:12px;}
+.row{background:var(--panel); border:1px solid var(--line); border-left:6px solid var(--line);
+  border-radius:12px; padding:14px 15px; margin:12px 0; transition:opacity .15s;}
+.row.settled{opacity:.62;}
+.rhead{display:flex; align-items:flex-start; gap:10px;}
+.dot{flex:0 0 auto; width:13px; height:13px; border-radius:50%; margin-top:5px;}
+.dot.green{background:var(--green);} .dot.amber{background:var(--amber);} .dot.red{background:var(--red);}
+.rtitle{font-size:16px; font-weight:700; margin:0; color:var(--ink);}
+.rbody{font-size:14px; color:var(--soft); margin:9px 0 0;}
+.rnext{font-size:14px; margin:9px 0 0; color:var(--ink);}
+.rnext b{color:var(--ink);}
+.rproof{font-size:11.5px; color:var(--mut); margin:9px 0 0; font-style:italic;}
+.state{font-size:12px; font-weight:700; margin:9px 0 0; display:none;}
+.row.chosen .state{display:block;}
+
+.btns{display:flex; gap:7px; margin-top:11px; flex-wrap:wrap;}
+.btn{border:none; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600;
+  color:var(--btnink); cursor:pointer; font-family:Arial, Helvetica, sans-serif;}
+.b-do{background:var(--do);} .b-more{background:var(--more);} .b-did{background:var(--did);}
+.b-read{background:var(--read);} .b-kill{background:var(--kill);}
+.btn:hover{filter:brightness(1.07);}
+.btn.on{outline:3px solid rgba(0,0,0,.18); outline-offset:1px;}
+
+.cmt{width:100%; margin-top:10px; background:var(--box); color:var(--ink);
+  border:1px solid var(--line); border-radius:8px; padding:8px 10px;
+  font-family:Arial, Helvetica, sans-serif; font-size:13px; min-height:38px; resize:vertical;}
+.cmt::placeholder{color:var(--mut);}
+
+.endnote{color:var(--mut); font-size:12px; margin-top:26px; text-align:center;}
+
+@media (max-width:520px){
+  h1{font-size:23px;}
+  .kw{min-width:104px;}
+  .btn{flex:1 1 auto; text-align:center;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="titlerow">
+      <h1>Morning Report</h1>
+      <span class="vchip">v1.0</span>
+    </div>
+    <p class="date">Tuesday, October 20, 2026</p>
+  </header>
+
+  <p class="intro">A wide open day, Scott. Nothing on the calendar today, a handful of small things waiting on a word from you, and tomorrow starts early.</p>
+
+  <div class="habit">
+    <b>Atomic Habits for today:</b> the Two-Minute Rule. With 44 finished jobs waiting on your yes, do not sit down to clear them all. Sit down to approve one. A habit has to be established before it can be improved, and a single tap today keeps the whole machine moving.
+  </div>
+
+  <!-- pinned answer panel -->
+  <div class="pin">
+    <div class="pinbox">
+      <p class="pinhd">Your answers gather here</p>
+      <p class="pinsub">Tap the buttons below. Your choices build up in this box as plain text. Select it all and paste it back into the chat. That paste is how your answers reach me.</p>
+      <textarea id="out" readonly></textarea>
+      <div class="pinbtns">
+        <button class="util" id="selall">Select all</button>
+        <button class="util" id="copy">Copy</button>
+      </div>
+      <p class="copynote" id="copynote">Nothing is stored on this page. Your answers live only here until you paste them into the chat.</p>
+    </div>
+  </div>
+
+  <!-- button key -->
+  <div class="key">
+    <h2>What each button means</h2>
+    <div class="keygrid">
+      <div class="keyrow"><span class="kw k-do">Do this</span>Go build it, run it, ship it. An instruction, not just an answer. The card stays open until the work is done.</div>
+      <div class="keyrow"><span class="kw k-more">Tell me more</span>You lean yes, but want the cost, the risk, or the reasoning first. The card stays open and the next move is mine.</div>
+      <div class="keyrow"><span class="kw k-did">I did it</span>You handled it yourself. The card settles.</div>
+      <div class="keyrow"><span class="kw k-read">I read this</span>Just noting you saw it. Nothing is owed. The card settles.</div>
+      <div class="keyrow"><span class="kw k-kill">Kill this task</span>Dead, and it does not come back. The card settles.</div>
+    </div>
+  </div>
+
+  <div class="rows" id="rows"></div>
+
+  <p class="endnote">Eleven things this morning. Two keep a card open when work is owed, Do this and Tell me more. The rest settle it.</p>
+
+</div>
+
+<script>
+var ROWS = [
+  { id:"maps", light:"red", tag:"System maps frozen",
+    title:"Your system maps have been frozen for seven weeks",
+    body:"The six map pages on your site still show the setup from early September, and the nightly check keeps finding the same gaps night after night. It cannot open the live site on its own to bring them current, because that needs a tap to approve, and that tap has gone unanswered eight nights running. Nothing on the maps is wrong, they are just well behind what the system actually does now. This is the oldest open thread in the whole setup.",
+    next:"Tell me to refresh the maps from today's data, and I will have them current by tomorrow morning.",
+    proof:"Proof: the six map pages last changed Sep 4 and Oct 9; the freshness check flagged drift again at 3:27am." },
+
+  { id:"queue", light:"amber", tag:"44 jobs waiting on your yes",
+    title:"Forty-four finished jobs are waiting on your yes",
+    body:"The overnight builder had nothing new to make last night. That is not a fault. It is because everything it has already built is sitting in review, waiting for you to look. Until you clear a few, it keeps waking to an empty tray and goes back to sleep. Approving even a handful tonight lets it pick up the next round.",
+    next:"Pick a few to approve so the line starts moving again. I can send them to you one screen at a time.",
+    proof:"Proof: 44 built items marked complete and waiting, 7 more blocked on your answer, 0 ready to build." },
+
+  { id:"scan", light:"amber", tag:"Idea scan backlog",
+    title:"This morning's idea scan left a stack to sort",
+    body:"Your daily scan of AI tools and community finds ran at 3am and added six fresh cards today. All told there are now a few hundred waiting for a simple keep or toss. The newest are trending AI tools and a couple of roundup takes worth a glance. This is a ten minute job, not an hour.",
+    next:"Say the word and I will walk you through today's six first, then the backlog in small batches.",
+    proof:"Proof: 298 cards unsaved, 6 added today, 12 in the last two days." },
+
+  { id:"pinterest", light:"amber", tag:"Pinterest alert from Asa",
+    title:"Asa asked you to check a Pinterest alert",
+    body:"On Saturday she passed you a Pinterest security notice and asked if it looks like spam or needs any action. It mentions a sign in from California. The thread is still sitting unanswered. It is most likely harmless, but she is waiting to hear back from you.",
+    next:"Take a quick look and tell her whether to do anything. I can draft the reply for you if you want.",
+    proof:"Proof: forwarded by Asa on Oct 17, no reply from you since." },
+
+  { id:"farm", light:"amber", tag:"Thanksgiving farm order",
+    title:"The Thanksgiving farm order needs your picks",
+    body:"Todd sent around last year's Morning Glory Farm order and asked everyone to flag what they do and do not want. One note suggests maybe less bread and fewer pies if some of the crew leaves early, and just one cranberry sauce. The group is waiting on you and Asa to confirm your side.",
+    next:"Reply with what you want in or out. I can draft it from last year's list for you to tweak.",
+    proof:"Proof: thread from Oct 19 to 20, you are named to confirm, no reply yet." },
+
+  { id:"grid", light:"amber", tag:"GRID donation",
+    title:"A GRID Alternatives donation is sitting with you",
+    body:"On Monday night Asa forwarded you the invoice thread for this year's public trip. The plan all along was to give through the GRID website rather than pay the invoice directly. Nothing has gone out yet, as far as this thread shows.",
+    next:"Make the donation on their site, or check with Asa whether she already handled it.",
+    proof:"Proof: Asa forwarded the invoice thread to you Oct 20, donation not confirmed in the thread." },
+
+  { id:"zoom", light:"amber", tag:"Friday 9am Zoom with Ruth",
+    title:"Ruth wants a Friday 9am Zoom",
+    body:"Ruth sent a Zoom invite for this Friday, October 23 at 9am, to you and Asa. There is nothing on your calendar for it yet, so it is easy to lose. It is a short note and only needs a yes or no.",
+    next:"Decide if you are in, and I will add it to your calendar if so.",
+    proof:"Proof: Zoom invite received Oct 19, no calendar hold and no reply." },
+
+  { id:"treadwell", light:"amber", tag:"TreadWell feedback tape",
+    title:"TreadWell's one open thread is Mike's feedback tape",
+    body:"The only thing on the TreadWell list right now is the feedback recording from the August 7 call, still unopened in the folder. It has been waiting since early September. The folder lives on your Mac, which this run cannot reach, so it is a you-at-your-desk job.",
+    next:"Give it a listen when you are back at the Mac, then tell me the takeaways and I will turn them into next steps.",
+    proof:"Proof: single open TreadWell item, in the Parking Lot, untouched since Sep 4." },
+
+  { id:"usage", light:"amber", tag:"Claude usage unknown",
+    title:"I cannot see your Claude usage from here",
+    body:"You asked where you stand on your weekly Claude limit. A run like this has no window into the usage meter, so I cannot pull a real number and I will not guess one. If you have been leaning on it hard this week, it is worth a glance in the app. Nothing here depends on it.",
+    next:"Check the usage view in the Claude app yourself. If you want, I can look into whether this can be tracked for you automatically.",
+    proof:"Proof: usage data is not exposed to a scheduled run; reported, not estimated." },
+
+  { id:"overnight", light:"green", tag:"Overnight builder gaps",
+    title:"Last night's builder ran, clean, with two small gaps",
+    body:"It woke at 2:17am, looked for work, found none to build, and closed out by about 2:30. Two things are worth knowing. It did not write itself into its own run log, so at a glance it can look like it never ran even though it did. And the site and link checks were skipped again, because a run with nobody awake cannot approve the web fetch they need.",
+    next:"Nothing needed. If the missing log bothers you, I can fix how it signs itself in.",
+    proof:"Proof: start and finish recorded in the board notes at 2:17 and 2:23am; no matching row in the run log." },
+
+  { id:"day", light:"green", tag:"Day shape",
+    title:"Today is wide open; tomorrow starts early",
+    body:"Nothing is on your calendar today, so the whole day is yours to spend on the thing that has been waiting. Tomorrow is the opposite: an early appointment in Stamford with a 7:45 arrival, then squash in the late afternoon. A clear today is the best time to get ahead of a full tomorrow.",
+    next:"Nothing today. Maybe set out tomorrow morning tonight so the early start is easy.",
+    proof:"Proof: zero events today on your calendar; two events tomorrow, first at 8am." }
+];
+
+var BTNS = [
+  { key:"do",   label:"Do this",        cls:"b-do",   word:"DO THIS",      open:true  },
+  { key:"more", label:"Tell me more",   cls:"b-more", word:"TELL ME MORE", open:true  },
+  { key:"did",  label:"I did it",       cls:"b-did",  word:"I DID IT",     open:false },
+  { key:"read", label:"I read this",    cls:"b-read", word:"I READ THIS",  open:false },
+  { key:"kill", label:"Kill this task", cls:"b-kill", word:"KILL THIS",    open:false }
+];
+var COLORS = { do:"#3f6f8f", more:"#c07f10", did:"#2f8f5b", read:"#6f7b8a", kill:"#a8724a" };
+var WORDS  = { do:"DO THIS", more:"TELL ME MORE", did:"I DID IT", read:"I READ THIS", kill:"KILL THIS" };
+var STATELABEL = { do:"Working on it", more:"Sending you the detail", did:"You handled it", read:"Noted", kill:"Killed" };
+
+var state = {};
+
+function esc(s){ var d=document.createElement("div"); d.textContent=s; return d.innerHTML; }
+
+function render(){
+  var host = document.getElementById("rows");
+  ROWS.forEach(function(r, i){
+    var row = document.createElement("div");
+    row.className = "row";
+    row.id = "row-" + r.id;
+
+    var btns = BTNS.map(function(b){
+      return '<button class="btn '+b.cls+'" data-row="'+r.id+'" data-key="'+b.key+'">'+esc(b.label)+'</button>';
+    }).join("");
+
+    row.innerHTML =
+      '<div class="rhead">'
+        + '<span class="dot '+r.light+'"></span>'
+        + '<div><p class="rtitle">'+(i+1)+'. '+esc(r.title)+'</p></div>'
+      + '</div>'
+      + '<p class="rbody">'+esc(r.body)+'</p>'
+      + '<p class="rnext"><b>Next:</b> '+esc(r.next)+'</p>'
+      + '<p class="state" id="state-'+r.id+'"></p>'
+      + '<div class="btns">'+btns+'</div>'
+      + '<textarea class="cmt" data-row="'+r.id+'" placeholder="Add a note for me (optional)"></textarea>'
+      + '<p class="rproof">'+esc(r.proof)+'</p>';
+
+    host.appendChild(row);
+  });
+
+  host.addEventListener("click", function(e){
+    var b = e.target.closest ? e.target.closest(".btn") : null;
+    if(!b) return;
+    choose(b.getAttribute("data-row"), b.getAttribute("data-key"));
+  });
+  host.addEventListener("input", function(e){
+    if(e.target && e.target.classList.contains("cmt")){
+      var id = e.target.getAttribute("data-row");
+      state[id] = state[id] || {};
+      state[id].comment = e.target.value;
+      compile();
+    }
+  });
+}
+
+function choose(id, key){
+  state[id] = state[id] || {};
+  state[id].choice = key;
+  var row = document.getElementById("row-"+id);
+  row.classList.add("chosen");
+  row.style.borderLeftColor = COLORS[key];
+  var open = (key==="do" || key==="more");
+  row.classList.toggle("settled", !open);
+  var all = row.querySelectorAll(".btn");
+  for(var j=0;j<all.length;j++){ all[j].classList.toggle("on", all[j].getAttribute("data-key")===key); }
+  var st = document.getElementById("state-"+id);
+  st.textContent = (open ? "Open — " : "Settled — ") + STATELABEL[key];
+  st.style.color = COLORS[key];
+  compile();
+}
+
+function compile(){
+  var lines = [];
+  lines.push("MORNING REPORT — Scott's answers — Tuesday, October 20, 2026");
+  lines.push("");
+  var any = false;
+  ROWS.forEach(function(r, i){
+    var s = state[r.id];
+    if(!s || (!s.choice && !(s.comment && s.comment.trim()))) return;
+    any = true;
+    var line = (i+1) + ". " + r.tag;
+    if(s.choice) line += "  →  " + WORDS[s.choice];
+    lines.push(line);
+    if(s.comment && s.comment.trim()) lines.push("   note: " + s.comment.trim());
+  });
+  if(!any){
+    document.getElementById("out").value =
+      "No taps yet. Tap a button on any card below and your answers gather here, ready to paste back into the chat.";
+    return;
+  }
+  document.getElementById("out").value = lines.join("\n");
+}
+
+document.getElementById("selall").addEventListener("click", function(){
+  var t = document.getElementById("out");
+  t.focus(); t.select();
+  try { t.setSelectionRange(0, t.value.length); } catch(e){}
+  document.getElementById("copynote").textContent = "Selected. Now copy it with your usual copy gesture and paste it into the chat.";
+});
+document.getElementById("copy").addEventListener("click", function(){
+  var t = document.getElementById("out");
+  t.focus(); t.select();
+  var note = document.getElementById("copynote");
+  try {
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t.value).then(function(){
+        note.textContent = "Copied. Paste it into the chat. If nothing pasted, use Select all and copy by hand.";
+      }, function(){
+        note.textContent = "Copy was blocked here. Use Select all, then copy by hand and paste into the chat.";
+      });
+    } else {
+      note.textContent = "Copy is not available here. Use Select all, then copy by hand and paste into the chat.";
+    }
+  } catch(e){
+    note.textContent = "Copy is not available here. Use Select all, then copy by hand and paste into the chat.";
+  }
+});
+
+render();
+compile();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
