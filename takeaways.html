@@ -50,6 +50,7 @@
   .pk.seen{color:#9aa6b4}
   .pk.part{color:#7b8593}
   .pk.lock{color:#c3cad4}
+  .pk.lock:hover{color:#c3cad4}
   .pk.on[disabled]{color:var(--ink)}
   .pkn{font-weight:700;font-size:10px;color:#b0b8c4;margin-left:3px;font-variant-numeric:tabular-nums}
   .now{text-align:center;margin:2px 0 8px}
@@ -120,7 +121,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v2.9</span>
+    <span class="pn-ver">v3.0</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -250,7 +251,7 @@ function rebuildTiles(){
   TILES.forEach(function(x,i){ x.n=i; });
 }
 rebuildTiles();
-/* v2.9: cards saved from the Card Maker live in public.mindset_cards (words plus
+/* v3.0 (Oct 21, 2026): the card names above the card open that card (dealt cards only; a read-through records nothing). v2.9: cards saved from the Card Maker live in public.mindset_cards (words plus
    picture paths) and are drawn by mindset-tile.js. They join the end of the deck,
    in the order of their position number, behind the picture-file cards above. */
 async function loadSavedCards(){
@@ -271,6 +272,8 @@ const END_TILE={end:true};
 let SERVED={}, VIEW=[], idx=0, LOCKED=TILES.length, DECKSTATE=null;
 let CARD=-1, CARDS_READ=0;
 let signedIn=false, ticked=false, habitRow=null, FREE=false;
+/* v3.0: tapping a card name above the card opens that card (a read-through that records nothing). HOMEVIEW is today's real card; REVIEW is true while looking at a different one. */
+let REVIEW=false, HOMEVIEW=[];
 
 function url(slug,t){return BASE+slug+'-'+t+'.webp';}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -321,6 +324,7 @@ async function loadDeck(){
   if(LOCKED===0)VIEW=VIEW.concat([END_TILE]);
   if(!VIEW.length)VIEW=[END_TILE];
   if(idx>=VIEW.length)idx=0;
+  HOMEVIEW=VIEW.slice(); REVIEW=false;
 }
 
 async function markRead(){
@@ -358,9 +362,18 @@ function ledger(){
     }
     var s=seenIn(i);
     var cls=(i===cur)?'on':(s>=c.tiles?'seen':(s?'part':'lock'));
-    return '<button class="pk '+cls+'" data-c="'+i+'" disabled>'+esc(c.name)+
+    return '<button class="pk '+cls+'" data-c="'+i+'">'+esc(c.name)+
            '<span class="pkn">'+s+'/'+c.tiles+'</span></button>';
   }).join('');
+}
+
+/* open a card from the names above it. Today's card is the real one (Finish ticks the habit).
+   Any other dealt card is a read-through: nothing is recorded and Finish never fires. A card the
+   deck has not dealt yet stays shut, with a message, so reading ahead cannot skip the one-a-day order. */
+function showCard(ci){
+  if(HOMEVIEW.some(function(x){return !x.end&&x.ci===ci;})){ VIEW=HOMEVIEW.slice(); REVIEW=false; idx=0; render(); return; }
+  if(seenIn(ci)===0){ toast(CARDS[ci].name+' has not been dealt yet. It comes up in order.'); return; }
+  VIEW=tilesOf(ci); REVIEW=true; idx=0; render();
 }
 
 function render(){
@@ -371,11 +384,13 @@ function render(){
 
   document.getElementById('picker').innerHTML=ledger();
   document.querySelectorAll('.pk[data-c]').forEach(function(b){
-    if(b.disabled)return;
     b.onclick=function(){
       var ci=parseInt(b.dataset.c,10);
-      for(var i=0;i<VIEW.length;i++) if(VIEW[i].ci===ci&&VIEW[i].ti===1){idx=i;break;}
-      render();
+      if(FREE){
+        for(var i=0;i<VIEW.length;i++) if(VIEW[i].ci===ci&&VIEW[i].ti===1){idx=i;break;}
+        render(); return;
+      }
+      showCard(ci);
     };
   });
 
@@ -389,7 +404,9 @@ function render(){
 
   /* the progress line counts CARDS, because a card is the unit of a day */
   var ll=document.getElementById('lockline');
-  if(FREE){
+  if(REVIEW&&!c.end){
+    ll.textContent='Reading '+CARDS[c.ci].name+'. Nothing is recorded.';
+  } else if(FREE){
     ll.textContent='Offline — browsing all '+TILES.length+' tiles. Nothing is being recorded.';
   } else if(c.end){
     ll.textContent='';
@@ -414,7 +431,7 @@ function render(){
       '<button class="rback" id="rotBack">Add back to rotation</button>'+
     '</div>';
     var rb=document.getElementById('rotBack'); if(rb)rb.onclick=rotateBack;
-    if(!FREE)markRead();
+    if(!FREE&&!REVIEW)markRead();
   } else {
     if(CARDS[c.ci].saved){
       /* a saved card: drawn from its words and pictures, same look as the picture tiles */
@@ -441,7 +458,8 @@ function render(){
   bk.classList.toggle('off',atStart); bk.disabled=atStart;
 
   var nx=document.getElementById('btnNext');
-  if(FREE) nx.textContent=(idx===n-1)?'Back to the start':'Next';
+  if(REVIEW) nx.textContent=(idx===n-1)?'Back to today\u2019s card':'Next';
+  else if(FREE) nx.textContent=(idx===n-1)?'Back to the start':'Next';
   else nx.textContent=(idx===n-1)?'Finish':'Next';
 
   /* preload whatever Next lands on */
@@ -450,7 +468,7 @@ function render(){
 
   /* the minute box only exists on the last tile of a live deck — Finish reads it,
      logs it and bounces to the board, so there is no separate credit card. */
-  var __showMins=!(FREE||!!c.end||idx!==n-1);
+  var __showMins=!(FREE||REVIEW||!!c.end||idx!==n-1);
   var __minsEl=document.getElementById('mins'), __totEl=document.getElementById('minTotal');
   __minsEl.classList.toggle('hidden', !__showMins);
   __totEl.classList.add('hidden'); /* only finish() reveals the measured total, once tapped */
@@ -461,6 +479,7 @@ function step(d){
   var n=VIEW.length;
   if(d>0){
     if(idx<n-1){idx++;render();}
+    else if(REVIEW){VIEW=HOMEVIEW.slice();REVIEW=false;idx=0;render();}
     else if(FREE){idx=0;render();}
     else{finish();}
   } else if(idx>0){ idx--; render(); }
@@ -537,7 +556,7 @@ function freeMode(msg){
 
 async function boot(){
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  document.getElementById('stamp').textContent='Mindset Training v2.9 · artwork from the Gold Standard Master Cue Cards Library · as of '+f+' · all times EST';
+  document.getElementById('stamp').textContent='Mindset Training v3.0 · artwork from the Gold Standard Master Cue Cards Library · as of '+f+' · all times EST';
   if(!sb){ freeMode('Could not reach the database — browsing all '+TILES.length+' tiles, nothing recorded. Reload to try again.'); return; }
   var s=await sb.auth.getSession();
   if(s.data.session){
