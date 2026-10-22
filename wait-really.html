@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wait, Really?! &middot; ProjectYou</title>
+<script src="py-day.js"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--key:#c2c8d1;--accent:#3f6f8f;--acc:#8f5f3f}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  a{color:inherit}
+  /* shared ProjectYou nav */
+  .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;gap:1px}
+  .pynav::-webkit-scrollbar{height:0}
+  .pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+  .pn-logo img{height:28px;width:auto;display:block}
+  .pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+  .pn-group.first{border-left:none}
+  .pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+  a.pn-label{text-decoration:none;cursor:pointer}a.pn-label:hover{color:var(--accent)}a.pn-label.on{color:var(--accent)}
+  .pn-links{display:flex;gap:1px;align-items:stretch}
+  .pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+  .pn-link:hover{background:#eef2f8;color:#3f6f8f}.pn-link.on{background:#3f6f8f;color:#fff}.pn-link.pn-solo{min-height:31px}
+  .pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+  .pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+  .pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+  .pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+  .pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+  .pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+  .pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+  .pn-drop{position:relative;display:inline-flex;align-items:stretch}.pn-dropbtn{cursor:pointer;user-select:none}
+  .pn-menu{position:fixed;background:#fff;border:1px solid #e3e7ee;border-radius:9px;box-shadow:0 10px 28px rgba(31,42,68,.16);padding:5px;display:none;flex-direction:column;min-width:200px;z-index:60}
+  .pn-menu.open{display:flex}.pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}
+
+    .stage{max-width:560px;margin:0 auto;padding:20px 16px 70px}
+  .now{text-align:center;margin:2px 0 8px}
+  .now .nm{font-size:14.5px;font-weight:800;color:var(--ink)}
+  .now .kd{font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#8a93a0;margin-top:1px}
+  .lockline{text-align:center;font-size:11px;color:var(--muted);margin:0 0 2px}
+  .endtile{background:#fff;border:1px solid var(--key);border-top:3px solid var(--acc);border-radius:16px;box-shadow:0 12px 34px rgba(31,42,68,.10);padding:22px 20px 20px;min-height:430px;display:flex;flex-direction:column}
+  .endtile .step{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc)}
+  .endtile h2{font-size:22px;line-height:1.22;margin-top:7px}
+  .endtile .body{font-size:14.5px;color:#46516a;line-height:1.38;margin-top:11px;flex:1}
+  .rback{width:100%;margin-top:14px;padding:10px;border:none;border-radius:999px;background:var(--acc);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+  .now{position:relative}
+  .now .cuetimer{position:absolute;left:4px;top:2px;width:22px;height:22px;border-radius:50%;background:#eef2f8;display:flex;align-items:center;justify-content:center}
+  .now .cuetimer svg{width:100%;height:100%;display:block}
+  .now .cuehand{transform-origin:12px 12px}
+  .mintotal{font-size:11.5px;color:#8a93a0;font-weight:700;margin-top:4px}
+  .mintotal.hidden{display:none}
+  .back{font-size:13px;font-weight:700;color:#a6adba;cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 2px}
+  .back.off{color:#d3d8e0;cursor:default}
+  .next{font-size:13px;font-weight:800;color:#fff;background:var(--accent);border-radius:10px;padding:9px 18px;cursor:pointer;border:none;font-family:inherit}
+  .back:focus-visible,.next:focus-visible,.pk:focus-visible,.dot:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .hint{text-align:center;font-size:11.5px;color:#9aa6b4;margin-top:16px}
+  .stamp{text-align:center;font-size:11px;color:#b0b8c4;margin-top:8px;font-style:italic}
+  .bkboard{display:block;text-align:center;font-size:12.5px;font-weight:800;color:var(--accent);text-decoration:none;margin-top:18px}
+  .minin{width:62px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;text-align:center}
+  .gate{max-width:340px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(31,42,68,.07)}
+  .gate h2{font-size:17px;margin-bottom:4px}
+  .gate p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .gate input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:9px;font-family:inherit}
+  .gate button{width:100%;padding:10px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+  .gate .err{color:#c0453b;font-size:12px;margin-top:8px;min-height:16px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:#1f2a44;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(31,42,68,.28);opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
+  .toast.on{opacity:1}
+  .hidden{display:none!important}
+.kicker{font-size:12px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent)}
+.chip{font-family:inherit;font-weight:800;font-size:12.5px;border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:7px 14px;cursor:pointer}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.chip:focus-visible,.btn:focus-visible,.pick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{font-family:inherit;font-weight:700;border:1px solid var(--line);background:#fff;color:var(--accent);border-radius:12px;padding:12px 18px;cursor:pointer;font-size:15px}
+.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.big{font-size:19px;padding:16px 10px;flex:1}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap}
+.linkbtn{font-family:inherit;background:none;border:0;color:var(--accent);font-weight:700;font-size:14.5px;cursor:pointer;padding:4px 0;text-align:left}
+/* cue card */
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px 24px;min-height:430px;display:flex;flex-direction:column;gap:14px;box-shadow:0 14px 40px rgba(31,42,68,.10);position:relative}
+.card .qline{font-size:21px;line-height:1.25;font-weight:700}
+.card .small{font-size:13px;color:var(--muted)}
+.play{display:flex;flex-direction:column;gap:14px;flex:1}
+.banner{border-radius:14px;padding:12px 14px;font-size:15px;color:var(--ink);background:var(--chip)}
+.banner b{display:block;font-size:19px;margin-bottom:2px}
+.banner.ok{background:#eaf6ef}.banner.ok b{color:var(--green)}
+.banner.no{background:#fbecea}.banner.no b{color:var(--hot)}
+.insight{font-size:27px;line-height:1.2;font-weight:800;text-wrap:balance}
+.insight em{font-style:normal;color:var(--accent);box-shadow:inset 0 -.32em 0 rgba(63,111,143,.18)}
+.tryit{padding:2px 0;font-size:16px}
+.tryit b{display:block;font-size:11.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.proof{list-style:none;font-size:14.5px;color:var(--muted)}
+.proof li{padding:9px 0;border-top:1px solid var(--line)}
+@keyframes stampin{from{transform:rotate(-6deg) scale(2.2);opacity:0}to{transform:rotate(-6deg) scale(1);opacity:1}}
+@keyframes shake{0%,100%{transform:none}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.shake{animation:shake .3s}
+@media (prefers-reduced-motion: reduce){.shake{animation:none}}
+
+/* week strip: simple */
+.board{max-width:560px;margin:14px auto 0;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 16px 12px}
+.board .bt{display:flex;justify-content:space-between;font-size:11px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.day{text-align:center}
+.day small{display:block;font-size:11px;font-weight:800;letter-spacing:1px;color:var(--muted)}
+.day .bulb{width:22px;height:22px;border-radius:50%;margin:5px auto 0;border:2px solid var(--line);background:#fff}
+.day.r .bulb{background:var(--green);border-color:var(--green)}
+.day.w .bulb{background:#fff;border-color:var(--hot)}
+.day.today small{color:var(--gold)}
+.day.today .bulb{box-shadow:0 0 0 3px rgba(217,164,0,.35)}
+
+/* dial */
+.read{font-size:54px;font-weight:800;text-align:center;color:var(--accent);line-height:1}
+.read small{font-size:20px;color:var(--muted);font-weight:700;margin-left:4px}
+.dial{position:relative;height:84px;margin:6px 20px 0}
+.track{position:absolute;left:0;right:0;top:36px;height:14px;border-radius:99px;background:linear-gradient(90deg,#6fa8c9,#e6c25a 55%,#d9695a);touch-action:none;cursor:pointer;outline:none}
+.track:focus-visible{box-shadow:0 0 0 3px var(--accent)}
+.thumb{position:absolute;top:-15px;width:44px;height:44px;margin-left:-22px;border-radius:50%;background:#fff;border:5px solid var(--accent);box-shadow:0 3px 8px rgba(0,0,0,.25);pointer-events:none}
+.flag{position:absolute;top:-36px;width:2px;height:56px;background:var(--green)}
+.flag b{position:absolute;top:-4px;left:50%;transform:translateX(-50%);white-space:nowrap;background:var(--green);color:#fff;border-radius:6px;padding:2px 7px;font-size:11px}
+.ends{display:flex;justify-content:space-between;margin:0 20px;font-size:12px;color:var(--muted)}
+/* swipe */
+.swarea{position:relative;height:240px}
+.sedge{position:absolute;top:50%;transform:translateY(-50%);font-weight:800;font-size:14px;opacity:.4;max-width:66px;line-height:1.1}
+.sedge.l{left:0}.sedge.r{right:0;text-align:right}
+.scard{position:absolute;left:50%;top:0;width:58%;height:100%;margin-left:-29%;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 26px rgba(31,42,68,.2);padding:16px;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:19px;line-height:1.25;touch-action:pan-y;cursor:grab;user-select:none}
+.scard.snap{transition:transform .25s}
+/* doors */
+.host{font-size:13px;font-weight:800;letter-spacing:1px;background:var(--ink);color:#f2d98a;border-radius:10px;padding:9px;text-align:center}
+.doors{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.door{overflow:hidden;position:relative;height:210px;perspective:700px;border:0;background:#2a1c12;padding:6px 6px 0;border-radius:8px 8px 0 0;cursor:pointer}
+.door .behind{position:absolute;left:6px;right:6px;top:6px;bottom:0;background:#fff3c4;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:30px;font-weight:800;gap:4px}
+.door .behind small{font-size:11px;font-weight:700}
+.door .behind.ok{background:#bfe8cf}.door .behind.no{background:#f6c9c0}
+.door .leaf{position:absolute;left:6px;right:6px;top:6px;bottom:0;background:linear-gradient(#c58648,#8e5a2b);transform-origin:left center;transition:transform .9s cubic-bezier(.3,.7,.2,1);display:flex;align-items:center;justify-content:center;padding:10px 6px;color:#fff;font-weight:800;font-size:13px;text-align:center;line-height:1.15;border:2px solid #6b4220}
+.door .leaf::after{content:"";position:absolute;right:8px;top:55%;width:9px;height:9px;border-radius:50%;background:#f2d98a}
+.door.open .leaf{transform:rotateY(-108deg)}
+.door:disabled{cursor:default}
+.door.chosen{outline:3px solid var(--accent)}
+/* scratch (options stay visible, only the verdict is hidden) */
+.ticket{display:grid;gap:10px}
+.srow{display:flex;align-items:center;gap:10px}
+.srow .opt{flex:1;font-weight:700;font-size:15.5px;background:var(--chip);border-radius:12px;padding:15px 14px}
+.sfoil{position:relative;width:46%;height:52px;border-radius:12px;overflow:hidden;background:#fff3c4;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+.sfoil.ok{background:#bfe8cf;color:var(--green)}.sfoil.no{background:#f6c9c0;color:var(--hot)}
+.sfoil canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+/* generic option buttons */
+.optbtn{font-family:inherit;font-size:16px;font-weight:700;text-align:left;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;color:var(--ink)}
+.optbtn:hover{border-color:var(--accent)}
+.optbtn.right{border-color:var(--green);background:#eaf6ef}
+.optbtn.wrong{border-color:var(--hot);background:#fbecea}
+.optbtn:disabled{cursor:default}
+.stack{display:grid;gap:9px}
+/* higher or lower */
+.bignum{font-size:72px;font-weight:800;text-align:center;color:var(--accent);line-height:1}
+.bignum small{font-size:26px;color:var(--muted)}
+/* fuse */
+.fuse{height:12px;background:var(--line);border-radius:99px;overflow:hidden;position:relative}
+.fuse i{position:absolute;left:0;top:0;bottom:0;width:100%;background:linear-gradient(90deg,var(--hot),var(--gold));border-radius:99px}
+.fusemsg{font-size:12px;color:var(--muted);text-align:right}
+/* rewind */
+.rw{display:flex;align-items:center;gap:10px}
+.rw .n{width:30px;height:30px;border-radius:50%;background:var(--chip);color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex:none}
+.rw.done .n{background:var(--green);color:#fff}
+.rw .optbtn{flex:1;font-size:14.5px}
+.rw .yr{font-weight:800;color:var(--accent);min-width:46px;text-align:right}
+/* match */
+.mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mt{aspect-ratio:3/4;border-radius:12px;border:1.5px solid var(--line);background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:800;font-size:11.5px;line-height:1.15;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;cursor:pointer;font-family:inherit}
+.mt.up{background:#fff;color:var(--ink);border-color:var(--accent)}
+.mt.got{background:#eaf6ef;color:var(--green);border-color:var(--green);cursor:default}
+/* wheel */
+.wheelbox{position:relative;width:260px;height:260px;margin:0 auto}
+.wheelbox svg{width:100%;height:100%;transition:transform 3.6s cubic-bezier(.12,.6,.1,1)}
+.wpin{position:absolute;left:50%;top:-8px;margin-left:-11px;width:0;height:0;border-left:11px solid transparent;border-right:11px solid transparent;border-top:24px solid var(--ink);z-index:2}
+@media (prefers-reduced-motion: reduce){.wheelbox svg{transition:none}}
+/* blank */
+.sent{font-size:23px;line-height:1.5;font-weight:700}
+.slot{display:inline-block;min-width:110px;border-bottom:3px solid var(--accent);text-align:center;color:var(--accent);padding:0 6px}
+.slot.ok{color:var(--green);border-color:var(--green)}.slot.no{color:var(--hot);border-color:var(--hot)}
+.bank{display:flex;gap:8px;flex-wrap:wrap}
+/* buzz */
+.reader{font-size:22px;font-weight:700;line-height:1.35;min-height:130px}
+.reader .ghost{opacity:0}
+.buzz{width:100%;font-family:inherit;font-weight:800;font-size:26px;letter-spacing:2px;padding:20px;border-radius:18px;border:0;background:var(--hot);color:#fff;cursor:pointer;box-shadow:0 6px 0 #8c2d26}
+.buzz:active{transform:translateY(4px);box-shadow:0 2px 0 #8c2d26}
+.buzz:disabled{opacity:.4}
+/* faceoff */
+.fo{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch}
+.fo .vs{align-self:center;font-weight:800;color:var(--muted)}
+.fo .side{border:1.5px solid var(--line);border-radius:16px;padding:14px 10px;background:#fff;font-family:inherit;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;gap:10px;text-align:center;font-size:15px;font-weight:800;min-height:200px;justify-content:flex-end}
+.fo .side .bar{background:var(--accent);border-radius:8px 8px 0 0;height:0;transition:height .9s ease;align-self:stretch;margin-top:auto}
+.fo .side .val{font-size:13px;color:var(--muted);font-weight:700;min-height:18px}
+.fo .side.right{border-color:var(--green)}.fo .side.wrong{border-color:var(--hot)}
+.fo .side:disabled{cursor:default}
+/* ladder */
+.clues{display:grid;gap:8px}
+.clue{padding:12px 14px;border-radius:12px;background:var(--chip);font-size:15.5px}
+.clue.lock{color:var(--muted);font-weight:700;border:1.5px dashed var(--line);background:#fff}
+.pts{font-size:13px;color:var(--muted)}
+.pts b{color:var(--gold);font-size:18px}
+/* unscramble */
+.built{min-height:90px;border:2px dashed var(--line);border-radius:14px;padding:12px;font-size:20px;font-weight:700;line-height:1.5}
+.built span{color:var(--ink)}
+.wchips{display:flex;gap:8px;flex-wrap:wrap}
+.wchips .chip{font-size:15px;padding:9px 14px;color:var(--ink)}
+.wchips .chip:disabled{opacity:.25;cursor:default}
+/* curve */
+.chartbox{background:#fff;border:1px solid var(--line);border-radius:14px;padding:8px}
+.chartbox svg{width:100%;height:auto;touch-action:none;display:block;cursor:crosshair}
+.legend{display:flex;gap:14px;font-size:12.5px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:4px;border-radius:2px;margin-right:5px;vertical-align:middle}
+
+
+:root{--chip:#eef2f8;--gold:#d9a400;--hot:#c0453b;--green:#1e8e5a;--accent2:#2f5a74}
+.score{max-width:560px;margin:14px auto 0;text-align:center;font-size:13px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.score b{color:var(--ink)}
+.proof a{color:var(--accent);word-break:break-all;font-size:12.5px}
+.endrow{display:flex;align-items:center;gap:10px;justify-content:flex-end;margin-top:auto;flex-wrap:wrap}
+.card .qline{color:var(--ink)}
+.tryit b{display:block;font-size:11.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent);margin-bottom:4px}
+.stage{padding:20px 16px 70px}
+
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="pynav">
+    <a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a>
+    <span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link">Staging<br>Area</a></span></span>
+    <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
+    <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
+    <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
+    <span class="pn-ver">v1.0</span>
+    <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="now"><span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(63,111,143,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#3f6f8f"/></svg></span><div class="nm" id="nowNm"></div><div class="kd" id="nowKd"></div></div>
+    <div class="lockline" id="lockline"></div>
+    <div class="card" id="card"></div>
+    <div class="score" id="score"></div>
+    <a class="bkboard" href="habit-modules.html">&larr; Back to the Cue Cards board</a>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="gate hidden" id="gate">
+    <h2>Sign in</h2>
+    <p>The deck remembers which tiles it has dealt you, and the tick has to reach the wheel, so this page needs your account.</p>
+    <input id="email" type="email" placeholder="Email" autocomplete="username">
+    <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button onclick="signIn()">Sign in</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ===== Wait, Really? v1.0 (Oct 10, 2026) =====
+   One quiz card a day. Each card is one approved, sourced question shown with
+   the template that fits it (dial, swipe, door, scratch ticket, impostor,
+   timeline, fill the blank, face-off, clue ladder). Every card ends the same
+   way: the insight, something to try, then the proof on request. Finishing a
+   card ticks the "Wait, Really?!" habit. Built on the Takeaways page: same
+   nav, sign-in, card clock, deck_progress and todos wiring, no schema change.
+   deck_progress deck 'wait-really' = which card was dealt on which day.
+   deck_progress deck 'wait-really-results' = right or wrong, tile_key
+   "<card>|r" or "<card>|w". The habit name is "Wait, Really?!" on this page,
+   in MODS in habit-modules.html, todos.task and qs_log.tracker. Rename one,
+   rename all. */
+
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
+const HABIT="Wait, Really?!", QS="Wait, Really?!", DECK="wait-really", RES="wait-really-results";
+/* Cue card clock v2 (Sep 29, 2026). The start time is saved in this browser, so a reload or coming back from another page no longer restarts the clock. After 2+ hours with no touch, Done asks how many minutes instead of guessing. */
+var __CUE_IDLE=2*3600*1000, __CUE_STALE=12*3600*1000, __cueAway=false, __cueSt=null, __cueKey='', __cueLastW=0;
+function __cueSave(force){ var n=Date.now(); if(!force&&n-__cueLastW<8000) return; __cueLastW=n; try{ localStorage.setItem(__cueKey,JSON.stringify(__cueSt)); }catch(e){} }
+function __cueClockInit(){
+  var now=Date.now(), st=null;
+  __cueKey='cueclock:'+(location.pathname.split('/').pop()||'card');
+  try{ st=JSON.parse(localStorage.getItem(__cueKey)||'null'); }catch(e){ st=null; }
+  if(!st||st.fin||!(st.s>0)||st.s>now||(now-(st.l||st.s))>__CUE_STALE) st={s:now,l:now};
+  if(!(st.l>0)) st.l=now;
+  if(now-st.l>__CUE_IDLE) __cueAway=true;
+  __cueSt=st; __cueSave(true);
+  function touch(){ var n=Date.now(); if(n-__cueSt.l>__CUE_IDLE) __cueAway=true; __cueSt.l=n; __cueSave(false); }
+  ['pointerdown','touchstart','keydown','click','scroll'].forEach(function(ev){ try{ window.addEventListener(ev,touch,{capture:true,passive:true}); }catch(e){} });
+  return st.s;
+}
+function __cueAskIfIdle(){
+  var el=document.getElementById('tmin')||document.getElementById('mins');
+  var typed=(el&&String(el.value).trim()!=='')?parseInt(el.value,10):NaN;
+  if(!(typed>0&&typed<=180)&&__cueAway&&el){
+    var m=document.getElementById('cueAskMsg');
+    if(!m){ m=document.createElement('div'); m.id='cueAskMsg'; m.setAttribute('role','status'); m.style.cssText='flex-basis:100%;width:100%;margin:8px 0 0;font-size:13.5px;font-weight:600;color:#b45309;line-height:1.4'; var host=el.closest('label')||el.parentNode; host.insertAdjacentElement('afterend',m); }
+    m.textContent='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+    try{ el.focus(); }catch(e){}
+    return true;
+  }
+  if(__cueSt){ __cueSt.fin=Date.now(); __cueSave(true); }
+  return false;
+}
+var __cueStart=__cueClockInit();
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge'); if(!h) return;
+  var line=h.querySelector('.cuehand'); if(!line) return;
+  var deg=((Date.now()-__cueStart)%60000)/60000*360;
+  line.style.transform='rotate('+deg+'deg)';
+}
+var __cueTickId=setInterval(__cueHandTick,250);
+const CARDS=[{"id": "weak-ties-1", "topic": "Weak Ties", "sec": "Social Well-Being", "c": "#b05a26", "tpl": "dial", "q": "Mark Granovetter asked people who found a job through a contact how often they saw that contact. What percent saw the contact only occasionally or rarely?", "d": {"unit": "%", "min": 0, "max": 100, "answer": 83, "tolerance": 5}, "ins": "In Granovetter's job study, only about 17% saw the helpful contact often. About 56% saw them occasionally and 28% rarely. Useful news tends to come from people outside your inner circle, so the acquaintances you rarely talk to are worth keeping in touch with.", "tr": "Send a short hello message to one person you have not spoken to in over a year.", "tm": 5, "pf": [{"text": "Granovetter, 1973, 'The Strength of Weak Ties', American Journal of Sociology 78(6), 1360-1380: 16.7% often, 55.6% occasionally, 27.8% rarely (N=54), so 83.4% occasionally or rarely. https://www.cs.umd.edu/~golbeck/INST633o/granovetterTies.pdf", "url": "https://www.cs.umd.edu/~golbeck/INST633o/granovetterTies.pdf"}]}, {"id": "what-makes-a-good-life-1", "topic": "What Makes a Good Life", "sec": "Sense of Purpose", "c": "#8c3f52", "tpl": "dial", "q": "In what year did the Harvard Study of Adult Development begin tracking its first group of Harvard sophomores?", "d": {"unit": "year", "min": 1900, "max": 2000, "answer": 1938, "tolerance": 2}, "ins": "The study began in 1938 with 268 Harvard sophomores, in the Great Depression, and has followed lives for more than 80 years. Few studies ever watch the same people from youth to old age. Its main lesson came from that patience: slow, long-term patterns, like friendships, matter.", "tr": "Write down one relationship you want to still be strong in 10 years, and one thing you will do for it this week.", "tm": 5, "pf": [{"text": "Harvard Gazette, Apr 11, 2017: 'In 1938, 268 Harvard sophomores'. https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/", "url": "https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/"}, {"text": "Wikipedia on the Grant Study (start year 1938). https://en.wikipedia.org/wiki/Harvard_Study_of_Adult_Development", "url": "https://en.wikipedia.org/wiki/Harvard_Study_of_Adult_Development"}]}, {"id": "spaced-repetition-1", "topic": "Spaced Repetition", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "dial", "q": "Students read a passage once, then practiced recalling it three times. A week later, about what percent of the passage's ideas could they recall?", "d": {"unit": "%", "min": 0, "max": 100, "answer": 61, "tolerance": 5}, "ins": "Students who recalled the passage from memory three times remembered about 61% a week later. Students who read it four times remembered about 40%. Practicing recall can beat rereading for lasting memory, even though rereading feels easier. For anything you want to keep, test yourself instead of rereading.", "tr": "Close your notes and write down everything you remember about something you studied recently.", "tm": 5, "pf": [{"text": "Roediger & Karpicke, 2006, 'Test-enhanced learning', Psychological Science, Experiment 2 (180 students): after 1 week, study-test-test-test 61% vs study x4 40%. https://psychology.ecu.edu/wp-content/pv-uploads/sites/216/2019/03/Roediger-Karpicke-2006.pdf", "url": "https://psychology.ecu.edu/wp-content/pv-uploads/sites/216/2019/03/Roediger-Karpicke-2006.pdf"}]}, {"id": "single-tasking-1", "topic": "Single-Tasking", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "swipe", "q": "People who were interrupted while writing emails finished faster than people left alone, but felt more stressed. True or false?", "d": {"statement": "People who were interrupted while writing emails finished faster than people left alone, but felt more stressed.", "true": true, "labels": ["True", "False"]}, "ins": "In a 48-person experiment, interrupted writers finished in about 20 minutes versus nearly 23 for uninterrupted writers, but they wrote shorter emails and reported more stress, frustration, time pressure and effort. So interruptions can look harmless on the clock while quietly costing you. Protect one stretch of your day where nothing is allowed to cut in.", "tr": "For 10 minutes, silence your phone and close your email tab before starting one task. Jot down how stressed you feel afterward.", "tm": 10, "pf": [{"text": "Mark, Gudith and Klocke (2008), The Cost of Interrupted Work: More Speed and Stress, CHI 2008 (48 participants; 22.77 min uninterrupted vs about 20.5 min interrupted; stress, frustration and effort significantly higher)", "url": "https://www.ics.uci.edu/~gmark/chi08-mark.pdf"}]}, {"id": "daily-walking-1", "topic": "Daily Walking", "sec": "Physical Health", "c": "#2f7d5f", "tpl": "dial", "q": "Walking 8,000 steps a day versus 4,000 was linked to roughly what percent lower risk of dying from any cause, in a big US study?", "d": {"unit": "% lower risk", "min": 0, "max": 100, "answer": 51, "tolerance": 8}, "ins": "In about 4,800 US adults aged 40 and over, 8,000 steps a day went with a 51% lower risk of dying from any cause than 4,000 steps, and 12,000 steps went with 65% lower. This type of study shows a link, not proof, since active people may be healthier to begin with. Still, doubling a low step count is a very worthwhile move.", "tr": "Add one 10-minute walk today, around the block or up and down your street, and check how many steps it adds.", "tm": 5, "pf": [{"text": "Saint-Maurice et al. (2020), JAMA, via National Cancer Institute press release: 51% lower at 8,000 vs 4,000; 65% lower at 12,000", "url": "https://www.cancer.gov/news-events/press-releases/2020/daily-step-count-mortality"}]}, {"id": "morning-light-1", "topic": "Morning Light", "sec": "Physical Health", "c": "#a85f14", "tpl": "dial", "q": "After a week camping with only natural light, the body clock of volunteers moved roughly how many hours earlier?", "d": {"unit": "hours", "min": 0, "max": 6, "answer": 2, "tolerance": 0.5}, "ins": "In Kenneth Wright's 2013 study, a week of camping without electric light moved the volunteers' melatonin timing (the body's 'night begins' signal) roughly two hours earlier, and their average light exposure rose more than fourfold. It shows how strongly the body clock follows the daylight cycle. For most of us, more daytime light and less night light could nudge sleep earlier.", "tr": "Spend 15 minutes outside within the first hour or two after you get up, even on a cloudy day.", "tm": 15, "pf": [{"text": "University of Colorado Boulder (2017) summarizing the 2013 Current Biology study: melatonin onset nearly two hours earlier after a week", "url": "https://www.colorado.edu/today/node/21746"}, {"text": "ScienceAlert/The Conversation (2013) on Wright et al., Current Biology: clock moved about two hours earlier", "url": "https://www.sciencealert.com/how-a-week-of-camping-resets-the-body-clock"}]}, {"id": "savouring-1", "topic": "Savouring", "sec": "Emotional Health", "c": "#b3445c", "tpl": "swipe", "q": "True or false: students who gave up chocolate for a week enjoyed the next piece more than students who ate extra chocolate.", "d": {"statement": "Giving up chocolate for a week made students enjoy and savour it more when they ate it again.", "true": true, "labels": ["True", "False"]}, "ins": "In a small lab study, students who skipped chocolate for a week savoured their next piece more and felt better after it than students who had been given lots of chocolate. Plenty of access had dulled the pleasure, while a short break brought it back. A brief pause from a favourite treat can make it feel special again.", "tr": "Pick one small pleasure (a sweet, a coffee, a show). Skip it for 3 days, then enjoy it slowly with full attention for 5 minutes.", "tm": 5, "pf": [{"text": "Dunn and Quoidbach (2013), Social Psychological and Personality Science, 4(5), 563-568 (journal record)", "url": "https://bse.eu/research/publications/give-it-strategy-combating-hedonic-adaptation"}, {"text": "Quoidbach and Dunn study write-up: 55 UBC undergraduates, restricted group savoured more (Psychology Today)", "url": "https://www.psychologytoday.com/us/blog/the-social-self/201309/denying-the-self-increases-happiness"}, {"text": "Berkeley Greater Good in Action, Give It Up practice", "url": "https://ggia.berkeley.edu/practice/give_it_up"}]}, {"id": "awe-1", "topic": "Awe", "sec": "Emotional Health", "c": "#b3445c", "tpl": "dial", "q": "In the eucalyptus tree experiment, how many minutes did people look up at the towering trees before the pen test?", "d": {"unit": "minutes", "min": 0, "max": 10, "answer": 1, "tolerance": 0}, "ins": "Just one minute of looking up at very tall trees was enough for people to feel awe, and afterward they picked up more spilled pens than people who looked at a tall building. The awe group also felt less entitled. A tiny dose of wonder can nudge us toward being more helpful.", "tr": "Go outside and look up at the tallest tree or building view you can find for 1 minute. Notice how small you feel.", "tm": 1, "pf": [{"text": "Piff, Dietze, Feinberg, Stancato, Keltner (2015), Awe, the small self, and prosocial behavior, JPSP: Study 5, 1 minute, 90 undergraduates, 11 pens (full text)", "url": "https://scholarblogs.emory.edu/sarahhiginbotham/files/2016/06/Awe-and-Prosocial-Behavior.pdf"}, {"text": "UC Irvine news release on the study", "url": "https://news.uci.edu/faculty/awe-promotes-altruistic-behavior-uci-led-study-finds"}]}, {"id": "time-affluence-1", "topic": "Time Affluence", "sec": "Recreational Health", "c": "#b05a26", "tpl": "dial", "q": "Working adults were asked how they'd use a surprise $40. What percent said they would spend it to save themselves time?", "d": {"unit": "percent", "min": 0, "max": 100, "answer": 2, "tolerance": 3}, "ins": "Only about 2% of 98 working Canadians said they would spend a $40 windfall on saving time, even though a separate experiment showed time-saving purchases made people happier. Most of us default to buying stuff. Handing off one chore may beat a new gadget.", "tr": "List 3 chores you dislike and price one fix (grocery delivery, a cleaner for one hour). Takes 10 minutes.", "tm": 10, "pf": [{"text": "UBC Psychology news: study of 6,000+ adults, 98 working adults, only 2% chose time-saving", "url": "https://psych.ubc.ca/news/new-research-using-money-to-buy-time-linked-to-increased-happiness/"}, {"text": "Whillans, Dunn, Smeets, Bekkers, Norton (2017), Buying time promotes happiness, PNAS (PMC full text)", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5559044/"}]}, {"id": "weak-ties-2", "topic": "Weak Ties", "sec": "Social Well-Being", "c": "#b05a26", "tpl": "swipe", "q": "Commuters were asked to chat with a stranger on the train or bus. They expected a worse ride. True or false: they actually reported a MORE pleasant commute than people who stayed silent.", "d": {"statement": "Commuters who talked to a stranger reported a more positive commute than commuters who sat in silence.", "isTrue": true, "labels": ["True", "False"]}, "ins": "People who were told to start a conversation had a better ride, and they did not lose any productivity. Other people asked to predict the result guessed the opposite. We tend to underrate how good a small chat with a stranger feels, so it is worth trying anyway.", "tr": "Say a friendly hello or a short comment to one stranger today, such as a barista or a neighbor.", "tm": 2, "pf": [{"text": "Epley & Schroeder, 2014, 'Mistakenly seeking solitude', Journal of Experimental Psychology: General (nine experiments; train and bus commuters in Experiments 1 and 2). https://faculty.haas.berkeley.edu/jschroeder/Publications/Epley%26Schroeder2014.pdf", "url": "https://faculty.haas.berkeley.edu/jschroeder/Publications/Epley%26Schroeder2014.pdf"}]}, {"id": "what-makes-a-good-life-2", "topic": "What Makes a Good Life", "sec": "Sense of Purpose", "c": "#8c3f52", "tpl": "blank", "q": "Fill the Blank: People who were most satisfied in their relationships at age 50 turned out to be healthier at age 80. At age 50 it predicted later health better than their ______ level.", "d": {"sentence": "At 50, satisfaction in relationships predicted health later in life better than a person's ______ level.", "blank": "cholesterol", "options": ["cholesterol", "caffeine", "sodium", "vitamin D"], "correct": 0}, "ins": "Researchers found that how happy men were in their relationships at 50 told them more about their health at 80 than cholesterol did. Close relationships seem to protect both mind and body. Looking after your close relationships is part of looking after your health.", "tr": "Call or text one person you are close to and ask a real question about how they are.", "tm": 5, "pf": [{"text": "Harvard Gazette, Apr 11, 2017: several studies found relationship satisfaction at 50 predicted physical health better than cholesterol; Waldinger: 'The people who were the most satisfied in their relationships at age 50 were the healthiest at age 80.' https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/", "url": "https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/"}]}, {"id": "spaced-repetition-2", "topic": "Spaced Repetition", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "swipe", "q": "True or false: Most students expected that making concept maps would help them learn better than practicing recall, and they were right.", "d": {"statement": "Most students expected concept mapping to work better than practicing recall, and a week later concept mapping did give better results.", "isTrue": false, "labels": ["True", "False"]}, "ins": "Students expected concept mapping to work best, but practicing retrieval produced more learning a week later. Study methods that feel productive are often not. Close the book and try to retrieve the answer.", "tr": "After your next read, put it away and say out loud the three key points.", "tm": 3, "pf": [{"text": "Purdue News on Karpicke & Blunt, 2011, Science: 200 students; retrieval group scored about 50 percent higher one week later; most students predicted concept mapping would win. https://www.purdue.edu/newsroom/research/2011/110120KarpickeScience.html", "url": "https://www.purdue.edu/newsroom/research/2011/110120KarpickeScience.html"}]}, {"id": "single-tasking-2", "topic": "Single-Tasking", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "imp", "q": "Spot the myth about the famous Stanford heavy media-multitasker study (Ophir, Nass, Wagner, 2009).", "d": {"items": [{"text": "About 100 students took part, split into heavy and light media multitaskers.", "myth": false}, {"text": "Heavy multitaskers did worse on the memory test as the letter sequences got longer.", "myth": false}, {"text": "Heavy multitaskers were worse at switching between two tasks.", "myth": false}, {"text": "Heavy multitaskers were better at ignoring distractions, thanks to all the practice.", "myth": true}]}, "ins": "The surprise in the 2009 study was that heavy media multitaskers were more distracted by irrelevant things, not less, and did worse on memory and task switching. The researchers could not say whether heavy multitasking causes this or whether distractible people simply multitask more. Treat it as a warning sign, not proof that multitasking harms your brain.", "tr": "For 5 minutes, do just one thing with one screen, no second tab and no phone in reach, then notice how often you wanted to check something.", "tm": 5, "pf": [{"text": "Stanford News (2009), Media multitaskers pay mental price (about 100 students, three tests: filtering, memory, task switching), reporting Ophir, Nass and Wagner, PNAS 2009", "url": "https://news.stanford.edu/stories/2009/08/multitask-research-study-082409"}]}, {"id": "daily-walking-2", "topic": "Daily Walking", "sec": "Physical Health", "c": "#2f7d5f", "tpl": "face", "q": "Which cut blood sugar more, when people broke up long sitting with light walking or with standing?", "d": {"a": {"label": "Light walking breaks", "value": 17.01}, "b": {"label": "Standing breaks", "value": 9.51}, "unit": "% lower blood sugar vs sitting", "answer": "a"}, "ins": "A review of seven studies found that breaking up long sitting with light walking lowered blood sugar by about 17%, compared with about 9.5% for standing. In the studies, people moved for 2 to 5 minutes every 20 to 30 minutes. Short walking breaks in a long sitting day beat standing for blood sugar, and walking also kept insulin steadier.", "tr": "Set a 30-minute timer while you sit, then walk for 3 minutes each time it rings, for 2 hours.", "tm": 3, "pf": [{"text": "Buffey et al. (2022), Sports Medicine, meta-analysis of 7 studies (standing about 9.51%, light walking about 17.01%), reported by CNN", "url": "https://edition.cnn.com/2022/09/02/health/walking-blood-sugar-study-wellness/index.html"}]}, {"id": "morning-light-2", "topic": "Morning Light", "sec": "Physical Health", "c": "#a85f14", "tpl": "doors", "q": "In a lab study, what did a bright light arriving AFTER the body's temperature low point do to the body clock?", "d": {"question": "In a lab study, what did a bright light arriving AFTER the body's temperature low point do to the body clock?", "options": ["Shifted it earlier", "Shifted it later", "Had no effect"], "correct": 0}, "ins": "Khalsa and colleagues (2003) found that light timing decides the direction: bright light before the body's temperature low shifted the clock later, and bright light after it shifted the clock earlier. That is the science behind morning light helping some people wake and sleep earlier. It does not mean any one exact minute count is magic.", "tr": "Go outside for 10 minutes after breakfast tomorrow and note whether you get sleepy earlier that night.", "tm": 10, "pf": [{"text": "Khalsa, Jewett, Cajochen and Czeisler (2003), A phase response curve to single bright light pulses in human subjects, J Physiology 549, 945-952 (21 subjects, about 10,000 lux for 6.7 hours)", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2342968"}]}, {"id": "savouring-2", "topic": "Savouring", "sec": "Emotional Health", "c": "#b3445c", "tpl": "rew", "q": "Put these savouring milestones in order, oldest first.", "d": {"items": [{"label": "Bryant publishes the Savoring Beliefs Inventory (past, present, future savouring scale)", "year": 2003}, {"label": "Bryant and Veroff publish the book Savoring: A New Model of Positive Experience", "year": 2007}, {"label": "Quoidbach and colleagues show reminding people of wealth cuts how long they savour chocolate", "year": 2010}, {"label": "Hurley and Kwon run a two-week savouring-the-moment group study with 193 students", "year": 2012}, {"label": "Dunn and Quoidbach test giving up chocolate for a week to renew enjoyment", "year": 2013}]}, "ins": "Savouring went from a measuring scale to a book to a string of small experiments in about ten years. The big idea stayed simple: you can learn to notice and stretch good moments. That means enjoyment is partly a skill you can practise.", "tr": "Write down one good thing from today and one way you could stretch it out. Takes 3 minutes.", "tm": 3, "pf": [{"text": "Bryant (2003) Savoring Beliefs Inventory, as cited in a validation paper, PMC (Frontiers in Psychology 2018)", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5825911"}, {"text": "Bryant and Veroff (2007) book, Routledge listing (copyright 2007)", "url": "https://www.routledge.com/Savoring-A-New-Model-of-Positive-Experience/Bryant-Veroff/p/book/9780805851199"}, {"text": "Quoidbach, Dunn, Petrides, Mikolajczak (2010), Psychological Science 21(6), 759-763", "url": "https://journals.sagepub.com/doi/abs/10.1177/0956797610371963"}, {"text": "Hurley and Kwon (2012), Journal of Happiness Studies, 13, 579-588", "url": "https://link.springer.com/article/10.1007/s10902-011-9280-8"}]}, {"id": "awe-2", "topic": "Awe", "sec": "Emotional Health", "c": "#b3445c", "tpl": "doors", "q": "In a 2015 study of young adults, which positive feeling stood out as linked to lower levels of an inflammation marker (IL-6)?", "d": {"options": ["Awe", "Pride", "Contentment"], "correct": 0}, "ins": "Students who often felt awe, wonder and amazement had the lowest levels of IL-6, a molecule that drives inflammation. Awe was the only emotion that held up under the strictest statistical test. This does not prove awe protects the body, but it hints that wonder is more than a nice feeling.", "tr": "Spend 10 minutes looking at something vast (the sky, a view, a great painting online) and name what makes it amazing.", "tm": 10, "pf": [{"text": "Stellar, John-Henderson, Anderson, Gordon, McNeil, Keltner (2015), Positive affect and markers of inflammation, Emotion (UC Berkeley news)", "url": "https://news.berkeley.edu/2015/02/02/anti-inflammatory"}, {"text": "Scientific American summary: two student studies (94 and 105 people), correlational, awe only emotion significant under strict test", "url": "https://www.scientificamerican.com/article/feeling-awe-may-be-good-for-our-health/"}]}, {"id": "time-affluence-2", "topic": "Time Affluence", "sec": "Recreational Health", "c": "#b05a26", "tpl": "imp", "q": "Spot the myth about buying time.", "d": {"statements": ["A survey of more than 6,000 adults in the US, Canada, Denmark and the Netherlands linked buying time to higher life satisfaction.", "In a field experiment, 60 working adults spent $40 on a time-saving purchase one weekend and $40 on a material purchase another.", "Almost half of surveyed Dutch millionaires spent nothing in a typical month on outsourcing tasks they disliked.", "Buying time only makes wealthy people happier."], "myth": 3}, "ins": "The link between buying time and life satisfaction did not depend on income, and the senior author said the benefits are not just for wealthy people. Many rich people still skip paying for help. If a small purchase gives you back an hour, it can be worth more than another thing.", "tr": "Next time you plan a purchase, ask 'does this buy me back time?' and pick one time-saving option this week. 5 minutes.", "tm": 5, "pf": [{"text": "Whillans et al. (2017), PNAS, full text: effect did not vary by income", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5559044/"}, {"text": "UBC Psychology news release (850 Dutch millionaires, quote from Elizabeth Dunn)", "url": "https://psych.ubc.ca/news/new-research-using-money-to-buy-time-linked-to-increased-happiness/"}]}, {"id": "weak-ties-3", "topic": "Weak Ties", "sec": "Social Well-Being", "c": "#b05a26", "tpl": "doors", "q": "A huge LinkedIn experiment (about 20 million members over five years) tested which kind of connection helped people change jobs the most. Which won, when strength was measured by mutual connections?", "d": {"options": ["Very close ties (people you share lots of friends with)", "Moderately weak ties", "The very weakest ties (almost no shared friends)"], "correct": 1}, "ins": "The best results came from moderately weak ties, in an upside-down U shape: very strong ties helped least, and the weakest of all did not win either. A later measure based on how much people interacted found the weakest ties did best, so the finding depends on how you count. It was also stronger in digital and tech jobs. Either way, the people just outside your circle matter.", "tr": "List three acquaintances (a former coworker, a friend of a friend) you could reconnect with this month.", "tm": 5, "pf": [{"text": "Rajkumar et al., 2022, 'A causal test of the strength of weak ties', Science. Stanford Report summary: about 20 million LinkedIn users, five years, moderately weak ties best. https://news.stanford.edu/stories/2022/09/real-strength-weak-ties", "url": "https://news.stanford.edu/stories/2022/09/real-strength-weak-ties"}, {"text": "Full text: 20 million+ members, about 2 billion new ties, 600,000 new jobs; interaction-intensity measure found the weakest ties best. https://www.gwern.net/doc/sociology/technology/2022-rajkumar.pdf", "url": "https://www.gwern.net/doc/sociology/technology/2022-rajkumar.pdf"}]}, {"id": "what-makes-a-good-life-3", "topic": "What Makes a Good Life", "sec": "Sense of Purpose", "c": "#8c3f52", "tpl": "face", "q": "Face-Off: the Harvard study followed two original groups of men. Which group was bigger?", "d": {"a": {"label": "Harvard sophomores (Grant Study)", "value": 268, "unit": "men"}, "b": {"label": "Boston inner-city youths (Glueck Study)", "value": 456, "unit": "men"}, "biggerIs": "b"}, "ins": "The study combined two very different groups: 268 Harvard men and 456 young men from Boston neighborhoods. Both groups pointed to close relationships as the key to a good life. That suggests the finding is not just about rich or well-educated people. It does leave out women, which was a limit of the original design.", "tr": "Name the three people you would call in a crisis. If you hesitate, plan one way to build that circle.", "tm": 5, "pf": [{"text": "Harvard Gazette, 2017: 268 Harvard sophomores; 456 inner-city Boston men. https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/", "url": "https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/"}, {"text": "Wikipedia: 268 Harvard men; 456 Glueck youths. https://en.wikipedia.org/wiki/Harvard_Study_of_Adult_Development", "url": "https://en.wikipedia.org/wiki/Harvard_Study_of_Adult_Development"}]}, {"id": "spaced-repetition-3", "topic": "Spaced Repetition", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "doors", "q": "You have a test in one week. According to a study of over 1,350 people, when is the best time to review the material?", "d": {"options": ["Right after you first learn it", "About 1 to 3 days after you first learn it", "The night before the test"], "correct": 1}, "ins": "The best gap was roughly 20 to 40% of the time until the test. For a one-week test that means reviewing after about one to three days. The longer you want to remember, the longer the best gap, but the smaller the share of the total time. Put a review a few days out, not right away.", "tr": "Set a phone reminder to review something you learned today in 2 to 3 days.", "tm": 2, "pf": [{"text": "Cepeda et al., 2008, 'Spacing effects in learning: a temporal ridgeline of optimal retention', Psychological Science: 1,354 people, optimal gap about 20-40% of a 1-week delay, 5-10% of a 1-year delay. https://www.evullab.org/pdf/CepedaVulRohrerWixtedPashler-PS-2008.pdf", "url": "https://www.evullab.org/pdf/CepedaVulRohrerWixtedPashler-PS-2008.pdf"}]}, {"id": "single-tasking-3", "topic": "Single-Tasking", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "dial", "q": "Gloria Mark's research found people now stay on any one screen for only about how many seconds before switching?", "d": {"unit": "seconds", "min": 0, "max": 300, "answer": 47, "tolerance": 15}, "ins": "Mark measured about 150 seconds (two and a half minutes) in 2003, about 75 seconds in 2012, and about 47 seconds in the last five or six years. Those come from different studies and different people, so they show a trend rather than a perfect comparison. The takeaway is that most of us now flit between screens far faster than we realize.", "tr": "For 5 minutes, keep one window open and count how many times you feel the urge to switch. Stay put anyway.", "tm": 5, "pf": [{"text": "Gloria Mark, UC Irvine, via University of California (2023), 'Can't pay attention? You're not alone': 2.5 minutes (2003 data), 75 seconds (2012), 47 seconds (recent)", "url": "https://www.universityofcalifornia.edu/news/cant-pay-attention-youre-not-alone"}, {"text": "Silicon Canals write-up notes the figures come from different studies, so they are a trend, not a controlled comparison", "url": "https://siliconcanals.com/t-screen-attention-47-seconds-gloria-mark/"}]}, {"id": "daily-walking-3", "topic": "Daily Walking", "sec": "Physical Health", "c": "#2f7d5f", "tpl": "rew", "q": "Put these steps and walking milestones in order, oldest first.", "d": {"items": [{"label": "Japanese company launches the 'Manpo-kei' (10,000 steps meter) pedometer", "year": 1965}, {"label": "Stanford study: walking boosts creative thinking (Oppezzo and Schwartz)", "year": 2014}, {"label": "Harvard study of older women: 4,400 steps already tied to lower mortality (Lee et al.)", "year": 2019}, {"label": "Meta-analysis of 15 cohorts, 47,471 adults: more steps, lower mortality (Paluch et al.)", "year": 2022}, {"label": "Meta-analysis of 17 studies, 226,889 people: 3,967 steps start to cut risk (Banach et al.)", "year": 2023}]}, "ins": "The famous 10,000-step goal began as a pedometer brand name in 1965, not as a medical finding. Decades later, studies showed benefits begin far lower: about 4,400 steps in older women, and gains that keep rising up to roughly 6,000-8,000 for people over 60 and 8,000-10,000 for younger adults. Your goal can be a number that fits you, not a magic one.", "tr": "Check your average daily steps for the past 3 days, then aim for 1,000 more tomorrow (about 10 minutes of walking).", "tm": 10, "pf": [{"text": "PopSci: the 10,000-step goal dates to Yamasa's 1965 Manpo-kei pedometer", "url": "https://www.popsci.com/story/health/10000-steps-evidence-study/"}, {"text": "Lee et al. (2019), JAMA Internal Medicine, via MDedge", "url": "https://mdedge.com/content/higher-step-volume-associated-lower-mortality-older-women"}, {"text": "Paluch et al. (2022), Lancet Public Health, 15 cohorts, 47,471 adults", "url": "https://pubmed.ncbi.nlm.nih.gov/35247352/"}, {"text": "Banach et al. (2023), Eur J Prev Cardiol, 17 studies, 226,889 participants", "url": "https://researchonline.ljmu.ac.uk/id/eprint/22970/"}, {"text": "Oppezzo and Schwartz (2014), Stanford News coverage", "url": "https://news.stanford.edu/stories/2014/04/walking-vs-sitting-042414"}]}, {"id": "morning-light-3", "topic": "Morning Light", "sec": "Physical Health", "c": "#a85f14", "tpl": "imp", "q": "Spot the myth about camping and the body clock.", "d": {"items": [{"text": "A week camping with only natural light moved volunteers' melatonin timing about two hours earlier (2013).", "myth": false}, {"text": "A weekend of summer camping moved campers' body clocks about 1.4 hours earlier (2017).", "myth": false}, {"text": "A larger study of about 89,000 people linked bright nights and dim days to a higher risk of dying (observational).", "myth": false}, {"text": "In winter, a week of camping did nothing to the body clock.", "myth": true}]}, "ins": "In the winter study, five volunteers camped for a week and their melatonin rose 2.6 hours earlier, after getting 13 times more daytime light than usual. The larger UK study only shows an association, not that light causes the difference. In short, light has a real effect on your clock, and the exact dose for your life is still an open question.", "tr": "Swap 10 minutes of indoor scrolling for 10 minutes outdoors in daylight today.", "tm": 10, "pf": [{"text": "CU Boulder (2017) on Stothard et al., Current Biology: weekend 1.4 hours earlier; winter week 2.6 hours earlier, 13x the daytime light", "url": "https://www.colorado.edu/today/node/21746"}, {"text": "Flinders University (2024) on Windred et al., PNAS: about 89,000 people, high night light linked to 21-34% higher risk of death", "url": "https://news.flinders.edu.au/blog/2024/11/01/brighter-nights-and-darker-days-could-lead-to-an-early-grave/"}]}, {"id": "savouring-3", "topic": "Savouring", "sec": "Emotional Health", "c": "#b3445c", "tpl": "lad", "q": "What am I? (Clue ladder)", "d": {"answer": "Savouring", "clues": ["A 2007 book by Fred Bryant and Joseph Veroff gave it a new model.", "Bryant and Veroff describe it as the positive counterpart to coping.", "Researchers split it into three directions: looking back, living in the moment, and looking ahead.", "You do it when you slow down to really taste a piece of chocolate."]}, "ins": "Savouring means deliberately noticing and appreciating good things, and it works in the past (reminiscing), the present, and the future (anticipating). Coping helps you handle the bad; savouring helps you get more out of the good. Both are trainable.", "tr": "Next time you eat or drink something you like, put your phone away and notice smell, taste and texture for 2 minutes.", "tm": 2, "pf": [{"text": "Bryant and Veroff (2007), Savoring: A New Model of Positive Experience (Routledge)", "url": "https://www.routledge.com/Savoring-A-New-Model-of-Positive-Experience/Bryant-Veroff/p/book/9780805851199"}, {"text": "Definition quoted from Bryant and Veroff: positive counterpart to coping (Positive Psychology People)", "url": "https://www.thepositivepsychologypeople.com/the-art-of-positive-savouring/"}, {"text": "Past, present, future orientations of the Savoring Beliefs Inventory, Bryant (2003), cited in PMC", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5825911"}]}, {"id": "awe-3", "topic": "Awe", "sec": "Emotional Health", "c": "#b3445c", "tpl": "scratch", "q": "In the 2012 Rudd, Vohs and Aaker experiments, awe made people more willing to give what?", "d": {"options": ["Their time, by volunteering", "Money, by donating", "Gifts, by shopping"], "correct": 0}, "ins": "People who felt awe said they had more time available, were less impatient, and were more willing to volunteer their time. Awe also tilted choices toward experiences over material things. When time feels roomier, we tend to share it.", "tr": "Before your next chore or wait, take 2 minutes to look at something that amazes you, then notice whether the rest of the day feels less rushed.", "tm": 2, "pf": [{"text": "Rudd, Vohs, Aaker (2012), Awe expands people's perception of time, Psychological Science 23(10), 1130-1136 (abstract)", "url": "https://journals.sagepub.com/doi/10.1177/0956797612438731"}, {"text": "Association for Psychological Science summary of the three experiments", "url": "https://psychologicalscience.org/?p=72312"}]}, {"id": "time-affluence-3", "topic": "Time Affluence", "sec": "Recreational Health", "c": "#b05a26", "tpl": "rew", "q": "Put these time-and-happiness papers in order, oldest first.", "d": {"items": [{"label": "Kasser and Sheldon, Time affluence as a path toward happiness (four studies)", "year": 2009}, {"label": "Mogilner, The pursuit of happiness: time, money, and social connection", "year": 2010}, {"label": "Hershfield, Mogilner and Barnea, People who choose time over money are happier", "year": 2016}, {"label": "Whillans and colleagues, Buying time promotes happiness", "year": 2017}, {"label": "Giurge, Whillans and West, Why time poverty matters", "year": 2020}]}, "ins": "Over a decade, the research moved from 'time affluence feels good' to 'you can actually buy some of it' to 'time poverty is a societal problem'. Each step points the same way: how we treat our hours shapes well-being. Your calendar is part of your happiness plan.", "tr": "Block 30 minutes in your calendar this week as protected unscheduled time.", "tm": 30, "pf": [{"text": "Kasser and Sheldon (2009), Journal of Business Ethics 84(2), 243-255 (IDEAS)", "url": "https://ideas.repec.org/a/kap/jbuset/v84y2009i2p243-255.html"}, {"text": "Mogilner (2010), Psychological Science (Science Daily)", "url": "https://www.sciencedaily.com/releases/2010/10/101007145457.htm"}, {"text": "Hershfield, Mogilner, Barnea (2016), SPPS 7(7), 697-706", "url": "https://iris.unibocconi.it/handle/11565/4060463"}, {"text": "Whillans et al. (2017), PNAS (PMC)", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5559044/"}, {"text": "Giurge, Whillans, West (2020), Nature Human Behaviour 4, 993-1003", "url": "https://lbsresearch.london.edu/id/eprint/1451"}]}, {"id": "weak-ties-4", "topic": "Weak Ties", "sec": "Social Well-Being", "c": "#b05a26", "tpl": "imp", "q": "Spot the Impostor: three of these are true about Granovetter's 'Strength of Weak Ties'. Which one is the myth?", "d": {"statements": ["Granovetter described tie strength using time together, emotional intensity, intimacy and favors traded.", "The paper was published in 1973 in the American Journal of Sociology.", "Among job-finders who used a contact, more than half saw that contact only 'occasionally'.", "Most people who found a job through a contact heard about it from a close friend they saw often."], "mythIndex": 3}, "ins": "Only about 17% of contact-based job finders saw the contact often. Most saw them occasionally or rarely. That is the core idea: acquaintances connect you to different circles, so they bring news your close friends already know. Do not overlook your wider circle when you want new options.", "tr": "Post or tell one acquaintance what kind of opportunity you are looking for.", "tm": 5, "pf": [{"text": "Granovetter, 1973, American Journal of Sociology 78(6): tie strength definition (time, emotional intensity, intimacy, reciprocal services) and job-finding figures. https://www.cs.umd.edu/~golbeck/INST633o/granovetterTies.pdf", "url": "https://www.cs.umd.edu/~golbeck/INST633o/granovetterTies.pdf"}]}, {"id": "what-makes-a-good-life-4", "topic": "What Makes a Good Life", "sec": "Sense of Purpose", "c": "#8c3f52", "tpl": "imp", "q": "Spot the Impostor: three of these are findings from the Harvard Study of Adult Development. Which is the myth?", "d": {"statements": ["Loneliness was linked to earlier death, with an effect comparable to smoking or alcoholism.", "Personality was not fixed by age 30. People could change course later in life.", "Close relationships predicted long, healthy lives better than social class, IQ or genes.", "Money and fame were the strongest predictors of lasting happiness."], "mythIndex": 3}, "ins": "The study found the opposite of the money-and-fame idea: close relationships, more than money or fame, were tied to lasting happiness. It also found people can change later in life. Where you put your time matters more than where you start.", "tr": "Replace 15 minutes of scrolling with time spent with a friend, in person or on the phone.", "tm": 15, "pf": [{"text": "Harvard Gazette, Apr 11, 2017: relationships over money or fame; 'Loneliness kills'; personality not fixed at 30. https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/", "url": "https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/"}]}, {"id": "spaced-repetition-4", "topic": "Spaced Repetition", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "rew", "q": "Put these memory-research milestones in order, oldest first.", "d": {"items": [{"label": "Ebbinghaus publishes his forgetting-curve work", "year": 1885}, {"label": "Roediger & Karpicke show testing beats rereading after a week", "year": 2006}, {"label": "Cepeda and colleagues find the best gap between reviews depends on the test delay", "year": 2008}, {"label": "Karpicke & Blunt: retrieval practice beats concept mapping", "year": 2011}, {"label": "Murre & Dros replicate Ebbinghaus's forgetting curve", "year": 2015}]}, "ins": "Over more than 130 years, researchers have kept confirming that memory fades fast and that spaced practice and self-testing slow it down. Ebbinghaus's curve held up in a 2015 replication using one person over 70 hours. Do a little recalling, spread out, to hold on to what you learn.", "tr": "Pick one fact to learn and test yourself on it today, tomorrow and in three days.", "tm": 5, "pf": [{"text": "Murre & Dros, 2015, PLoS ONE: replication of Ebbinghaus's 1880/1885 curve. https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0120644", "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0120644"}, {"text": "Roediger & Karpicke, 2006. https://psychology.ecu.edu/wp-content/pv-uploads/sites/216/2019/03/Roediger-Karpicke-2006.pdf", "url": "https://psychology.ecu.edu/wp-content/pv-uploads/sites/216/2019/03/Roediger-Karpicke-2006.pdf"}, {"text": "Cepeda et al., 2008. https://www.evullab.org/pdf/CepedaVulRohrerWixtedPashler-PS-2008.pdf", "url": "https://www.evullab.org/pdf/CepedaVulRohrerWixtedPashler-PS-2008.pdf"}, {"text": "Karpicke & Blunt, 2011 (Purdue news). https://www.purdue.edu/newsroom/research/2011/110120KarpickeScience.html", "url": "https://www.purdue.edu/newsroom/research/2011/110120KarpickeScience.html"}]}, {"id": "single-tasking-4", "topic": "Single-Tasking", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "lad", "q": "Name the idea: what slows you down after you switch tasks?", "d": {"answer": "Attention residue", "clues": ["A 2009 paper by Sophie Leroy asked 'Why is it so hard to do my work?'", "It shows up when you jump between projects, tasks or meetings.", "Finishing the first task is not enough to make it go away.", "Part of your mind is still stuck on the thing you just left."]}, "ins": "Leroy's experiments found that people need to mentally let go of one task before they can fully focus on the next, and when they cannot, they do worse on the next task. Simply finishing the first task was not enough by itself. Wrapping up a task with a clear stopping point may help you start the next one clean.", "tr": "Before switching tasks, take 2 minutes to write one line: where you stopped and what comes next.", "tm": 2, "pf": [{"text": "Leroy, S. (2009), Why is it so hard to do my work? The challenge of attention residue when switching between work tasks, Organizational Behavior and Human Decision Processes 109(2), 168-181", "url": "https://ideas.repec.org/a/eee/jobhdp/v109y2009i2p168-181.html"}]}, {"id": "daily-walking-4", "topic": "Daily Walking", "sec": "Physical Health", "c": "#2f7d5f", "tpl": "imp", "q": "Spot the myth about the Stanford walking and creativity experiments (Oppezzo and Schwartz, 2014).", "d": {"items": [{"text": "In one experiment, walking raised creative output by an average of 60% compared with sitting.", "myth": false}, {"text": "Walking on an indoor treadmill gave a similar boost to walking outdoors.", "myth": false}, {"text": "Every person who walked outside came up with at least one high-quality new analogy, versus half of those sitting indoors.", "myth": false}, {"text": "Walking also boosted focused, single-answer problem solving.", "myth": true}]}, "ins": "Across four experiments with 176 people, walking helped open-ended idea generation, but on a single-answer word task walkers did mildly worse. It was the walking, not the scenery, that helped. So walk when you need ideas, and sit when you need to grind through one right answer.", "tr": "Next time you are stuck for ideas, take a 10-minute walk and brainstorm out loud or in a voice memo.", "tm": 5, "pf": [{"text": "Stanford News (2014), 'Stanford study finds walking boosts creativity' on Oppezzo and Schwartz, J Experimental Psychology: Learning, Memory and Cognition", "url": "https://news.stanford.edu/stories/2014/04/walking-vs-sitting-042414"}]}, {"id": "morning-light-4", "topic": "Morning Light", "sec": "Physical Health", "c": "#a85f14", "tpl": "face", "q": "Which camping trip moved the body clock earlier by more?", "d": {"a": {"label": "One week of winter camping", "value": 2.6}, "b": {"label": "Summer weekend camping", "value": 1.4}, "unit": "hours earlier", "answer": "a"}, "ins": "The winter group (5 volunteers, one week, about 13 times their usual daytime light) shifted 2.6 hours earlier, while the summer weekend group (9 campers) shifted 1.4 hours earlier after two days. Winter life indoors leaves us with far less daylight, so more outdoor time makes a bigger difference. Even a weekend counts.", "tr": "On your next day off, spend 20 minutes outside in daylight before noon.", "tm": 20, "pf": [{"text": "CU Boulder (2017), Stothard et al., Current Biology: winter week 2.6 hours earlier; summer weekend 1.4 hours earlier", "url": "https://www.colorado.edu/today/node/21746"}]}, {"id": "savouring-4", "topic": "Savouring", "sec": "Emotional Health", "c": "#b3445c", "tpl": "blank", "q": "Fill the blank.", "d": {"sentence": "In a 2010 study, reminding people of their ____ made them spend less time savouring a piece of chocolate.", "options": ["wealth", "deadlines", "hunger", "age"], "correct": 0}, "ins": "Researchers found that richer working adults reported weaker savouring, and simply reminding people of wealth made them savour a chocolate less and enjoy it less. Having more can make us rush past small pleasures. If life is full of nice things, you may need to slow down on purpose to feel them.", "tr": "Choose one everyday thing you usually rush (first coffee, a walk to the car) and give it 5 full minutes of attention.", "tm": 5, "pf": [{"text": "Quoidbach, Dunn, Petrides, Mikolajczak (2010), Money Giveth, Money Taketh Away, Psychological Science 21(6), 759-763", "url": "https://journals.sagepub.com/doi/abs/10.1177/0956797610371963"}]}, {"id": "awe-4", "topic": "Awe", "sec": "Emotional Health", "c": "#b3445c", "tpl": "imp", "q": "Spot the myth about the awe walk study with older adults.", "d": {"statements": ["Walks were about 15 minutes long and happened weekly for eight weeks.", "The awe group's selfies showed them filling less of the frame, with bigger smiles over time.", "The control group walked too, but showed no comparable emotional gains.", "Awe walks lowered anxiety and depression scores by the end of the study."], "myth": 3}, "ins": "Awe walkers felt more awe, joy, compassion and gratitude in daily life and had less everyday distress. But formal anxiety, depression and life satisfaction scores did not change in either group. A short mindful walk can lift everyday mood without being a treatment for clinical problems.", "tr": "Take a 15 minute walk and look for anything vast or surprising (sky, old trees, a view). Take one photo of it.", "tm": 15, "pf": [{"text": "Sturm et al. (2020 online; Emotion 2022, 22(5), 1044-1058), Big smile, small self (PubMed record)", "url": "https://pubmed.ncbi.nlm.nih.gov/32955293/"}, {"text": "UCSF news release on awe walks", "url": "https://www.ucsf.edu/news/2020/09/418551/awe-walks-boost-emotional-well-being"}]}, {"id": "time-affluence-4", "topic": "Time Affluence", "sec": "Recreational Health", "c": "#b05a26", "tpl": "face", "q": "Face-Off: which purchase left working adults happier in the $40 experiment?", "d": {"a": {"label": "After a $40 time-saving purchase", "value": 4.0}, "b": {"label": "After a $40 material purchase", "value": 3.71}, "unit": "average happiness (1 to 5 scale)", "answer": "a"}, "ins": "The same people were happier after spending $40 to save time than after spending $40 on a thing, 4.0 versus about 3.7. They also felt less time pressure. The gap is modest, but it came from the same people on different weekends.", "tr": "Spend a small amount this week to remove one annoying task, then rate your mood that evening from 1 to 5. About 5 minutes.", "tm": 5, "pf": [{"text": "Whillans et al. (2017), PNAS full text: 4.00 vs 3.71, d = 0.33", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5559044/"}, {"text": "Harvard Business School Working Knowledge summary (4 vs 3.7)", "url": "https://www.library.hbs.edu/working-knowledge/want-to-be-happier-spend-some-money-on-avoiding-household-chores"}]}, {"id": "weak-ties-5", "topic": "Weak Ties", "sec": "Social Well-Being", "c": "#b05a26", "tpl": "lad", "q": "Clue Ladder: what idea am I? (Hardest clue first.)", "d": {"answer": "The strength of weak ties", "clues": ["In 2022 a randomized test on about 20 million LinkedIn members found the best results came from moderately weak versions of these.", "A 1973 paper in the American Journal of Sociology by Mark Granovetter named this idea.", "Most people who found jobs through contacts saw that contact only occasionally or rarely.", "They are your acquaintances, not your close friends, and they can bring you news your inner circle does not have."]}, "ins": "Acquaintances move in different circles than your close friends, so they carry different information and chances. Studies also link everyday chats with acquaintances to feeling happier and more connected. A wide, loose network is worth tending along with close ones.", "tr": "Have a two-minute chat with someone you only know a little, such as a coworker or neighbor.", "tm": 2, "pf": [{"text": "Granovetter 1973. https://www.cs.umd.edu/~golbeck/INST633o/granovetterTies.pdf", "url": "https://www.cs.umd.edu/~golbeck/INST633o/granovetterTies.pdf"}, {"text": "Rajkumar et al., 2022. https://news.stanford.edu/stories/2022/09/real-strength-weak-ties", "url": "https://news.stanford.edu/stories/2022/09/real-strength-weak-ties"}, {"text": "Sandstrom & Dunn, 2014, Personality and Social Psychology Bulletin 40(7): students felt happier and more belonging on days with more classmate interactions; weak ties tied to well-being. https://journals.sagepub.com/doi/10.1177/0146167214529799", "url": "https://journals.sagepub.com/doi/10.1177/0146167214529799"}]}, {"id": "what-makes-a-good-life-5", "topic": "What Makes a Good Life", "sec": "Sense of Purpose", "c": "#8c3f52", "tpl": "lad", "q": "Clue Ladder: which person am I? (Hardest clue first.)", "d": {"answer": "George Vaillant", "clues": ["I joined the Harvard study in 1966.", "I led it from 1972 to 2004.", "I wrote a book called Triumphs of Experience about the Grant Study men.", "After about four decades of watching the men's lives, I said: 'Happiness is love. Full stop.'"]}, "ins": "Vaillant, a psychiatrist, led the Harvard study for more than three decades and came to say that happiness comes down to love and warm relationships. A study that watched real lives for so long gave the line weight. Prioritize the people you love.", "tr": "Tell one person today something you appreciate about them.", "tm": 3, "pf": [{"text": "Harvard Gazette, 2017: Vaillant joined 1966, led 1972-2004. https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/", "url": "https://news.harvard.edu/gazette/story/2017/04/over-nearly-80-years-harvard-study-has-been-showing-how-to-live-a-healthy-and-happy-life/"}, {"text": "Mental Floss summary of Shenk's Atlantic article: 'Happiness is love. Full stop.' https://www.mentalfloss.com/article/21698/happiness-love-researcher-concludes", "url": "https://www.mentalfloss.com/article/21698/happiness-love-researcher-concludes"}, {"text": "Wikipedia: Triumphs of Experience. https://en.wikipedia.org/wiki/Harvard_Study_of_Adult_Development", "url": "https://en.wikipedia.org/wiki/Harvard_Study_of_Adult_Development"}]}, {"id": "spaced-repetition-5", "topic": "Spaced Repetition", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "blank", "q": "Fill the Blank: In a study of over 1,350 people, the best gap between study sessions got longer as the test got further away, but as a share of the delay it got ______.", "d": {"sentence": "As the test got further away, the best gap between study sessions got longer, but as a share of the delay it got ______.", "blank": "smaller", "options": ["smaller", "larger", "exactly the same", "random"], "correct": 0}, "ins": "For a test one week away, the best gap was about 20 to 40% of that week. For a test one year away, it was only about 5 to 10%. So for long-term memory, you do not need to wait as long, in proportion, between reviews. A few well-timed reviews can carry a memory for a year.", "tr": "Plan reviews of one topic at 3 days, 1 week and 1 month.", "tm": 3, "pf": [{"text": "Cepeda et al., 2008, Psychological Science: ratio fell from about 20-40% (1 week) to about 5-10% (1 year). https://www.evullab.org/pdf/CepedaVulRohrerWixtedPashler-PS-2008.pdf", "url": "https://www.evullab.org/pdf/CepedaVulRohrerWixtedPashler-PS-2008.pdf"}, {"text": "Cepeda et al., 2006 meta-analysis, Psychological Bulletin: 839 assessments, 317 experiments, 184 articles; best gap grows with retention interval. https://digitalcommons.usf.edu/psy_facpub/1771/", "url": "https://digitalcommons.usf.edu/psy_facpub/1771/"}]}, {"id": "single-tasking-5", "topic": "Single-Tasking", "sec": "Mental Fitness", "c": "#7a4f9c", "tpl": "blank", "q": "A 2021 review of 46 studies found the link between heavy media multitasking and weaker focus is ___.", "d": {"sentence": "A 2021 review of 46 studies found the link between heavy media multitasking and weaker focus is ___.", "options": ["small", "huge", "reversed", "absent"], "correct": 0}, "ins": "The pooled link was small (about 0.14 on a correlation-style scale), and on performance tests it was negligible once publication bias was accounted for. The authors concluded they were no closer to understanding it, so the dramatic headlines from the first study have not held up well. Single-tasking is still sensible for hard work, but do not expect a fixed brain flaw from multitasking.", "tr": "Pick one hard task today and give it 15 minutes with no switching. Compare how it felt with your usual hopping.", "tm": 15, "pf": [{"text": "Parry and le Roux (2021), 'Cognitive control in media multitaskers' ten years on: A meta-analysis, Cyberpsychology (46 studies, 118 assessments, pooled z = .138; negligible for performance tests after bias adjustment)", "url": "https://cyberpsychology.eu/article/view/13303/11994"}]}, {"id": "daily-walking-5", "topic": "Daily Walking", "sec": "Physical Health", "c": "#2f7d5f", "tpl": "swipe", "q": "After age 60, you need about 10,000 steps a day to get the full benefit. True or false?", "d": {"statement": "After age 60, you need about 10,000 steps a day to get the full mortality benefit.", "true": false, "labels": ["True", "False"]}, "ins": "In a pooled analysis of 15 studies, the benefit for adults 60 and older leveled off at about 6,000-8,000 steps a day, and for younger adults at 8,000-10,000. A separate Harvard study of older women found the benefit leveling off near 7,500. If you are over 60, a daily number well below 10,000 can still be a real win.", "tr": "Try a 15-minute walk after lunch and see how many steps it adds to your day.", "tm": 5, "pf": [{"text": "Paluch et al. (2022), Lancet Public Health, 15 cohorts, 47,471 adults: levels off at 6,000-8,000 (60+) and 8,000-10,000 (under 60)", "url": "https://pubmed.ncbi.nlm.nih.gov/35247352/"}, {"text": "Lee et al. (2019), JAMA Internal Medicine: benefit leveled off at about 7,500 steps in older women", "url": "https://mdedge.com/content/higher-step-volume-associated-lower-mortality-older-women"}]}, {"id": "morning-light-5", "topic": "Morning Light", "sec": "Physical Health", "c": "#a85f14", "tpl": "rew", "q": "Put these body-clock and light milestones in order, oldest first.", "d": {"items": [{"label": "Khalsa and Czeisler's team show light timing shifts the human clock earlier or later", "year": 2003}, {"label": "Wright's camping study: a week of natural light moves the clock about 2 hours earlier", "year": 2013}, {"label": "Nobel Prize in Physiology or Medicine for the molecular body clock (Hall, Rosbash, Young)", "year": 2017}, {"label": "Large UK study links bright nights and dim days to higher death risk (Windred et al.)", "year": 2024}]}, "ins": "The idea that timed light steers your body clock was tested in humans in 2003, shown in the real world in 2013, and honored by a Nobel Prize in 2017. The newest evidence is observational but points the same way: dark days and bright nights go with worse outcomes. Your daily light pattern is something you can shape.", "tr": "Tonight, dim the lights in your home for the last hour before bed, and tomorrow step outside for 10 minutes in the morning.", "tm": 10, "pf": [{"text": "Khalsa et al. (2003), J Physiology", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2342968"}, {"text": "CU Boulder / ScienceAlert on Wright et al. (2013), Current Biology", "url": "https://www.sciencealert.com/how-a-week-of-camping-resets-the-body-clock"}, {"text": "Nobel Prize 2017 in Physiology or Medicine: Hall, Rosbash, Young, discoveries of molecular mechanisms controlling the circadian rhythm", "url": "https://www.nobelprize.org/prizes/medicine/2017/summary/"}, {"text": "Flinders University (2024) on Windred et al., PNAS", "url": "https://news.flinders.edu.au/blog/2024/11/01/brighter-nights-and-darker-days-could-lead-to-an-early-grave/"}]}, {"id": "savouring-5", "topic": "Savouring", "sec": "Emotional Health", "c": "#b3445c", "tpl": "doors", "q": "In a two-week savouring group study with 193 students, what changed compared with the control group?", "d": {"options": ["Self-reported depressive symptoms went down", "Positive mood went up", "The number of close friends went up"], "correct": 0}, "ins": "After two weeks of practising savouring the moment, students reported fewer depressive symptoms and less negative feeling than a control group. Positive mood itself did not differ between groups. So savouring may work as much by turning down the lows as by turning up the highs.", "tr": "Tonight, recall three good moments from this week and note how you could have savoured each one. About 5 minutes.", "tm": 5, "pf": [{"text": "Hurley and Kwon (2012), Journal of Happiness Studies 13, 579-588: 193 students (94 intervention, 99 control), two weeks", "url": "https://link.springer.com/article/10.1007/s10902-011-9280-8"}, {"text": "Study record on the intervention (three positive events from the past week), World Database of Happiness", "url": "https://worlddatabaseofhappiness.eur.nl/correlational-findings/25241/"}]}, {"id": "awe-5", "topic": "Awe", "sec": "Emotional Health", "c": "#b3445c", "tpl": "blank", "q": "Fill the blank.", "d": {"sentence": "Keltner and Haidt (2003) describe awe as feeling something so ____ that you have to update how you see the world.", "options": ["vast", "loud", "familiar", "colourful"], "correct": 0}, "ins": "Awe comes from perceived vastness plus a need to fit it into your existing view of things. That is why a huge canyon, a great idea or an act of extreme kindness can all trigger it. Awe can come from ordinary places if they stretch your sense of what is possible.", "tr": "Search for a short video of something vast (space, deep ocean, a giant tree) and watch it for 5 minutes with full attention.", "tm": 5, "pf": [{"text": "Keltner and Haidt (2003), Cognition and Emotion, summarised on Wikipedia (Awe)", "url": "https://en.wikipedia.org/wiki/Awe"}, {"text": "NYU Stern on Keltner and Haidt's two qualities: perceived vastness and accommodation", "url": "https://www.stern.nyu.edu/experience-stern/news/prof-jonathan-haidt-s-research-awe-featured"}]}, {"id": "time-affluence-5", "topic": "Time Affluence", "sec": "Recreational Health", "c": "#b05a26", "tpl": "lad", "q": "What am I? (Clue ladder)", "d": {"answer": "Time affluence", "clues": ["Psychologist Tim Kasser is credited with coining this term.", "Kasser and Sheldon's four studies (2009) linked it to well-being even after accounting for material wealth.", "It is the opposite of being 'time poor'.", "It's the sense that you have plenty of time in your day."]}, "ins": "Time affluence is the feeling of having enough time, and it predicts well-being beyond what money alone explains. It is about how time feels, not just how many hours you have. Protecting some slack in your day is a real investment in how you feel.", "tr": "Cancel or shorten one thing on tomorrow's list and use that 15 minutes for something unhurried.", "tm": 15, "pf": [{"text": "Time affluence definition and Kasser credit (Wikipedia)", "url": "https://en.wikipedia.org/wiki/Time_affluence"}, {"text": "Kasser and Sheldon (2009), Journal of Business Ethics: four studies summary", "url": "https://stafforini.com/works/kasser-2009-time-affluence-path/"}, {"text": "Giurge, Whillans, West (2020) on time poverty", "url": "https://lbsresearch.london.edu/id/eprint/1451"}]}];
+const LADANS=["Savouring", "Attention residue", "The strength of weak ties", "George Vaillant", "Time affluence"];
+function $(s,r){return (r||document).querySelector(s);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function fmt(d,v){return (Math.round(v*100)/100)+d.u;}
+function todayKey(){return PY.today();}
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2400);}
+var timers=[];
+function clearTimers(){timers.forEach(function(x){clearTimeout(x);clearInterval(x);});timers=[];}
+function later(fn,ms){var x=setTimeout(fn,ms);timers.push(x);return x;}
+function every(fn,ms){var x=setInterval(fn,ms);timers.push(x);return x;}
+
+var SERVED={}, RESULTS={}, CUR=-1, signedIn=false, ticked=false, habitRow=null, FREE=false, DECKSTATE=null;
+var ctx={}, card=null, IDX=0;
+
+/* turn one approved question into the shape its template wants */
+function norm(c){
+  var d=c.d,t=c.tpl,n={};
+  if(t==='dial'){
+    var rg=d.max-d.min,cands=[.1,.25,.5,1,2,5,10],st=1;for(var i=0;i<cands.length;i++){if(cands[i]>=rg/80){st=cands[i];break;}}
+    n={q:c.q,min:d.min,max:d.max,step:st,ans:d.answer,tol:d.tolerance||0,u:(d.unit==='%'||d.unit==='percent')?'%':' '+d.unit,lab:''};
+  } else if(t==='swipe'){
+    var tv=(d.isTrue!==undefined)?d.isTrue:d.true;
+    n={q:d.statement,L:d.labels[0],R:d.labels[1],ans:tv?'L':'R',w:''};
+  } else if(t==='doors'||t==='scratch'){
+    var correct=d.options[d.correct],o=shuffle(d.options);
+    n={g:{q:c.q,o:o,r:o.indexOf(correct),w:''}};
+  } else if(t==='imp'){
+    var st2=d.items?d.items.map(function(x){return {s:x.text,m:!!x.myth};}):d.statements.map(function(s,i){return {s:s,m:i===(d.mythIndex!==undefined?d.mythIndex:d.myth)};});
+    st2=shuffle(st2);
+    n={h:c.q,s:st2.map(function(x){return x.s;}),m:st2.findIndex(function(x){return x.m;}),w:''};
+  } else if(t==='rew'){
+    n={h:c.q,it:d.items.map(function(x){return [x.label,x.year];})};
+  } else if(t==='blank'){
+    var parts=d.sentence.split(/_{2,}/),ans=d.options[d.correct];
+    n={s:[parts[0],parts.slice(1).join('')],bank:d.options,ans:ans,w:''};
+  } else if(t==='face'){
+    var u=d.unit||d.a.unit||'',w=(d.answer||d.biggerIs)==='a'?'A':'B';
+    n={q:c.q,A:{n:d.a.label,v:d.a.value,l:d.a.value+' '+u},B:{n:d.b.label,v:d.b.value,l:d.b.value+' '+u},win:w,w:''};
+  } else if(t==='lad'){
+    var others=shuffle(LADANS.filter(function(x){return x!==d.answer;})).slice(0,3),o2=shuffle(others.concat([d.answer]));
+    n={clues:d.clues,o:o2,r:o2.indexOf(d.answer)};
+  }
+  return n;
+}
+
+/* ---- the week score: just a number ---- */
+function weekStart(){var p=todayKey().split('-').map(Number),dt=new Date(Date.UTC(p[0],p[1]-1,p[2]));var dow=(dt.getUTCDay()+6)%7;dt.setUTCDate(dt.getUTCDate()-dow);return dt.toISOString().slice(0,10);}
+function renderScore(){
+  var ws=weekStart(),r=0,p=0;
+  Object.keys(RESULTS).forEach(function(k){var v=RESULTS[k];if(v.on>=ws){p++;if(v.ok)r++;}});
+  $('#score').innerHTML=p?('This week: <b>'+r+' of '+p+'</b> right'):'This week: not played yet';
+}
+
+/* ---- the card ---- */
+function frame(c){
+  ctx={c:c,answered:false,ok:null,proof:false};
+  card.innerHTML='<div class="kicker" style="color:'+c.c+'">'+esc(c.sec)+' · '+esc(c.topic)+'</div><div class="play" id="play"></div><div id="after"></div>';
+  return $('#play');
+}
+function done(ok,head,detail){
+  if(ctx.answered)return;ctx.answered=true;ctx.ok=ok;
+  saveResult(ctx.c.id,ok);
+  var a=$('#after');
+  a.innerHTML='<div class="banner '+(ok?'ok':'no')+'"><b>'+head+'</b>'+esc(detail||'')+'</div><div style="margin-top:12px"><button class="btn primary" id="toins">So what’s the insight?</button></div>';
+  $('#toins').onclick=ending;
+}
+function ending(){
+  var c=ctx.c,a=$('#after'),p=$('#play');
+  p.style.display='none';
+  var h='<div class="play"><p class="kicker" style="color:'+c.c+'">The insight</p><p class="insight">'+esc(c.ins)+'</p>';
+  h+='<div class="tryit"><b>Try it · about '+c.tm+' min</b>'+esc(c.tr)+'</div>';
+  h+='<div><button class="linkbtn" id="pf">'+(ctx.proof?'Hide the proof':'See the proof ▾')+'</button>';
+  if(ctx.proof){h+='<ul class="proof">';c.pf.forEach(function(x){h+='<li>'+esc(x.text)+'<br><a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.url)+'</a></li>';});h+='</ul>';}
+  h+='</div>';
+  h+='<div class="endrow">'+(FREE?'<button class="next" id="btnNext">Next card</button>':'<input class="minin" id="mins" type="number" min="1" max="180" placeholder="min" title="How long did that take?"><div class="mintotal hidden" id="minTotal"></div><button class="next" id="btnNext">Finish</button>')+'</div></div>';
+  a.innerHTML=h;
+  $('#pf').onclick=function(){ctx.proof=!ctx.proof;ending();};
+  $('#btnNext').onclick=function(){if(FREE){IDX=(IDX+1)%CARDS.length;showCard(IDX);}else finish();};
+}
+function showCard(i){
+  clearTimers();CUR=i;var c=CARDS[i];
+  $('#nowNm').textContent='Wait, Really?!';
+  $('#nowKd').textContent=c.sec;
+  $('#lockline').textContent=FREE?'Offline: browsing the cards, nothing is recorded.':('Card '+(i+1)+' of '+CARDS.length+'. One a day.');
+  var play=frame(c);
+  R[c.tpl](play,norm(c));
+}
+var R={};
+  R.dial=function(p,it){
+    var d=it,t=ctx.t,val=(d.min+d.max)/2;
+    p.innerHTML='<p class="qline">'+esc(d.q)+'</p><div class="read" id="rd"></div><div class="dial"><div class="track" id="trk" role="slider" tabindex="0" aria-label="Your guess"><div class="thumb" id="thb"></div></div></div><div class="ends"><span>'+fmt(d,d.min)+'</span><span>'+fmt(d,d.max)+'</span></div><div style="flex:1"></div><button class="btn primary" id="lock">Lock it in</button>';
+    var trk=$('#trk'),thb=$('#thb'),rd=$('#rd');
+    function set(v){v=Math.max(d.min,Math.min(d.max,Math.round(v/d.step)*d.step));val=v;thb.style.left=((v-d.min)/(d.max-d.min)*100)+'%';rd.innerHTML=fmt(d,v).replace(/^(-?[\d.]+)(.*)$/,'$1<small>$2</small>');trk.setAttribute('aria-valuenow',v);}
+    function ev(e){var r=trk.getBoundingClientRect();set(d.min+(e.clientX-r.left)/r.width*(d.max-d.min));}
+    set(val);
+    trk.onpointerdown=function(e){trk.setPointerCapture(e.pointerId);ev(e);};
+    trk.onpointermove=function(e){if(e.buttons)ev(e);};
+    trk.onkeydown=function(e){if(e.key==='ArrowRight'||e.key==='ArrowUp'){set(val+d.step);e.preventDefault();}if(e.key==='ArrowLeft'||e.key==='ArrowDown'){set(val-d.step);e.preventDefault();}};
+    $('#lock').onclick=function(){
+      this.disabled=true;trk.onpointerdown=null;trk.onpointermove=null;
+      var fl=document.createElement('div');fl.className='flag';fl.style.left=((d.ans-d.min)/(d.max-d.min)*100)+'%';fl.innerHTML='<b>Research '+fmt(d,d.ans)+'</b>';trk.appendChild(fl);
+      var diff=Math.abs(val-d.ans),rg=d.max-d.min,ok=diff<=Math.max(it.tol,rg*.03);
+      done(ok,diff===0?'Bang on.':(ok?'Very close.':(diff<=rg*.2?'In the area.':'Way off.')),'You said '+fmt(d,val)+'. The research found '+fmt(d,d.ans)+' ('+d.lab+').');
+    };
+  };
+  /* ---- 2 swipe ---- */
+  R.swipe=function(p,it){
+    p.innerHTML='<div class="swarea"><span class="sedge l" id="el">← '+esc(it.L)+'</span><span class="sedge r" id="er">'+esc(it.R)+' →</span><div class="scard" id="sc">'+esc(it.q)+'</div></div><div class="btnrow" style="justify-content:space-between"><button class="btn" id="bl">← '+esc(it.L)+'</button><button class="btn" id="br">'+esc(it.R)+' →</button></div>';
+    var c=$('#sc'),el=$('#el'),er=$('#er'),x0=null,dx=0,fin=false;
+    function commit(side){if(fin)return;fin=true;c.classList.add('snap');c.style.transform='translateX('+(side==='L'?-420:420)+'px) rotate('+(side==='L'?-30:30)+'deg)';later(function(){var ok=side===it.ans;done(ok,ok?'You threw it right.':'Not quite.',it.w);},260);}
+    c.onpointerdown=function(e){if(fin)return;c.setPointerCapture(e.pointerId);x0=e.clientX;c.classList.remove('snap');};
+    c.onpointermove=function(e){if(x0===null||fin)return;dx=e.clientX-x0;c.style.transform='translateX('+dx+'px) rotate('+(dx/14)+'deg)';el.style.opacity=dx<0?Math.min(1,.4+Math.abs(dx)/90):.2;er.style.opacity=dx>0?Math.min(1,.4+dx/90):.2;};
+    function end(){if(x0===null)return;var d=dx;x0=null;dx=0;if(Math.abs(d)>80)commit(d<0?'L':'R');else{c.classList.add('snap');c.style.transform='';el.style.opacity=.4;er.style.opacity=.4;}}
+    c.onpointerup=end;c.onpointercancel=end;
+    $('#bl').onclick=function(){commit('L');};$('#br').onclick=function(){commit('R');};
+  };
+  /* ---- 3 doors ---- */
+  R.doors=function(p,it){
+    var g=it.g;
+    p.innerHTML='<p class="qline">'+esc(g.q)+'</p><div class="host">Behind one door: the research.</div><div class="doors" id="ds"></div>';
+    g.o.forEach(function(o,i){
+      var b=document.createElement('button');b.className='door';
+      b.innerHTML='<div class="behind '+(i===g.r?'ok':'no')+'">'+(i===g.r?'✓':'✗')+'<small>'+(i===g.r?'Right':'Not this')+'</small></div><div class="leaf">'+esc(o)+'</div>';
+      b.onclick=function(){
+        var ds=document.querySelectorAll('.door');b.classList.add('chosen');
+        ds.forEach(function(d,k){d.disabled=true;later(function(){d.classList.add('open');},k===i?0:350+k*180);});
+        $('.host').textContent='And the answer is…';
+        later(function(){var ok=i===g.r;done(ok,ok?'You opened the right door.':'Wrong door.',g.w);},1100);
+      };
+      $('#ds').appendChild(b);
+    });
+  };
+  /* ---- 4 scratch (options visible) ---- */
+  R.scratch=function(p,it){
+    var g=it.g,fin=false;
+    p.innerHTML='<p class="qline">'+esc(g.q)+'</p><p class="small">Scratch the foil beside the answer you think is right.</p><div class="ticket" id="tk"></div><div style="flex:1"></div><button class="linkbtn" id="rv">Rubbing is awkward? Reveal the middle one</button>';
+    function pick(i){if(fin)return;fin=true;document.querySelectorAll('.sfoil canvas').forEach(function(c){c.style.display='none';});var ok=i===g.r;done(ok,ok?'You scratched the winner.':'Not the winner.',g.w);}
+    g.o.forEach(function(o,i){
+      var right=i===g.r,row=document.createElement('div');row.className='srow';
+      row.innerHTML='<div class="opt">'+esc(o)+'</div><div class="sfoil '+(right?'ok':'no')+'">'+(right?'✓ Right':'✗ Not this')+'<canvas></canvas></div>';
+      $('#tk').appendChild(row);
+    });
+    document.querySelectorAll('.sfoil').forEach(function(f,i){
+      var cv=f.querySelector('canvas'),r=f.getBoundingClientRect();cv.width=Math.round(r.width);cv.height=Math.round(r.height);
+      var x=cv.getContext('2d'),gr=x.createLinearGradient(0,0,cv.width,cv.height);gr.addColorStop(0,'#b9c2cc');gr.addColorStop(.5,'#e8ecf1');gr.addColorStop(1,'#aab4bf');
+      x.fillStyle=gr;x.fillRect(0,0,cv.width,cv.height);x.fillStyle='#6b7886';x.font='bold 11px Arial';x.textAlign='center';x.fillText('SCRATCH',cv.width/2,cv.height/2+4);
+      var down=false;
+      function er(e){var b=cv.getBoundingClientRect();x.globalCompositeOperation='destination-out';x.beginPath();x.arc(e.clientX-b.left,e.clientY-b.top,13,0,7);x.fill();}
+      cv.onpointerdown=function(e){if(fin)return;cv.setPointerCapture(e.pointerId);down=true;er(e);};
+      cv.onpointermove=function(e){if(down&&!fin)er(e);};
+      function up(){if(!down||fin)return;down=false;var d=x.getImageData(0,0,cv.width,cv.height).data,n=0,tot=0;for(var k=3;k<d.length;k+=24){tot++;if(d[k]===0)n++;}if(n/tot>.4)pick(i);}
+      cv.onpointerup=up;cv.onpointercancel=up;
+    });
+    $('#rv').onclick=function(){pick(Math.min(1,g.o.length-1));};
+  };
+  /* ---- 7 impostor ---- */
+  R.imp=function(p,it){
+    p.innerHTML='<p class="qline">'+esc(it.h)+'</p><p class="small">Three are true. One is the impostor.</p><div class="stack" id="st"></div>';
+    var done1=false;
+    it.s.forEach(function(s,i){var b=document.createElement('button');b.className='optbtn';b.textContent=s;b.onclick=function(){if(done1)return;done1=true;document.querySelectorAll('#st .optbtn').forEach(function(x,k){x.disabled=true;if(k===it.m)x.classList.add('right');});if(i!==it.m)b.classList.add('wrong');var ok=i===it.m;done(ok,ok?'Impostor caught.':'The impostor got away.',it.w);};$('#st').appendChild(b);});
+  };
+  /* ---- 8 rewind ---- */
+  R.rew=function(p,it){
+    var order=it.it.slice().sort(function(a,b){return a[1]-b[1];}),next=0,miss=0;
+    p.innerHTML='<p class="qline">'+esc(it.h)+'</p><p class="small">Tap them one by one, starting with the oldest.</p><div class="stack" id="st"></div>';
+    shuffle(it.it).forEach(function(x){
+      var row=document.createElement('div');row.className='rw';row.innerHTML='<div class="n">?</div><button class="optbtn">'+esc(x[0])+'</button><div class="yr"></div>';
+      var b=row.querySelector('button');
+      b.onclick=function(){
+        if(b.disabled)return;
+        if(x[1]===order[next][1]){next++;b.disabled=true;row.classList.add('done');row.querySelector('.n').textContent=next;row.querySelector('.yr').textContent=x[1];b.classList.add('right');
+          if(next===order.length){done(miss===0,miss===0?'Perfect timeline.':'In order, with '+miss+' slip'+(miss>1?'s':'')+'.','Oldest to newest, as shown.');}}
+        else{miss++;row.classList.remove('shake');void row.offsetWidth;row.classList.add('shake');}
+      };
+      $('#st').appendChild(row);
+    });
+  };
+  /* ---- 11 blank ---- */
+  R.blank=function(p,it){
+    p.innerHTML='<p class="qline">Finish the sentence.</p><p class="sent">'+esc(it.s[0])+'<span class="slot" id="sl">&nbsp;&nbsp;&nbsp;&nbsp;</span>'+esc(it.s[1])+'</p><div class="bank" id="bk"></div>';
+    var fin=false;
+    shuffle(it.bank).forEach(function(w){var b=document.createElement('button');b.className='chip';b.style.fontSize='16px';b.style.padding='10px 16px';b.style.color='var(--ink)';b.textContent=w;b.onclick=function(){if(fin)return;fin=true;var sl=$('#sl');sl.textContent=w;var ok=w===it.ans;sl.classList.add(ok?'ok':'no');document.querySelectorAll('#bk .chip').forEach(function(x){x.disabled=true;});if(!ok){later(function(){sl.textContent=it.ans;sl.classList.remove('no');sl.classList.add('ok');},700);}done(ok,ok?'Nailed it.':'Not that word.',it.w);};$('#bk').appendChild(b);});
+  };
+  /* ---- 13 face-off ---- */
+  R.face=function(p,it){
+    p.innerHTML='<p class="qline">'+esc(it.q)+'</p><div class="fo"><button class="side" id="sa"><div class="val" id="va"></div><div class="bar" id="ba"></div>'+esc(it.A.n)+'</button><div class="vs">VS</div><button class="side" id="sb"><div class="val" id="vb"></div><div class="bar" id="bb"></div>'+esc(it.B.n)+'</button></div>';
+    function go(side){
+      $('#sa').disabled=true;$('#sb').disabled=true;
+      var mx=Math.max(it.A.v,it.B.v);
+      $('#ba').style.height=(it.A.v/mx*130)+'px';$('#bb').style.height=(it.B.v/mx*130)+'px';
+      $('#va').textContent=it.A.l;$('#vb').textContent=it.B.l;
+      var ok=side===it.win;$('#s'+it.win.toLowerCase()).classList.add('right');if(!ok)$('#s'+side.toLowerCase()).classList.add('wrong');
+      later(function(){done(ok,ok?'You picked the bigger one.':'The other one was bigger.',it.w);},900);
+    }
+    $('#sa').onclick=function(){go('A');};$('#sb').onclick=function(){go('B');};
+  };
+  /* ---- 14 clue ladder ---- */
+  R.lad=function(p,it){
+    var shown=1,fin=false;
+    p.innerHTML='<p class="qline">Which idea am I?</p><div class="clues" id="cl"></div><p class="pts" id="pt"></p><div class="btnrow"><button class="btn" id="more">Give me another clue</button></div><div class="wchips" id="lo"></div>';
+    function paint(){
+      var h='';it.clues.forEach(function(c,i){h+=i<shown?'<div class="clue"><b>'+(i+1)+'.</b> '+esc(c)+'</div>':'<div class="clue lock">Clue '+(i+1)+' (locked)</div>';});
+      $('#cl').innerHTML=h;$('#pt').innerHTML='Worth <b>'+(it.clues.length-shown+1)+'</b> points if you get it now.';
+      $('#more').disabled=shown>=it.clues.length||fin;
+    }
+    paint();
+    $('#more').onclick=function(){shown++;paint();};
+    it.o.forEach(function(o,i){var b=document.createElement('button');b.className='chip';b.style.fontSize='15px';b.style.color='var(--ink)';b.textContent=o;b.onclick=function(){if(fin)return;fin=true;paint();document.querySelectorAll('#lo .chip').forEach(function(x){x.disabled=true;});var ok=i===it.r;b.classList.add(ok?'on':'');var pts=it.clues.length-shown+1;done(ok,ok?'Got it with '+shown+' clue'+(shown>1?'s':'')+'. '+pts+' points.':'Not that one.','It was '+it.o[it.r]+'.');};$('#lo').appendChild(b);});
+  };
+
+
+/* ---- the deck: one card a day ---- */
+async function loadDeck(){
+  var t=todayKey();
+  var r=await sb.from('deck_progress').select('tile_key,served_on').eq('deck',DECK);
+  SERVED={};(r.data||[]).forEach(function(x){SERVED[x.tile_key]=x.served_on;});
+  var s=await sb.from('deck_state').select('deck,status,finished_on').eq('deck',DECK).limit(1);
+  DECKSTATE=(s.data&&s.data[0])||null;
+  var rr=await sb.from('deck_progress').select('tile_key,served_on').eq('deck',RES);
+  RESULTS={};(rr.data||[]).forEach(function(x){var m=String(x.tile_key).split('|');RESULTS[m[0]]={ok:m[1]==='r',on:x.served_on};});
+  var today=-1;for(var i=0;i<CARDS.length;i++) if(SERVED[CARDS[i].id]===t){today=i;break;}
+  if(today<0){for(var j=0;j<CARDS.length;j++) if(!SERVED[CARDS[j].id]){today=j;break;}
+    if(today>=0){var ins=await sb.from('deck_progress').upsert([{deck:DECK,tile_key:CARDS[today].id,served_on:t}],{onConflict:'deck,tile_key'});if(!ins.error)SERVED[CARDS[today].id]=t;}}
+  CUR=today;
+}
+async function saveResult(id,ok){
+  if(FREE||!sb)return;
+  if(RESULTS[id])return;
+  RESULTS[id]={ok:ok,on:todayKey()};renderScore();
+  var r=await sb.from('deck_progress').upsert([{deck:RES,tile_key:id+'|'+(ok?'r':'w'),served_on:todayKey()}],{onConflict:'deck,tile_key'});
+  if(r.error)toast('Could not save the result: '+r.error.message);
+}
+async function markRead(){
+  if(DECKSTATE&&DECKSTATE.status==='read')return;
+  var r=await sb.from('deck_state').upsert([{deck:DECK,status:'read',finished_on:todayKey(),updated_at:new Date().toISOString()}],{onConflict:'deck'});
+  if(!r.error)DECKSTATE={deck:DECK,status:'read'};
+}
+async function rotateBack(){
+  var r=await sb.rpc('deck_reset',{p_deck:DECK});
+  if(r.error){toast('Could not reset it: '+r.error.message);return;}
+  toast('Back in rotation. One card a day again.');
+  await boot2();
+}
+async function loadHabit(){
+  var r=await sb.from('todos').select('id,task,done,actual_minutes,for_date').eq('is_habit',true).eq('task',HABIT).order('for_date',{ascending:false}).limit(1);
+  habitRow=(r.data&&r.data[0])||null;
+  ticked=!!(habitRow&&habitRow.done&&habitRow.for_date===todayKey());
+}
+async function ensureRow(){
+  if(habitRow)return habitRow;
+  var ins=await sb.from('todos').insert({
+    task:HABIT, section:'Core To-Dos', subsection:'HABIT BANDIT', category:'HABIT BANDIT',
+    is_habit:true, bucket:'today', est_minutes:5, position:21,
+    for_date:todayKey(), done:false, status:'todo'
+  }).select().single();
+  if(ins.error){toast('Could not create the habit row: '+ins.error.message);return null;}
+  habitRow=ins.data;return habitRow;
+}
+async function finish(){
+  if(!sb||!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
+  if(window.__cvFin)return;
+  if(__cueAskIfIdle())return;
+  clearInterval(__cueTickId);
+  var el=$('#mins'),typed=(el&&el.value.trim()!=='')?parseInt(el.value,10):NaN;
+  var totMin=(typed>0&&typed<=180)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(el){el.value=totMin;el.disabled=true;}
+  var totEl=$('#minTotal');if(totEl){totEl.textContent='Timer total: '+totMin+' min';totEl.classList.remove('hidden');}
+  var nx=$('#btnNext');if(nx)nx.disabled=true;
+  var row=await ensureRow();if(!row)return;
+  var now=new Date().toISOString(),today=todayKey();
+  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:totMin,for_date:today,updated_at:now}).eq('id',row.id);
+  if(res.error){toast('Did not save: '+res.error.message);return;}
+  ticked=true;habitRow.done=true;habitRow.for_date=today;
+  toast('Wait, Really?! → wheel ✓, '+totMin+' min');
+  var left=CARDS.filter(function(c){return !SERVED[c.id];}).length;if(left===0)markRead();
+  window.__cvFin=1;if(window.CueVisits){CueVisits.finish({sb:sb,card:'wait-really',minutes:totMin,url:'habit-modules.html?done=wait-really'});}else{setTimeout(function(){location.href='habit-modules.html?done=wait-really';},3000);}
+}
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&e.target.id==='mins'){e.preventDefault();finish();}});
+
+function endTile(){
+  clearTimers();
+  $('#nowNm').textContent='Wait, Really?!';$('#nowKd').textContent='The whole deck';$('#lockline').textContent='';
+  card.innerHTML='<div class="kicker">Deck complete</div><h2 style="font-size:22px">That is every card in the deck</h2><p class="small" style="font-size:14.5px;color:#46516a">All '+CARDS.length+' cards have been dealt. Nothing is lost. Put it back in rotation whenever you want another pass.</p><div class="endrow"><button class="next" id="rotBack">Add back to rotation</button></div>';
+  $('#rotBack').onclick=rotateBack;markRead();
+}
+async function boot2(){
+  await loadDeck();await loadHabit();renderScore();
+  if(CUR<0)endTile();else showCard(CUR);
+}
+async function signIn(){
+  var email=$('#email').value.trim(),pass=$('#pass').value;
+  var r=await sb.auth.signInWithPassword({email:email,password:pass});
+  if(r.error){$('#gateErr').textContent=r.error.message;return;}
+  $('#gate').classList.add('hidden');$('#stage').classList.remove('hidden');
+  signedIn=true;await boot2();
+}
+function freeMode(msg){
+  FREE=true;SERVED={};RESULTS={};$('#gate').classList.add('hidden');$('#stage').classList.remove('hidden');
+  renderScore();IDX=0;showCard(0);if(msg)$('#lockline').textContent=msg;
+}
+async function boot(){
+  card=$('#card');
+  var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
+  $('#stamp').textContent='Wait, Really?! v1.0 · sourced questions, each with proof links · as of '+f+' · all times EST';
+  if(!sb||window.__WR_FREE){freeMode('Could not reach the database. Browsing the cards, nothing recorded. Reload to try again.');return;}
+  var s=await sb.auth.getSession();
+  if(s.data.session){signedIn=true;$('#gate').classList.add('hidden');$('#stage').classList.remove('hidden');await boot2();}
+  else{$('#stage').classList.add('hidden');$('#gate').classList.remove('hidden');}
+}
+boot();
+
+</script>
+<script src="cue-visits.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>
