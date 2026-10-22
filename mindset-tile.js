@@ -1,4 +1,5 @@
-/* mindset-tile.js v1.0 (Oct 20, 2026)
+/* mindset-tile.js v1.1 (Oct 21, 2026): adds '> ' lead-quote lines (larger, bold) and [text](https://...) links. Old cards unchanged.
+   v1.0 (Oct 20, 2026)
    ONE definition of how a Mindset Training tile is drawn from saved words and
    pictures. The Mindset Training deck and the Card Maker both load this file,
    so the two can never drift apart. Every measurement was taken from the
@@ -18,12 +19,13 @@ var CSS='.mtile{container-type:inline-size;position:relative;width:100%;aspect-r
 '.mtpic:last-child{margin-bottom:calc(var(--u)*30)}'+
 '.mttxt{flex:1;min-height:0;padding:calc(var(--u)*13) calc(var(--u)*30) calc(var(--u)*14)}'+
 '.mttxt p{margin:0 0 calc(var(--u)*7)}.mttxt ul{margin:0 0 calc(var(--u)*7);padding-left:calc(var(--u)*15)}.mttxt li{margin:0 0 calc(var(--u)*2)}'+
-'.mttxt b{font-weight:700;color:#33373f}.mttxt.mtbig{font-size:calc(var(--u)*16.2)}';
+'.mttxt b{font-weight:700;color:#33373f}.mttxt.mtbig{font-size:calc(var(--u)*16.2)}'+
+'.mttxt p.mtq{font-size:calc(var(--u)*21.5);line-height:1.22;font-weight:700;color:#2b2f37;margin:0 0 calc(var(--u)*10)}.mttxt a{color:inherit;text-decoration:underline;text-underline-offset:calc(var(--u)*2)}';
 function injectCss(){ if(document.getElementById('mt-css'))return; var s=document.createElement('style'); s.id='mt-css'; s.textContent=CSS; document.head.appendChild(s); }
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function inl(s){return esc(s).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>');}
+function inl(s){return esc(s).replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener" onclick="event.stopPropagation()">$1</a>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\*(.+?)\*/g,'<i>$1</i>');}
 function md(t){var out='',ul=false;String(t||'').split('\n').forEach(function(l){var m=/^\s*-\s+(.*)$/.exec(l);
-  if(m){if(!ul){out+='<ul>';ul=true;}out+='<li>'+inl(m[1])+'</li>';}else{if(ul){out+='</ul>';ul=false;}if(l.trim())out+='<p>'+inl(l.trim())+'</p>';}});
+  if(m){if(!ul){out+='<ul>';ul=true;}out+='<li>'+inl(m[1])+'</li>';}else{if(ul){out+='</ul>';ul=false;}var q=/^\s*>\s+(.*)$/.exec(l);if(q)out+='<p class="mtq">'+inl(q[1])+'</p>';else if(l.trim())out+='<p>'+inl(l.trim())+'</p>';}});
   if(ul)out+='</ul>';return out;}
 function head(card){
   var c=CATS[card.category]||CATS.mental, nm=card.name||'', fs=nm.length<=12?24.5:(nm.length<=19?22.5:18.5);
@@ -39,7 +41,7 @@ function tile(card,i){
   /* words-first tiles share the space with their picture, so the picture is capped to what is left */
   var ph=300;
   if(t.order==='words'){var big=i===0,cpl=big?33:42,lh=big?21.1:17.7,lines=0,blocks=0;
-    String(t.text||'').split('\n').forEach(function(l){if(l.trim()){blocks++;lines+=Math.max(1,Math.ceil(l.replace(/^\s*-\s+/,'').length/cpl));}});
+    String(t.text||'').split('\n').forEach(function(l){if(l.trim()){blocks++;var isq=/^\s*>\s/.test(l);lines+=isq?Math.max(1,Math.ceil(l.replace(/^\s*>\s+/,'').length/24))*1.28:Math.max(1,Math.ceil(l.replace(/^\s*-\s+/,'').length/cpl));}});
     ph=Math.max(150,Math.min(300,531-(big?84:34)-(27+lines*lh+blocks*5)-11-30));}
   var pic=t.picture?'<div class="mtpic" style="--ph:'+ph.toFixed(0)+';--pm:calc(var(--u)*'+(344*(1-size/100)/2).toFixed(1)+')"><img src="'+esc((window.MT_PICS&&window.MT_PICS[t.picture])||t.picture)+'" alt=""></div>':'';
   var top=i===0?head(card):'<div class="mtcap">'+esc(t.caption)+'</div>';
