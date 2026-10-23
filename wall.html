@@ -293,7 +293,7 @@
   .tray[hidden]{display:none}
   @keyframes trayDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
   .tray:not([hidden]){animation:trayDown .2s ease}
-  /* v2.24 (Oct 22, 2026): a tile opens in a pop-up over the board. Nothing pushes the board down. */
+  /* v2.25 (Oct 22, 2026): a tile opens in a pop-up over the board. Nothing pushes the board down. */
   .tray.pop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(780px,calc(100vw - 32px));
             max-height:calc(100vh - 48px);overflow:auto;z-index:2147483000;background:var(--card);
             border:1px solid var(--key);border-radius:14px;padding:12px;box-shadow:0 24px 70px rgba(0,0,0,.5);animation:popFade .15s ease}
@@ -577,6 +577,18 @@
   /* v2.22 (Oct 9, 2026): every tile is about 80% of its old size (156px), with wider gaps so the board breathes.
      The daily doors are two tiles wide and a third of their old height (63px). */
   .feed.w2{grid-template-columns:repeat(auto-fill,156px);gap:22px;justify-content:start}
+
+  /* v2.25 (Oct 22, 2026): the daily idea door. One new source idea a day, with three real samples, in the doors row. */
+  .w2idea{grid-column:1/-1}
+  .w2idea .ibtn{display:flex;align-items:center;gap:10px;width:100%;max-width:334px;text-align:left;cursor:pointer;border:1px dashed var(--key);border-radius:12px;background:var(--card);color:inherit;padding:10px 12px;font:inherit}
+  .w2idea .ibtn b{display:block;font-size:13px}.w2idea .ibtn small{opacity:.7}
+  .w2idea .ipanel{margin-top:10px;border:1px solid var(--key);border-radius:12px;background:var(--card);padding:12px}
+  .w2idea .ipanel[hidden]{display:none}
+  .w2idea .isamp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0}
+  .w2idea .isamp a{display:block;text-decoration:none;color:inherit;font-size:11.5px}
+  .w2idea .isamp img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;display:block}
+  .w2idea .iacts{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+  .w2idea .inote{font-size:12px;opacity:.75;margin:4px 0}
   .w2doors{display:grid;grid-template-columns:repeat(2,156px);gap:22px;justify-content:start}
   .w2doors > *{min-width:0}
   .w2doors .w2t{aspect-ratio:1/1}
@@ -728,7 +740,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.24</span></h1>
+      <h1>Sparkboard <span class="ver">v2.25</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -836,7 +848,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.24</div>
+  <div class="stamp" id="stamp">v2.25</div>
 </div>
 
 <aside class="stx-col">
@@ -1277,7 +1289,7 @@ function openTrayFor(n){
   if(!tr.getAttribute("data-filled")){ tr.innerHTML=fillTray(n); tr.setAttribute("data-filled","1"); }
   var btn=document.querySelector('[data-src="'+n+'"]');
   if(btn) btn.setAttribute("aria-expanded","true");
-  /* v2.24: show it as a pop-up over the board, with a close button */
+  /* v2.25: show it as a pop-up over the board, with a close button */
   tr.classList.add("pop");
   if(!tr.querySelector(".w2x")){
     var x=document.createElement("button"); x.type="button"; x.className="w2x"; x.setAttribute("aria-label","Close");
@@ -1564,6 +1576,7 @@ function w2deck(k,choice){
 
 document.addEventListener("click",function(e){
   var t=e.target;
+  if(ideaClick(t)){ e.preventDefault(); return; }
   var a=t.closest("[data-w2add]"); if(a){ e.preventDefault(); w2open("add"); return; }
   var st=t.closest("[data-w2set]"); if(st){ e.preventDefault(); w2open("edit",st.getAttribute("data-w2set")); return; }
   var sy=t.closest("[data-w2story]"); if(sy){ e.preventDefault(); w2story(+sy.getAttribute("data-w2story")); return; }
@@ -1738,10 +1751,57 @@ function paintRemoved(){
   }).join("")+'<div class="hint" style="margin-top:8px">A source you put back shows up again from tomorrow morning\'s pictures, or right away if it was on today\'s Wall.</div>';
 }
 
+
+/* v2.25 (Oct 22, 2026): the daily idea door. Today's row comes from wall_ideas; skip a day and nothing piles up. */
+var IDEA=null;
+function ideaToday(){ try{ return new Date().toLocaleDateString("en-CA",{timeZone:"America/New_York"}); }catch(e){ return new Date().toISOString().slice(0,10); } }
+function ideaLoad(){
+  return api("wall_ideas?select=*&status=eq.offered&day=eq."+ideaToday()+"&limit=1").then(function(r){
+    IDEA=(r&&r[0])||null; ideaPaint();
+  }).catch(function(){ IDEA=null; });
+}
+function ideaPaint(){
+  var old=document.getElementById("ideaDoor"); if(old) old.remove();
+  if(!IDEA) return;
+  var row=document.querySelector(".w2doors");
+  if(!row){
+    var st=document.getElementById("sbwall"); if(!st) return;
+    row=document.createElement("div"); row.className="w2doors";
+    st.insertBefore(row,st.firstChild);
+  }
+  var d=document.createElement("div"); d.className="w2idea"; d.id="ideaDoor";
+  var smp=(IDEA.samples||[]).map(function(x){
+    return '<a href="'+esc(x.link)+'" target="_blank" rel="noopener noreferrer"><img src="'+esc(x.img)+'" alt="" loading="lazy"><span>'+esc(x.t)+'</span></a>';
+  }).join("");
+  d.innerHTML='<button class="ibtn" type="button" data-idea="open"><span style="font-size:22px">\u{1F4A1}</span><span><b>Today\u2019s idea: '+esc(IDEA.name)+'</b><small>Tap to see three samples</small></span></button>'+
+    '<div class="ipanel" hidden><div>'+esc(IDEA.pitch)+'</div>'+(IDEA.why?'<div class="inote">'+esc(IDEA.why)+'</div>':'')+
+    '<div class="isamp">'+smp+'</div>'+
+    '<div class="inote">'+(IDEA.checked?'All three samples were opened and loaded.':'Not checked yet.')+' '+esc(IDEA.overlap||"")+'</div>'+
+    '<div class="iacts"><button class="w2btn pri" type="button" data-idea="added">Add to Sparkboard</button>'+
+    '<button class="w2btn" type="button" data-idea="passed">Not for me</button>'+
+    (IDEA.site_url?'<a class="w2btn" href="'+esc(IDEA.site_url)+'" target="_blank" rel="noopener noreferrer">Visit the site</a>':'')+
+    '<small data-idea-msg></small></div></div>';
+  row.insertBefore(d,row.firstChild);
+}
+function ideaClick(t){
+  var b=t.closest("[data-idea]"); if(!b||!IDEA) return false;
+  var v=b.getAttribute("data-idea"), box=document.getElementById("ideaDoor");
+  if(v==="open"){ var pn=box.querySelector(".ipanel"); pn.hidden=!pn.hidden; return true; }
+  var msg=box.querySelector("[data-idea-msg]"); msg.textContent="Saving...";
+  fetch(SB+"/rest/v1/rpc/idea_decide",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},
+    body:JSON.stringify({p_id:IDEA.id,p_status:v})}).then(function(r){
+    if(!r.ok) throw new Error(r.status);
+    msg.textContent=(v==="added")?"Got it. It joins the Sparkboard after tonight\u2019s run.":"Noted. Not for you.";
+    box.querySelectorAll("button[data-idea=added],button[data-idea=passed]").forEach(function(x){x.disabled=true;});
+    setTimeout(function(){ IDEA=null; ideaPaint(); },2200);
+  }).catch(function(){ msg.textContent="That did not save. Try again."; });
+  return true;
+}
 function paint(){
   paintRemoved();
   document.getElementById("stage").innerHTML=drawFeed();
   applyOpened();
+  ideaPaint();
   paintSize();
   var sb=document.getElementById("sizebtn"); if(sb) sb.onclick=toggleSize;
   var saved=ITEMS.filter(function(i){return i.saved;}).length;
@@ -2681,6 +2741,7 @@ document.addEventListener("click",function(e){
   if(star){ e.preventDefault(); hiToggleStar(+star.getAttribute("data-i")); }
 });
 boot();
+ideaLoad();
 loadWatch();
 loadHarpers();
 loadSportsTicker();
