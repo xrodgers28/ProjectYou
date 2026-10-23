@@ -293,6 +293,15 @@
   .tray[hidden]{display:none}
   @keyframes trayDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
   .tray:not([hidden]){animation:trayDown .2s ease}
+  /* v2.24 (Oct 22, 2026): a tile opens in a pop-up over the board. Nothing pushes the board down. */
+  .tray.pop{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(780px,calc(100vw - 32px));
+            max-height:calc(100vh - 48px);overflow:auto;z-index:2147483000;background:var(--card);
+            border:1px solid var(--key);border-radius:14px;padding:12px;box-shadow:0 24px 70px rgba(0,0,0,.5);animation:popFade .15s ease}
+  @keyframes popFade{from{opacity:0}to{opacity:1}}
+  .w2back{position:fixed;inset:0;background:rgba(10,13,20,.55);z-index:2147482999}
+  .w2back[hidden]{display:none}
+  .w2x{position:sticky;top:0;float:right;z-index:3;width:30px;height:30px;border-radius:50%;border:0;margin:0 0 6px 8px;
+       background:rgba(10,13,20,.7);color:#fff;font:700 15px/1 Arial,sans-serif;cursor:pointer}
   .trayr{display:flex;gap:10px;overflow-x:auto;padding:2px 2px 8px;
          -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
          overscroll-behavior-x:contain}
@@ -503,8 +512,9 @@
   .w2hit{position:absolute;inset:0;width:100%;height:100%;border:0;padding:0;margin:0;background:none;
          cursor:pointer;text-align:left;font:inherit;color:#fff;display:block}
   .w2art{position:absolute;inset:0;display:block;background:#1b2130}
-  .w2art img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s ease}
-  .w2hit:hover .w2art img{transform:scale(1.035)}
+  .w2art img{width:100%;height:100%;object-fit:cover;display:block;transition:none}
+  /* v2.23 (Oct 22, 2026): nothing on the board grows or zooms when you point at it. */
+  .w2hit:hover .w2art img{transform:none}
   .w2art.mos{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px}
   .w2art.mos.n2{grid-template-rows:1fr}
   .w2art.mos.n3 img:first-child{grid-row:span 2}
@@ -567,12 +577,10 @@
   /* v2.22 (Oct 9, 2026): every tile is about 80% of its old size (156px), with wider gaps so the board breathes.
      The daily doors are two tiles wide and a third of their old height (63px). */
   .feed.w2{grid-template-columns:repeat(auto-fill,156px);gap:22px;justify-content:start}
-  .w2doors{display:grid;grid-template-columns:repeat(2,minmax(0,334px));gap:22px;justify-content:start}
+  .w2doors{display:grid;grid-template-columns:repeat(2,156px);gap:22px;justify-content:start}
   .w2doors > *{min-width:0}
-  .w2doors .w2t{aspect-ratio:auto;height:63px}
-  .w2doors .w2cap{font-size:13px;padding-top:24px}
-  .w2doors .w2cap small{display:none}
-  .w2doors .w2art img{filter:blur(2.5px) brightness(.62);transform:scale(1.08)}
+  .w2doors .w2t{aspect-ratio:1/1}
+  .w2doors .w2art img{filter:blur(2.5px) brightness(.62);transform:scale(1.08);transition:none}
   .w2doors .w2hit:hover .w2art img{transform:scale(1.08)}
   @media (max-width:640px){
     .feed.w2{grid-template-columns:repeat(2,minmax(0,136px));gap:18px;justify-content:space-between}
@@ -720,7 +728,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.22</span></h1>
+      <h1>Sparkboard <span class="ver">v2.24</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -828,7 +836,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.22</div>
+  <div class="stamp" id="stamp">v2.24</div>
 </div>
 
 <aside class="stx-col">
@@ -1247,8 +1255,18 @@ function doorSwap(k){
     toast(/No swaps left/.test(m)?"No swaps left today.":/No spare/.test(m)?"No spare doors left today.":"Could not swap: "+m.slice(0,80));
   });
 }
+function w2backdrop(){
+  var b=document.getElementById("w2back");
+  if(!b){ b=document.createElement("div"); b.id="w2back"; b.className="w2back"; b.hidden=true;
+    b.addEventListener("click",function(){ closeAllTrays(); }); document.body.appendChild(b); }
+  return b;
+}
+document.addEventListener("keydown",function(e){
+  if(e.key==="Escape" && document.querySelector(".tray.pop:not([hidden])")) closeAllTrays();
+});
 function closeAllTrays(){
-  Array.prototype.forEach.call(document.querySelectorAll("[data-tray]"), function(o){ o.hidden=true; });
+  var bk=document.getElementById("w2back"); if(bk) bk.hidden=true;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-tray]"), function(o){ o.hidden=true; o.classList.remove("pop"); });
   Array.prototype.forEach.call(document.querySelectorAll("[data-src]"), function(b){
     b.setAttribute("aria-expanded","false");
   });
@@ -1259,17 +1277,14 @@ function openTrayFor(n){
   if(!tr.getAttribute("data-filled")){ tr.innerHTML=fillTray(n); tr.setAttribute("data-filled","1"); }
   var btn=document.querySelector('[data-src="'+n+'"]');
   if(btn) btn.setAttribute("aria-expanded","true");
-  /* drop the tray below the WHOLE row the tile sits in */
-  var feed=document.getElementById("feed");
-  if(feed && btn){
-    var cols=(getComputedStyle(feed).gridTemplateColumns||"").split(" ").filter(Boolean).length || 1;
-    var tiles=Array.prototype.slice.call(feed.querySelectorAll(".w2t, .stile, .w2add"));
-    var i=tiles.indexOf(btn.closest(".w2t, .stile")||btn);
-    if(i>=0){
-      var last=tiles[Math.min(tiles.length-1, Math.floor(i/cols)*cols + cols - 1)];
-      if(last && last.nextSibling!==tr) feed.insertBefore(tr, last.nextSibling);
-    }
+  /* v2.24: show it as a pop-up over the board, with a close button */
+  tr.classList.add("pop");
+  if(!tr.querySelector(".w2x")){
+    var x=document.createElement("button"); x.type="button"; x.className="w2x"; x.setAttribute("aria-label","Close");
+    x.innerHTML="&times;"; x.addEventListener("click",function(ev){ ev.stopPropagation(); closeAllTrays(); });
+    tr.insertBefore(x,tr.firstChild);
   }
+  w2backdrop().hidden=false;
   tr.hidden=false;
   doorRefresh(tr);
 }
