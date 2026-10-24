@@ -216,13 +216,14 @@
 
   <div id="browse" class="hidden">
     <div class="wrap">
-    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v3.2</span><span class="date"></span></div>
+    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v3.3</span><span class="date"></span></div>
       <div class="add">
         <b>Add a phrase</b>
         <div class="r">
           <input id="nt" placeholder="the phrase or quote">
           <input id="nm" placeholder="what it means (optional)">
           <input id="ng" placeholder="category">
+          <input id="nu" placeholder="source link (where it came from)">
           <button class="btn" onclick="addQuote()">Add</button>
         </div>
       </div>
@@ -236,7 +237,7 @@
       <div class="grid" id="grid"></div>
     </div>
   </div>
-  <div class="badge">Things Worth Knowing v3.2</div>
+  <div class="badge">Things Worth Knowing v3.3</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -279,7 +280,7 @@ async function onLogin(session){try{await sb.realtime.setAuth(session.access_tok
 async function load(){
   try{
     const {data,error}=await sb.from('quotes')
-      .select('id,text,meaning,author,tags,source_module,favorite,created_at,is_new,seen_on')
+      .select('id,text,meaning,author,tags,source_module,favorite,created_at,is_new,seen_on,source_url')
       .order('created_at',{ascending:false});
     if(error) throw error;
     ALL=(data||[]).slice();
@@ -476,7 +477,10 @@ function twkSrc(q){
   else if(m==='james-clear'){ lab='James Clear, 3-2-1'; href='james-clear.html'; }
   else if(m==='manual'){ lab='Your own Clever Phrases library'; }
   else { lab='Written for Project YOU'; }
-  var inner=href?('<a href="'+href+'" style="color:inherit;text-decoration:underline">'+esc(lab)+'</a>'):esc(lab);
+  /* v3.3 (Oct 24, 2026): a quote with its own source_url links straight out to it (new quotes only, Scott's call). */
+  if(q&&q.source_url&&/^https?:\/\//i.test(q.source_url)){ href=q.source_url; }
+  var ext=/^https?:/i.test(href);
+  var inner=href?('<a href="'+esc(href)+'"'+(ext?' target="_blank" rel="noopener noreferrer"':'')+' style="color:inherit;text-decoration:underline">'+esc(lab)+'</a>'):esc(lab);
   return '<div class="src">Source &middot; '+inner+'</div>';
 }
 function catLabel(c){return CATLABEL[c]||c;}
@@ -516,7 +520,7 @@ function __cueHandTick(){
   line.style.transform='rotate('+deg+'deg)';
 }
 var __cueTickId=setInterval(__cueHandTick,250);
-function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+'<span class="ver">v3.2</span></div>';}
+function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+'<span class="ver">v3.3</span></div>';}
 function paras(t){return (t||'').split(/\n\s*\n/).map(function(p){return '<div class="mean">'+esc(p.trim())+'</div>';}).join('');}
 function posterHtml(c,text,big){return '<div class="poster" style="background:linear-gradient(135deg,'+c.acc+','+c.dark+')"><div class="'+(big?'big ':'')+'ptxt">'+esc(text)+'</div></div>';}
 function renderDaily(){
@@ -657,9 +661,10 @@ function toggleFav(){
 async function addQuote(){
   const t=document.getElementById('nt').value.trim();if(!t)return;
   const m=document.getElementById('nm').value.trim();const g=document.getElementById('ng').value.trim();
-  const {error}=await sb.from('quotes').insert({text:t,meaning:m||null,tags:g?[g]:[],source_module:'manual'});
+  const u=(document.getElementById('nu').value||'').trim(); const su=/^https?:\/\//i.test(u)?u:null;
+  const {error}=await sb.from('quotes').insert({text:t,meaning:m||null,tags:g?[g]:[],source_module:'manual',source_url:su});
   if(error){toast('Error: '+error.message);return;}
-  document.getElementById('nt').value='';document.getElementById('nm').value='';document.getElementById('ng').value='';
+  document.getElementById('nt').value='';document.getElementById('nm').value='';document.getElementById('ng').value='';document.getElementById('nu').value='';
   toast('Added.');load();
 }
 async function markDone(){
