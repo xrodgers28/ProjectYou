@@ -57,6 +57,12 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 .weeknav{margin-left:auto;display:flex;align-items:center;gap:8px}
 .weeklabel{font-size:12.5px;font-weight:700;color:var(--muted);min-width:150px;text-align:center}
 .btn{border:1px solid #cfd3d9;background:#fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#333;text-decoration:none}
+/* v6.07, Oct 24, 2026, Scott: plan up to 4 weeks ahead. Gold button home, dimmed Next at the limit, gold planning strip, history cards fade on a future week. */
+.btn.gold{border-color:#c9a23a;background:#f8eed6;color:#6b4e0a;font-weight:700}
+.btn[disabled]{opacity:.4;cursor:not-allowed}
+.planstrip{max-width:1000px;margin:6px auto 0;padding:0 16px}
+.planstrip>div{padding:7px 12px;border:1.5px dashed #c9a23a;background:#f8eed6;color:#5a4208;border-radius:8px;font-size:12.5px;font-weight:700}
+body.planahead #page .card.block:not(#flowwrap):not(#swCard):not(#tripwrap){opacity:.35;pointer-events:none}
 .status{max-width:1000px;margin:4px auto 0;padding:0 16px;font-size:11.5px;color:var(--faint);font-weight:700}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#37a169;margin-right:5px;vertical-align:middle}
 .dot.bad{background:var(--bad)}
@@ -906,9 +912,10 @@ html.py-embed .swshadebtn{display:none!important}
 
 <div id="app" class="hidden">
   <div class="secbar"><h1>Habit Dashboard</h1><span class="ver" id="verBadge"></span><span class="date" id="builtOn"></span>
-    <span class="weeknav"><a class="btn" id="prevWeek">&#9664; Previous</a><span id="weekLabel" class="weeklabel"></span><a class="btn" id="nextWeek">Next &#9654;</a><a class="btn" id="signout">sign out</a></span>
+    <span class="weeknav"><a class="btn" id="prevWeek">&#9664; Previous</a><span id="weekLabel" class="weeklabel"></span><a class="btn" id="nextWeek">Next &#9654;</a><a class="btn gold" id="homeWeek" style="display:none">Back to this week</a><a class="btn" id="signout">sign out</a></span>
   </div>
   <div class="status"><span id="statusdot" class="dot"></span><span id="statustext">Loading your week...</span></div>
+  <div class="planstrip" id="planStrip" hidden><div></div></div>
 
   <div id="page" class="page">
     <!-- title row, hidden Oct 11 2026 at Scott's request (kept in the page so the numbers still compute) -->
@@ -1163,7 +1170,8 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
 /* v6.01, Oct 18, 2026, Scott: the scoreboard counts every train trip (office days x 2 at 69 minutes), has a Taxi line, and the city bike ride goes in the bike line. */
 /* v6.05, Oct 24, 2026, Scott: Sleep Synopsis gets a small refresh button in its top right corner that pulls the latest data (his first ask: last night was in the database but not on the page he already had open). The card is also much shorter: the empty band above and below the bars is gone and the card padding is tighter. */
 /* v6.06, Oct 24, 2026, Scott: trip countdown numbers (the black boxes) turn orange ONLY at 4 days or fewer to go, per trip. Before, every number on the banner went orange whenever the first trip was within 7 days. The orange outline round the banner now follows the same 4-day line. */
-const VERSION='v6.06';
+/* v6.07, Oct 24, 2026, Scott: the Next arrow now goes up to 4 weeks past this week, for planning Flow Time. Future weeks wear a gold planning strip, the history cards fade, Flow Time, meet ups and the trip banner stay bright. Planned time never counts. */
+const VERSION='v6.07';
 (function(){ /* v6.05: Sleep Synopsis refresh button. Icon choice: A circular arrow, B two chasing arrows, C cloud with down arrow. */
   const SLP_REFRESH_ICON='A';
   const ICONS_R={
@@ -1357,7 +1365,9 @@ el('signin').onclick=async()=>{const email=el('email').value.trim(),password=el(
 el('password').addEventListener('keydown',e=>{if(e.key==='Enter')el('signin').click();});
 el('signout').onclick=async()=>{await sb.auth.signOut();location.reload();};
 el('prevWeek').onclick=()=>{WEEK_END=addDays(WEEK_END,-7);load();};
-el('nextWeek').onclick=()=>{if(WEEK_END<defaultWeekEnd()){WEEK_END=addDays(WEEK_END,7);load();}};
+function maxWeekEnd(){return addDays(defaultWeekEnd(),28);} /* v6.07: planning reaches 4 weeks past this week */
+el('nextWeek').onclick=()=>{if(WEEK_END<maxWeekEnd()){WEEK_END=addDays(WEEK_END,7);load();}};
+el('homeWeek').onclick=()=>{WEEK_END=defaultWeekEnd();load();};
 function msg(t,c){const m=el('msg');m.textContent=t;m.className=c||'';}
 function status(t,bad){el('statustext').textContent=t;el('statusdot').className='dot'+(bad?' bad':'');}
 function showApp(){el('login').classList.add('hidden');el('app').classList.remove('hidden');WEEK_END=initialWeekEnd();
@@ -1372,8 +1382,15 @@ function showApp(){el('login').classList.add('hidden');el('app').classList.remov
 let RING={};   /* v5.29: watch exercise-ring minutes by day */
 async function load(){
   const days=weekDays(), ws=days[0], we=days[6];
-  el('weekLabel').textContent=fmt(ws)+' to '+fmt(we,true);
-  el('nextWeek').style.visibility=(WEEK_END<defaultWeekEnd())?'visible':'hidden';el('weekLabel').textContent+=(WEEK_END>=defaultWeekEnd()&&PY.today()<we)?' · in progress':'';
+  /* v6.07: weeks ahead of this one (0 = this week). Noon times keep a clock change from shifting the count. */
+  const ahead=Math.round((new Date(WEEK_END+'T12:00:00')-new Date(defaultWeekEnd()+'T12:00:00'))/604800000);
+  el('weekLabel').textContent=fmt(ws)+' to '+fmt(we,true)+(ahead>0?' · '+(ahead===1?'1 week ahead':ahead+' weeks ahead'):(ahead===0&&PY.today()<we?' · in progress':''));
+  el('nextWeek').style.visibility='visible';
+  if(WEEK_END>=maxWeekEnd())el('nextWeek').setAttribute('disabled','');else el('nextWeek').removeAttribute('disabled');
+  el('homeWeek').style.display=ahead>0?'':'none';
+  document.body.classList.toggle('planahead',ahead>0);
+  el('planStrip').hidden=!(ahead>0);
+  el('planStrip').firstElementChild.textContent='Planning ahead. Nothing here counts until it happens.'+(WEEK_END>=maxWeekEnd()?' That is as far as planning goes. Four weeks ahead ends '+fmt(WEEK_END,true)+'.':'');
   status('Loading '+fmt(ws)+' to '+fmt(we)+'...');
   const from28=addDays(ws,-27), from14=addDays(we,-13);
   try{
