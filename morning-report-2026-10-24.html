@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f4f2ec; --panel:#ffffff; --ink:#23262b; --soft:#5a5f68; --faint:#8b909a;
+  --line:#e2ddd2; --accent:#3f6f8f; --box:#fbfaf6;
+  --green:#2f8f5b; --amber:#c07f10; --red:#b4452f;
+  --b-do:#3f6f8f; --b-more:#c07f10; --b-did:#2f8f5b; --b-read:#6f7b8a; --b-kill:#a8724a;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181c; --panel:#1e2228; --ink:#e9eaec; --soft:#b2b7bf; --faint:#7d838c;
+    --line:#2d333b; --accent:#6fa8c9; --box:#242a31;
+    --green:#4bbd80; --amber:#e0a63a; --red:#e07a5f;
+    --b-do:#4a7fa0; --b-more:#c88a1e; --b-did:#359d66; --b-read:#7b8794; --b-kill:#b47e55;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181c; --panel:#1e2228; --ink:#e9eaec; --soft:#b2b7bf; --faint:#7d838c;
+  --line:#2d333b; --accent:#6fa8c9; --box:#242a31;
+  --green:#4bbd80; --amber:#e0a63a; --red:#e07a5f;
+  --b-do:#4a7fa0; --b-more:#c88a1e; --b-did:#359d66; --b-read:#7b8794; --b-kill:#b47e55;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif;
+  font-size:16px; line-height:1.5;
+  padding:16px;
+}
+.wrap{max-width:820px; margin:0 auto}
+header.top{padding:6px 2px 10px}
+.titlerow{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+h1{font-size:23px; margin:0; letter-spacing:.2px}
+.chip{font-size:12px; font-weight:bold; color:#fff; background:var(--accent);
+  border-radius:6px; padding:2px 8px; line-height:1.6}
+.datel{color:var(--soft); font-size:14px; margin-top:4px}
+.habit{color:var(--soft); font-size:14px; margin-top:10px; padding:10px 12px;
+  background:var(--box); border:1px solid var(--line); border-radius:8px}
+.habit b{color:var(--ink)}
+
+.sticky{position:sticky; top:0; z-index:20; background:var(--bg); padding-top:8px}
+.answers{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:12px}
+.answers h2{font-size:14px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.6px; color:var(--soft)}
+#out{width:100%; min-height:92px; resize:vertical; font-family:Arial, Helvetica, sans-serif;
+  font-size:13px; line-height:1.45; color:var(--ink); background:var(--box);
+  border:1px solid var(--line); border-radius:8px; padding:10px}
+.copyrow{display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap}
+.copybtn{font-size:13px; font-weight:bold; color:#fff; background:var(--accent);
+  border:none; border-radius:7px; padding:7px 14px; cursor:pointer}
+.copyhint{color:var(--faint); font-size:12px}
+
+.key{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:16px}
+.key h2{font-size:14px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.6px; color:var(--soft)}
+.key ul{margin:0; padding:0; list-style:none}
+.key li{font-size:13.5px; color:var(--soft); padding:3px 0}
+.key b{color:var(--ink)}
+.kname{display:inline-block; min-width:118px; font-weight:bold; color:var(--ink)}
+
+.sec{margin:22px 0 8px}
+.sec h2{font-size:13px; text-transform:uppercase; letter-spacing:.7px; color:var(--soft);
+  margin:0 0 10px; border-bottom:1px solid var(--line); padding-bottom:6px}
+
+.row{background:var(--panel); border:1px solid var(--line); border-left:6px solid var(--line);
+  border-radius:10px; padding:14px 16px; margin-bottom:12px}
+.row .lighthead{display:flex; align-items:flex-start; gap:10px}
+.dot{width:14px; height:14px; border-radius:50%; margin-top:5px; flex:0 0 auto}
+.dot.green{background:var(--green)} .dot.amber{background:var(--amber)} .dot.red{background:var(--red)}
+.rhead{font-size:17px; font-weight:bold; margin:0}
+.rbody{color:var(--soft); font-size:14.5px; margin:8px 0 0}
+.rbody p{margin:0 0 4px}
+.next{margin-top:9px; font-size:14px}
+.next b{color:var(--ink)}
+.status{font-size:12px; color:var(--faint); margin-top:7px; min-height:15px}
+.btns{display:flex; flex-wrap:wrap; gap:8px; margin-top:11px}
+.btns button{font-size:13px; font-weight:bold; color:#fff; border:none; border-radius:7px;
+  padding:8px 13px; cursor:pointer; opacity:.94}
+.btns button:hover{opacity:1}
+.cbox{width:100%; margin-top:9px; font-family:Arial, Helvetica, sans-serif; font-size:13px;
+  color:var(--ink); background:var(--box); border:1px solid var(--line); border-radius:7px; padding:8px}
+.cbox::placeholder{color:var(--faint)}
+
+.ctx{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:12px}
+.ctx h3{font-size:15px; margin:0 0 7px}
+.ctx .line{font-size:14px; color:var(--soft); padding:2px 0}
+.ctx .line b{color:var(--ink)}
+.proof{font-size:12px; color:var(--faint); line-height:1.5}
+.foot{color:var(--faint); font-size:12px; text-align:center; margin:18px 0 6px}
+@media (max-width:640px){
+  h1{font-size:20px}
+  .rhead{font-size:16px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="titlerow">
+    <h1>Morning Report</h1>
+    <span class="chip">v1.0</span>
+  </div>
+  <div class="datel">Saturday, October 24, 2026</div>
+  <div class="habit"><b>One small habit idea.</b> Atomic Habits says you do not rise to the level of your goals, you fall to the level of your systems. Most of today's flags are quiet systems that stopped running, not things you dropped. Fix the system once and the result takes care of itself.</div>
+</header>
+
+<div class="sticky">
+  <div class="answers">
+    <h2>Your answers (copy this back into the chat)</h2>
+    <textarea id="out" readonly>Tap a button on any card below. Your answers build up here.</textarea>
+    <div class="copyrow">
+      <button class="copybtn" id="copy">Copy my answers</button>
+      <span class="copyhint">Or select the text above and copy it. Copy may be blocked in the panel, so selecting by hand always works.</span>
+    </div>
+  </div>
+</div>
+
+<div class="key">
+  <h2>What the five buttons mean</h2>
+  <ul>
+    <li><span class="kname">Do this</span> Go build it, run it, ship it. An instruction, not an answer. The card stays open until the work is done.</li>
+    <li><span class="kname">Tell me more</span> You lean yes but want the cost, risk, or reasoning first. Your question goes in the note and the card stays open.</li>
+    <li><span class="kname">I did it</span> You handled it yourself. The card is settled.</li>
+    <li><span class="kname">I read this</span> Just noting you saw it. Nothing is owed. The card is settled.</li>
+    <li><span class="kname">Kill this task</span> Drop it for good. It will not come back as a question.</li>
+  </ul>
+</div>
+
+<div class="sec"><h2>The day</h2></div>
+<div class="ctx">
+  <div class="line"><b>Shape.</b> An open Saturday. No work meetings, a few family things on the shared calendars.</div>
+  <div class="line"><b>11:00 am</b> Carson catch up.</div>
+  <div class="line"><b>1:00 pm</b> Scott catch up (on Asa's calendar).</div>
+  <div class="line"><b>2:00 pm</b> Salon appointment, USC Village (Max's calendar).</div>
+  <div class="line"><b>All day</b> Rawle Curtis's birthday. Zac Brown Band, USC at Wisconsin, and Arsenal vs Everton are on your sports and music feeds.</div>
+  <div class="line"><b>Tomorrow</b> Jack Mahoney turns 19. Squash at 2:00 pm.</div>
+</div>
+
+<div class="sec"><h2>Needs your call</h2></div>
+<div id="rows"></div>
+
+<div class="sec"><h2>For your information</h2></div>
+
+<div class="ctx">
+  <h3>Project rundown</h3>
+  <div class="line"><b>Project YOU.</b> 39 open items in the build queue. The live next step is the one that came up again overnight: bring the six site "map" pages back in line with what the system actually does. Correction drafts are already written and waiting (see the card above).</div>
+  <div class="line"><b>Quantified Self.</b> Healthy and current. Apple Health and the exercise roll ups are writing, though two feeds went quiet overnight (see the card above).</div>
+  <div class="line"><b>2026 Calendar.</b> Syncing normally, 2,188 entries on file.</div>
+  <div class="line"><b>TreadWell, CrushingIt, Clever Phrases, AI Intelligence.</b> These live in your Mac folder, which this early run could not reach. Their detail is pending until the desktop is connected. The AI Intelligence daily picks did refresh on their own this morning (see below).</div>
+</div>
+
+<div class="ctx">
+  <h3>Waiting for your keep or discard</h3>
+  <div class="line"><b>Today's AI picks.</b> 6 fresh cards: four tools (EzLayers, Viggle Image Studio, Kouro, Wan 2.2 Fast) and three short notes, including one that Claude apps now run without the approval tap.</div>
+  <div class="line"><b>The Feed.</b> 65 new reads sitting unopened.</div>
+  <div class="line"><b>The Wall.</b> 6 picture candidates offered.</div>
+  <div class="line"><b>Needs You queue.</b> Empty. Nothing else is waiting on a decision.</div>
+</div>
+
+<div class="ctx">
+  <h3>Technical proof</h3>
+  <div class="proof">
+  Overnight: no run row recorded for the Oct 24 midnight job (last run row is Oct 23 morning). The durable output store has nothing newer than Oct 19. The overnight work queue held zero items flagged for the overnight lane. Two light jobs did fire on their own: the daily AI cards (03:00 ET) and the map freshness check (03:24 ET).<br>
+  Verification: the freshness note's live counts were checked against the real tables and match exactly, health 17,785, calendar 2,188, wall pieces 2,785, staging decisions 66. The six map pages were checked and none has been republished since Oct 9, confirming the drift is real.<br>
+  Queue depth 39 open (Project YOU). Feed new 65, AI cards today 6 unsaved, wall candidates offered 6, Needs You open 0.
+  </div>
+</div>
+<div class="foot">Morning Report v1.0 for Saturday, October 24, 2026. Nothing on this page is saved. Copy your answers back into the chat to act on them.</div>
+
+</div>
+<script>
+var ROWS = [
+  {
+    id:"overnight", light:"red",
+    head:"Last night's overnight build came up empty",
+    body:[
+      "The midnight job left no record of running and wrote nothing to its output store, which has now sat still for five nights.",
+      "The list of jobs it was supposed to work overnight was empty, so even if it did wake up it had nothing queued to do.",
+      "Two smaller jobs did run on their own, your daily AI cards and the map freshness check, so the machine is not fully asleep.",
+      "The work you want from it, like the map corrections, is ready but keeps not getting picked up."
+    ],
+    next:"Decide whether to re-queue the waiting drafts and get the overnight job clocking in again, or look into why its queue is empty."
+  },
+  {
+    id:"maps", light:"amber",
+    head:"Six of your site map pages are out of date",
+    body:[
+      "The pages that picture how your system fits together are stale, the oldest from early September.",
+      "They miss three things added since, the dinner vote, the daily idea list, and the new daily summary of your relationship check-ins.",
+      "Their counts also lag reality, for example they show fewer health readings and calendar entries than you actually have.",
+      "Corrected versions were already drafted on two earlier nights but never went live."
+    ],
+    next:"Say the word and I will publish the corrections that are already written, then check the pages went live."
+  },
+  {
+    id:"feeds", light:"amber",
+    head:"Three of your feeds have gone quiet",
+    body:[
+      "Your spoken notes from Drafts have not turned into tasks in 48 days, so anything you dictated is piling up uncaptured. This is the one most worth a look.",
+      "The Swarm check-in roll up has not written in about three days even though raw check-ins keep arriving.",
+      "Apple Health and the Strava roll up both delivered around midday yesterday and then went silent overnight.",
+      "None of these throws an error, they just stop, which is exactly how a thing fades without anyone noticing."
+    ],
+    next:"Tell me which to chase first. I would start with the 48 days of uncaptured spoken notes."
+  },
+  {
+    id:"funfacts", light:"amber",
+    head:"Fun Facts on your cue card have quietly faded",
+    body:[
+      "For three weeks running, the fun fact tiles have served at most one a day and skipped most days entirely.",
+      "The weekly supply check keeps reporting healthy because the pool never drains, so it will never raise a flag on its own.",
+      "The result is the slow silent fade you specifically asked to avoid.",
+      "The fix is a small attended change to how the cue card loads and stamps a fun fact."
+    ],
+    next:"Give the go-ahead and I will fix the fun fact loading on the quotes page so two show each day again."
+  },
+  {
+    id:"fafsa", light:"amber",
+    head:"Asa is waiting on your FAFSA answer",
+    body:[
+      "Asa forwarded the 2027 to 2028 FAFSA notice two days ago.",
+      "He asked whether it was worth filling out for this school year, and if so that it is time to do it again for next year.",
+      "He ended with please let me know, so the reply is on you.",
+      "This is your decision to make, but I can draft the reply for you to send."
+    ],
+    next:"Make the call on whether to file again. If you want, I will draft a short reply to Asa."
+  },
+  {
+    id:"scan", light:"green",
+    head:"Today's AI and reading picks are stocked and waiting",
+    body:[
+      "Six fresh AI cards landed this morning, four tools and three short notes.",
+      "The Feed has 65 unopened reads, and the Wall has 6 new picture candidates offered.",
+      "Nothing here is broken, it is simply sitting for your keep or discard.",
+      "The Needs You queue is empty, so this is the only review waiting."
+    ],
+    next:"Skim and star what you want when you have a minute. Nothing is owed."
+  },
+  {
+    id:"usage", light:"green",
+    head:"Your Claude weekly usage is not visible from here",
+    body:[
+      "This early run cannot read your Anthropic usage meter, it does not live in your own system and there is no feed for it.",
+      "So I cannot tell you how much of the weekly limit is left this morning.",
+      "You can see it in the Claude app under your plan and usage.",
+      "Flagging it plainly rather than guessing a number."
+    ],
+    next:"Check it in the Claude app when convenient. Nothing for me to do here."
+  }
+];
+
+var BTNS = [
+  {label:"Do this",        answer:"Do this",        color:"var(--b-do)",   open:true},
+  {label:"Tell me more",   answer:"Tell me more",   color:"var(--b-more)", open:true},
+  {label:"I did it",       answer:"I did it",        color:"var(--b-did)",  open:false},
+  {label:"I read this",    answer:"noted",           color:"var(--b-read)", open:false},
+  {label:"Kill this task", answer:"Kill this task",  color:"var(--b-kill)", open:false}
+];
+var COLOR = {"Do this":"#3f6f8f","Tell me more":"#c07f10","I did it":"#2f8f5b","noted":"#6f7b8a","Kill this task":"#a8724a"};
+
+var state = {};
+
+function build(){
+  var host = document.getElementById("rows");
+  ROWS.forEach(function(r){
+    state[r.id] = {head:r.head, answer:"", comment:""};
+    var row = document.createElement("div");
+    row.className = "row";
+    row.id = "row-"+r.id;
+
+    var lh = document.createElement("div");
+    lh.className = "lighthead";
+    var dot = document.createElement("span");
+    dot.className = "dot "+r.light;
+    var h = document.createElement("p");
+    h.className = "rhead";
+    h.textContent = r.head;
+    lh.appendChild(dot); lh.appendChild(h);
+    row.appendChild(lh);
+
+    var body = document.createElement("div");
+    body.className = "rbody";
+    r.body.forEach(function(s){
+      var p = document.createElement("p");
+      p.textContent = s;
+      body.appendChild(p);
+    });
+    row.appendChild(body);
+
+    var nx = document.createElement("div");
+    nx.className = "next";
+    nx.innerHTML = "<b>Next:</b> ";
+    nx.appendChild(document.createTextNode(r.next));
+    row.appendChild(nx);
+
+    var st = document.createElement("div");
+    st.className = "status";
+    st.id = "st-"+r.id;
+    row.appendChild(st);
+
+    var bwrap = document.createElement("div");
+    bwrap.className = "btns";
+    BTNS.forEach(function(b){
+      var btn = document.createElement("button");
+      btn.textContent = b.label;
+      btn.style.background = b.color;
+      btn.onclick = function(){ pick(r.id, b); };
+      bwrap.appendChild(btn);
+    });
+    row.appendChild(bwrap);
+
+    var c = document.createElement("textarea");
+    c.className = "cbox";
+    c.rows = 2;
+    c.placeholder = "Add a comment (optional)";
+    c.oninput = function(){ state[r.id].comment = c.value; compile(); };
+    row.appendChild(c);
+
+    host.appendChild(row);
+  });
+}
+
+function pick(id, b){
+  state[id].answer = b.answer;
+  var row = document.getElementById("row-"+id);
+  row.style.borderLeftColor = COLOR[b.answer] || "var(--line)";
+  var st = document.getElementById("st-"+id);
+  if(b.open){
+    st.textContent = (b.answer==="Do this") ? "Marked: Do this. This card stays open until the work is done." : "Marked: Tell me more. This card stays open.";
+  } else {
+    st.textContent = "Marked: "+b.answer+". This card is settled.";
+  }
+  compile();
+}
+
+function compile(){
+  var lines = ["MORNING REPORT - Saturday, October 24, 2026 - my answers",""];
+  var any = false;
+  ROWS.forEach(function(r, i){
+    var s = state[r.id];
+    if(s.answer || s.comment){
+      any = true;
+      lines.push((i+1)+". "+r.head);
+      if(s.answer) lines.push("   answer: "+s.answer);
+      if(s.comment) lines.push("   note: "+s.comment);
+      lines.push("");
+    }
+  });
+  var out = document.getElementById("out");
+  out.value = any ? lines.join("\n") : "Tap a button on any card below. Your answers build up here.";
+}
+
+document.getElementById("copy").onclick = function(){
+  var out = document.getElementById("out");
+  out.removeAttribute("readonly");
+  out.select();
+  var ok = false;
+  try { ok = document.execCommand("copy"); } catch(e){ ok = false; }
+  out.setAttribute("readonly","readonly");
+  this.textContent = ok ? "Copied" : "Select the text above to copy";
+  var b = this;
+  setTimeout(function(){ b.textContent = "Copy my answers"; }, 2200);
+};
+
+build();
+compile();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
