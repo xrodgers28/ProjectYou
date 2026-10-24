@@ -818,6 +818,21 @@ input[type=text],textarea{font-family:inherit;font-size:13px;padding:9px;border:
 .slpmsg.idle{border-left-color:transparent}
 .slpshade{display:flex;width:100%;box-sizing:border-box;margin-top:12px;padding:9px 14px;border-radius:10px;min-height:40px;font-size:13px}
 @media(min-width:721px){.sleepwrap .sleepbody{flex-wrap:nowrap}.sleepwrap .sleepspark{min-width:0}}
+/* v6.05: tighter Sleep Synopsis card plus the refresh button */
+#sleepCard.block{padding:6px 14px;gap:2px;position:relative}
+#sleepCard .h2row{min-height:30px}
+#sleepCard .sleepwrap{margin-top:0}
+#sleepCard .slpshade{margin-top:2px;padding:5px 12px;min-height:30px;font-size:12.5px}
+#sleepCard .slplast{margin:0 0 2px}
+#sleepCard .slpdrop{margin-top:6px}
+.slprefresh{margin-left:auto;width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex:none}
+.slprefresh:hover{border-color:var(--accent)}
+.slprefresh svg{width:16px;height:16px;display:block}
+.slprefresh.spin svg{animation:slpspin .8s linear infinite}
+.slpupd{margin-left:auto;font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--faint);letter-spacing:.04em}
+.slpupd:not(:empty)+.slprefresh{margin-left:6px}
+@keyframes slpspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.slprefresh.spin svg{animation:none;opacity:.4}}
 @media(max-width:720px){.sleepwrap{flex-direction:column;align-items:stretch;gap:0}.sleepwrap .slpmsg{flex:none;margin-top:8px;min-height:34px}}
 .slpdrop{display:none;margin-top:10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);padding:12px 13px}
 .slpdrop.open{display:block}
@@ -992,8 +1007,8 @@ html.py-embed .swshadebtn{display:none!important}
     </div>
 
     <!-- sleep synopsis -->
-    <div class="card block">
-      <div class="h2row hasicon"><img class="h2icon" data-ic="sleep" alt=""><div class="h2">Sleep Synopsis</div><div class="sub" id="sleepSub">how you slept this week</div></div>
+    <div class="card block" id="sleepCard">
+      <div class="h2row hasicon"><img class="h2icon" data-ic="sleep" alt=""><div class="h2">Sleep Synopsis</div><div class="sub" id="sleepSub">how you slept this week</div><span class="slpupd" id="sleepUpd"></span><button type="button" class="slprefresh" id="sleepRefresh" title="Refresh: pull the latest sleep data" aria-label="Refresh: pull the latest sleep data"></button></div>
       <div class="slplast" id="sleepLast" style="display:none"></div>
       <div class="sleepwrap"><div class="sleepbody" id="sleepBody"></div><div class="slpmsg" id="sleepMsg"></div></div>
       <button class="slpshade" type="button" id="sleepShade"><span class="car">▼</span><span id="sleepShadeTxt">The night ribbon, the numbers, and what the colours mean</span></button>
@@ -1146,7 +1161,29 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
 /* v5.99, Oct 18, 2026: Amazon, Irvine and platform blocks count even when saved as planned. v5.98, Oct 18, 2026, Scott: the Time Bandit Scoreboard fills itself in. When the week has no list, or its lines are still waiting for numbers, the dashboard builds the list and works out every line from what is already logged (waking-hours-auto.js). Lines you typed on the list page are never changed. */
 /* v6.00, Oct 18, 2026: the Time Bandit Scoreboard friend box counts only Social entries of 60 minutes or more, and the list page now uses the same rules. */
 /* v6.01, Oct 18, 2026, Scott: the scoreboard counts every train trip (office days x 2 at 69 minutes), has a Taxi line, and the city bike ride goes in the bike line. */
-const VERSION='v6.04';
+/* v6.05, Oct 24, 2026, Scott: Sleep Synopsis gets a small refresh button in its top right corner that pulls the latest data (his first ask: last night was in the database but not on the page he already had open). The card is also much shorter: the empty band above and below the bars is gone and the card padding is tighter. */
+const VERSION='v6.05';
+(function(){ /* v6.05: Sleep Synopsis refresh button. Icon choice: A circular arrow, B two chasing arrows, C cloud with down arrow. */
+  const SLP_REFRESH_ICON='A';
+  const ICONS_R={
+    A:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>',
+    B:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>',
+    C:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.9A7 7 0 1 1 15.7 8h1.8a4.5 4.5 0 0 1 2.5 8.2"/><path d="M12 12v9"/><path d="m8 17 4 4 4-4"/></svg>'};
+  function wire(){
+    const b=document.getElementById('sleepRefresh'); if(!b)return;
+    b.innerHTML=ICONS_R[SLP_REFRESH_ICON]||ICONS_R.A;
+    const u=document.getElementById('sleepUpd');
+    function stamp(){try{u.textContent='Updated '+new Date().toLocaleTimeString('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).replace(' AM','am').replace(' PM','pm');}catch(e){}}
+    b.addEventListener('click',async function(){
+      if(b.classList.contains('spin'))return;
+      b.classList.add('spin');
+      try{await Promise.all([load(),new Promise(r=>setTimeout(r,700))]);stamp();}
+      catch(e){try{u.textContent='Could not refresh';}catch(_){}}
+      b.classList.remove('spin');
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',wire);else wire();
+})();
 /* v5.80, Oct 11, 2026, Scott: Sleep Synopsis layout matched to his screenshot, rollover quote moved to the right of the week chart, full-width shade bar */
 (function(){ /* v5.55: window shade on the meet ups card, remembered per browser */
   function wire(){
@@ -1848,7 +1885,7 @@ function renderSleep(){
 
   /* v4.4, option 1: the night column. Height is hours on a 4h to 10h scale, the
      cap is the night's score, the figure is printed above. */
-  const VW=580,COLS=7,BASE=176,TOP=36,LO=4,HI=10,CW=46;
+  const VW=580,COLS=7,BASE=132,TOP=4,LO=4,HI=10,CW=46; /* v6.05: was BASE 176 / TOP 36, which left a blank band above the bars */
   const SLPCOL={good:'var(--good)',warn:'#e08a2e',bad:'var(--bad)'};
   const xFor=i=>VW*(i+0.5)/COLS;
   const yFor=h=>BASE-(BASE-TOP)*((Math.max(LO,Math.min(HI,h))-LO)/(HI-LO));
@@ -1886,7 +1923,7 @@ function renderSleep(){
       '<div class="sleepstat"><b>'+avgLabel+'</b><i>'+phrase+'</i></div>'+
     '</div>'+
     '<div class="sleepspark">'+
-      '<svg viewBox="0 0 '+VW+' 206" width="100%" height="206" style="display:block">'+g+'</svg>'+
+      '<svg viewBox="0 0 '+VW+' '+(BASE+30)+'" width="100%" height="'+(BASE+30)+'" style="display:block">'+g+'</svg>'+
     '</div>';
 
   /* the rollover line */
