@@ -57,6 +57,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 .weeknav{margin-left:auto;display:flex;align-items:center;gap:8px}
 .weeklabel{font-size:12.5px;font-weight:700;color:var(--muted);min-width:150px;text-align:center}
 .btn{border:1px solid #cfd3d9;background:#fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#333;text-decoration:none}
+/* v6.17, Oct 25, 2026, Scott: the Time Bandit Scoreboard has its own week arrows (top right) so you can step back and compare this week with earlier weeks. The rest of the page stays on its own week. */
 /* v6.16, Oct 25, 2026, Scott: a night with 8h 15m or more asleep now reads green whatever the bedtime (it used to take the worse of hours and bedtime). The week verdict and the colour key follow automatically. */
 /* v6.15, Oct 24, 2026, Scott: the Habit stacks window shade works again. Its code sat inside the navpatch.js script tag, which browsers skip, so it now has its own tag. */
 /* v6.14, Oct 24, 2026, Scott: Scoreboard Checkerboard uses the Ink on soft tint look (Mock B). */
@@ -1043,7 +1044,8 @@ html.py-embed .swshadebtn{display:none!important}
 
     <!-- waking hours chart, v5.67 -->
     <div class="card block" id="whCard">
-      <div class="h2row hasicon"><img class="h2icon" data-ic="timebandit" alt=""><div class="h2">Time Bandit Scoreboard</div><div class="sub" id="whSub"></div></div>
+      <div class="h2row hasicon"><img class="h2icon" data-ic="timebandit" alt=""><div class="h2">Time Bandit Scoreboard</div><div class="sub" id="whSub"></div>
+        <div class="whwk" id="whWk" role="group" aria-label="Scoreboard week"><button type="button" id="whPrev" aria-label="Previous week" title="Previous week">&#8249;</button><span class="whwkl" id="whWkL" aria-live="polite">This week</span><button type="button" id="whNext" aria-label="Next week" title="Next week">&#8250;</button><button type="button" id="whNow" class="whnow" style="display:none">This week</button></div></div>
       <div class="whbar">
         <div class="whtog" id="whTog" role="group" aria-label="Chart look"><button type="button" data-v="opt1">Picture chart</button><button type="button" data-v="nest">Checkerboard</button><button type="button" data-v="opt3">Nested Boxes</button></div>
         <a class="whedit" href="waking-hours.html">Edit the list &rarr;</a>
@@ -1180,7 +1182,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
 /* v6.07, Oct 24, 2026, Scott: the Next arrow now goes up to 4 weeks past this week, for planning Flow Time. Future weeks wear a gold planning strip, the history cards fade, Flow Time, meet ups and the trip banner stay bright. Planned time never counts. */
 /* v6.08, Oct 24, 2026, Scott: on departure day the GO box on the trip banner is green, not orange (orange stays for 1 to 4 days to go). */
 /* v6.09, Oct 24, 2026, Scott: the dashboard also refreshes itself when he switches back to the tab, if it has been more than 2 minutes since the last refresh. Same refresh as the Sleep Synopsis button. */
-const VERSION='v6.16';
+const VERSION='v6.17';
 (function(){ /* v6.05: Sleep Synopsis refresh button. Icon choice: A circular arrow, B two chasing arrows, C cloud with down arrow. */
   const SLP_REFRESH_ICON='A';
   const ICONS_R={
@@ -5187,6 +5189,13 @@ window.__TB_CSS_Y="\n/* ---------- Cool Mist (pale theme) v1, added in dashboard
 #whCard .whtog{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
 #whCard .whtog button{border:0;background:#fff;color:var(--muted);font:700 13px Arial,Helvetica,sans-serif;padding:7px 16px;cursor:pointer}
 #whCard .whtog button.on{background:var(--ink);color:#fff}
+#whCard .h2row{flex-wrap:nowrap}#whCard .h2row .sub{min-width:0}
+#whCard .whwk{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex:none}
+#whCard .whwk button{border:1px solid var(--line);background:#fff;color:var(--ink);font:700 18px/1 Arial,Helvetica,sans-serif;width:34px;height:34px;border-radius:99px;cursor:pointer;padding:0}
+#whCard .whwk button:disabled{opacity:.35;cursor:default}
+#whCard .whwk .whnow{width:auto;padding:0 12px;font-size:12px;height:34px}
+#whCard .whwkl{font:700 12px Arial,Helvetica,sans-serif;color:var(--muted);min-width:78px;text-align:center}
+@media(max-width:560px){#whCard .h2row{flex-wrap:wrap}#whCard .whwk{margin-left:0;width:100%;justify-content:flex-end}}
 #whCard .whedit{font-size:13px;font-weight:700;color:var(--accent);text-decoration:none}
 #whCard .whstage{background:#f7f9fb;border:1px solid var(--line);border-radius:8px;padding:6px;overflow:hidden}
 #whCard .whbox{cursor:default}
@@ -5227,7 +5236,7 @@ WHS.logo='<rect width="200" height="140" fill="#f4efe6"/><text x="100" y="30" te
 /* ===== How I Spend My Waking Hours (v5.67, Oct 11 2026) =====
    Reads the list you agreed on the Waking Hours page (waking_hours_items) for the week on screen.
    Two looks, one toggle: Pictures and Nested boxes. Colours are the seven Clarity Compass sections. */
-var WHC={rows:[],view:'opt1',ws:null,tipOn:false};
+var WHC={rows:[],view:'opt1',ws:null,tipOn:false,pws:null,pwe:null,off:0,tok:0};
 try{WHC.view=localStorage.getItem('whc_view')||'opt1';if(WHC.view==='pics')WHC.view='opt1';}catch(e){}
 var WH_SEC={desk:'Sense of Purpose',meet:'Sense of Purpose',commute:'Environmental Health',home:'Environmental Health',
   bike:'Physical Health',zingo:'Physical Health',walks:'Physical Health',runs:'Physical Health',eat:'Physical Health',
@@ -5399,12 +5408,25 @@ function whDraw(){
   document.getElementById('whTog').querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.v===WHC.view);b.setAttribute('aria-pressed',b.dataset.v===WHC.view?'true':'false');});
 }
 async function whChartLoad(ws,we){
+  /* v6.16: the page hands us its own week; the Scoreboard keeps its own step back from it (off = 0, -1, -2 ...). */
+  if(ws!==WHC.pws){WHC.off=0;}
+  WHC.pws=ws;WHC.pwe=we;
+  return whWeekShow();
+}
+async function whWeekShow(){
+  var card=document.getElementById('whCard');if(!card||!WHC.pws)return;
+  var ws=addDays(WHC.pws,7*WHC.off),we=addDays(WHC.pwe,7*WHC.off),tok=++WHC.tok;
   WHC.ws=ws;
-  var card=document.getElementById('whCard');if(!card)return;
   document.getElementById('whSub').textContent=fmt(ws)+' to '+fmt(we,true);
+  var lab=WHC.off===0?'This week':(WHC.off===-1?'Last week':(-WHC.off)+' weeks back');
+  var wl=document.getElementById('whWkL');if(wl)wl.textContent=lab;
+  var nx=document.getElementById('whNext');if(nx)nx.disabled=(WHC.off>=0);
+  var nw=document.getElementById('whNow');if(nw)nw.style.display=WHC.off===0?'none':'';
   var rows=null;
   try{rows=await WHAuto.run(sb,ws);}catch(e){try{console.warn('Scoreboard auto-fill failed',e);}catch(_){}}
+  if(tok!==WHC.tok)return;
   if(!rows){var r=await sb.from('waking_hours_items').select('id,label,parent_id,zone,hours,source_note,confidence,sort').eq('week_start',ws).order('sort');rows=(r&&r.data)||[];}
+  if(tok!==WHC.tok)return;
   WHC.rows=rows;
   whDraw();
 }
@@ -5419,6 +5441,8 @@ async function whChartLoad(ws,we){
   function hide(){if(tip)tip.style.display='none';}
   document.addEventListener('mousemove',function(e){var g=e.target.closest&&e.target.closest('#whCard .whbox');if(g)show(g,e.clientX,e.clientY);else hide();});
   document.addEventListener('click',function(e){
+    var wb=e.target.closest&&e.target.closest('#whWk button');
+    if(wb){if(wb.id==='whPrev')WHC.off-=1;else if(wb.id==='whNext'&&WHC.off<0)WHC.off+=1;else if(wb.id==='whNow')WHC.off=0;else return;whWeekShow();return;}
     var b=e.target.closest&&e.target.closest('#whTog button');
     if(b){WHC.view=b.dataset.v;try{localStorage.setItem('whc_view',WHC.view);}catch(x){}whDraw();return;}
     var g=e.target.closest&&e.target.closest('#whCard .whbox');
