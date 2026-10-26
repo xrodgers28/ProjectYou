@@ -1557,7 +1557,8 @@ var RAIL = (function(){
            addPhotoName:'', addLabelName:'', addSay:'', cups:[], cofOpen:false, cofJustOpened:false, cofLastId:null, glasses:0, mf:{}, flags:{}, ex:null, photo:false, meals:{}, soc:{}, plans:[], quiet:[], ready:false,
            chocTaps:[], wineTaps:[], chocQty:0, wineQty:0, viceWhy:'', viceOpen:false, viceJustOpened:false,
            mh:[], mhWeek:{}, bdays:[], mhOpen:null, mhStep:null, mhName:null, mhMins:null,
-           wi:[], mo:[], moCount:{}, railOrder:null, railParked:[], wiAddOpen:false, wiText:'', wiLabel:'', wiSection:'', wiLabelTouched:false};
+           wi:[], mo:[], moCount:{}, railOrder:null, railParked:[], wiAddOpen:false, wiText:'', wiLabel:'', wiSection:'', wiLabelTouched:false,
+           relQuestions:[], relResponses:{}};
   var el = null;
 
   /* ---- the day's latte pattern: same for every cup, worked out from the date ---- */
@@ -1913,6 +1914,8 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     var pb=row('Photo Booth'); R.photo = (d!==wd) ? !!R.pastDone['Photo Booth'] : !!(pb&&pb.done&&pb.for_date===d);
     await loadVices(d);
     await mhLoadMeet();
+    relChkRandomize();
+    await relChkLoad();
     R.ready=true;
     draw();
     socLoadSync();
@@ -3766,7 +3769,7 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     let html='';
     R.relQuestions.forEach(function(q){
       const resp=R.relResponses[q.n]||0;
-      html+='<div class="relchkitem">'+
+      html+='<div class="relchkitem" style="padding:8px 6px;margin:4px 0;border-bottom:1px solid #edf0f5">'+
             '<div class="relchkq">'+esc(q.q)+'</div>'+
             '<input type="range" min="1" max="10" value="'+resp+'" class="relchkslider" data-qn="'+q.n+'" data-src="'+q.s+'">'+
             '<div class="relchksummary">'+resp+'/10</div>'+
@@ -3774,6 +3777,11 @@ var VICEICON={choc:{dim:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAH4AAABZC
     });
     html+='<button class="relchkdone" data-done="1">Done</button>';
     container.innerHTML=html;
+    container.querySelectorAll('.relchkslider').forEach(function(slider){
+      slider.onchange=function(){ relChkSave(this); };
+      slider.oninput=function(){ this.nextElementSibling.textContent=this.value+'/10'; };
+    });
+    container.querySelector('.relchkdone').onclick=relChkDone;
     relChkUpdateSummary();
   }
 
