@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#FCFCFB; --surface:#ffffff; --ink:#2E2C27; --ink-soft:#4a483f; --ink-grey:#8a887e;
+  --hairline:#e4e3dc; --green:#2f8f5b; --amber:#c07f10; --red:#b4452f;
+  --b-do:#3f6f8f; --b-more:#c07f10; --b-did:#2f8f5b; --b-read:#6f7b8a; --b-kill:#a8724a;
+  --pin:#f3f1ea; --shadow:rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#191917; --surface:#232320; --ink:#ebe8e1; --ink-soft:#c3c0b7; --ink-grey:#8f8d83;
+    --hairline:#35342e; --green:#4fb37a; --amber:#d9992e; --red:#d26a52;
+    --b-do:#5a8aa8; --b-more:#d1941f; --b-did:#3aa06b; --b-read:#8793a1; --b-kill:#c28a5f;
+    --pin:#2a2a26; --shadow:rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#191917; --surface:#232320; --ink:#ebe8e1; --ink-soft:#c3c0b7; --ink-grey:#8f8d83;
+  --hairline:#35342e; --green:#4fb37a; --amber:#d9992e; --red:#d26a52;
+  --b-do:#5a8aa8; --b-more:#d1941f; --b-did:#3aa06b; --b-read:#8793a1; --b-kill:#c28a5f;
+  --pin:#2a2a26; --shadow:rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif;
+  line-height:1.5; font-size:16px;
+  -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:820px; margin:0 auto; padding:0 16px 60px;}
+header.top{padding:22px 0 8px;}
+.titlerow{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+h1{font-size:26px; margin:0; letter-spacing:.2px;}
+.vchip{font-size:12px; font-weight:700; color:var(--ink-soft); border:1px solid var(--hairline);
+  border-radius:6px; padding:2px 7px; background:var(--surface);}
+.date{color:var(--ink-soft); font-size:14px; margin:4px 0 0;}
+.lead{color:var(--ink-soft); font-size:14.5px; margin:10px 0 0;}
+
+/* pinned answer box */
+.pin{position:sticky; top:0; z-index:50; background:var(--pin);
+  border:1px solid var(--hairline); border-radius:10px; padding:12px; margin:16px 0 8px;
+  box-shadow:0 2px 8px var(--shadow);}
+.pin h2{font-size:13px; margin:0 0 6px; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-soft);}
+.pin p.sub{font-size:12.5px; color:var(--ink-grey); margin:0 0 8px;}
+textarea#answers{width:100%; min-height:90px; resize:vertical; font-family:Arial,Helvetica,sans-serif;
+  font-size:13px; color:var(--ink); background:var(--surface); border:1px solid var(--hairline);
+  border-radius:8px; padding:9px;}
+.copyrow{display:flex; justify-content:flex-end; margin-top:6px;}
+#copy{font-family:inherit; font-size:12.5px; font-weight:600; color:#fff; background:var(--b-do);
+  border:1px solid var(--b-do); border-radius:8px; padding:7px 14px; cursor:pointer;}
+
+/* key */
+.key{border:1px solid var(--hairline); border-radius:10px; background:var(--surface);
+  padding:12px 14px; margin:8px 0 18px;}
+.key h2{font-size:13px; margin:0 0 8px; text-transform:uppercase; letter-spacing:.6px; color:var(--ink-soft);}
+.key ul{margin:0; padding:0; list-style:none; display:grid; gap:6px;}
+.key li{font-size:13px; color:var(--ink-soft);}
+.key b{color:var(--ink);}
+.kd{display:inline-block; min-width:96px; font-weight:700;}
+.k1{color:var(--b-do)} .k2{color:var(--b-more)} .k3{color:var(--b-did)} .k4{color:var(--b-read)} .k5{color:var(--b-kill)}
+
+/* rows */
+.row{background:var(--surface); border:1px solid var(--hairline); border-left:5px solid var(--hairline);
+  border-radius:10px; padding:14px 15px; margin:0 0 13px;}
+.row.settled{opacity:.72;}
+.rhead{display:flex; align-items:flex-start; gap:9px;}
+.dot{flex:0 0 auto; width:13px; height:13px; border-radius:50%; margin-top:5px;}
+.dot.green{background:var(--green)} .dot.amber{background:var(--amber)} .dot.red{background:var(--red)}
+.htitle{font-size:16.5px; font-weight:700; margin:0; color:var(--ink);}
+.rbody{font-size:14.5px; color:var(--ink-soft); margin:8px 0 0;}
+.rbody p{margin:0 0 6px;}
+.next{font-size:14px; margin:10px 0 0; color:var(--ink);}
+.next b{color:var(--ink);}
+.btns{display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 0;}
+.btn{font-family:inherit; font-size:13px; font-weight:600; color:#fff; border:none;
+  border-radius:8px; padding:9px 15px; cursor:pointer; opacity:.92;}
+.btn:hover{opacity:1}
+.btn.on{outline:2px solid var(--ink); outline-offset:2px;}
+.b-do{background:var(--b-do)} .b-more{background:var(--b-more)} .b-did{background:var(--b-did)}
+.b-read{background:var(--b-read)} .b-kill{background:var(--b-kill)}
+.cmt{margin:10px 0 0;}
+.cmt input{width:100%; font-family:inherit; font-size:13px; color:var(--ink); background:var(--bg);
+  border:1px solid var(--hairline); border-radius:8px; padding:8px 10px;}
+.openflag{font-size:11.5px; font-weight:700; letter-spacing:.4px; margin-left:auto; color:var(--ink-grey);
+  text-transform:uppercase; white-space:nowrap;}
+
+/* section label */
+.seclabel{font-size:12px; text-transform:uppercase; letter-spacing:.7px; color:var(--ink-grey);
+  margin:22px 0 10px; border-top:1px solid var(--hairline); padding-top:14px;}
+
+/* habit + proof */
+.habit{background:var(--surface); border:1px dashed var(--hairline); border-radius:10px;
+  padding:13px 15px; margin:6px 0 0; font-size:14px; color:var(--ink-soft);}
+.habit b{color:var(--ink);}
+.proof{margin:16px 0 0; font-size:11.5px; color:var(--ink-grey); line-height:1.6;
+  border-top:1px solid var(--hairline); padding-top:12px;}
+.proof b{color:var(--ink-soft);}
+footer{margin:26px 0 0; font-size:12px; color:var(--ink-grey); text-align:center;}
+@media (max-width:560px){ h1{font-size:23px} .htitle{font-size:15.5px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="titlerow"><h1>Morning Report</h1><span class="vchip">v1.0</span></div>
+    <p class="date">Tuesday, October 27, 2026</p>
+    <p class="lead">A light, open day. You fly to Cincinnati this morning, so the home system is standing in for you. Nothing broke overnight. A handful of calls have been waiting on you, and one scary-looking alert turned out to be a false alarm when I checked it.</p>
+  </header>
+
+  <!-- PINNED ANSWER BOX -->
+  <section class="pin">
+    <h2>Your answers travel back here</h2>
+    <p class="sub">Tap buttons and type notes below, then select this text and paste it into the chat. Nothing on this page is saved anywhere, so the paste is the only way your answers reach me.</p>
+    <textarea id="answers" readonly></textarea>
+    <div class="copyrow"><button id="copy">Copy</button></div>
+  </section>
+
+  <!-- KEY -->
+  <section class="key">
+    <h2>What each button means</h2>
+    <ul>
+      <li><span class="kd k1">Do this</span> go and build it, run it, ship it. An instruction, not an answer. The item stays open until the work is done.</li>
+      <li><span class="kd k2">Tell me more</span> you lean yes but want the cost, risk or reasoning first. The item stays open and the next move is mine.</li>
+      <li><span class="kd k3">I did it</span> you handled it yourself. The item is closed.</li>
+      <li><span class="kd k4">I read this</span> just noting you saw it. Nothing is owed. The item is closed.</li>
+      <li><span class="kd k5">Kill this task</span> drop it, and do not raise it again.</li>
+    </ul>
+  </section>
+
+  <!-- ROWS -->
+  <div id="rows">
+
+    <article class="row" data-id="1" data-title="Fly to Cincinnati this morning">
+      <div class="rhead"><span class="dot green"></span><p class="htitle">You fly to Cincinnati this morning</p></div>
+      <div class="rbody">
+        <p>Delta flight 4985 leaves JFK at 8:25 in the morning. The check-in email is already in your inbox.</p>
+        <p>The rest of today is open on the calendar. Tomorrow the only fixed thing is leaving for squash at 4:30 in the afternoon.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Nothing. This is just the shape of your day.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Add a note (optional)"></div>
+    </article>
+
+    <article class="row" data-id="2" data-title="Overnight dead-jobs alarm was a false alarm">
+      <div class="rhead"><span class="dot amber"></span><p class="htitle">Last night's scary alarm was a false alarm, checked</p></div>
+      <div class="rbody">
+        <p>The overnight check cried that four background jobs had switched themselves off, and that today's idea board would be empty.</p>
+        <p>I did not take its word for it. I looked at the live data, and today's idea board was in fact filled at 4:19 this morning, about an hour after the check peeked and gave up too early.</p>
+        <p>So the headline alarm was a timing quirk, not a real outage. The web jobs recovered on their own.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Nothing needed. Flagging it so a loud alarm does not send you chasing a ghost.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Add a note (optional)"></div>
+    </article>
+
+    <article class="row" data-id="3" data-title="Two picture jobs still stalled because they need your Mac">
+      <div class="rhead"><span class="dot amber"></span><p class="htitle">Two picture jobs are stuck waiting for your Mac</p></div>
+      <div class="rbody">
+        <p>Two jobs that pull in fresh photos, the daily card pictures and the food log photos, really are stalled.</p>
+        <p>Both need your computer awake and reachable overnight, and lately it has not been. This is the same recurring theme: anything that reaches into your Mac quietly stops when the Mac is asleep.</p>
+        <p>I can move them to web sources that do not need your computer, or you can keep the Mac awake for them. Your call on which.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Decide, move them to the cloud or keep the Mac on overnight.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Add a note (optional)"></div>
+    </article>
+
+    <article class="row" data-id="4" data-title="Three automate build plans waiting on your yes (Project YOU)">
+      <div class="rhead"><span class="dot amber"></span><p class="htitle">Three build plans are waiting on your yes</p></div>
+      <div class="rbody">
+        <p>Three small automations are written up and sitting ready for a go or a no. First, count your real work time toward the 40 hour week, not only meetings. Second, log a connection the moment a calendar event matches someone you know. Third, keep your travel history flowing on the same nightly schedule as everything else.</p>
+        <p>Each one has a plan behind it. They have been parked a while because each writes to your live data and I held off without your word.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Pick one to green-light, or kill the ones you do not want.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Which one, or a note (optional)"></div>
+    </article>
+
+    <article class="row" data-id="5" data-title="iPhone calendar shortcut sends each meeting about 13 times">
+      <div class="rhead"><span class="dot amber"></span><p class="htitle">Your calendar shortcut still fires each meeting a dozen times</p></div>
+      <div class="rbody">
+        <p>The shortcut on your phone that sends meetings over still posts each one about thirteen times.</p>
+        <p>It does no harm to your data, which de-duplicates, but it floods the logs and is a loose end. The cause is known: a step inside its repeat loop keeps re-sending everything gathered so far.</p>
+        <p>There is a one-minute, tap-by-tap fix ready for you, since I cannot touch your phone myself.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Say the word and I will hand you the tap-by-tap fix.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Add a note (optional)"></div>
+    </article>
+
+    <article class="row" data-id="6" data-title="Dictated notes have not landed anywhere since Sep 5">
+      <div class="rhead"><span class="dot red"></span><p class="htitle">Your dictated notes have gone nowhere since September 5</p></div>
+      <div class="rbody">
+        <p>The notes you speak into your phone through the day have not reached your to-do system in 51 days.</p>
+        <p>The pipe that carries them from your Drafts app into your tasks is broken, so every spoken note since early September is sitting where you left it. This is the one genuinely dead feed.</p>
+        <p>Fixing it needs your phone or Mac in the loop, which is why it keeps waiting.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Decide to fix the capture pipe, and we schedule it for a moment your computer is on.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Add a note (optional)"></div>
+    </article>
+
+    <article class="row" data-id="7" data-title="Fun Facts card quietly fading for four weeks">
+      <div class="rhead"><span class="dot amber"></span><p class="htitle">The Fun Facts card has been quietly fading for four weeks</p></div>
+      <div class="rbody">
+        <p>You have plenty of fun facts in store, about ten weeks worth, so supply is fine.</p>
+        <p>The trouble is delivery. The card serves roughly one fact a day instead of two, and skips most days, so the pile never drains and the weekly health check keeps reporting all is well while the card slowly goes quiet.</p>
+        <p>This needs a proper sit-down look at how the card picks and marks its fun facts, in a normal session.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Flag it for an attended look at the card's fun-fact logic.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Add a note (optional)"></div>
+    </article>
+
+    <article class="row" data-id="8" data-title="Chase flagged an Amazon Prime charge on card ending 4045">
+      <div class="rhead"><span class="dot amber"></span><p class="htitle">Chase flagged a charge for you to confirm</p></div>
+      <div class="rbody">
+        <p>Chase sent a fraud alert on an Amazon Prime charge against the card ending in 4045.</p>
+        <p>They want you to confirm whether it was you. This is a money and security matter, so it stays in your hands, I am only surfacing it so it does not get buried under newsletters.</p>
+        <p>Everything else in your inbox is receipts, confirmations and newsletters, with nothing owed to another person.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Open the Chase alert and confirm or deny the charge yourself.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Add a note (optional)"></div>
+    </article>
+
+    <article class="row" data-id="9" data-title="Claude weekly usage meter not readable from here">
+      <div class="rhead"><span class="dot amber"></span><p class="htitle">I cannot see your Claude usage meter from here</p></div>
+      <div class="rbody">
+        <p>Where you stand on your weekly Claude limit is an account setting, and it does not live in your own data, so this run cannot read it.</p>
+        <p>I did not find any session activity logged in the last seven days either, which most likely means the tracking was not written rather than that you did no work.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Check it in the Claude app, under your plan and usage, if you want the number.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Add a note (optional)"></div>
+    </article>
+
+    <article class="row" data-id="10" data-title="Everything else is healthy">
+      <div class="rhead"><span class="dot green"></span><p class="htitle">Everything else is running clean</p></div>
+      <div class="rbody">
+        <p>Last night's run finished cleanly and built nothing, because the whole build queue is drained: every item is either already built and waiting on your publish, or holding one of the questions above.</p>
+        <p>Your calendar is syncing, your fitness feed is alive, your to-do board is fresh, and the AI idea deck is current, with 62 new cards in the last week, the newest dated today, and 13 you have kept.</p>
+      </div>
+      <p class="next"><b>What you do next:</b> Nothing.</p>
+      <div class="btns"></div>
+      <div class="cmt"><input type="text" placeholder="Add a note (optional)"></div>
+    </article>
+
+  </div>
+
+  <div class="seclabel">One habit thought</div>
+  <div class="habit">
+    <b>Atomic Habits:</b> you do not rise to the level of your goals, you fall to the level of your systems. The dictated notes did not stop because of willpower, a pipe broke. Fix the pipe and the notes flow again on their own, no discipline required.
+  </div>
+
+  <div class="proof">
+    <b>Technical proof (for the record):</b><br>
+    Overnight run: heartbeat 06:12 UTC, wrap written 06:19 UTC (2:19am ET), system-map check 07:27 UTC. Built 0, queue drained. Independent re-check of the run's "to-do data clean" claim held: 0 blank rows, 0 bad statuses. Pages store 328 rows.<br>
+    Drift verification: system-map note claimed Sparkboard had no doors today; live data shows 8 door rows for 2026-10-27, created 08:19 to 08:20 UTC (4:19am ET) by the dailyurl and weirddoor sources, after the 07:27 check looked. Claim does not hold; web door jobs ran. Photo-refresh jobs (cue cards, food log) remain stalled on device reach.<br>
+    run_log note: no row for last night is expected. That table now serves only the Brain Food and 3-2-1 feed jobs (last entries Oct 26). The midnight run records to the board, which proves it ran.<br>
+    Project folder (CoWork on your Mac) was unreachable this run. TreadWell, Elevator Pitch, CrushingIt and Clever Phrases detail is pending a folder connect; project data above is what the live database holds.<br>
+    Published as morning-report-2026-10-27.html, gzip route, verified against repo main.
+  </div>
+
+  <footer>Morning Report v1.0 &middot; built while you were asleep</footer>
+</div>
+
+<script>
+(function(){
+  var ta = document.getElementById('answers');
+  var LABELS = [
+    {key:'do',   text:'Do this',        cls:'b-do',   color:getCss('--b-do'),   open:true},
+    {key:'more', text:'Tell me more',   cls:'b-more', color:getCss('--b-more'), open:true},
+    {key:'did',  text:'I did it',       cls:'b-did',  color:getCss('--b-did'),  open:false},
+    {key:'read', text:'I read this',    cls:'b-read', color:getCss('--b-read'), open:false},
+    {key:'kill', text:'Kill this task', cls:'b-kill', color:getCss('--b-kill'), open:false}
+  ];
+  function getCss(v){ try{return getComputedStyle(document.documentElement).getPropertyValue(v).trim();}catch(e){return '#3f6f8f';} }
+  var answers = {};
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.row'));
+
+  rows.forEach(function(r){
+    var bar = r.querySelector('.btns');
+    LABELS.forEach(function(L){
+      var b = document.createElement('button');
+      b.className = 'btn ' + L.cls;
+      b.textContent = L.text;
+      b.setAttribute('data-label', L.text);
+      b.setAttribute('data-open', L.open ? '1':'0');
+      b.setAttribute('data-color', L.color);
+      b.addEventListener('click', function(){ choose(r, b, L); });
+      bar.appendChild(b);
+    });
+    var inp = r.querySelector('.cmt input');
+    inp.addEventListener('input', function(){
+      var id = r.getAttribute('data-id');
+      answers[id] = answers[id] || {title:r.getAttribute('data-title')};
+      answers[id].comment = inp.value;
+      rebuild();
+    });
+  });
+
+  function choose(r, b, L){
+    var id = r.getAttribute('data-id');
+    answers[id] = answers[id] || {title:r.getAttribute('data-title')};
+    answers[id].choice = L.text;
+    r.style.borderLeftColor = L.color;
+    r.classList.toggle('settled', !L.open);
+    Array.prototype.forEach.call(r.querySelectorAll('.btn'), function(x){ x.classList.remove('on'); });
+    b.classList.add('on');
+    var flag = r.querySelector('.openflag');
+    if(L.open){
+      if(!flag){ flag = document.createElement('span'); flag.className='openflag'; r.querySelector('.rhead').appendChild(flag); }
+      flag.textContent = 'stays open';
+    } else if(flag){ flag.textContent = 'closed'; }
+    rebuild();
+  }
+
+  function rebuild(){
+    var lines = ['MORNING REPORT - Tue, Oct 27 2026 - Scott\'s answers', ''];
+    var any = false;
+    rows.forEach(function(r, i){
+      var id = r.getAttribute('data-id');
+      var a = answers[id];
+      if(a && (a.choice || (a.comment && a.comment.trim()))){
+        any = true;
+        var line = (i+1) + '. ' + r.getAttribute('data-title') + ' -> ' + (a.choice || '(note only)');
+        if(a.comment && a.comment.trim()) line += '  | note: ' + a.comment.trim();
+        lines.push(line);
+      }
+    });
+    if(!any) lines.push('(tap a button on any row, or type a note, and your answer shows up here to copy back)');
+    ta.value = lines.join('\n');
+  }
+
+  document.getElementById('copy').addEventListener('click', function(){
+    var btn = this;
+    function done(msg){ btn.textContent = msg; setTimeout(function(){ btn.textContent='Copy'; }, 1600); }
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(ta.value).then(function(){ done('Copied'); }, function(){ fallback(); });
+      } else { fallback(); }
+    }catch(e){ fallback(); }
+    function fallback(){ ta.removeAttribute('readonly'); ta.focus(); ta.select(); try{document.execCommand('copy');}catch(e){} ta.setAttribute('readonly','readonly'); done('Select above + copy'); }
+  });
+
+  rebuild();
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
