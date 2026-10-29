@@ -1117,6 +1117,8 @@
   .cxblk.p-learn{border-left-color:#c6a63f;background:#faf6e6}     .cxblk.p-learn b{color:#6e5a12}     .cxblk.p-learn i{color:#c6b57e}
   .cxblk.over{left:auto;right:10px;width:calc(50% - 20px);border-left-style:dashed;
     border-left-color:#d69b5a;background:#fbf1e3}
+  /* v6.59: a pill on a flight sits on the right half so the flight stays visible, in its own colour, no warning look */
+  .cxblk.onfly{left:auto;right:10px;width:calc(50% - 20px)}
   .cxblk.over b{color:#6d5220}
   .cxblk.over i{color:#b09468}
   .cxblk.done{border-left-color:#6aab86;background:#e7f3ec}
@@ -1255,7 +1257,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.58</span><span class="date"></span><a class="waiting" id="waitchip" href="staging-area.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.59</span><span class="date"></span><a class="waiting" id="waitchip" href="staging-area.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -6019,7 +6021,11 @@ function cxNowMin() {
   return (cxDay && cxDay < rawET) ? 1440 + m : m;
 }
 function cxIsToday() { return cxDay === localDate(); }
-function cxClash(s, e) { return cxMeet.some(m => !m.skipped && cxShown(m) && s < m.e && e > m.s); }
+/* v6.59, Oct 28 2026 (Scott): "add pills on top of flights like Amazon, because sometimes I work on flights."
+   A flight is no longer a clash. Dropping or tapping a pill onto a flight is allowed, shows no "on a meeting"
+   warning, and lands in the next slot even if that is mid-flight. Only a real meeting still counts as a clash. */
+function cxClash(s, e) { return cxMeet.some(m => !m.skipped && cxShown(m) && !cxIsFlightTitle(m.t) && s < m.e && e > m.s); }
+function cxOnFlight(s, e) { return cxMeet.some(m => !m.skipped && cxShown(m) && cxIsFlightTitle(m.t) && s < m.e && e > m.s); }
 /* The first quarter hour from now with room for the whole thing, counting meetings and
    anything already dropped. Returns null if the rest of the day is full, and the caller
    says so rather than stacking it on top of something. */
@@ -6233,6 +6239,7 @@ function cxLooksLikeCommute(m) { return !!m && (!m.tov || m.tov === 'nomeeting')
    Day totals are not changed by this tag. */
 const CX_MEET_FROM = '2026-10-11';
 let cxNotMeet = new Set();
+/* v6.59, Oct 28 2026 (Scott): pills can sit on top of flights. */
 /* v6.58, Oct 27 2026 (Scott): airplane marks on flights, counted or crossed out. */
 /* v6.57, Oct 27 2026 (Scott): RULE, a flight is never a meeting. No Meeting? chip, no Make this a Meeting button, a stored meeting tag on a flight is ignored; the database also clears it. */
 /* v6.56, Oct 27 2026 (Scott): airport time, 90 minutes before a flight, drawn and counted in the Flying list. */
@@ -6461,7 +6468,7 @@ function cxDrawGrid() {
   });
   cxBlocks.forEach(b => {
     const ht = Math.max(8, b.mins * CX_PX), slim = ht < 26 ? ' slim' : '', done = b.done ? ' done' : '';
-    const over = cxClash(b.start_min, b.start_min + b.mins) ? ' over' : '';
+    const over = cxClash(b.start_min, b.start_min + b.mins) ? ' over' : (cxOnFlight(b.start_min, b.start_min + b.mins) ? ' onfly' : '');
     const soc = (typeof cxIsSocialBlock === 'function' && cxIsSocialBlock(b)) ? ' soc' : '';
     const az = soc ? ' hab soc' : (b.cat === 'py' ? ' py' : (b.cat === 'hab' ? ' hab' :
                (b.amz ? ' amz' : (b.cat === 'own' ? ' own' : ''))));
