@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f5f3ee; --panel:#ffffff; --ink:#22262b; --soft:#555b62; --faint:#8a8f96;
+  --line:#e4ddcf; --hd:#2a2f35; --pinbg:#fbf8f1;
+  --green:#2f8f5b; --amber:#c07f10; --red:#b23b3b;
+  --b-do:#3f6f8f; --b-more:#c07f10; --b-did:#2f8f5b; --b-read:#6f7b8a; --b-kill:#a8724a;
+  --btnink:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#191b1e; --panel:#23262b; --ink:#eceef0; --soft:#b3b8be; --faint:#868c93;
+    --line:#343941; --hd:#f2f4f6; --pinbg:#20242a;
+    --green:#4bbd82; --amber:#e2a42e; --red:#e06a6a;
+    --b-do:#5b8fb0; --b-more:#d79a2e; --b-did:#3fa870; --b-read:#8793a2; --b-kill:#c08857;
+    --btnink:#15171a;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#191b1e; --panel:#23262b; --ink:#eceef0; --soft:#b3b8be; --faint:#868c93;
+  --line:#343941; --hd:#f2f4f6; --pinbg:#20242a;
+  --green:#4bbd82; --amber:#e2a42e; --red:#e06a6a;
+  --b-do:#5b8fb0; --b-more:#d79a2e; --b-did:#3fa870; --b-read:#8793a2; --b-kill:#c08857;
+  --btnink:#15171a;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:820px; margin:0 auto; padding:20px 16px 60px}
+.daydate{color:var(--faint); font-size:13px; letter-spacing:.02em; margin:0 0 2px}
+h1{font-size:26px; margin:0 0 4px; color:var(--hd); display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.vchip{font-size:11px; font-weight:bold; color:var(--soft); border:1px solid var(--line);
+  border-radius:6px; padding:2px 7px; background:var(--panel)}
+.lead{color:var(--soft); font-size:14px; margin:6px 0 18px}
+.key{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin:0 0 16px}
+.key h2{font-size:13px; margin:0 0 10px; color:var(--soft); text-transform:uppercase; letter-spacing:.05em}
+.keyrow{display:flex; gap:9px; align-items:flex-start; margin:7px 0; font-size:13px; color:var(--soft)}
+.kdot{flex:0 0 auto; width:11px; height:11px; border-radius:3px; margin-top:4px}
+.keyrow b{color:var(--ink)}
+.pin{position:sticky; top:0; z-index:5; background:var(--pinbg); border:1px solid var(--line);
+  border-radius:10px; padding:12px 14px; margin:0 0 20px; box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.pin h2{font-size:13px; margin:0 0 4px; color:var(--hd)}
+.pin p{font-size:12px; color:var(--soft); margin:0 0 8px}
+#compiled{width:100%; min-height:74px; resize:vertical; font-family:Arial, Helvetica, sans-serif;
+  font-size:13px; color:var(--ink); background:var(--panel); border:1px solid var(--line);
+  border-radius:8px; padding:9px 10px; line-height:1.45}
+.copybtn{margin-top:8px; font-size:12px; font-weight:bold; color:var(--btnink); background:var(--b-do);
+  border:1px solid var(--b-do); border-radius:8px; padding:7px 14px; cursor:pointer}
+.copybtn:hover{opacity:.9}
+.sec{font-size:12px; font-weight:bold; text-transform:uppercase; letter-spacing:.06em;
+  color:var(--faint); margin:24px 0 10px}
+.row{background:var(--panel); border:1px solid var(--line); border-left:6px solid var(--line);
+  border-radius:10px; padding:15px 16px; margin:0 0 13px; transition:opacity .2s}
+.row.settled{opacity:.62}
+.rhead{display:flex; gap:10px; align-items:flex-start}
+.light{flex:0 0 auto; width:13px; height:13px; border-radius:50%; margin-top:5px}
+.light.green{background:var(--green)} .light.amber{background:var(--amber)} .light.red{background:var(--red)}
+.rtitle{font-size:16px; font-weight:bold; color:var(--ink); margin:0}
+.rbody{color:var(--soft); font-size:14px; margin:9px 0 0}
+.rbody ul{margin:8px 0 0; padding-left:18px}
+.rbody li{margin:3px 0}
+.rnext{font-size:14px; margin:10px 0 0; color:var(--ink)}
+.rnext b{color:var(--ink)}
+.proof{font-size:12px; color:var(--faint); margin:10px 0 0; border-top:1px dashed var(--line); padding-top:8px}
+.btns{display:flex; flex-wrap:wrap; gap:8px; margin:13px 0 0}
+.btns button{font-size:13px; font-weight:500; color:var(--btnink); border:1px solid transparent;
+  border-radius:8px; padding:9px 16px; cursor:pointer}
+.b-do{background:var(--b-do); border-color:var(--b-do)}
+.b-more{background:var(--b-more); border-color:var(--b-more)}
+.b-did{background:var(--b-did); border-color:var(--b-did)}
+.b-read{background:var(--b-read); border-color:var(--b-read)}
+.b-kill{background:var(--b-kill); border-color:var(--b-kill)}
+.btns button:hover{opacity:.88}
+.btns button.chosen{outline:2px solid var(--ink); outline-offset:1px}
+.status{font-size:12px; color:var(--soft); margin:9px 0 0; min-height:1px}
+.status b{color:var(--ink)}
+.cbox{width:100%; margin:10px 0 0; font-family:Arial, Helvetica, sans-serif; font-size:13px;
+  color:var(--ink); background:transparent; border:1px solid var(--line); border-radius:8px;
+  padding:8px 10px; resize:vertical; min-height:36px}
+.cbox::placeholder{color:var(--faint)}
+.foot{color:var(--faint); font-size:12px; margin:26px 0 0; text-align:center}
+@media (max-width:640px){
+  h1{font-size:22px}
+  .wrap{padding:16px 14px 50px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="daydate">Sunday · Nov 1, 2026 · 5:00am EST</p>
+  <h1>Morning Report <span class="vchip">v1.0</span></h1>
+  <p class="lead">A quiet Sunday, and a travel day. One thing needs you before mid-morning. Everything else can wait for coffee.</p>
+
+  <div class="key">
+    <h2>What each button means</h2>
+    <div class="keyrow"><span class="kdot" style="background:var(--b-do)"></span><span><b>Do this</b> &nbsp;go and build it, run it, ship it. An instruction, not an answer. The item stays open until it is finished.</span></div>
+    <div class="keyrow"><span class="kdot" style="background:var(--b-more)"></span><span><b>Tell me more</b> &nbsp;you want to say yes but need the cost, the risk or the reasoning first. The item stays open and the next move is mine.</span></div>
+    <div class="keyrow"><span class="kdot" style="background:var(--b-did)"></span><span><b>I did it</b> &nbsp;you handled it yourself. The item settles.</span></div>
+    <div class="keyrow"><span class="kdot" style="background:var(--b-read)"></span><span><b>I read this</b> &nbsp;not a task, just good to know. Nothing is owed. The item settles, marked noted.</span></div>
+    <div class="keyrow"><span class="kdot" style="background:var(--b-kill)"></span><span><b>Kill this task</b> &nbsp;dead, and it never comes back as a question. The item settles.</span></div>
+  </div>
+
+  <div class="pin">
+    <h2>Your answers, ready to copy back</h2>
+    <p>This fills in as you tap. Select the text and paste it into the chat. (The copy button works too, but select-and-paste is the sure route.)</p>
+    <textarea id="compiled" readonly>Nothing tapped yet.</textarea>
+    <button class="copybtn" id="copybtn">Copy my answers</button>
+  </div>
+
+  <div class="sec">Needs you first</div>
+
+  <div class="row" data-id="flight" data-title="Two flights booked out of LA today">
+    <div class="rhead"><span class="light red"></span><p class="rtitle">Two different flights are booked out of LA today</p></div>
+    <div class="rbody">
+      Yesterday TripIt told you a Delta flight leaves Los Angeles at 9:10am Pacific today, bound for Cincinnati, on confirmation GXUH4H. Your calendar and travel records also hold an Alaska flight from Los Angeles to Newark this afternoon, on confirmation IACCIH. You cannot be on both. The Delta one leaves first, so this is the one to settle before the morning gets away from you.
+    </div>
+    <p class="rnext"><b>Next:</b> Decide which flight is real. If it is Newark, ignore the Delta check-in. If it is Cincinnati, check in with Delta now and drop the Newark leg. Tap Do this and I will dig into both bookings and tell you which one is live.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <div class="row" data-id="cvghotel" data-title="No Cincinnati hotel on record">
+    <div class="rhead"><span class="light amber"></span><p class="rtitle">If Cincinnati is the plan, there is no hotel booked</p></div>
+    <div class="rbody">
+      The P&amp;G Summit is Wednesday, Nov 3, in Cincinnati. Your travel records show the Delta flight but no hotel for the nights you would be there. The placeholder you set on the calendar still reads "no flights or hotel yet," and it sits on Nov 2, a day after the Delta flight actually leaves. A room this close in only gets pricier.
+    </div>
+    <p class="rnext"><b>Next:</b> Lock a Cincinnati hotel for the summit nights, or tap Do this and I will pull a short list near the venue.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <div class="sec">Good to know</div>
+
+  <div class="row" data-id="shape" data-title="Today is a travel day">
+    <div class="rhead"><span class="light green"></span><p class="rtitle">Today is a travel day, and otherwise yours</p></div>
+    <div class="rbody">
+      You check out of the Palihotel in Culver City this morning. The only fixed thing on the calendar is the flight above. No meetings, no calls. Tomorrow your normal weekday routine picks back up, with a Cincinnati travel block attached to it.
+    </div>
+    <p class="rnext"><b>Next:</b> Nothing, once the flight is settled.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <div class="row" data-id="inbox" data-title="Inbox is quiet">
+    <div class="rhead"><span class="light green"></span><p class="rtitle">Nothing in your inbox is waiting on a reply</p></div>
+    <div class="rbody">
+      The unread mail from the last two days is all automatic: travel alerts, ride receipts, a couple of newsletters, a donation thank-you and a bank notice. No person has asked you something and gone unanswered. The only ones worth a look are the travel alerts, and those feed the flight question up top.
+    </div>
+    <p class="rnext"><b>Next:</b> Nothing.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <div class="row" data-id="overnight" data-title="Last night's run finished clean">
+    <div class="rhead"><span class="light green"></span><p class="rtitle">Last night's run finished clean, with nothing to build</p></div>
+    <div class="rbody">
+      The nightly Food Log tidy-up ran early this morning and finished all four of its jobs. No build work was lined up for the overnight list, so nothing else needed to run, and nothing stalled or failed. I checked its main claim against your real data, not just its own note: it said every logged meal already has its fiber number filled in, and that holds up.
+    </div>
+    <p class="rnext"><b>Next:</b> Nothing.</p>
+    <p class="proof">Proof: the overnight Food Log job logged 4 of 4 steps done at 4:22am EST. The overnight build list was empty, so no other job was due. A direct count of your food log found zero meals missing a fiber value.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <div class="sec">Worth clearing soon</div>
+
+  <div class="row" data-id="decisions" data-title="Build decisions waiting since September">
+    <div class="rhead"><span class="light amber"></span><p class="rtitle">A stack of build decisions has been waiting for weeks</p></div>
+    <div class="rbody">
+      Ten items in Project YOU are parked because they need your yes or no before I can build them, and the oldest has been sitting since early September. They run from small automations, like logging a connection the moment a calendar event matches someone you know, to tidy-ups you already approved. None is urgent alone, but together they are the biggest thing slowing the project. Atomic Habits would call the fix making the action easy: a page of pre-filled taps turns ten stalled decisions into two minutes of thumb work.
+    </div>
+    <p class="rnext"><b>Next:</b> Tap Do this and I will bring all ten back as one clean decision page you can tap through in a sitting.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <div class="row" data-id="scan" data-title="75 research finds waiting for keep or toss">
+    <div class="rhead"><span class="light amber"></span><p class="rtitle">Research finds are stacking up for a keep or toss</p></div>
+    <div class="rbody">
+      Your recurring health and behavior scan has not pulled anything new since Oct 25, so there is nothing fresh from overnight. What is there is a backlog of 75 unreviewed finds, newest batch about a week old, on things like gratitude and a longer life, short bursts of fast walking, and a one-week break from social media. They will keep piling up until you run through them.
+    </div>
+    <p class="rnext"><b>Next:</b> Tap Do this and I will lay the 75 out on a quick keep-or-toss page, newest first.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <div class="row" data-id="projects" data-title="Where your projects stand">
+    <div class="rhead"><span class="light green"></span><p class="rtitle">Where your projects stand this morning</p></div>
+    <div class="rbody">
+      A quick read across the ones I can reach:
+      <ul>
+        <li><b>Project YOU:</b> humming. 418 open to-dos, 10 of them waiting on your call. Next step: triage those 10 (see above).</li>
+        <li><b>TreadWell:</b> one thing open. Next step: listen to Mike Cann's feedback recording from the Aug 7 call, still unopened in the folder.</li>
+        <li><b>Elevator Pitch:</b> active, nothing pending in the tracker.</li>
+        <li><b>CrushingIt, Clever Phrases, AI Intelligence:</b> I could not read their folders this morning, because your computer was not connected to this run. I will cover them the moment it reconnects.</li>
+        <li><b>2026 Calendar:</b> it lives inside Project YOU, so it is covered above.</li>
+      </ul>
+    </div>
+    <p class="rnext"><b>Next:</b> Nothing needed.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <div class="row" data-id="reconcile" data-title="Data map not reconciled since August">
+    <div class="rhead"><span class="light amber"></span><p class="rtitle">The data map has not been reconciled since August</p></div>
+    <div class="rbody">
+      The check that keeps your system's wiring diagram honest, which part reads which feed, last ran on Aug 16. That is well overdue. The full page-by-page version needs your computer's project folder, which this run could not reach, so I could confirm the date but not re-run it. Nothing looks broken, the check is just stale.
+    </div>
+    <p class="rnext"><b>Next:</b> Reconnect the folder and I will run the full reconciliation, or tap Do this and I will run the database-only version now.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <div class="row" data-id="usage" data-title="Can't read Claude usage from here">
+    <div class="rhead"><span class="light amber"></span><p class="rtitle">I could not read your Claude usage this morning</p></div>
+    <div class="rbody">
+      This run has no window into your weekly usage meter, so there is no percentage to give you today. The meter lives in the Claude app under your account. If you want it in the brief every day, the dependable way is to note the number when you see it and I will track the trend over time.
+    </div>
+    <p class="rnext"><b>Next:</b> Nothing, unless you want to start logging it. Tap Do this and I will set up a one-tap place to drop the number.</p>
+    <div class="btns"></div>
+    <div class="status"></div>
+    <textarea class="cbox" placeholder="Add a note (optional)"></textarea>
+  </div>
+
+  <p class="foot">Built for Scott · Nov 1, 2026 · all times EST</p>
+</div>
+
+<script>
+(function(){
+  var BUTTONS=[
+    {label:"Do this",      cls:"b-do",   color:"--b-do",   settle:false},
+    {label:"Tell me more", cls:"b-more", color:"--b-more", settle:false},
+    {label:"I did it",     cls:"b-did",  color:"--b-did",  settle:true},
+    {label:"I read this",  cls:"b-read", color:"--b-read", settle:true},
+    {label:"Kill this task",cls:"b-kill",color:"--b-kill", settle:true}
+  ];
+  var OPEN_MSG={"Do this":"Open — building it is on me.","Tell me more":"Open — I owe you the detail."};
+  var SETTLE_MSG={"I did it":"Settled — you handled it.","I read this":"Settled — noted.","Kill this task":"Settled — killed."};
+  var state={};
+  var rows=Array.prototype.slice.call(document.querySelectorAll(".row"));
+  rows.forEach(function(row){
+    var id=row.getAttribute("data-id");
+    var title=row.getAttribute("data-title");
+    state[id]={title:title, choice:null, comment:""};
+    var btnWrap=row.querySelector(".btns");
+    BUTTONS.forEach(function(b){
+      var el=document.createElement("button");
+      el.className=b.cls;
+      el.textContent=b.label;
+      el.addEventListener("click",function(){ pick(row,id,b); });
+      btnWrap.appendChild(el);
+    });
+    var cbox=row.querySelector(".cbox");
+    cbox.addEventListener("input",function(){
+      state[id].comment=cbox.value;
+      render();
+    });
+  });
+  function pick(row,id,b){
+    state[id].choice=b.label;
+    row.style.borderLeftColor="var("+b.color+")";
+    if(b.settle){ row.classList.add("settled"); } else { row.classList.remove("settled"); }
+    var all=row.querySelectorAll(".btns button");
+    Array.prototype.forEach.call(all,function(x){ x.classList.remove("chosen"); });
+    var idx=BUTTONS.map(function(z){return z.label;}).indexOf(b.label);
+    if(idx>-1) all[idx].classList.add("chosen");
+    var st=row.querySelector(".status");
+    var msg=b.settle?SETTLE_MSG[b.label]:OPEN_MSG[b.label];
+    st.innerHTML="<b>"+b.label+"</b> &nbsp;"+msg;
+    render();
+  }
+  function render(){
+    var lines=[];
+    rows.forEach(function(row){
+      var id=row.getAttribute("data-id");
+      var s=state[id];
+      if(!s.choice && !s.comment) return;
+      var line="- "+s.title+": "+(s.choice?s.choice.toUpperCase():"(comment only)");
+      if(s.comment && s.comment.trim()) line+="  [note: "+s.comment.trim()+"]";
+      lines.push(line);
+    });
+    var box=document.getElementById("compiled");
+    box.value = lines.length ? ("Morning Report, Nov 1, my answers:\n"+lines.join("\n")) : "Nothing tapped yet.";
+  }
+  document.getElementById("copybtn").addEventListener("click",function(){
+    var box=document.getElementById("compiled");
+    box.removeAttribute("readonly");
+    box.select();
+    try{ document.execCommand("copy"); }catch(e){}
+    box.setAttribute("readonly","readonly");
+    var b=this; var t=b.textContent; b.textContent="Copied (or select and paste)";
+    setTimeout(function(){ b.textContent=t; },1800);
+  });
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
