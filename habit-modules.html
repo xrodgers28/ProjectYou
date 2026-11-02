@@ -16,6 +16,7 @@
 <script src="social-log.js"></script>
 <script src="safari-log.js"></script>
 <!-- v6.95 (Oct 12, 2026): the What gave me energy card now has a Park button and parks into the Parked area. -->
+<!-- v6.106 (Nov 1, 2026): streak freeze. A frozen day (table cue_streak_freezes) bridges the streak instead of breaking it, and shows an ice icon. Starts with Oct 31, 2026. -->
 <!-- v6.105 (Nov 1, 2026): counter cards were missing because the relationship check-in crashed the page load (PYBackfill.dateKey did not exist). Added it. -->
 <!-- v6.104 (Oct 21, 2026): Wait, Really?! card added beside Mindset Training. -->
 <!-- v6.103 (Oct 19, 2026): the Takeaways card is now called Mindset Training, with a new sub line. Saved habit names unchanged. -->
@@ -972,13 +973,13 @@ if(window.PYBackfill&&!window.PYBackfill.dateKey){window.PYBackfill.dateKey=func
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.105</span>
+    <span class="pn-ver">v6.106</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.105</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.106</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -986,7 +987,7 @@ if(window.PYBackfill&&!window.PYBackfill.dateKey){window.PYBackfill.dateKey=func
       </div>
       <div class="meter">
         <div class="mrow"><div class="bar"><i id="progbar" style="width:0%"></i></div><span class="mtxt" id="progtxt">0/4 today</span><span class="parkcount" id="parkcount" hidden></span></div>
-        <span class="streak">&#128293; <span class="n" id="streakn">0 day streak</span> <span class="sub">&middot; in a row</span></span></div>
+        <span class="streak">&#128293; <span class="n" id="streakn">0 day streak</span> <span class="sub">&middot; in a row</span> <span id="freezeico" hidden aria-label="Streak freeze used">&#10052;&#65039;</span></span></div>
     </div>
     <div id="photobooth"></div>
     <div class="pjwrap pj-off" id="projects"></div>
@@ -1376,6 +1377,7 @@ function setHist(id,on){var h=getHist(),k=todayKey();var s=new Set(h[k]||[]);if(
    is wiped each night, so it cannot hold a past day.
    Today is allowed to be unfinished without breaking the run: it simply does
    not count yet, so the badge never punishes you at 9am. */
+var FROZEN={};
 var STREAK=null;              /* null = not loaded, fall back to the local mirror */
 function qsNames(){return MODS.map(function(m){return m.qs;});}
 function streakLocal(){var h=getHist(),d=todayAnchor(),n=0;
@@ -1393,11 +1395,15 @@ async function loadStreak(){
   if(res.error){STREAK=null;return;}
   var byDay={};
   (res.data||[]).forEach(function(r){ if(!byDay[r.date])byDay[r.date]={}; byDay[r.date][r.tracker]=1; });
+  var fr={};
+  try{var fz=await sb.from('cue_streak_freezes').select('day').gte('day',keyOf(from)); if(!fz.error)(fz.data||[]).forEach(function(r){fr[r.day]=1;});}catch(e){}
+  FROZEN=fr;
   function counted(k){var s=byDay[k];if(!s)return false;
     for(var i=0;i<names.length;i++){if(s[names[i]])return true;}return false;}
   var d=todayAnchor(), n=0;
   for(var i=0;i<400;i++){
     if(counted(keyOf(d)))n++;
+    else if(FROZEN[keyOf(d)]){}
     else if(i>0)break;
     d.setUTCDate(d.getUTCDate()-1);
   }
@@ -4238,6 +4244,7 @@ function render(){
   var pc=document.getElementById('parkcount'), pk=MODS.filter(isParked).length;
   if(pc){pc.textContent=pk?(pk+' parked'):'';pc.hidden=!pk;}
   document.getElementById('streakn').textContent=streakDays()+' day streak';
+  var fz=document.getElementById('freezeico'); if(fz){var fk=Object.keys(FROZEN||{}).sort(); fz.hidden=!fk.length; fz.title=fk.length?('Streak freeze used: '+fk.join(', ')):'';}
 }
 
 /* a module page can still bounce back with ?done=<id> */
