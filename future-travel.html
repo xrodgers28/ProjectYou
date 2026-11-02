@@ -58,6 +58,9 @@
   .lvq .del{position:absolute;top:9px;right:12px;font-size:15px;color:#c9cfd6;cursor:pointer;line-height:1}
   .lvq .del:hover{color:var(--hot)}
   .tcard.lv:before{background:var(--accent)}
+  .rep{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 6px}
+  .rep span{background:#eef7f0;color:var(--green);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700}
+  .rep span b{color:var(--ink)}
   .tcard .rank{font-size:26px;font-weight:800;color:var(--accent2);line-height:1}
   .tcard .note{font-size:12px;color:var(--muted);margin-top:7px;line-height:1.35}
 </style>
@@ -102,7 +105,7 @@
 
 <div id="app" class="hidden">
 <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link on">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.2</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
-  <div class="secbar-wrap"><div class="secbar"><h1>🏝️ Future Travel</h1><span class="ver">v1.3</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>🏝️ Future Travel</h1><span class="ver">v1.4</span><span class="date"></span></div></div>
   <div class="wrap">
     <div class="intro">Your someday map. Every dream destination tagged by country, nearest city, and who put you onto it. Tip: say <b>"add [place] to Future Travel"</b> in any Claude chat and it lands right here.</div>
     <div class="addbar" id="addbar">
@@ -119,7 +122,7 @@
     <div class="grid" id="cards"></div>
     <div id="livepane" class="hidden"></div>
   </div>
-  <div class="badge">Future Travel v1.3</div>
+  <div class="badge">Future Travel v1.4</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -223,6 +226,12 @@ function renderLive(){
   }).join('');
   const groups=[], idx={};
   cities.forEach(c=>{ const k=(c.source||'')+'|'+(c.source_date||'')+'|'+(c.url||''); if(!(k in idx)){idx[k]=groups.length;groups.push({src:c.source,date:c.source_date,url:c.url,items:[]});} groups[idx[k]].items.push(c); });
+  groups.sort((a,b)=>String(b.date||'').localeCompare(String(a.date||'')));
+  const yrs={}, seen={};
+  cities.forEach(c=>{ const y=(c.source_date||'').slice(0,4); if(!y) return; yrs[y]=1; const k=c.name+', '+(c.state||''); (seen[k]=seen[k]||{})[y]=1; });
+  const ny=Object.keys(yrs).length;
+  const reps=Object.keys(seen).map(k=>({k:k,n:Object.keys(seen[k]).length})).filter(r=>r.n>=3).sort((a,b)=>b.n-a.n||a.k.localeCompare(b.k));
+  if(ny>=3 && reps.length){ h+='<div class="lv-h">Keep showing up ('+ny+' years of lists)</div><div class="rep">'+reps.map(r=>'<span><b>'+esc(r.k.replace(/, $/,''))+'</b> · '+r.n+' of '+ny+'</span>').join('')+'</div>'; }
   h+='<div class="lv-h">'+cities.length+' cit'+(cities.length===1?'y':'ies')+' on the list</div>';
   if(!cities.length) h+='<div class="empty">No cities yet.</div>';
   groups.forEach(g=>{
