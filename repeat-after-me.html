@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repeat After Me &middot; ProjectYou</title>
+<script src="py-day.js"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--key:#c2c8d1;--accent:#3f6f8f;--acc:#8f5f3f}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  a{color:inherit}
+  /* shared ProjectYou nav */
+  .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;gap:1px}
+  .pynav::-webkit-scrollbar{height:0}
+  .pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+  .pn-logo img{height:28px;width:auto;display:block}
+  .pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+  .pn-group.first{border-left:none}
+  .pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+  a.pn-label{text-decoration:none;cursor:pointer}a.pn-label:hover{color:var(--accent)}a.pn-label.on{color:var(--accent)}
+  .pn-links{display:flex;gap:1px;align-items:stretch}
+  .pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+  .pn-link:hover{background:#eef2f8;color:#3f6f8f}.pn-link.on{background:#3f6f8f;color:#fff}.pn-link.pn-solo{min-height:31px}
+  .pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+  .pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+  .pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+  .pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+  .pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+  .pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+  .pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+  .pn-drop{position:relative;display:inline-flex;align-items:stretch}.pn-dropbtn{cursor:pointer;user-select:none}
+  .pn-menu{position:fixed;background:#fff;border:1px solid #e3e7ee;border-radius:9px;box-shadow:0 10px 28px rgba(31,42,68,.16);padding:5px;display:none;flex-direction:column;min-width:200px;z-index:60}
+  .pn-menu.open{display:flex}.pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}
+
+    .stage{max-width:560px;margin:0 auto;padding:20px 16px 70px}
+  .now{text-align:center;margin:2px 0 8px}
+  .now .nm{font-size:14.5px;font-weight:800;color:var(--ink)}
+  .now .kd{font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#8a93a0;margin-top:1px}
+  .lockline{text-align:center;font-size:11px;color:var(--muted);margin:0 0 2px}
+  .endtile{background:#fff;border:1px solid var(--key);border-top:3px solid var(--acc);border-radius:16px;box-shadow:0 12px 34px rgba(31,42,68,.10);padding:22px 20px 20px;min-height:430px;display:flex;flex-direction:column}
+  .endtile .step{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc)}
+  .endtile h2{font-size:22px;line-height:1.22;margin-top:7px}
+  .endtile .body{font-size:14.5px;color:#46516a;line-height:1.38;margin-top:11px;flex:1}
+  .rback{width:100%;margin-top:14px;padding:10px;border:none;border-radius:999px;background:var(--acc);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+  .now{position:relative}
+  .now .cuetimer{position:absolute;left:4px;top:2px;width:22px;height:22px;border-radius:50%;background:#eef2f8;display:flex;align-items:center;justify-content:center}
+  .now .cuetimer svg{width:100%;height:100%;display:block}
+  .now .cuehand{transform-origin:12px 12px}
+  .mintotal{font-size:11.5px;color:#8a93a0;font-weight:700;margin-top:4px}
+  .mintotal.hidden{display:none}
+  .back{font-size:13px;font-weight:700;color:#a6adba;cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 2px}
+  .back.off{color:#d3d8e0;cursor:default}
+  .next{font-size:13px;font-weight:800;color:#fff;background:var(--accent);border-radius:10px;padding:9px 18px;cursor:pointer;border:none;font-family:inherit}
+  .back:focus-visible,.next:focus-visible,.pk:focus-visible,.dot:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .hint{text-align:center;font-size:11.5px;color:#9aa6b4;margin-top:16px}
+  .stamp{text-align:center;font-size:11px;color:#b0b8c4;margin-top:8px;font-style:italic}
+  .bkboard{display:block;text-align:center;font-size:12.5px;font-weight:800;color:var(--accent);text-decoration:none;margin-top:18px}
+  .minin{width:62px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;text-align:center}
+  .gate{max-width:340px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(31,42,68,.07)}
+  .gate h2{font-size:17px;margin-bottom:4px}
+  .gate p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .gate input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:9px;font-family:inherit}
+  .gate button{width:100%;padding:10px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+  .gate .err{color:#c0453b;font-size:12px;margin-top:8px;min-height:16px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:#1f2a44;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(31,42,68,.28);opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
+  .toast.on{opacity:1}
+  .hidden{display:none!important}
+  /* ===== Repeat After Me ===== */
+  .sub{text-align:center;font-size:12.5px;color:var(--muted);margin:-4px 0 10px;font-style:italic}
+  .steps{display:flex;justify-content:center;gap:6px;margin:0 0 10px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#d3d8e0;border:none;padding:0;cursor:pointer}
+  .dot.on{background:var(--accent);transform:scale(1.25)}.dot.done{background:#8fb3c9}
+  .poster{background:#fff;border:1px solid var(--key);border-radius:18px;overflow:hidden;box-shadow:0 12px 34px rgba(31,42,68,.10)}
+  .top{position:relative;min-height:290px;display:flex;align-items:center;color:#fff;isolation:isolate}
+  .top .art{position:absolute;inset:0;z-index:-2}.top .art svg{width:100%;height:100%;display:block;object-fit:cover}
+  .top .veil{position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(45,58,74,.38) 0%,rgba(45,58,74,.58) 50%,rgba(45,58,74,.78) 100%)}
+  .top.plain{color:var(--ink)}.top.plain .veil{display:none}.top.plain .q{text-shadow:none}
+  .top .q{padding:28px 22px 34px;font-size:30px;text-shadow:0 1px 3px rgba(0,0,0,.25);line-height:1.2;font-weight:800;letter-spacing:-.2px;text-wrap:balance}
+  .top .q.long{font-size:24px}.top .q.vlong{font-size:20px}
+  .top .src{position:absolute;right:12px;bottom:8px;font-size:10.5px;font-weight:700;opacity:.82;text-decoration:none;max-width:70%;text-align:right}
+  .top .src:hover{opacity:1;text-decoration:underline}
+  .strip{padding:16px 20px 6px}
+  .kicker{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc)}
+  .habit{font-size:13.5px;font-weight:800;color:#46516a;margin-top:3px;line-height:1.25}
+  .idline{font-size:21px;line-height:1.28;font-weight:800;color:var(--ink);margin:12px 0 4px}
+  .idline .blank{display:inline-block;min-width:150px;border-bottom:3px solid var(--accent);height:1em;vertical-align:-3px;margin-left:4px}
+  .idline .tail{color:var(--accent)}
+  .typebox{display:flex;gap:8px;margin:10px 0 4px}
+  .typebox input{flex:1;padding:11px 12px;border:2px solid var(--line);border-radius:11px;font-size:16px;font-family:inherit;color:var(--ink)}
+  .typebox input:focus{outline:none;border-color:var(--accent)}
+  .typebox .next{flex:none}
+  .optlink{background:none;border:none;font:700 12.5px/1 inherit;font-family:inherit;color:#9aa6b4;cursor:pointer;padding:6px 2px;text-decoration:underline}
+  .opts{display:flex;flex-direction:column;gap:7px;margin:8px 0 6px}
+  .opt{text-align:left;padding:10px 12px;border:1.5px solid var(--line);border-radius:11px;background:#fbfcfd;font:600 14px/1.3 inherit;font-family:inherit;color:var(--ink);cursor:pointer}
+  .opt:hover{border-color:var(--accent)}
+  .verdict{font-size:13.5px;font-weight:800;margin:8px 0 2px;color:#2f8f5b}.verdict.miss{color:#b45309}
+  .stmt{margin:10px 20px 0;padding:12px 14px;border-left:4px solid var(--card-col,#e4d5c3);background:#f7f8fb;border-radius:0 10px 10px 0;font-size:14.5px;font-weight:700;color:#2d3a4a;line-height:1.35}
+  .stmt .by{display:block;font-size:11px;color:#8a93a0;font-weight:700;margin-top:4px}
+  .why{padding:6px 20px 18px}
+  .why h4{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#8a93a0;margin:14px 0 4px}
+  .why p{font-size:14.5px;line-height:1.42;color:#46516a}
+  .why .big{font-size:20px;line-height:1.25;font-weight:800;color:var(--ink);margin:4px 0 2px}
+  .foot{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 20px 18px;flex-wrap:wrap}
+  .foot label{font-size:12.5px;font-weight:700;color:#8a93a0;display:flex;align-items:center;gap:6px}
+  .srcline{font-size:11.5px;color:#9aa6b4;padding:0 20px 12px}.srcline a{color:#7a8798}
+  .endrow{margin-top:14px}
+  @media (max-width:420px){.top .q{font-size:26px}.top .q.long{font-size:21px}.top .q.vlong{font-size:18px}.idline{font-size:19px}}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <div class="pynav">
+    <a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a>
+    <span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link">Staging<br>Area</a></span></span>
+    <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
+    <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
+    <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
+    <span class="pn-ver">v1.0</span>
+    <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="now"><span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(63,111,143,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/></svg></span><div class="nm" id="nowNm">Repeat After Me</div><div class="kd" id="nowKd">One belief a day</div></div>
+    <div class="sub">Build habits that reinforce the person you want to become.</div>
+    <div class="steps" id="steps"></div>
+    <div class="lockline" id="lockline"></div>
+    <div class="poster" id="card"></div>
+    <a class="bkboard" href="habit-modules.html">&larr; Back to the Cue Cards board</a>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="gate hidden" id="gate">
+    <h2>Sign in</h2>
+    <p>The deck remembers which belief it has shown you, and the tick has to reach the wheel, so this page needs your account.</p>
+    <input id="email" type="email" placeholder="Email" autocomplete="username">
+    <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button onclick="signIn()">Sign in</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* ===== Repeat After Me v1.0 (Nov 6, 2026) =====
+   One identity line a day, from the Identity column of the Habit Worksheets
+   (worksheet_rows.identity, read live, so editing a worksheet edits this card).
+   Three tiles: Say it (poster: a sourced quote over the picture, the habit as a
+   sub-headline, the identity line with its tail missing, which you type back
+   with loose key-word checking or pick from hidden options), Reveal (the whole
+   line, with the verdict), Why (the worksheet's Insight and Outcome, the
+   statement, every source linked). Simple rotation: every card once before any
+   repeats, deck_progress deck 'repeat-after-me' (tile_key = card id). When the
+   last card has been dealt the deck resets itself (deck_reset) and starts over.
+   Finishing ticks the habit "Repeat After Me" (todos.task, qs_log.tracker and
+   MODS in habit-modules.html all use that name; rename one, rename all).
+   Built on the Wait, Really?! page: same nav, sign-in, card clock, deck and
+   todos wiring, no schema change. The 'I lived this today' vote was scrapped. */
+
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
+const HABIT="Repeat After Me", DECK="repeat-after-me", VER="v1.0";
+/* Cue card clock v2 (Sep 29, 2026). The start time is saved in this browser, so a reload or coming back from another page no longer restarts the clock. After 2+ hours with no touch, Done asks how many minutes instead of guessing. */
+var __CUE_IDLE=2*3600*1000, __CUE_STALE=12*3600*1000, __cueAway=false, __cueSt=null, __cueKey='', __cueLastW=0;
+function __cueSave(force){ var n=Date.now(); if(!force&&n-__cueLastW<8000) return; __cueLastW=n; try{ localStorage.setItem(__cueKey,JSON.stringify(__cueSt)); }catch(e){} }
+function __cueClockInit(){
+  var now=Date.now(), st=null;
+  __cueKey='cueclock:'+(location.pathname.split('/').pop()||'card');
+  try{ st=JSON.parse(localStorage.getItem(__cueKey)||'null'); }catch(e){ st=null; }
+  if(!st||st.fin||!(st.s>0)||st.s>now||(now-(st.l||st.s))>__CUE_STALE) st={s:now,l:now};
+  if(!(st.l>0)) st.l=now;
+  if(now-st.l>__CUE_IDLE) __cueAway=true;
+  __cueSt=st; __cueSave(true);
+  function touch(){ var n=Date.now(); if(n-__cueSt.l>__CUE_IDLE) __cueAway=true; __cueSt.l=n; __cueSave(false); }
+  ['pointerdown','touchstart','keydown','click','scroll'].forEach(function(ev){ try{ window.addEventListener(ev,touch,{capture:true,passive:true}); }catch(e){} });
+  return st.s;
+}
+function __cueAskIfIdle(){
+  var el=document.getElementById('tmin')||document.getElementById('mins');
+  var typed=(el&&String(el.value).trim()!=='')?parseInt(el.value,10):NaN;
+  if(!(typed>0&&typed<=180)&&__cueAway&&el){
+    var m=document.getElementById('cueAskMsg');
+    if(!m){ m=document.createElement('div'); m.id='cueAskMsg'; m.setAttribute('role','status'); m.style.cssText='flex-basis:100%;width:100%;margin:8px 0 0;font-size:13.5px;font-weight:600;color:#b45309;line-height:1.4'; var host=el.closest('label')||el.parentNode; host.insertAdjacentElement('afterend',m); }
+    m.textContent='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+    try{ el.focus(); }catch(e){}
+    return true;
+  }
+  if(__cueSt){ __cueSt.fin=Date.now(); __cueSave(true); }
+  return false;
+}
+var __cueStart=__cueClockInit();
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge'); if(!h) return;
+  var line=h.querySelector('.cuehand'); if(!line) return;
+  var deg=((Date.now()-__cueStart)%60000)/60000*360;
+  line.style.transform='rotate('+deg+'deg)';
+}
+var __cueTickId=setInterval(__cueHandTick,250);
+
+const CARDS=[{"id": "c13", "hb": "Daylight in the eyes within an hour of waking", "row": 13, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><rect y=\"170\" width=\"400\" height=\"90\" fill=\"#3b8f7f\" opacity=\".35\"/><circle cx=\"200\" cy=\"170\" r=\"54\" fill=\"#f2b84b\"/><rect y=\"170\" width=\"400\" height=\"4\" fill=\"#2d3a4a\"/><path d=\"M0 200q60-10 120 0t120 0 160 0\" stroke=\"#2d3a4a\" stroke-width=\"3\" fill=\"none\" opacity=\".4\"/><circle cx=\"110\" cy=\"190\" r=\"7\" fill=\"#2d3a4a\"/><rect x=\"104\" y=\"197\" width=\"12\" height=\"26\" rx=\"4\" fill=\"#2d3a4a\"/><g stroke=\"#e07a5f\" stroke-width=\"5\" stroke-linecap=\"round\"><path d=\"M200 90V60M140 110l-20-20M260 110l20-20M120 160H90M310 160h-30\"/></g></svg>", "sect": "Physical Health", "col": "#e7abbb", "q": "Your mind evolved outdoors, not among office buildings and relentless motion.", "qs": "Thinking, Outside and Inside, Mindset Training", "qu": "takeaways.html", "st": "Morning light sets the clock that makes you tired at the right time tonight.", "ss": "Habit Worksheet, Insight column", "su": "habit-worksheets.html", "prefix": "I am someone who", "fb": "I am someone who starts the day outside."}, {"id": "c36", "hb": "Local Safari", "row": 36, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><rect x=\"40\" y=\"30\" width=\"200\" height=\"120\" rx=\"6\" fill=\"#3b8f7f\" opacity=\".3\"/><rect x=\"60\" y=\"50\" width=\"160\" height=\"80\" fill=\"#3b8f7f\"/><circle cx=\"110\" cy=\"80\" r=\"18\" fill=\"#f2b84b\"/><rect y=\"180\" width=\"400\" height=\"80\" fill=\"#e4d5c3\"/><rect x=\"230\" y=\"120\" width=\"130\" height=\"80\" rx=\"6\" fill=\"#2d3a4a\"/><rect x=\"240\" y=\"130\" width=\"110\" height=\"60\" fill=\"#fff\"/><rect x=\"215\" y=\"200\" width=\"160\" height=\"8\" rx=\"4\" fill=\"#2d3a4a\"/><circle cx=\"90\" cy=\"195\" r=\"20\" fill=\"#e07a5f\"/><rect x=\"86\" y=\"175\" width=\"8\" height=\"12\" fill=\"#e07a5f\"/></svg>", "sect": "Environmental Health", "col": "#a4d6ca", "q": "Open, natural spaces let you pause, restore and imagine. Walled spaces give you a private place to test and tinker.", "qs": "Thinking, Outside and Inside, Mindset Training", "qu": "takeaways.html", "st": "Environment is the invisible hand that shapes human behavior.", "ss": "James Clear, Atomic Habits", "su": "james-clear.html", "prefix": "I'm someone who", "fb": "I'm someone who changes environments to generate better ideas."}, {"id": "c47", "hb": "Social Opp Inbound", "row": 47, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><rect width=\"400\" height=\"260\" fill=\"#2d3a4a\"/><rect x=\"150\" y=\"40\" width=\"110\" height=\"200\" fill=\"#fff\" opacity=\".15\"/><path d=\"M150 40l110 30v170l-110 0z\" fill=\"#f2b84b\"/><path d=\"M260 70l100 190H150z\" fill=\"#f2b84b\" opacity=\".35\"/><circle cx=\"242\" cy=\"160\" r=\"5\" fill=\"#2d3a4a\"/></svg>", "sect": "Social Well-Being", "col": "#a6c4e8", "q": "Every person you meet is holding an idea you have not had yet.", "qs": "Habit Worksheets, Social Well-Being", "qu": "habit-worksheets.html", "st": "Most of the good things socially arrive as an inconvenient invitation.", "ss": "Habit Worksheet, Insight column", "su": "habit-worksheets.html", "prefix": "I am someone who", "fb": "I am someone who believes in opportunistic awareness."}, {"id": "c44", "hb": "Connect with one friend every week", "row": 44, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><path d=\"M-10 70C80 70 120 190 200 190S320 70 410 70\" fill=\"none\" stroke=\"#3b8f7f\" stroke-width=\"12\" stroke-linecap=\"round\"/><path d=\"M-10 190C80 190 120 70 200 70S320 190 410 190\" fill=\"none\" stroke=\"#e07a5f\" stroke-width=\"12\" stroke-linecap=\"round\"/><circle cx=\"200\" cy=\"130\" r=\"14\" fill=\"#f2b84b\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><circle cx=\"60\" cy=\"86\" r=\"8\" fill=\"#2d3a4a\"/><circle cx=\"340\" cy=\"86\" r=\"8\" fill=\"#2d3a4a\"/></svg>", "sect": "Social Well-Being", "col": "#a6c4e8", "q": "Adult friendship is arithmetic, not chemistry.", "qs": "Fifty hours, Social Fitness", "qu": "social-fitness.html", "st": "People with strong relationships are 50% less likely to die early.", "ss": "Vivek Murthy, Together", "su": "", "prefix": "I am someone who", "fb": "I am someone who keeps his close friendships alive."}, {"id": "c50", "hb": "Play a game, cards, board or puzzle", "row": 50, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><g transform=\"translate(110 130) rotate(-14)\"><rect x=\"-34\" y=\"-48\" width=\"68\" height=\"96\" rx=\"7\" fill=\"#fff\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><path d=\"M0 14c-14-9-18-16-18-23a9 9 0 0 1 18-3a9 9 0 0 1 18 3c0 7-4 14-18 23z\" fill=\"#e07a5f\"/></g><g transform=\"translate(170 122) rotate(4)\"><rect x=\"-34\" y=\"-48\" width=\"68\" height=\"96\" rx=\"7\" fill=\"#fff\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><path d=\"M0-14c12 10 17 16 17 22a8 8 0 0 1-14 5l3 9h-12l3-9a8 8 0 0 1-14-5c0-6 5-12 17-22z\" fill=\"#2d3a4a\"/></g><g transform=\"translate(230 134) rotate(18)\"><rect x=\"-34\" y=\"-48\" width=\"68\" height=\"96\" rx=\"7\" fill=\"#fff\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><path d=\"M0-16l12 16-12 16-12-16z\" fill=\"#e07a5f\"/></g><path transform=\"translate(318 92) rotate(-10)\" d=\"M-30-30h20a10 10 0 0 1 20 0h20v22a10 10 0 0 0 0 16v22h-60z\" fill=\"#3b8f7f\" stroke=\"#2d3a4a\" stroke-width=\"3\" stroke-linejoin=\"round\"/><path transform=\"translate(300 178) rotate(8)\" d=\"M-30-30h20a10 10 0 0 1 20 0h20v22a10 10 0 0 0 0 16v22h-60z\" fill=\"#f2b84b\" stroke=\"#2d3a4a\" stroke-width=\"3\" stroke-linejoin=\"round\"/><path transform=\"translate(355 200) rotate(24)\" d=\"M-30-30h20a10 10 0 0 1 20 0h20v22a10 10 0 0 0 0 16v22h-60z\" fill=\"#e07a5f\" stroke=\"#2d3a4a\" stroke-width=\"3\" stroke-linejoin=\"round\"/></svg>", "sect": "Recreational Health", "col": "#f3c6a1", "q": "Nothing lights up the brain like play.", "qs": "Stuart Brown, Play", "qu": "", "st": "Regular play with no outcome attached.", "ss": "Habit Worksheet, Outcome column", "su": "habit-worksheets.html", "prefix": "I am someone who", "fb": "I am someone who makes space for play."}, {"id": "c54", "hb": "Attend one creative retreat", "row": 54, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><rect x=\"40\" y=\"110\" width=\"320\" height=\"60\" rx=\"8\" fill=\"#e4d5c3\"/><circle cx=\"80\" cy=\"60\" r=\"20\" fill=\"#2d3a4a\"/><circle cx=\"140\" cy=\"220\" r=\"20\" fill=\"#3b8f7f\"/><circle cx=\"200\" cy=\"60\" r=\"20\" fill=\"#e07a5f\"/><circle cx=\"260\" cy=\"220\" r=\"20\" fill=\"#f2b84b\"/><circle cx=\"320\" cy=\"60\" r=\"20\" fill=\"#2d3a4a\"/><circle cx=\"380\" cy=\"220\" r=\"20\" fill=\"#3b8f7f\"/><rect x=\"66\" y=\"124\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#e07a5f\"/><rect x=\"126\" y=\"136\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#f2b84b\"/><rect x=\"186\" y=\"124\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#3b8f7f\"/><rect x=\"246\" y=\"136\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#2d3a4a\"/><rect x=\"306\" y=\"124\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#e07a5f\"/><rect x=\"366\" y=\"136\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#f2b84b\"/><circle cx=\"200\" cy=\"140\" r=\"9\" fill=\"#fff\"/></svg>", "sect": "Recreational Health", "col": "#f3c6a1", "q": "Every person you meet is holding an idea you have not had yet.", "qs": "Habit Worksheets, Social Well-Being", "qu": "habit-worksheets.html", "st": "", "ss": "", "su": "", "prefix": "I feed off", "fb": "I feed off other creatives."}, {"id": "c3", "hb": "Mental Fitness (Elevate, Imprint, Impulse)", "row": 3, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><path d=\"M40 230H370M40 230V30\" stroke=\"#2d3a4a\" stroke-width=\"4\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M40 228q120-2 200-40t120-150\" stroke=\"#3b8f7f\" stroke-width=\"9\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M40 226q150 0 320-30\" stroke=\"#b8b2a7\" stroke-width=\"4\" fill=\"none\" stroke-dasharray=\"8 8\"/><circle cx=\"360\" cy=\"40\" r=\"10\" fill=\"#e07a5f\"/><text x=\"300\" y=\"28\" font-family=\"Helvetica\" font-weight=\"700\" font-size=\"22\" fill=\"#2d3a4a\">1%</text></svg>", "sect": "Mental Fitness", "col": "#f0dd93", "q": "If it feels slightly hard, it's working.", "qs": "Cognitive Friction, Mindset Training", "qu": "takeaways.html", "st": "Habits are the compound interest of self-improvement.", "ss": "James Clear, Atomic Habits", "su": "james-clear.html", "prefix": "I am someone who", "fb": "I am someone who compounds learning in small daily doses."}, {"id": "c91", "hb": "Mindset Training", "row": 91, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#2d3a4a\"/><circle cx=\"200\" cy=\"150\" r=\"70\" fill=\"#f2b84b\"/><rect x=\"0\" y=\"150\" width=\"400\" height=\"110\" fill=\"#2d3a4a\"/><g stroke=\"#2d3a4a\" stroke-width=\"3\"><rect x=\"120\" y=\"190\" width=\"160\" height=\"22\" rx=\"3\" fill=\"#e07a5f\"/><rect x=\"132\" y=\"168\" width=\"150\" height=\"22\" rx=\"3\" fill=\"#3b8f7f\"/><rect x=\"126\" y=\"146\" width=\"140\" height=\"22\" rx=\"3\" fill=\"#f6efe6\"/><rect x=\"140\" y=\"124\" width=\"120\" height=\"22\" rx=\"3\" fill=\"#e4d5c3\"/></g><rect x=\"0\" y=\"212\" width=\"400\" height=\"48\" fill=\"#f6efe6\"/></svg>", "sect": "Mental Fitness", "col": "#f0dd93", "q": "Go to bed smarter than when you woke up.", "qs": "attributed to Charlie Munger", "qu": "", "st": "Fill your brain regularly with new ideas.", "ss": "Scott", "su": "", "prefix": "I repeatedly expose myself to", "fb": "I repeatedly expose myself to ideas that influence how I think and act."}, {"id": "c68", "hb": "Log what gives me energy", "row": 68, "pic": null, "sect": "Emotional Health", "col": "#c6b9e8", "q": "Observation changes behaviour. The logging is the intervention.", "qs": "Project YOU Knowledge Base", "qu": "mission.html#docs", "st": "Know what actually fuels you.", "ss": "Habit Worksheet, Outcome column", "su": "habit-worksheets.html", "prefix": "I am someone who", "fb": "I am someone who notices and tracks what energises me."}, {"id": "c80", "hb": "Compass YIR", "row": 80, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#2d3a4a\"/><defs><pattern id=\"d0\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#e7abbb\"/></pattern><pattern id=\"d1\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#a4d6ca\"/></pattern><pattern id=\"d2\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#a6c4e8\"/></pattern><pattern id=\"d3\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#f3c6a1\"/></pattern><pattern id=\"d4\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#e6d3a2\"/></pattern><pattern id=\"d5\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#f0dd93\"/></pattern><pattern id=\"d6\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#c6b9e8\"/></pattern></defs><rect x=\"20.0\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d0)\"/><rect x=\"71.4\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d1)\"/><rect x=\"122.9\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d2)\"/><rect x=\"174.3\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d3)\"/><rect x=\"225.7\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d4)\"/><rect x=\"277.1\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d5)\"/><rect x=\"328.6\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d6)\"/><rect x=\"19\" y=\"19\" width=\"362\" height=\"222\" fill=\"none\" stroke=\"#f6efe6\" stroke-width=\"2\" opacity=\".35\"/></svg>", "sect": "Emotional Health", "col": "#c6b9e8", "q": "How we spend our days is, of course, how we spend our lives.", "qs": "Annie Dillard, The Writing Life", "qu": "", "st": "", "ss": "", "su": "", "prefix": "I am intentional about", "fb": "I am intentional about the life I am living."}, {"id": "ctw", "hb": "TreadWell", "row": 124, "pic": null, "sect": "Sense of Purpose", "col": "#e6d3a2", "q": "Your ikigai sits where what you love, what you are good at, what the world needs and what sustains you overlap.", "qs": "García and Miralles, Ikigai", "qu": "habit-worksheets.html", "st": "Turn any trip into a positive footprint.", "ss": "TreadWell", "su": "", "prefix": "In Japan, the village of Ogimi", "fb": "In Japan, the village of Ogimi has no word for retirement."}];
+function $(s,r){return (r||document).querySelector(s);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function todayKey(){return PY.today();}
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2400);}
+
+var SERVED={}, CUR=-1, signedIn=false, habitRow=null, FREE=false, card=null, IDX=0, ROWS={}, verdict=null;
+
+/* ---- the identity line, live from the worksheet ---- */
+function clean(s){return String(s||'').replace(/^[\s“"']+|[\s”"']+$/g,'').trim();}
+function lineFor(c){var r=ROWS[c.row];return clean((r&&r.identity)||c.fb);}
+function habitFor(c){var r=ROWS[c.row];return (r&&r.habit)||c.hb||'';}
+function split(c){
+  var line=lineFor(c), pre=c.prefix;
+  if(line.toLowerCase().indexOf(pre.toLowerCase())!==0){ pre=line.split(/\s+/).slice(0,3).join(' '); }
+  return {pre:line.slice(0,pre.length), tail:line.slice(pre.length).trim(), line:line};
+}
+var STOP={'the':1,'that':1,'with':1,'what':1,'who':1,'and':1,'for':1,'from':1,'this':1,'into':1,'about':1,'have':1,'has':1,'other':1,'some':1,'someone':1,'myself':1,'his':1,'her':1,'their':1,'word':1,'than':1,'when':1,'how':1};
+function words(s){return String(s||'').toLowerCase().replace(/[’']/g,"'").replace(/[^a-z0-9' ]+/g,' ').split(/\s+/).filter(Boolean);}
+function stem(w){return w.replace(/(ises|izes|ised|ized|ising|izing|ings|ing|ies|ers|es|ed|er|s)$/,'').replace(/[sz]$/,'');}
+/* loose check: the key words of the tail (4+ letters, not filler) and how many of them the typed text contains, stems compared */
+function grade(typed,tail){
+  var keys=words(tail).filter(function(w){return w.length>=4&&!STOP[w];}).map(stem);
+  if(!keys.length) keys=words(tail).map(stem);
+  var have=words(typed).map(stem), hit=0;
+  keys.forEach(function(k){ if(have.some(function(h){return h===k||(k.length>=5&&(h.indexOf(k)===0||k.indexOf(h)===0&&h.length>=4));})) hit++; });
+  var score=hit/keys.length;
+  return score>=0.9?'exact':(score>=0.55?'close':'miss');
+}
+
+/* ---- the three tiles ---- */
+function paintSteps(){var h='';for(var i=0;i<3;i++)h+='<button class="dot'+(i===IDX?' on':(i<IDX?' done':''))+'" aria-label="Tile '+(i+1)+'"></button>';$('#steps').innerHTML=h;
+  document.querySelectorAll('#steps .dot').forEach(function(d,i){d.onclick=function(){if(i<=IDX||i===IDX+1&&verdict)show(i);};});}
+function qClass(q){return q.length>110?' vlong':(q.length>70?' long':'');}
+function topHtml(c){
+  var plain=!c.pic;
+  return '<div class="top'+(plain?' plain':'')+'"'+(plain?' style="background:'+c.col+'"':'')+'>'+(c.pic?'<div class="art">'+c.pic+'</div>':'')+'<div class="veil"></div>'
+    +'<div class="q'+qClass(c.q)+'">&ldquo;'+esc(c.q)+'&rdquo;</div>'
+    +(c.qu?'<a class="src" href="'+esc(c.qu)+'">'+esc(c.qs)+'</a>':'<span class="src">'+esc(c.qs)+'</span>')+'</div>';
+}
+function stmtHtml(c){ if(!c.st) return ''; return '<div class="stmt" style="--card-col:'+c.col+'">'+esc(c.st)+(c.ss?'<span class="by">'+(c.su?'<a href="'+esc(c.su)+'" style="color:inherit">'+esc(c.ss)+'</a>':esc(c.ss))+'</span>':'')+'</div>'; }
+function headHtml(c){ return '<div class="strip"><div class="kicker" style="color:'+shade(c.col)+'">'+esc(c.sect)+'</div><div class="habit">'+esc(habitFor(c)||'')+'</div>'; }
+function shade(hex){ /* the section colour, darkened enough to read as small text */
+  var n=parseInt(hex.slice(1),16),r=(n>>16)&255,g=(n>>8)&255,b=n&255; return 'rgb('+Math.round(r*.55)+','+Math.round(g*.55)+','+Math.round(b*.55)+')'; }
+
+function show(i){
+  IDX=i; paintSteps(); var c=CARDS[CUR], s=split(c);
+  $('#nowKd').textContent=['Say it','Reveal','Why'][i]+' · '+(CUR+1)+' of '+CARDS.length;
+  if(i===0){
+    card.innerHTML=topHtml(c)+headHtml(c)
+      +'<div class="idline">'+esc(s.pre)+' <span class="blank"></span></div>'
+      +'<div class="typebox"><input id="tail" type="text" autocomplete="off" autocapitalize="none" placeholder="Type the rest of the line" aria-label="The rest of the line"><button class="next" id="chk">Check</button></div>'
+      +'<button class="optlink" id="showOpts">Show me options</button><div class="opts hidden" id="opts"></div><div class="verdict hidden" id="vd"></div></div>'
+      +stmtHtml(c)+'<div class="foot"><span></span><button class="next" id="skip" style="background:#9aa6b4">Skip to the line</button></div>';
+    $('#chk').onclick=function(){var t=$('#tail').value.trim(); if(!t){$('#tail').focus();return;} verdict=grade(t,s.tail); show(1);};
+    $('#tail').onkeydown=function(e){if(e.key==='Enter'){e.preventDefault();$('#chk').click();}};
+    $('#skip').onclick=function(){verdict='skip';show(1);};
+    $('#showOpts').onclick=function(){
+      var decoys=shuffle(CARDS.filter(function(x){return x.id!==c.id;})).slice(0,2).map(function(x){return split(x).tail;});
+      var list=shuffle([s.tail].concat(decoys)), h='';
+      list.forEach(function(t,k){h+='<button class="opt" data-k="'+k+'">'+esc(s.pre)+' <b>'+esc(t)+'</b></button>';});
+      $('#opts').innerHTML=h;$('#opts').classList.remove('hidden');$('#showOpts').classList.add('hidden');
+      document.querySelectorAll('#opts .opt').forEach(function(b,k){b.onclick=function(){verdict=(list[k]===s.tail)?'picked':'miss';show(1);};});
+    };
+    setTimeout(function(){try{$('#tail').focus();}catch(e){}},50);
+  } else if(i===1){
+    var v={exact:['That is it.','#2f8f5b'],close:['Close enough. Here it is in full.','#2f8f5b'],picked:['Right one.','#2f8f5b'],miss:['Not quite. Here it is in full, say it once.','#b45309'],skip:['Here it is. Say it once.','#8a93a0']}[verdict||'skip'];
+    card.innerHTML=topHtml(c)+headHtml(c)
+      +'<div class="verdict" style="color:'+v[1]+'">'+esc(v[0])+'</div>'
+      +'<div class="idline">'+esc(s.pre)+' <span class="tail">'+esc(s.tail)+'</span></div></div>'
+      +stmtHtml(c)+'<div class="foot"><button class="back" id="bk">&larr; Back</button><button class="next" id="nx">Why this matters &rarr;</button></div>';
+    $('#bk').onclick=function(){verdict=null;show(0);}; $('#nx').onclick=function(){show(2);};
+  } else {
+    var r=ROWS[c.row]||{};
+    card.innerHTML=topHtml(c)+headHtml(c)
+      +'<div class="idline"><span class="tail">'+esc(s.line)+'</span></div></div>'
+      +'<div class="why">'+(r.insight?'<h4>Insight</h4><p>'+esc(r.insight)+'</p>':'')+(r.outcome?'<h4>Outcome</h4><p class="big">'+esc(r.outcome)+'</p>':'')+'</div>'
+      +stmtHtml(c)
+      +'<div class="srcline">Identity line and habit: <a href="habit-worksheets.html">Habit Worksheets</a>, row '+c.row+'.'+(c.qu?' Quote: <a href="'+esc(c.qu)+'">'+esc(c.qs)+'</a>.':' Quote: '+esc(c.qs)+'.')+'</div>'
+      +'<div class="foot"><button class="back" id="bk">&larr; Back</button><label>Minutes <input class="minin" id="mins" type="number" min="1" max="180" inputmode="numeric" placeholder="auto"></label><button class="next" id="btnNext">Done &check;</button><span class="mintotal hidden" id="minTotal"></span></div>';
+    $('#bk').onclick=function(){show(1);}; $('#btnNext').onclick=finish;
+  }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ---- the deck: one card a day, every card once, then round again ---- */
+async function loadRows(){
+  if(!sb) return;
+  var ids=CARDS.map(function(c){return c.row;});
+  var r=await sb.from('worksheet_rows').select('id,habit,identity,insight,outcome').in('id',ids);
+  (r.data||[]).forEach(function(x){ROWS[x.id]=x;});
+}
+async function loadDeck(){
+  var t=todayKey();
+  var r=await sb.from('deck_progress').select('tile_key,served_on').eq('deck',DECK);
+  SERVED={};(r.data||[]).forEach(function(x){SERVED[x.tile_key]=x.served_on;});
+  var today=-1;for(var i=0;i<CARDS.length;i++) if(SERVED[CARDS[i].id]===t){today=i;break;}
+  if(today<0){
+    for(var j=0;j<CARDS.length;j++) if(!SERVED[CARDS[j].id]){today=j;break;}
+    if(today<0){ /* every card has been dealt once: start the next round */
+      var rs=await sb.rpc('deck_reset',{p_deck:DECK}); if(!rs.error){SERVED={};today=0;$('#lockline').textContent='Every belief has had its day. Starting the next round.';}
+    }
+    if(today>=0){var ins=await sb.from('deck_progress').upsert([{deck:DECK,tile_key:CARDS[today].id,served_on:t}],{onConflict:'deck,tile_key'});if(!ins.error)SERVED[CARDS[today].id]=t;}
+  }
+  CUR=today<0?0:today;
+}
+async function loadHabit(){
+  var r=await sb.from('todos').select('id,task,done,actual_minutes,for_date').eq('is_habit',true).eq('task',HABIT).order('for_date',{ascending:false}).limit(1);
+  habitRow=(r.data&&r.data[0])||null;
+}
+async function ensureRow(){
+  if(habitRow)return habitRow;
+  var ins=await sb.from('todos').insert({
+    task:HABIT, section:'Core To-Dos', subsection:'HABIT BANDIT', category:'HABIT BANDIT',
+    is_habit:true, bucket:'today', est_minutes:5, position:21.5,
+    for_date:todayKey(), done:false, status:'todo'
+  }).select().single();
+  if(ins.error){toast('Could not create the habit row: '+ins.error.message);return null;}
+  habitRow=ins.data;return habitRow;
+}
+async function finish(){
+  if(!sb||!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
+  if(window.__cvFin)return;
+  if(__cueAskIfIdle())return;
+  clearInterval(__cueTickId);
+  var el=$('#mins'),typed=(el&&el.value.trim()!=='')?parseInt(el.value,10):NaN;
+  var totMin=(typed>0&&typed<=180)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(el){el.value=totMin;el.disabled=true;}
+  var totEl=$('#minTotal');if(totEl){totEl.textContent='Timer total: '+totMin+' min';totEl.classList.remove('hidden');}
+  var nx=$('#btnNext');if(nx)nx.disabled=true;
+  var row=await ensureRow();if(!row)return;
+  var now=new Date().toISOString(),today=todayKey();
+  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:totMin,for_date:today,updated_at:now}).eq('id',row.id);
+  if(res.error){toast('Did not save: '+res.error.message);return;}
+  habitRow.done=true;habitRow.for_date=today;
+  toast('Repeat After Me → wheel ✓, '+totMin+' min');
+  window.__cvFin=1;if(window.CueVisits){CueVisits.finish({sb:sb,card:'repeat',habit:HABIT,minutes:totMin,url:'habit-modules.html?done=repeat'});}else{setTimeout(function(){location.href='habit-modules.html?done=repeat';},3000);}
+}
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&e.target.id==='mins'){e.preventDefault();finish();}});
+
+async function boot2(){ await loadRows(); await loadDeck(); await loadHabit(); verdict=null; show(0); }
+async function signIn(){
+  var email=$('#email').value.trim(),pass=$('#pass').value;
+  var r=await sb.auth.signInWithPassword({email:email,password:pass});
+  if(r.error){$('#gateErr').textContent=r.error.message;return;}
+  $('#gate').classList.add('hidden');$('#stage').classList.remove('hidden');
+  signedIn=true;await boot2();
+}
+function freeMode(msg){ FREE=true;SERVED={};$('#gate').classList.add('hidden');$('#stage').classList.remove('hidden'); CUR=Math.floor(Math.random()*CARDS.length); verdict=null; show(0); if(msg)$('#lockline').textContent=msg; }
+async function boot(){
+  card=$('#card');
+  var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
+  $('#stamp').textContent='Repeat After Me '+VER+' · '+CARDS.length+' beliefs, read live from the Habit Worksheets · as of '+f+' · all times EST';
+  if(!sb){freeMode('Could not reach the database. Browsing the cards, nothing recorded. Reload to try again.');return;}
+  var s=await sb.auth.getSession();
+  if(s.data.session){signedIn=true;$('#gate').classList.add('hidden');$('#stage').classList.remove('hidden');await boot2();}
+  else{$('#stage').classList.add('hidden');$('#gate').classList.remove('hidden');}
+}
+boot();
+</script>
+<script src="cue-fav.js"></script>
+<script>CueFav.mount({module:"repeat-after-me",label:"Repeat After Me",hideInfo:function(){return {error:"This card is dealt once a day, so it cannot be hidden."};},current:function(){var c=(typeof CARDS!=="undefined"&&CUR>=0)?CARDS[CUR]:null;if(!c)return null;var line=(typeof lineFor==="function")?lineFor(c):c.fb;return {key:c.id,title:line,body:"“"+c.q+"” — "+c.qs+(c.st?"\n"+c.st:""),type:"card",url:null};}});</script>
+<script src="cue-visits.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>
