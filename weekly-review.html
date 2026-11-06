@@ -58,6 +58,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 .weeklabel{font-size:12.5px;font-weight:700;color:var(--muted);min-width:150px;text-align:center}
 .btn{border:1px solid #cfd3d9;background:#fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#333;text-decoration:none}
 /* v6.27, Nov 4, 2026, Scott: Nested Boxes tab wears the same colours as Checkerboard (soft section tints, Amazon apricot, Project YOU pink, dark text). */
+/* v6.29, Nov 6, 2026, Scott: the two Amazon boxes on the Scoreboard (Checkerboard and Nested Boxes) show a rolling-wave tide whose height is the share of Amazon time (Working at Amazon vs In meetings), with the percent in Lexend at 70% opacity. Labels renamed Working at Amazon and In meetings. */
 /* v6.19, Oct 25, 2026, Scott: Amazon orange is Apricot, nudged a bit more orange (#F1BB7E). Amazon work and In meetings are now the same colour; the At my desk frame is a lighter tint of it. */
 /* v6.18, Oct 25, 2026, Scott: Scoreboard Checkerboard always puts Amazon (At my desk, with Amazon work first, then In meetings) in the upper left corner whatever its size, and Amazon boxes are pale orange from the Amazon brand orange. */
 /* v6.17, Oct 25, 2026, Scott: the Time Bandit Scoreboard has its own week arrows (top right) so you can step back and compare this week with earlier weeks. The rest of the page stays on its own week. */
@@ -1185,7 +1186,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
 /* v6.07, Oct 24, 2026, Scott: the Next arrow now goes up to 4 weeks past this week, for planning Flow Time. Future weeks wear a gold planning strip, the history cards fade, Flow Time, meet ups and the trip banner stay bright. Planned time never counts. */
 /* v6.08, Oct 24, 2026, Scott: on departure day the GO box on the trip banner is green, not orange (orange stays for 1 to 4 days to go). */
 /* v6.09, Oct 24, 2026, Scott: the dashboard also refreshes itself when he switches back to the tab, if it has been more than 2 minutes since the last refresh. Same refresh as the Sleep Synopsis button. */
-const VERSION='v6.28';
+const VERSION='v6.29';
 (function(){ /* v6.05: Sleep Synopsis refresh button. Icon choice: A circular arrow, B two chasing arrows, C cloud with down arrow. */
   const SLP_REFRESH_ICON='A';
   const ICONS_R={
@@ -5254,7 +5255,7 @@ window.__TB_CSS_Y="\n/* ---------- Cool Mist (pale theme) v1, added in dashboard
 })();
 </script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Lexend:wght@400&display=swap" rel="stylesheet">
 <style>
 #whCard .whbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between}
 #whCard .whtog{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
@@ -5321,6 +5322,25 @@ function whSecOf(r,parent){var k=whKey((parent||r).id);if(WH_SEC[k])return WH_SE
   if(/work|meeting|desk|project/.test(t))return 'Sense of Purpose';if(/home|commute|house/.test(t))return 'Environmental Health';return 'Not sure yet';}
 function whFh(n){return (Math.round(n*10)/10).toFixed(1);}
 function whEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+var WH_NAME={d_amz:'Working at Amazon',meet:'In meetings'};
+function whNm(id,l){return WH_NAME[whKey(id)]||l;}
+var WH_PCT=null,WH_WID=0;
+function whAmzPct(tree){var a=0,m=0;tree.forEach(function(n){(n.kids||[n]).forEach(function(k){var q=whKey(k.id);if(q==='d_amz')a+=k.v;else if(q==='meet')m+=k.v;});});
+  if(a+m<=0)return null;var w=Math.round(a/(a+m)*100);return {d_amz:w,meet:100-w};}
+/* rolling-wave tide on the two Amazon boxes. Height = share of Amazon time; percent in Lexend at 70%. */
+function whWave(x,y,w,h,n){
+  var p=WH_PCT&&WH_PCT[whKey(n.id)];if(p==null||w<40||h<30)return '';
+  var th=h*p/100,ty=y+h-th,a=Math.min(5,Math.max(2,h*.03)),segs=Math.max(2,Math.round(w/50)),sw=w/segs,id='whwv'+(WH_WID++);
+  var wavePath=function(x0,base,amp,ext){var d='M'+(x0-ext).toFixed(1)+' '+base.toFixed(1),n2=segs+Math.ceil(ext*2/sw)+1;
+    d+=' Q'+(x0-ext+sw/2).toFixed(1)+' '+(base-amp*2).toFixed(1)+' '+(x0-ext+sw).toFixed(1)+' '+base.toFixed(1);
+    for(var i=2;i<=n2;i++)d+=' T'+(x0-ext+sw*i).toFixed(1)+' '+base.toFixed(1);
+    return d+' V'+(y+h).toFixed(1)+' H'+(x0-ext).toFixed(1)+' Z';};
+  var calm=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var o='<clipPath id="'+id+'"><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'"/></clipPath><g clip-path="url(#'+id+')" pointer-events="none">';
+  o+='<path d="'+wavePath(x,ty-a*.4,a,sw)+'" fill="rgba(31,42,68,.07)">'+(calm?'':'<animateTransform attributeName="transform" type="translate" values="-'+(sw*.12).toFixed(1)+' 0;'+(sw*.12).toFixed(1)+' 0;-'+(sw*.12).toFixed(1)+' 0" dur="9s" repeatCount="indefinite" calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" keyTimes="0;.5;1"/>')+'</path>';
+  o+='<path d="'+wavePath(x,ty,a,0)+'" fill="rgba(31,42,68,.12)"/>';
+  if(w>=64&&h>=56)o+='<text x="'+(x+9)+'" y="'+(y+h-9)+'" font-size="14" fill="#1f2a44" opacity=".7" style="font-family:\'Lexend\',Arial,sans-serif;font-weight:400;font-variant-numeric:tabular-nums">'+p+'%</text>';
+  return o+'</g>';}
 function whTree(){
   var rows=WHC.rows.filter(function(r){return r.zone==='chart';});
   var tops=rows.filter(function(r){return !r.parent_id;}).sort(function(a,b){return a.sort-b.sort;});
@@ -5328,9 +5348,9 @@ function whTree(){
   tops.forEach(function(t){
     var kids=rows.filter(function(r){return r.parent_id===t.id;}).sort(function(a,b){return a.sort-b.sort;}).filter(function(k){return +k.hours>0;});
     var sec=whSecOf(t);
-    if(kids.length){var n={id:t.id,label:t.label,sec:sec,kids:kids.map(function(k){return {id:k.id,label:k.label,h:+k.hours,v:+k.hours,sec:sec,conf:k.confidence,note:k.source_note,parent:t.label};})};
+    if(kids.length){var n={id:t.id,label:t.label,sec:sec,kids:kids.map(function(k){return {id:k.id,label:whNm(k.id,k.label),h:+k.hours,v:+k.hours,sec:sec,conf:k.confidence,note:k.source_note,parent:t.label};})};
       n.v=n.kids.reduce(function(a,k){return a+k.v;},0);if(n.v>0)out.push(n);}
-    else if(+t.hours>0){out.push({id:t.id,label:t.label,h:+t.hours,v:+t.hours,sec:sec,conf:t.confidence,note:t.source_note});}
+    else if(+t.hours>0){out.push({id:t.id,label:whNm(t.id,t.label),h:+t.hours,v:+t.hours,sec:sec,conf:t.confidence,note:t.source_note});}
   });
   return out;
 }
@@ -5395,6 +5415,7 @@ function whDraw(){
   var W=Math.max(300,Math.round(host.clientWidth||host.parentNode.clientWidth||900));
   var H=W<560?Math.round(W*1.5):Math.round(W*0.56);
   var top=whSquarify(tree,0,0,W,H,WHC.view==='nest'?['desk','meet']:null),total=tree.reduce(function(a,n){return a+n.v;},0);
+  WH_PCT=whAmzPct(tree);WH_WID=0;
   var s='<svg id="whSvg" viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Time Bandit Scoreboard, a proportional area chart of waking hours">';
   if(WHC.view==='pics'||WHC.view==='opt1'){
     s+='<defs>';var leaves=[];
@@ -5429,8 +5450,8 @@ function whDraw(){
         if(head)s+='<text x="'+(r.x+9)+'" y="'+(r.y+16)+'" font-size="13" font-weight="700" fill="#1f2a44">'+whEsc(n.label)+' &#183; '+whFh(n.v)+' h</text>';
         s+='</g>';
         whSquarify(n.kids,r.x+4,r.y+4+head,Math.max(r.w-8,1),Math.max(r.h-8-head,1)).forEach(function(k){
-          s+='<g class="whbox"'+whTipAttr(k.n,total)+'><rect x="'+k.x+'" y="'+k.y+'" width="'+k.w+'" height="'+k.h+'" fill="'+(whKey(k.n.id)==='d_py'?'#e8a0b8':((whKey(k.n.id)==='d_amz'||whKey(k.n.id)==='meet')?WH_AMZ:whTint(c,.3)))+'" stroke="#f7f9fb" stroke-width="1.5"/></g>'+lab3(k.x,k.y,k.w,k.h,k.n,12);});
-      }else{s+='<g class="whbox"'+whTipAttr(n,total)+'><rect x="'+(r.x+1)+'" y="'+(r.y+1)+'" width="'+(r.w-2)+'" height="'+(r.h-2)+'" fill="'+(whKey(n.id)==='d_py'?'#e8a0b8':((whKey(n.id)==='d_amz'||whKey(n.id)==='meet')?WH_AMZ:whTint(c,.55)))+'" stroke="#f7f9fb" stroke-width="2"/></g>'+lab3(r.x+1,r.y+1,r.w-2,r.h-2,n,17);}
+          s+='<g class="whbox"'+whTipAttr(k.n,total)+'><rect x="'+k.x+'" y="'+k.y+'" width="'+k.w+'" height="'+k.h+'" fill="'+(whKey(k.n.id)==='d_py'?'#e8a0b8':((whKey(k.n.id)==='d_amz'||whKey(k.n.id)==='meet')?WH_AMZ:whTint(c,.3)))+'" stroke="#f7f9fb" stroke-width="1.5"/></g>'+whWave(k.x,k.y,k.w,k.h,k.n)+lab3(k.x,k.y,k.w,k.h,k.n,12);});
+      }else{s+='<g class="whbox"'+whTipAttr(n,total)+'><rect x="'+(r.x+1)+'" y="'+(r.y+1)+'" width="'+(r.w-2)+'" height="'+(r.h-2)+'" fill="'+(whKey(n.id)==='d_py'?'#e8a0b8':((whKey(n.id)==='d_amz'||whKey(n.id)==='meet')?WH_AMZ:whTint(c,.55)))+'" stroke="#f7f9fb" stroke-width="2"/></g>'+whWave(r.x+1,r.y+1,r.w-2,r.h-2,n)+lab3(r.x+1,r.y+1,r.w-2,r.h-2,n,17);}
     });
   }else{
     /* v6.14, Oct 24, 2026, Scott picked Mock B: ink on soft tint. One icon family: navy, same corner, four sizes. Project YOU keeps the multicolour wheel. Names show only when they fit whole; tiny boxes name themselves on hover. */
@@ -5446,7 +5467,7 @@ function whDraw(){
       var isPy=whKey(n.id)==='d_py';
       var amz=(whKey(n.id)==='d_amz'||whKey(n.id)==='meet');
       var fillc=isPy?'#e8a0b8':(amz?WH_AMZ:whTint(c,nested?.3:.55));
-      var out='<g class="whbox"'+whTipAttr(n,total)+'><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+fillc+'" stroke="#f7f9fb" stroke-width="1.5"/>';
+      var out='<g class="whbox"'+whTipAttr(n,total)+'><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+fillc+'" stroke="#f7f9fb" stroke-width="1.5"/>'+whWave(x,y,w,h,n);
       var small=Math.min(w,h)<34,t=tierOf(w,h);
       var ns=small?Math.max(10,Math.min(13,Math.min(w,h)*.5)):Math.max(10,Math.min(44,Math.min(w*.3,h*.38)));
       if(w>=20&&h>=14)out+='<text x="'+(x+7)+'" y="'+(y+6+ns*.82)+'" font-size="'+ns.toFixed(1)+'" font-weight="800" fill="'+INK+'" style="'+F4+';letter-spacing:-.02em">'+whFh(n.v)+'</text>';
