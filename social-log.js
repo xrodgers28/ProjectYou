@@ -94,6 +94,18 @@
    - A Social Interactions link sits under Log It, opening connections.html in
      a new tab.
 
+   v2.9, Oct 18 2026, Scott's ask: Therapist (Is) and Health Professional (Group) are
+     permanent pills, and every pill added with + is now kept automatically (the
+     "Keep it / Just this once" question is gone). Remove one with the pencil.
+
+   v2.8, Oct 13 2026, Scott's ask: a TBD pill on the When row for "I do not know the
+     meeting date yet", and a + on the end of the When row like the other rows.
+   - TBD saves as a plan on the Social Well-Being board with NO date (for_date empty).
+     It shows under Coming up as "no date" and can be marked It happened later.
+     Length, Photo and Felt hide for TBD, same as any plan.
+   - The + on When opens the date picker. The Pick date pill is gone (Scott, Oct 13):
+     once a date is picked, it shows as its own selected pill before TBD.
+
    v2.7, Oct 9 2026, copy only: the note box now says "Add a quick note about the
      convo" and the tick-box says "Add note to their profile". Nothing else changed.
 
@@ -111,14 +123,14 @@ window.PYSocial = (function () {
      list cannot be read, so the form still works rather than coming up empty. */
   var DEFAULTS = {
     is:     [['family','Family'],['friend','Friend'],['colleague','Colleague'],['ex-colleague','Ex-Colleague'],
-             ['industry','Industry'],['group','Group'],['barista-style','Barista Style Exchange']],
+             ['industry','Industry'],['group','Group'],['barista-style','Barista Style Exchange'],['therapist','Therapist']],
     source: [['outreach','I did'],['inbound','They did']],
     what:   [['breakfast','Breakfast'],['coffee','Coffee'],['lunch','Lunch'],['dinner','Dinner'],['drinks','Drinks'],
              ['party','Party'],['get together','Get Together'],['creative event','Creative Event'],['call','Call'],
              ['text','Text'],['walk','Walk'],['meeting','Meeting'],['other','Other']],
     where:  [['Home','Home'],['Coffee shop','Coffee shop'],['Restaurant','Restaurant'],['Office','Office'],
              ['Outdoors','Outdoors'],['Event','Event'],['Phone / video','Phone / video']],
-    group:  [['my family','My Family',{color:'#bfbdfb'}],['extended family','Extended Family',{color:'#cdd4ff'}],
+    group:  [['health professional','Health Professional',{color:'#9fc5d9'}],['my family','My Family',{color:'#bfbdfb'}],['extended family','Extended Family',{color:'#cdd4ff'}],
              ['personal friend','Personal Friend',{color:'#c5ebff'}],['old greenwich','Old Greenwich',{color:'#f5e992'}],
              ['creative social','Creative Social',{color:'#eed7f0'}],['work related','Work Related',{color:'#fed8b4'}],
              ['ex work','Ex Work',{color:'#c4dfc6'}],['tribe','Tribe',{color:'#44c1ff'}],['mom','Mom',{color:'#c9d0da'}]],
@@ -320,8 +332,8 @@ window.PYSocial = (function () {
       '.pysl .sl-felt .p.on{background:#37716f;color:#fff}',
       '.pysl [data-picks="what"] .p:not(.padd):not(.ptidy):not(.rm){background:#fbe7dc;border-color:transparent;color:#2b3348}',
       '.pysl [data-picks="what"] .p.on{background:#c06a35;color:#fff}',
-      '.pysl .sl-when .p{background:#e2ecf3;border-color:transparent;color:#2b3348}',
-      '.pysl .sl-when .p.on{background:#4a7fa8;color:#fff}',
+      '.pysl .sl-when .p:not(.padd){background:#e2ecf3;border-color:transparent;color:#2b3348}',
+      '.pysl .sl-when .p.on:not(.padd){background:#4a7fa8;color:#fff}',
       '.pysl [data-picks="where"] .p:not(.padd):not(.ptidy):not(.rm){background:#e0efe6;border-color:transparent;color:#2b3348}',
       '.pysl [data-picks="where"] .p.on{background:#3f7d5c;color:#fff}',
       '.pysl .recent .p{color:var(--sl-blue)}',
@@ -384,7 +396,7 @@ window.PYSocial = (function () {
   function Form(box, o){
     this.box = box; this.o = o || {}; this.sb = this.o.sb;
     var DAY = today();
-    this.when = this.o.when || DAY;
+    this.when = this.o.when || DAY; this.tbd = false;
     var guess = this.o.title ? nameIn(this.o.title) : { person: '', others: '' };
     this.kind = kindPill(this.o.title);
     this.who0 = guess.person; this.with0 = guess.others;
@@ -396,6 +408,7 @@ window.PYSocial = (function () {
   }
   Form.prototype.isFuture = function(){
     var DAY = today();
+    if (this.tbd) return true;
     if (this.when > DAY) return true;
     if (this.when === DAY && this.o.startMin != null && !this.o.timeIsGuess && this.o.startMin > nowMin()) return true;
     return false;
@@ -561,11 +574,13 @@ window.PYSocial = (function () {
       '<div class="fld"><span class="lab">What</span><div class="picks sl-kinds" data-picks="what">' + this.picksHtml('what') +
       '</div>' + this.addHtml('what') + '</div>' +
       '<div class="fld"><span class="lab">When</span><div class="picks sl-when">' +
-        '<button type="button" class="p' + (this.when === DAY ? ' on' : '') + '" data-w="0">Today</button>' +
-        '<button type="button" class="p' + (this.when === shift(DAY,-1) ? ' on' : '') + '" data-w="-1">Yesterday</button>' +
-        '<button type="button" class="p' + (this.when === shift(DAY,1) ? ' on' : '') + '" data-w="1">Tomorrow</button>' +
-        '<button type="button" class="p' + (quick.indexOf(this.when) < 0 ? ' on' : '') + '" data-w="pick">' + (quick.indexOf(this.when) < 0 ? esc(shortD(this.when)) : 'Pick date') + '</button>' +
-        '</div><input type="date" class="sl-date" value="' + att(this.when) + '"' + (quick.indexOf(this.when) > -1 ? ' style="display:none"' : '') + '></div>' +
+        '<button type="button" class="p' + (!this.tbd && this.when === DAY ? ' on' : '') + '" data-w="0">Today</button>' +
+        '<button type="button" class="p' + (!this.tbd && this.when === shift(DAY,-1) ? ' on' : '') + '" data-w="-1">Yesterday</button>' +
+        '<button type="button" class="p' + (!this.tbd && this.when === shift(DAY,1) ? ' on' : '') + '" data-w="1">Tomorrow</button>' +
+        '<button type="button" class="p sl-dp' + (!this.tbd && quick.indexOf(this.when) < 0 ? ' on' : '') + '" data-w="pick"' + (quick.indexOf(this.when) < 0 ? '' : ' style="display:none"') + '>' + esc(shortD(this.when)) + '</button>' +
+        '<button type="button" class="p' + (this.tbd ? ' on' : '') + '" data-w="tbd" title="Meeting date not known yet">TBD</button>' +
+        '<span class="pends"><button type="button" class="p padd" data-w="pick" title="Pick another date">+</button></span>' +
+        '</div><input type="date" class="sl-date" value="' + att(this.when) + '"' + ((this.tbd || quick.indexOf(this.when) > -1) ? ' style="display:none"' : '') + '></div>' +
       /* v2.4. Length sits with the date because it is a time question. Hidden for
          something still to come: a plan writes a to-do, and this would not save. */
       '<div class="fld sl-longrow"' + (fut ? ' hidden' : '') + '><span class="lab">Length</span><div class="picks sl-long">' + this.longHtml() + '</div></div>' +
@@ -683,9 +698,9 @@ window.PYSocial = (function () {
     var who = this.$('.sl-who'), date = this.$('.sl-date');
     date.addEventListener('change', function(){
       if (!date.value) return;
-      self.when = date.value;
+      self.when = date.value; self.tbd = false;
       var ws = self.$('.sl-when'); ws.querySelectorAll('.p').forEach(function(x){ x.classList.remove('on'); });
-      var pk = ws.querySelector('[data-w="pick"]'); pk.classList.add('on'); pk.textContent = shortD(self.when);
+      var pk = ws.querySelector('.sl-dp'); pk.classList.add('on'); pk.textContent = shortD(self.when); pk.style.display = '';
       self.refreshGo();
     });
     box.addEventListener('input', function(e){
@@ -788,8 +803,13 @@ window.PYSocial = (function () {
       }
       if (b.hasAttribute('data-w')) {
         var w = b.getAttribute('data-w');
+        if (w === 'tbd') {
+          self.tbd = true; date.style.display = 'none'; var dpt = box.querySelector('.sl-dp'); if (dpt) dpt.style.display = 'none';
+          grp.querySelectorAll('.p').forEach(function(x){ x.classList.toggle('on', x === b); });
+          self.refreshGo(); return;
+        }
         if (w === 'pick') { date.style.display = ''; date.focus(); if (date.showPicker) { try { date.showPicker(); } catch (x) {} } return; }
-        self.when = shift(DAY, +w); date.value = self.when; date.style.display = 'none';
+        self.tbd = false; self.when = shift(DAY, +w); date.value = self.when; date.style.display = 'none'; var dpq = box.querySelector('.sl-dp'); if (dpq) dpq.style.display = 'none';
         grp.querySelectorAll('.p').forEach(function(x){ x.classList.toggle('on', x === b); });
         self.refreshGo(); return;
       }
@@ -833,14 +853,9 @@ window.PYSocial = (function () {
     this.repaint(field);
     if (field === 'is') this.showCarry();
     if (already) return;
-    var q = box.querySelector('.keepq[data-kq="' + field + '"]');
-    if (q) {
-      q.className = 'why keepq';
-      q.innerHTML = 'Keep <b>' + esc(label) + '</b> on this list for next time?' +
-        '<button type="button" class="yes" data-keepyes="' + att(field + '|' + value + '|' + label) + '">Keep it</button>' +
-        '<button type="button" data-keepno="' + att(field) + '">Just this once</button>';
-      q.hidden = false;
-    }
+    /* v2.9, Oct 18 2026, Scott's ask: anything added with + is kept automatically.
+       No question. The pencil's remove is how a pill goes away. */
+    this.keepPill(field + '|' + value + '|' + label);
   };
   /* Removing only switches a pill off. Anything already logged with it keeps it,
      which is why this is an update and not a delete. One Undo is held for as long
@@ -889,6 +904,7 @@ window.PYSocial = (function () {
   Form.prototype.keepPill = async function(spec){
     var p = String(spec || '').split('|'), field = p[0], value = p[1], label = p.slice(2).join('|');
     var q = this.box.querySelector('.keepq[data-kq="' + field + '"]');
+    if (q) q.hidden = false;
     var sorts = pillsFor(field).length * 10 + 10;
     try {
       /* upsert, not insert: a name he used once before and turned off should come
@@ -899,7 +915,7 @@ window.PYSocial = (function () {
                 { onConflict: 'dimension,value' });
       if (q) {
         q.className = 'why keepq ' + (r.error ? 'warn' : 'ok');
-        q.textContent = r.error ? ('That one could not be kept, so it counts for this entry only. ' + (r.error.message || '')) : 'Kept. It will be there next time.';
+        q.textContent = r.error ? ('That one could not be kept, so it counts for this entry only. ' + (r.error.message || '')) : 'Added to the list. It will be there next time.';
       }
     } catch (e) {
       if (q) { q.className = 'why keepq warn'; q.textContent = 'That one could not be kept, so it counts for this entry only.'; }
@@ -931,12 +947,12 @@ window.PYSocial = (function () {
       return;
     }
     var go = this.$('.go'); go.disabled = true; this.say('Saving...');
-    var res = { future: fut, who: who, kind: this.kind, date: this.when, title: title, where: where, todoId: null, connectionId: null, habitId: null };
+    var res = { future: fut, tbd: this.tbd, who: who, kind: this.kind, date: (this.tbd ? null : this.when), title: title, where: where, todoId: null, connectionId: null, habitId: null };
     var r;
     if (fut) {
       /* a plan is a line on the to-do board under Social Well-Being, one home for plans */
       r = await sb.from('todos').insert({ task: title, section: 'Social Well-Being', subsection: null, position: 0,
-        bucket: 'today', status: 'todo', done: false, for_date: this.when, source_project: 'social-log' }).select('id').single();
+        bucket: 'today', status: 'todo', done: false, for_date: (this.tbd ? null : this.when), source_project: 'social-log' }).select('id').single();
       if (!r.error && r.data) res.todoId = r.data.id;
     } else {
       /* v2.4. Who else was there is a column now, not a string in the note. */
@@ -975,11 +991,11 @@ window.PYSocial = (function () {
     /* v2.4. If a room was named, say how many the day counted. That number is the
        whole reason the Else row exists, so it should be visible at the save. */
     var head = 1 + othersList.length;
-    var said = fut ? ('On your board under Social Well-Being: ' + title + ', ' + shortD(this.when) + '.')
+    var said = fut ? ('On your board under Social Well-Being: ' + title + ', ' + (this.tbd ? 'date to be decided' : shortD(this.when)) + '.')
                    : ('Logged: ' + title + ', ' + shortD(this.when) + '. Social habit ticked.' +
                       (head > 1 ? ' ' + head + ' people counted for today.' : ''));
     this.kind = ''; this.place = ''; this.labels = []; this.labelsTouched = false; this.source = ''; this.who0 = ''; this.with0 = '';
-    this.mins = null; this.felt = null; this.custom = false; this.photoFile = null; this.photoUrl = '';
+    this.mins = null; this.felt = null; this.custom = false; this.photoFile = null; this.photoUrl = ''; this.tbd = false;
     this.tidy = { is:false, source:false, what:false, where:false, group:false }; this.lastRm = null;
     this.group = ''; this.circle = ''; this.groupTouched = false; this.circleTouched = false;
     this.loaded = false;
@@ -1055,5 +1071,5 @@ window.PYSocial = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.6a' };
+  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.9a' };
 })();
