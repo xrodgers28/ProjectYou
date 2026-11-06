@@ -83,6 +83,14 @@
   .card.pending .open{background:#8a95a6}
   .wait{display:inline-block; font-size:10.5px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:#8a6d1f; background:#f5ecd2; border-radius:999px; padding:3px 9px; align-self:flex-start}
 
+  .card.wide{grid-column:1/-1}
+  .gal{display:grid; gap:10px; padding:12px; background:#e9edf3}
+  .gal.g8{grid-template-columns:repeat(4,1fr)}
+  .gal.g1{grid-template-columns:1fr; justify-items:center}
+  .gal.g1 button{max-width:760px}
+  .gal button{border:0; padding:0; background:#fff; cursor:zoom-in; border-radius:8px; overflow:hidden; display:block; width:100%}
+  .gal img{width:100%; height:auto; display:block}
+  .galnote{font-size:11.5px; font-weight:800; letter-spacing:.4px; color:var(--muted); padding:8px 14px 0; background:#e9edf3}
   .lb{position:fixed; inset:0; background:rgba(15,22,38,.92); z-index:200; display:none; flex-direction:column}
   .lb.on{display:flex}
   .lbbar{display:flex; align-items:center; gap:10px; padding:10px 14px; color:#fff}
@@ -92,7 +100,7 @@
   .lbscroll{flex:1; overflow:auto; text-align:center; padding:0 10px 30px}
   .lbscroll img{max-width:100%; height:auto; border-radius:8px; background:#fff}
 
-  @media(max-width:700px){ .grid{grid-template-columns:1fr} .pagehead h1{font-size:26px} }
+  @media(max-width:700px){ .gal.g8{grid-template-columns:repeat(2,1fr)} .grid{grid-template-columns:1fr} .pagehead h1{font-size:26px} }
 </style>
 </head>
 <body>
@@ -102,7 +110,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.0</span>
+    <span class="pn-ver">v1.1</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
   <div class="stage">
@@ -128,11 +136,12 @@
   function block(cls,h,p){ return p?('<div class="blk '+cls+'"><div class="h">'+h+'</div><div class="p">'+esc(p)+'</div></div>'):''; }
   function card(it,idx){
     var pend=it.status==='pending', n=it.images&&it.images.length;
-    var pic = n
-      ? '<button class="pic" type="button" data-i="'+idx+'" aria-label="Open pictures for '+esc(it.name)+'"><img loading="lazy" src="'+esc(it.images[0])+'" alt="'+esc(it.name)+'">'+(n>1?'<span class="more">'+n+' pictures</span>':'<span class="more">Open full size</span>')+'</button>'
+    var gal = n ? ('<div class="galnote">'+(n>1?n+' PICTURES, IN ORDER. TAP ANY TO ENLARGE':'FULL POSTER. TAP TO ENLARGE')+'</div><div class="gal '+(n>1?'g8':'g1')+'">'+it.images.map(function(u,k){return '<button type="button" data-i="'+idx+'" data-k="'+k+'" aria-label="Enlarge picture '+(k+1)+' of '+esc(it.name)+'"><img loading="lazy" src="'+esc(u)+'" alt="'+esc(it.name)+' picture '+(k+1)+'"></button>';}).join('')+'</div>') : '';
+    var pic = n ? gal
+      : false ? '<button class="pic type="button" data-i="'+idx+'" aria-label="Open pictures for '+esc(it.name)+'"><img loading="lazy" src="'+esc(it.images[0])+'" alt="'+esc(it.name)+'">'+(n>1?'<span class="more">'+n+' pictures</span>':'<span class="more">Open full size</span>')+'</button>'
       : '<div class="pic blank"><span class="n">'+it.num+'</span><span class="t">'+(pend?'Waiting for details':'No picture yet')+'</span></div>';
     var title = pend ? ('#'+it.num+' · '+esc(it.kind)) : esc(it.name);
-    return '<article class="card'+(pend?' pending':'')+'" id="sp'+it.num+'">'+pic+'<div class="body">'
+    return '<article class="card'+(pend?' pending':'')+(n?' wide':'')+'" id="sp'+it.num+'">'+pic+'<div class="body">'
       +'<div class="kick">#'+it.num+' · '+esc(it.kind)+'</div>'
       +(pend?'<span class="wait">Waiting for details</span>':'<div class="nm">'+esc(it.name)+'</div>')
       +(it.creator?'<div class="by">'+(/^Not /.test(it.creator)?'Creator: '+esc(it.creator.charAt(0).toLowerCase()+it.creator.slice(1)):'By '+esc(it.creator))+'</div>':'')
@@ -149,7 +158,7 @@
     var done=ITEMS.filter(function(x){return x.status!=='pending';}).length;
     document.getElementById('count').textContent=ITEMS.length+' PROJECTS · '+done+' FILLED IN · '+(ITEMS.length-done)+' WAITING';
     document.getElementById('grid').innerHTML=ITEMS.map(card).join('');
-    Array.prototype.forEach.call(document.querySelectorAll('.pic[data-i]'),function(b){b.addEventListener('click',function(){openLB(+b.getAttribute('data-i'),0);});});
+    Array.prototype.forEach.call(document.querySelectorAll('.pic[data-i],.gal button[data-i]'),function(b){b.addEventListener('click',function(){openLB(+b.getAttribute('data-i'),+(b.getAttribute('data-k')||0));});});
   }
   function showLB(){
     var it=LB.it, n=it.images.length;
