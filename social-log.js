@@ -309,7 +309,8 @@ window.PYSocial = (function () {
          its own teal and runs 1 to 7 left to right, so the row reads as a scale. */
       '.pysl .sl-long .p{background:#e2ecf3;border-color:transparent;color:#2b3348}',
       '.pysl .sl-long .p.on{background:#4a7fa8;color:#fff}',
-      '.pysl .sl-long .sl-cust{width:84px;padding:7px 10px;border:1px solid #c2d3e0;border-radius:999px;font:inherit;font-size:14px;color:#2b3348;background:#fff}',
+      '.pysl .sl-long .sl-hm{display:inline-flex;gap:6px;align-items:center}',
+      '.pysl .sl-long .sl-cust{width:78px;padding:7px 10px;border:1px solid #c2d3e0;border-radius:999px;font:inherit;font-size:14px;color:#2b3348;background:#fff}',
       '.pysl .sl-photo .sl-shot{display:flex;align-items:center;gap:10px;margin-top:8px}',
       '.pysl .sl-photo .sl-shot img{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid #d6dbe3}',
       '.pysl .sl-photo .p.on{background:#4a7fa8;color:#fff}',
@@ -462,7 +463,11 @@ window.PYSocial = (function () {
       return '<button type="button" class="p' + (self.mins === x[0] ? ' on' : '') + '" data-long="' + x[0] + '">' + esc(x[1]) + '</button>';
     }).join('') +
       '<button type="button" class="p' + (isCust ? ' on' : '') + '" data-longcustom="1">Custom</button>' +
-      (isCust ? '<input type="number" class="sl-cust" inputmode="numeric" min="1" max="1440" placeholder="Minutes" value="' + (this.mins && !fixed ? this.mins : '') + '" aria-label="Minutes">' : '');
+      (isCust ? (function(){
+        var cm = (self.mins && !fixed) ? self.mins : 0, ch = Math.floor(cm / 60), cn = cm % 60;
+        return '<span class="sl-hm"><input type="number" class="sl-cust sl-cust-h" inputmode="numeric" min="0" max="24" placeholder="Hours" value="' + (cm ? ch : '') + '" aria-label="Hours">' +
+          '<input type="number" class="sl-cust sl-cust-m" inputmode="numeric" min="0" max="59" placeholder="Mins" value="' + (cm ? cn : '') + '" aria-label="Minutes"></span>';
+      })() : '');
   };
   /* v2.6. Photo. No capture attribute on purpose: on the iPhone that is what
      makes it offer the Photo Library as well as the camera. */
@@ -685,7 +690,10 @@ window.PYSocial = (function () {
     });
     box.addEventListener('input', function(e){
       if (e.target && e.target.classList && e.target.classList.contains('sl-cust')) {
-        var n = parseInt(e.target.value, 10);
+        /* Hours and minutes boxes: the saved length is always total minutes. */
+        var hb = self.box.querySelector('.sl-cust-h'), mb = self.box.querySelector('.sl-cust-m');
+        var hh = Math.max(0, parseInt(hb && hb.value, 10) || 0), mm = Math.max(0, parseInt(mb && mb.value, 10) || 0);
+        var n = hh * 60 + mm;
         self.mins = (n > 0 && n <= 1440) ? n : null;
       }
     });
@@ -755,7 +763,7 @@ window.PYSocial = (function () {
         if (self.custom || (self.mins && !fx)) { self.custom = false; self.mins = null; }
         else { self.custom = true; self.mins = null; }
         self.repaint('long');
-        var ci = self.box.querySelector('.sl-cust'); if (ci) ci.focus();
+        var ci = self.box.querySelector('.sl-cust-h'); if (ci) ci.focus();
         return;
       }
       if (b.hasAttribute('data-photo-pick')) {
@@ -1047,5 +1055,5 @@ window.PYSocial = (function () {
     return { close: close, form: f };
   }
 
-  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.6' };
+  return { mount: mount, open: open, tickHabit: tickHabit, nameIn: nameIn, kindIn: kindIn, version: '2.6a' };
 })();
