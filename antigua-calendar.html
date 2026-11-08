@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Antigua Trip · Calendar</title>
+<style>
+:root{
+  --ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--accent:#3f6f8f;
+  --border:#e3e7ee;--bg:#eef1f6;--card:#ffffff;
+  --flight:#3f6f8f;--drive:#8a6d3b;--buffer:#9aa6b4;--lodging:#2F8A5B;
+  --activity:#c06a3a;--meal:#9c5fa8;--other:#5b6472;
+  --h:44px; /* px per hour */
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:13px}
+.top{padding:18px 20px 10px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.top h1{font-size:20px;margin:0;font-weight:700}
+.ver{font-family:ui-monospace,monospace;font-size:11px;color:var(--faint)}
+.countdown{font-family:ui-monospace,monospace;font-size:12px;background:var(--card);border:1px solid var(--border);border-radius:99px;padding:3px 10px;color:var(--accent);font-weight:600}
+.statuspill{font-size:11px;color:var(--muted)}
+.wrap{overflow-x:auto;padding:0 10px 30px}
+.grid{display:grid;grid-template-columns:52px repeat(6,1fr) 52px;min-width:980px;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.dayhead{border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:8px 6px;text-align:center;background:#f7f9fc}
+.dayhead .dow{font-weight:700;font-size:13px}
+.dayhead .status{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.dayhead .wx{margin-top:4px;font-size:11px;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:4px}
+.dayhead .wx svg{width:14px;height:14px}
+.cornercell{border-bottom:1px solid var(--border)}
+.gutter{position:relative;border-left:1px solid var(--border)}
+.gutter .lab{position:absolute;right:4px;transform:translateY(-50%);font-size:10px;color:var(--faint);font-family:ui-monospace,monospace}
+.gutter.right .lab{right:auto;left:4px}
+.col{position:relative;border-left:1px solid var(--border);background:#fff}
+.col.today{background:#f3f8fc}
+.hline{position:absolute;left:0;right:0;border-top:1px solid #eef0f3}
+.hline.half{border-top:1px dashed #f3f4f6}
+.sunset{position:absolute;left:4px;right:4px;display:flex;align-items:center;gap:4px;font-size:10px;color:#c9930f;pointer-events:none}
+.block{position:absolute;left:3px;right:3px;border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.3;overflow:hidden;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.08);color:#fff}
+.block .ti{font-weight:700;display:flex;align-items:center;gap:4px}
+.block .ti svg{width:11px;height:11px;flex:none}
+.block .loc{opacity:.9;font-size:10px;margin-top:1px}
+.block.suggested,.block.parsed{border:1.5px dashed rgba(255,255,255,.85);opacity:.92}
+.block .grip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:ns-resize}
+.block .fam{position:absolute;top:3px;right:4px;display:flex;gap:2px}
+.block .fam span{width:12px;height:12px;border-radius:99px;background:rgba(255,255,255,.9);color:#000;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.foot{display:grid;grid-template-columns:52px repeat(6,1fr) 52px;border-top:1px solid var(--border);background:#f7f9fc}
+.foot .cell{padding:8px 6px;text-align:center;font-size:10.5px;color:var(--muted);border-left:1px solid var(--border)}
+.foot .cell.stay{color:var(--lodging);font-weight:600}
+.foot .cell svg{width:13px;height:13px;vertical-align:-2px;margin-right:3px}
+.hint{padding:0 20px 14px;font-size:12px;color:var(--muted)}
+
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(20,28,40,.4);display:none;align-items:center;justify-content:center;z-index:50}
+.ov.show{display:flex}
+.modal{background:#fff;border-radius:12px;padding:20px;width:360px;max-width:92vw;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.modal h3{margin:0 0 12px;font-size:15px}
+.modal label{display:block;font-size:11px;color:var(--muted);margin:10px 0 3px}
+.modal input,.modal select,.modal textarea{width:100%;border:1px solid var(--border);border-radius:7px;padding:7px 8px;font-size:13px;font-family:inherit}
+.modal textarea{min-height:50px;resize:vertical}
+.row2{display:flex;gap:8px}
+.row2>div{flex:1}
+.famrow{display:flex;gap:6px;margin-top:4px}
+.famchip{border:1px solid var(--border);border-radius:99px;padding:4px 10px;font-size:12px;cursor:pointer;background:#f7f9fc}
+.famchip.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btns{display:flex;justify-content:space-between;margin-top:16px}
+.btn{border:none;border-radius:7px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+.btn.save{background:var(--accent);color:#fff}
+.btn.del{background:#fde8e5;color:#b0392c}
+.btn.cancel{background:#f1f3f6;color:var(--ink)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <h1>Antigua</h1>
+  <span class="ver">v1.0 · Nov 8, 2026</span>
+  <span class="countdown" id="countdown">—</span>
+  <span class="statuspill" id="status">Loading…</span>
+</div>
+<div class="hint">Drag a block to move it, drag the bottom edge to resize, tap a block to edit, tap empty space to add something.</div>
+
+<div class="wrap">
+  <div class="grid" id="grid"></div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<div class="ov" id="ov">
+  <div class="modal">
+    <h3 id="mTitle">Edit</h3>
+    <label>What is it</label>
+    <input id="fTitle" placeholder="e.g. Snorkeling at Pillars">
+    <div class="row2">
+      <div><label>Day</label><select id="fDay"></select></div>
+      <div><label>Kind</label>
+        <select id="fKind">
+          <option value="activity">Activity</option>
+          <option value="meal">Meal</option>
+          <option value="flight">Flight</option>
+          <option value="drive">Drive</option>
+          <option value="buffer">Buffer</option>
+          <option value="lodging">Lodging</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div><label>Start</label><input id="fStart" type="time"></div>
+      <div><label>End</label><input id="fEnd" type="time"></div>
+    </div>
+    <label>Where</label>
+    <input id="fLoc" placeholder="optional">
+    <label>Note</label>
+    <textarea id="fNote" placeholder="optional"></textarea>
+    <label>Who</label>
+    <div class="famrow" id="fFam"></div>
+    <div class="btns">
+      <button class="btn del" id="bDel">Delete</button>
+      <div>
+        <button class="btn cancel" id="bCancel">Cancel</button>
+        <button class="btn save" id="bSave">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function(){
+'use strict';
+var SUPA='https://arnjntspmrhigodlssbn.supabase.co';
+var ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+var sb=window.supabase.createClient(SUPA,ANON);
+
+var START_HOUR=6, END_HOUR=23, PXH=44;
+var DAYS=['2026-12-22','2026-12-23','2026-12-24','2026-12-25','2026-12-26','2026-12-27'];
+var DOW=['Tue','Wed','Thu','Fri','Sat','Sun'];
+var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var KIND_COLOR={flight:'var(--flight)',drive:'var(--drive)',buffer:'var(--buffer)',lodging:'var(--lodging)',activity:'var(--activity)',meal:'var(--meal)',other:'var(--other)'};
+var ICONS={
+  flight:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2.5 1.5V22l4-1 4 1v-1.5L13 19v-5.5z"/></svg>',
+  drive:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 17h14v-5l-2-5H7L5 12v5zm2.5-1a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm9 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM7 7h10l1.5 4h-13z"/></svg>',
+  buffer:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 2h12v2l-5 6 5 6v2H6v-2l5-6-5-6zm2 2.5L11.5 9h1L16 4.5zM8 19.5h8L12.5 15h-1z"/></svg>',
+  lodging:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 11h3v9h6v-6h2v6h6v-9h3z"/></svg>',
+  activity:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/><g stroke="currentColor" stroke-width="2"><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></g></svg>',
+  meal:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 2v8a2 2 0 0 1-2 2H5v10H3V2h1v8h1V2h1v8h1V2zm9 0c-2 0-4 2.5-4 6s1 5 2 6v8h2V2z"/></svg>',
+  other:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/></svg>',
+  sun:'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/><g stroke="currentColor" stroke-width="2"><path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></g></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 3 2 11h3v9h6v-6h2v6h6v-9h3z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>'
+};
+
+var WX_ICON={clear:'☀️',cloud:'⛅',rain:'🌧️',storm:'⛈️'};
+function wxCode(code){
+  if(code===0||code===1) return 'clear';
+  if(code>=2&&code<=48) return 'cloud';
+  if(code>=51&&code<=67) return 'rain';
+  if(code>=80&&code<=99) return 'storm';
+  return 'cloud';
+}
+
+var trip=null, people=[], events=[], weather={};
+var dragState=null, newBlockState=null;
+
+function qs(id){return document.getElementById(id);}
+function pad(n){return (n<10?'0':'')+n;}
+function timeToMin(t){ if(!t) return null; var p=t.split(':'); return (+p[0])*60+(+p[1]); }
+function minToTime(m){ m=((m%1440)+1440)%1440; return pad(Math.floor(m/60))+':'+pad(m%60); }
+function minToY(m){ return (m - START_HOUR*60) / 60 * PXH; }
+function yToMin(y){ var m = Math.round((y / PXH * 60) / 15) * 15 + START_HOUR*60; return m; }
+
+async function load(){
+  var r = await sb.from('trips').select('*').eq('slug','antigua-2026').single();
+  trip = r.data;
+  var pr = await sb.from('trip_people').select('*').eq('trip_id',trip.id).order('sort');
+  people = pr.data||[];
+  var er = await sb.from('trip_events').select('*, trip_event_people(person_id)').eq('trip_id',trip.id).eq('hidden',false);
+  events = er.data||[];
+  qs('status').textContent = events.length+' things on the calendar · tap Save after any change';
+  var today=new Date();
+  var startD=new Date(trip.start_date+'T00:00:00');
+  var daysOut=Math.round((startD-today)/86400000);
+  qs('countdown').textContent = daysOut>0 ? ('T-'+daysOut+' days') : (daysOut===0?'Today!':('Day '+(1-daysOut)+' of trip'));
+  await loadWeather();
+  render();
+}
+
+async function loadWeather(){
+  var today=new Date();
+  for (var i=0;i<DAYS.length;i++){
+    var d=DAYS[i];
+    var daysOut = Math.round((new Date(d+'T00:00:00')-today)/86400000);
+    var cached = await sb.from('trip_weather').select('*').eq('trip_id',trip.id).eq('date',d).maybeSingle();
+    if (cached.data && (cached.data.source==='forecast' ? daysOut<=16 : true) ){
+      // use cached unless it's a historical row but we're now close enough for a real forecast
+      if(!(cached.data.source==='historical' && daysOut<=16)){
+        weather[d]=cached.data; continue;
+      }
+    }
+    try{
+      var w;
+      if (daysOut<=16 && daysOut>=-1){
+        var fr = await fetch('https://api.open-meteo.com/v1/forecast?latitude=17.02&longitude=-61.77&daily=weathercode,temperature_2m_max,temperature_2m_min,sunset&timezone=America/Antigua&start_date='+d+'&end_date='+d);
+        var fj = await fr.json();
+        w={source:'forecast',hi_f:fj.daily.temperature_2m_max[0],lo_f:fj.daily.temperature_2m_min[0],icon:wxCode(fj.daily.weathercode[0]),sunset:fj.daily.sunset[0]};
+      } else {
+        // historical average across the last 3 years for this calendar date
+        var hi=[],lo=[],codes=[],sunsets=[];
+        for(var y=2023;y<=2025;y++){
+          var hd=d.replace('2026',y);
+          var hr = await fetch('https://archive-api.open-meteo.com/v1/archive?latitude=17.02&longitude=-61.77&daily=weathercode,temperature_2m_max,temperature_2m_min,sunset&timezone=America/Antigua&start_date='+hd+'&end_date='+hd+'&temperature_unit=fahrenheit');
+          var hj = await hr.json();
+          if(hj.daily && hj.daily.temperature_2m_max && hj.daily.temperature_2m_max[0]!=null){
+            hi.push(hj.daily.temperature_2m_max[0]); lo.push(hj.daily.temperature_2m_min[0]);
+            codes.push(hj.daily.weathercode[0]); sunsets.push(hj.daily.sunset[0]);
+          }
+        }
+        var avg=function(a){return a.length?Math.round(a.reduce(function(s,x){return s+x;},0)/a.length):null;};
+        w={source:'historical',hi_f:avg(hi),lo_f:avg(lo),icon:wxCode(codes[codes.length-1]||1),sunset:sunsets[sunsets.length-1]||null};
+      }
+      weather[d]=w;
+      await sb.from('trip_weather').upsert({trip_id:trip.id,date:d,source:w.source,hi_f:w.hi_f,lo_f:w.lo_f,icon:w.icon,fetched_at:new Date().toISOString()},{onConflict:'trip_id,date'});
+    }catch(e){ weather[d]={source:'none'}; }
+  }
+}
+
+function dayLabel(d){
+  var idx=DAYS.indexOf(d);
+  var dt=new Date(d+'T00:00:00');
+  return DOW[idx]+' '+MON[dt.getMonth()]+' '+dt.getDate();
+}
+function dayStatus(idx){
+  if(idx===0 || idx===DAYS.length-1) return 'Travel day';
+  return 'Antigua';
+}
+
+function render(){
+  renderGrid();
+  renderFoot();
+}
+
+function renderGrid(){
+  var g=qs('grid');
+  g.innerHTML='';
+  var hours=END_HOUR-START_HOUR;
+  var gridH = hours*PXH;
+
+  var corner=document.createElement('div'); corner.className='cornercell'; g.appendChild(corner);
+
+  DAYS.forEach(function(d,i){
+    var h=document.createElement('div'); h.className='dayhead';
+    var wx=weather[d];
+    var wxHtml = wx && wx.hi_f!=null ? ('<div class="wx">'+(WX_ICON[wx.icon]||'')+' '+Math.round(wx.hi_f)+'°/'+Math.round(wx.lo_f)+'°'+(wx.source==='historical'?' <span style="opacity:.6">(avg)</span>':'')+'</div>') : '<div class="wx">…</div>';
+    h.innerHTML = '<div class="dow">'+dayLabel(d)+'</div><div class="status">'+dayStatus(i)+'</div>'+wxHtml;
+    g.appendChild(h);
+  });
+
+  var corner2=document.createElement('div'); corner2.className='cornercell'; g.appendChild(corner2);
+
+  var leftGutter=document.createElement('div'); leftGutter.className='gutter'; leftGutter.style.gridRow='2'; leftGutter.style.height=gridH+'px';
+  for(var hh=START_HOUR; hh<=END_HOUR; hh++){
+    var lab=document.createElement('div'); lab.className='lab'; lab.style.top=((hh-START_HOUR)*PXH)+'px';
+    lab.textContent=(hh%12===0?12:hh%12)+(hh<12?'a':'p');
+    leftGutter.appendChild(lab);
+  }
+  g.appendChild(leftGutter);
+
+  DAYS.forEach(function(d,dayIdx){
+    var col=document.createElement('div'); col.className='col'; col.style.height=gridH+'px'; col.dataset.day=d;
+    for(var hh=START_HOUR; hh<END_HOUR; hh++){
+      var hl=document.createElement('div'); hl.className='hline'; hl.style.top=((hh-START_HOUR)*PXH)+'px';
+      col.appendChild(hl);
+      var hhalf=document.createElement('div'); hhalf.className='hline half'; hhalf.style.top=((hh-START_HOUR)*PXH+PXH/2)+'px';
+      col.appendChild(hhalf);
+    }
+    var wx=weather[d];
+    if(wx && wx.sunset){
+      var sMin = sunsetMinutes(wx.sunset);
+      if(sMin!=null && sMin>=START_HOUR*60 && sMin<=END_HOUR*60){
+        var sline=document.createElement('div'); sline.className='sunset'; sline.style.top=minToY(sMin)+'px';
+        sline.innerHTML=ICONS.sun+' '+minToTime(sMin).replace(/^0/,'');
+        col.appendChild(sline);
+      }
+    }
+    col.addEventListener('mousedown', function(e){ onColMouseDown(e, this); });
+    g.appendChild(col);
+
+    events.filter(function(ev){return ev.day_date===d;}).forEach(function(ev){
+      col.appendChild(renderBlock(ev));
+    });
+  });
+
+  var rightGutter=document.createElement('div'); rightGutter.className='gutter right'; rightGutter.style.height=gridH+'px';
+  for(var h2=START_HOUR; h2<=END_HOUR; h2++){
+    var lab2=document.createElement('div'); lab2.className='lab'; lab2.style.top=((h2-START_HOUR)*PXH)+'px';
+    lab2.textContent=(h2%12===0?12:h2%12)+(h2<12?'a':'p');
+    rightGutter.appendChild(lab2);
+  }
+  g.appendChild(rightGutter);
+}
+
+function sunsetMinutes(iso){
+  try{ var t=iso.split('T')[1]; var p=t.split(':'); return (+p[0])*60+(+p[1]); }catch(e){ return null; }
+}
+
+function renderBlock(ev){
+  var b=document.createElement('div'); b.className='block '+ev.confidence; b.dataset.id=ev.id;
+  var color=KIND_COLOR[ev.kind]||KIND_COLOR.other;
+  b.style.background=color;
+  var sMin = ev.start_time? timeToMin(ev.start_time) : START_HOUR*60;
+  var eMin = ev.end_time? timeToMin(ev.end_time) : sMin+45;
+  if(eMin<=sMin) eMin=sMin+30;
+  b.style.top = minToY(Math.max(sMin,START_HOUR*60))+'px';
+  b.style.height = Math.max(20, minToY(eMin)-minToY(Math.max(sMin,START_HOUR*60)))+'px';
+  var icon=ICONS[ev.kind]||ICONS.other;
+  b.innerHTML = '<div class="ti">'+icon+' <span>'+escapeHtml(ev.title)+'</span></div>'+(ev.location_name?'<div class="loc">'+escapeHtml(ev.location_name)+'</div>':'')+'<div class="grip"></div>';
+  var fam = (ev.trip_event_people||[]).map(function(x){return x.person_id;});
+  if(fam.length){
+    var famDiv=document.createElement('div'); famDiv.className='fam';
+    fam.forEach(function(pid){
+      var p=people.find(function(pp){return pp.id===pid;});
+      if(p){ var s=document.createElement('span'); s.textContent=p.initials; s.style.color=p.color; famDiv.appendChild(s); }
+    });
+    b.appendChild(famDiv);
+  }
+  b.addEventListener('mousedown', function(e){ onBlockMouseDown(e, ev, b); });
+  return b;
+}
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"]/g, function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+function renderFoot(){
+  var f=qs('foot'); f.innerHTML='';
+  var c=document.createElement('div'); f.appendChild(c);
+  DAYS.forEach(function(d,i){
+    var cell=document.createElement('div'); cell.className='cell';
+    var staying = events.some(function(ev){ return ev.kind==='lodging' && ev.title.indexOf('Check in')>=0 && ev.day_date<=d; }) &&
+                  !events.some(function(ev){ return ev.kind==='lodging' && ev.title.indexOf('Check out')>=0 && ev.day_date<d; });
+    if(i!==0 && i!==DAYS.length-1){ cell.className+=' stay'; cell.innerHTML=ICONS.home+' Sea La Vie '+ICONS.check; }
+    else { cell.textContent = i===0?'Old Greenwich':'Old Greenwich'; }
+    f.appendChild(cell);
+  });
+  var c2=document.createElement('div'); f.appendChild(c2);
+}
+
+/* ---- drag / resize / create ---- */
+function onBlockMouseDown(e, ev, el){
+  e.stopPropagation();
+  var isGrip = e.target.classList.contains('grip');
+  var startY = e.clientY;
+  var origTop = parseFloat(el.style.top);
+  var origH = parseFloat(el.style.height);
+  var moved=false;
+  function onMove(me){
+    var dy = me.clientY - startY;
+    if(Math.abs(dy)>3) moved=true;
+    if(isGrip){
+      el.style.height = Math.max(18, origH+dy)+'px';
+    } else {
+      el.style.top = Math.max(0, origTop+dy)+'px';
+    }
+  }
+  function onUp(){
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    if(!moved){ openEdit(ev); return; }
+    var newTop = parseFloat(el.style.top);
+    var newH = parseFloat(el.style.height);
+    var sMin = yToMin(newTop);
+    var eMin = yToMin(newTop+newH);
+    saveEvent(Object.assign({}, ev, {start_time: minToTime(sMin), end_time: minToTime(eMin)}));
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+function onColMouseDown(e, col){
+  if(e.target!==col) return;
+  var rect=col.getBoundingClientRect();
+  var startY=e.clientY-rect.top;
+  var ghost=document.createElement('div'); ghost.className='block suggested'; ghost.style.background='rgba(63,111,143,.5)';
+  ghost.style.top=startY+'px'; ghost.style.height='4px';
+  col.appendChild(ghost);
+  function onMove(me){
+    var y=me.clientY-rect.top;
+    var top=Math.min(startY,y), h=Math.max(10,Math.abs(y-startY));
+    ghost.style.top=top+'px'; ghost.style.height=h+'px';
+  }
+  function onUp(){
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    var top=parseFloat(ghost.style.top), h=parseFloat(ghost.style.height);
+    col.removeChild(ghost);
+    var sMin=yToMin(top), eMin=yToMin(top+Math.max(h,45));
+    openEdit({id:null, day_date:col.dataset.day, start_time:minToTime(sMin), end_time:minToTime(eMin), title:'', kind:'activity', location_name:'', note:'', confidence:'confirmed', source:'manual', trip_event_people:[]});
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+}
+
+/* ---- edit modal ---- */
+var editing=null, editFam=[];
+function openEdit(ev){
+  editing=ev;
+  editFam = (ev.trip_event_people||[]).map(function(x){return x.person_id;});
+  qs('mTitle').textContent = ev.id? 'Edit' : 'Add something';
+  qs('fTitle').value = ev.title||'';
+  var sel=qs('fDay'); sel.innerHTML='';
+  DAYS.forEach(function(d){ var o=document.createElement('option'); o.value=d; o.textContent=dayLabel(d); if(d===ev.day_date) o.selected=true; sel.appendChild(o); });
+  qs('fKind').value = ev.kind||'activity';
+  qs('fStart').value = ev.start_time? ev.start_time.slice(0,5):'';
+  qs('fEnd').value = ev.end_time? ev.end_time.slice(0,5):'';
+  qs('fLoc').value = ev.location_name||'';
+  qs('fNote').value = ev.note||'';
+  var fam=qs('fFam'); fam.innerHTML='';
+  people.forEach(function(p){
+    var c=document.createElement('div'); c.className='famchip'+(editFam.indexOf(p.id)>=0?' on':''); c.textContent=p.name;
+    c.addEventListener('click', function(){
+      var idx=editFam.indexOf(p.id);
+      if(idx>=0) editFam.splice(idx,1); else editFam.push(p.id);
+      c.classList.toggle('on');
+    });
+    fam.appendChild(c);
+  });
+  qs('bDel').style.display = ev.id? 'inline-block':'none';
+  qs('ov').classList.add('show');
+}
+function closeEdit(){ qs('ov').classList.remove('show'); editing=null; }
+
+qs('bCancel').addEventListener('click', closeEdit);
+qs('ov').addEventListener('click', function(e){ if(e.target===qs('ov')) closeEdit(); });
+qs('bSave').addEventListener('click', async function(){
+  var ev=Object.assign({}, editing, {
+    title: qs('fTitle').value || 'Untitled',
+    day_date: qs('fDay').value,
+    kind: qs('fKind').value,
+    start_time: qs('fStart').value || null,
+    end_time: qs('fEnd').value || null,
+    location_name: qs('fLoc').value || null,
+    note: qs('fNote').value || null,
+    source: editing.id? editing.source : 'manual',
+    confidence: editing.id? editing.confidence : 'confirmed'
+  });
+  await saveEvent(ev, editFam.slice());
+  closeEdit();
+  await load();
+});
+qs('bDel').addEventListener('click', async function(){
+  if(editing && editing.id){
+    await sb.from('trip_events').delete().eq('id', editing.id);
+  }
+  closeEdit();
+  await load();
+});
+
+async function saveEvent(ev, fam){
+  var row={trip_id:trip.id, day_date:ev.day_date, start_time:ev.start_time, end_time:ev.end_time,
+    title:ev.title, kind:ev.kind, location_name:ev.location_name, note:ev.note,
+    source:ev.source||'manual', confidence:ev.confidence||'confirmed'};
+  var id=ev.id;
+  if(id){
+    await sb.from('trip_events').update(row).eq('id', id);
+  } else {
+    var ins = await sb.from('trip_events').insert(row).select().single();
+    id = ins.data && ins.data.id;
+  }
+  if(fam && id){
+    await sb.from('trip_event_people').delete().eq('event_id', id);
+    if(fam.length){
+      await sb.from('trip_event_people').insert(fam.map(function(pid){return {event_id:id, person_id:pid};}));
+    }
+  }
+  if(!fam){ await load(); }
+}
+
+load();
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
