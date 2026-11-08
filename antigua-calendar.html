@@ -106,7 +106,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,
 
 <div class="top">
   <h1>Antigua</h1>
-  <span class="ver">v1.1 · Nov 8, 2026</span>
+  <span class="ver">v1.2 · Nov 8, 2026</span>
   <span class="countdown" id="countdown">—</span>
   <span class="statuspill" id="status">Loading…</span>
   <button class="undobtn" id="bUndo" disabled>Undo</button>
@@ -372,7 +372,7 @@ function renderGrid(){
     var st=dayStatusInfo(i);
     h.className='dayhead'+(st.cls?' '+st.cls:'');
     var wx=weather[d];
-    var wxHtml = wx && wx.hi_f!=null ? ('<div class="wx">'+(WX_ICON[wx.icon]||'')+' '+Math.round(wx.hi_f)+'°/'+Math.round(wx.lo_f)+'°'+(wx.source==='historical'?' <span style="opacity:.6">(avg)</span>':'')+'</div>') : '<div class="wx">…</div>';
+    var wxHtml = wx && wx.hi_f!=null ? ('<div class="wx">☀️ '+Math.round(wx.hi_f)+'°/'+Math.round(wx.lo_f)+'°'+(wx.source==='historical'?' <span style="opacity:.6">(avg)</span>':'')+'</div>') : '<div class="wx">…</div>';
     h.innerHTML = '<div class="dow">'+dayLabel(d)+'</div>'+(st.label?'<div class="status">'+st.label+'</div>':'')+wxHtml;
     g.appendChild(h);
   });
@@ -407,8 +407,9 @@ function renderGrid(){
     col.addEventListener('mousedown', function(e){ onColMouseDown(e, this); });
     g.appendChild(col);
 
-    events.filter(function(ev){return ev.day_date===d && enabledKind[ev.kind]!==false;}).forEach(function(ev){
-      col.appendChild(renderBlock(ev));
+    var dayEvents = events.filter(function(ev){return ev.day_date===d && enabledKind[ev.kind]!==false;});
+    layoutDay(dayEvents).forEach(function(it){
+      col.appendChild(renderBlock(it.ev, it.s, it.e, it.col, it.cols));
     });
   });
 
@@ -425,14 +426,48 @@ function sunsetMinutes(iso){
   try{ var t=iso.split('T')[1]; var p=t.split(':'); return (+p[0])*60+(+p[1]); }catch(e){ return null; }
 }
 
-function renderBlock(ev){
+/* Google-Calendar-style side-by-side layout for a day's events: anything that
+   overlaps in time gets its own column instead of hiding behind whatever was
+   drawn on top of it. */
+function layoutDay(dayEvents){
+  var items = dayEvents.map(function(ev){
+    var s = ev.start_time? timeToMin(ev.start_time) : START_HOUR*60;
+    var e = ev.end_time? timeToMin(ev.end_time) : s+45;
+    if(e<=s) e=s+30;
+    return {ev:ev, s:s, e:e};
+  });
+  items.sort(function(a,b){ return a.s-b.s || a.e-b.e; });
+  var clusters=[], current=[], currentEnd=-Infinity;
+  items.forEach(function(it){
+    if(current.length && it.s>=currentEnd){ clusters.push(current); current=[]; currentEnd=-Infinity; }
+    current.push(it); currentEnd=Math.max(currentEnd,it.e);
+  });
+  if(current.length) clusters.push(current);
+  var result=[];
+  clusters.forEach(function(cluster){
+    var colEnds=[];
+    cluster.forEach(function(it){
+      var placed=false;
+      for(var c=0;c<colEnds.length;c++){ if(it.s>=colEnds[c]){ it.col=c; colEnds[c]=it.e; placed=true; break; } }
+      if(!placed){ it.col=colEnds.length; colEnds.push(it.e); }
+    });
+    var maxCols=colEnds.length;
+    cluster.forEach(function(it){ it.cols=maxCols; result.push(it); });
+  });
+  return result;
+}
+
+function renderBlock(ev, sMin, eMin, colIdx, cols){
   var b=document.createElement('div'); b.className='block '+ev.confidence; b.dataset.id=ev.id;
   b.style.background=colorFor(ev);
-  var sMin = ev.start_time? timeToMin(ev.start_time) : START_HOUR*60;
-  var eMin = ev.end_time? timeToMin(ev.end_time) : sMin+45;
-  if(eMin<=sMin) eMin=sMin+30;
   b.style.top = minToY(Math.max(sMin,START_HOUR*60))+'px';
   b.style.height = Math.max(20, minToY(eMin)-minToY(Math.max(sMin,START_HOUR*60)))+'px';
+  var outerPad=3, gap=2;
+  cols = cols||1; colIdx = colIdx||0;
+  var totalGapsPx = outerPad*2 + gap*(cols-1);
+  b.style.right = 'auto';
+  b.style.width = 'calc((100% - '+totalGapsPx+'px) / '+cols+')';
+  b.style.left = 'calc('+outerPad+'px + '+colIdx+' * ((100% - '+totalGapsPx+'px) / '+cols+' + '+gap+'px))';
   var icon=ICONS[ev.kind]||ICONS.other;
   b.innerHTML = '<div class="ti">'+icon+' <span>'+escapeHtml(ev.title)+'</span></div>'+(ev.location_name?'<div class="loc">'+escapeHtml(ev.location_name)+'</div>':'')+'<div class="grip"></div>';
   var fam = (ev.trip_event_people||[]).map(function(x){return x.person_id;});
