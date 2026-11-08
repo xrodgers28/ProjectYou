@@ -74,6 +74,14 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,
 .cal .t{flex:1}
 .cal .n{font-size:10px;color:var(--faint);font-family:ui-monospace,monospace}
 .cals .allon{font-size:11px;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit;padding:4px 2px;margin-top:2px}
+.cal .car{font-size:10px;color:var(--faint);flex:none}
+.subcals{display:flex;flex-direction:column;gap:3px;padding:1px 0 5px 12px}
+.subcal{display:block;width:100%;text-align:left;border:1px dashed var(--border);border-radius:7px;padding:5px 7px;background:#fbfcfd;cursor:pointer;font-family:inherit}
+.subcal:hover{background:#f1f5f8}
+.subcal .sn{font-size:11px;color:var(--ink);font-weight:600;display:block}
+.subcal .sa{font-size:10px;color:var(--faint);display:block;margin-top:1px}
+.subcal.scheduled{border-style:solid;border-color:var(--accent)}
+.subcal.scheduled .sn:after{content:" ✓ on calendar";color:var(--accent);font-weight:700}
 @media (max-width:860px){
   .wrap{flex-direction:column}
   .wkrail{width:auto;align-self:stretch;position:static}
@@ -126,7 +134,7 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,
 
 <div class="top">
   <h1>Antigua</h1>
-  <span class="ver">v1.4 · Nov 8, 2026</span>
+  <span class="ver">v1.5 · Nov 8, 2026</span>
   <span class="countdown" id="countdown">—</span>
   <span class="statuspill" id="status">Loading…</span>
   <button class="undobtn" id="bUndo" disabled>Undo</button>
@@ -248,6 +256,12 @@ var enabledKind={};
 })();
 function saveLayerPrefs(){ try{ localStorage.setItem('antigua-cal-layers', JSON.stringify(enabledKind)); }catch(e){} }
 function setKind(k,on){ enabledKind[k]=on; saveLayerPrefs(); render(); }
+
+/* The 22-entry shortlist from the "Antigua Activities Planner" artifact (its
+   Activities tab), kept here as a flat copy so the sidebar can list every
+   option, scheduled or not, without a live link back to that page. */
+var PLANNER_ACTIVITIES=[{"id":"hike","kind":"land","name":"Guided hike (Trek Tours)","area":"Shirley Heights to Pillars of Hercules","time":"3.5 hrs"},{"id":"buggy","kind":"land","name":"Off-road buggies (Salty Dogs)","area":"Villages and farmland","time":"1 to 2.5 hrs, depending on the tour"},{"id":"barrel","kind":"eve","name":"Boxing Day Barrel Race","area":"Falmouth Harbour","time":"Sat Dec 26, 2026, start time not confirmed"},{"id":"parade","kind":"eve","name":"Boxing Day street parties and costume parade","area":"Location not confirmed","time":"Sat Dec 26, 2026, times not confirmed"},{"id":"turtle","kind":"water","name":"Turtle Beach power snorkeling (sea scooters)","area":"Galleon Beach, English Harbour","time":"2 hrs (tours listed at 9:30 am, 11 am and 2 pm)"},{"id":"zip","kind":"land","name":"Rainforest zipline and challenge course","area":"Fig Tree Drive rainforest","time":"2.5 hrs on the course; 3.5 to 4 hrs with pick-up"},{"id":"hmb","kind":"eve","name":"Half Moon Bay beach day (and a wind lesson)","area":"Half Moon Bay","time":"As long as you like"},{"id":"reef","kind":"water","name":"Reef Riders: drive your own little boat to the reef","area":"Cades Reef","time":"2.5 to 3 hrs (about 45 min in the water)"},{"id":"kayak","kind":"water","name":"Clear-bottom kayak and snorkel through the mangroves","area":"East coast mangroves","time":"3 hrs"},{"id":"thu","kind":"eve","name":"Shirley Heights Thursday: the Reggae Heights barbecue","area":"Shirley Heights Lookout","time":"Thu Dec 24, 2026, about 4 to 8 pm (not confirmed)"},{"id":"dock","kind":"eve","name":"Nelson's Dockyard Christmas Day Champagne Party","area":"Nelson's Dockyard, English Harbour","time":"Fri Dec 25, 2026, from midday, no set end"},{"id":"ray","kind":"water","name":"Stingray City half day (can add Devil's Bridge)","area":"Seatons Village","time":"3 hrs (about 4 hrs with Devil's Bridge and Long Bay)"},{"id":"sun","kind":"eve","name":"Shirley Heights Sunday sunset party","area":"Shirley Heights Lookout","time":"Sun Dec 27, 2026, about 4 to 10 pm (not confirmed)"},{"id":"pillars","kind":"eve","name":"Pillars Restaurant: Wednesday Jazz Night","area":"Nelson's Dockyard, English Harbour","time":"Wed evenings (also Sat afternoon live music on the beach)"},{"id":"abra","kind":"eve","name":"Abracadabra: waterfront bar, live band and nightclub","area":"Dockyard Drive, English Harbour","time":"Dinner from about 6pm, turning into a nightclub later; closed Wednesdays"},{"id":"seafoodfri","kind":"eve","name":"Seafood Fridays at Nelson's Dockyard","area":"Nelson's Dockyard, English Harbour","time":"Friday evenings, year-round"},{"id":"limerz","kind":"eve","name":"Beach Limerz: casual bar with impromptu live music","area":"Falmouth Harbour","time":"Tue to Sun, 9:30am to 11pm; closed Mondays"},{"id":"shirley","kind":"eve","name":"Shirley Heights Christmas Eve hike and party","area":"Shirley Heights Lookout","time":"Thu Dec 24, 2026, late afternoon into the evening (not confirmed)"},{"id":"carols","kind":"eve","name":"Carols by Candlelight","area":"Antigua Yacht Club, Falmouth Harbour (venue not confirmed)","time":"Mid-December, historically around Dec 14, and the date shifts year to year (not confirmed)"},{"id":"fair","kind":"eve","name":"Old-Time Antiguan Christmas Fair, King George V","area":"King George V recreation ground","time":"Date not confirmed"},{"id":"bbq","kind":"eve","name":"Beach barbecue at Dickenson Bay or Half Moon Bay","area":"Dickenson Bay or Half Moon Bay","time":"Fri Dec 25, 2026, as long as you like"},{"id":"horse","kind":"eve","name":"Boxing Day horse racing at Cassada Gardens","area":"Cassada Gardens Race Track, St. John's","time":"Sat Dec 26, 2026, only if racing is running"}];
+var activitiesOpen=false;
 var ICONS={
   flight:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2.5 1.5V22l4-1 4 1v-1.5L13 19v-5.5z"/></svg>',
   drive:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 17h14v-5l-2-5H7L5 12v5zm2.5-1a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm9 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM7 7h10l1.5 4h-13z"/></svg>',
@@ -374,8 +388,29 @@ function drawLayers(){
     var t=document.createElement('span'); t.className='t'; t.textContent=KIND_LABEL[k];
     b.appendChild(dot); b.appendChild(t);
     if(n){ var nn=document.createElement('span'); nn.className='n'; nn.textContent=String(n); b.appendChild(nn); }
-    b.addEventListener('click', function(){ setKind(k, !on); });
+    if(k==='activity'){ var car=document.createElement('span'); car.className='car'; car.textContent=activitiesOpen?'▾':'▸'; b.appendChild(car); }
+    b.addEventListener('click', function(ev){
+      if(k==='activity'){
+        var car=b.querySelector('.car');
+        if(car && ev.target===car){ activitiesOpen=!activitiesOpen; drawLayers(); return; }
+      }
+      setKind(k, !on);
+    });
     box.appendChild(b);
+    if(k==='activity' && activitiesOpen && on){
+      var scheduledNames = events.filter(function(e){return e.kind==='activity';}).map(function(e){return (e.title||'').toLowerCase();});
+      var row=document.createElement('div'); row.className='subcals';
+      PLANNER_ACTIVITIES.forEach(function(a){
+        var isSched = scheduledNames.some(function(t){ return t.indexOf(a.name.split(':')[0].split('(')[0].trim().toLowerCase().slice(0,8))>=0 || a.name.toLowerCase().indexOf(t)>=0; });
+        var sb=document.createElement('button'); sb.className='subcal'+(isSched?' scheduled':''); sb.type='button';
+        sb.innerHTML='<span class="sn">'+escapeHtml(a.name)+'</span><span class="sa">'+escapeHtml(a.area)+' · '+escapeHtml(a.time)+'</span>';
+        sb.addEventListener('click', function(){
+          openEdit({id:null, day_date:'2026-12-23', start_time:null, end_time:null, title:a.name, kind:'activity', location_name:a.area, note:a.time+' — from the Antigua Activities Planner', confidence:'suggested', source:'planner', trip_event_people:[]});
+        });
+        row.appendChild(sb);
+      });
+      box.appendChild(row);
+    }
   });
   var offCount=Object.keys(KIND_LABEL).filter(function(k){return enabledKind[k]===false;}).length;
   if(offCount){
