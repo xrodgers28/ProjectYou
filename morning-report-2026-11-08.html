@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f5f3ee; --panel:#ffffff; --ink:#23272c; --soft:#555c64; --line:#e4dfd4;
+  --hd:#2a2f35; --chipbg:#ece7db; --chipink:#5c636b;
+  --rowbg:#ffffff; --shadow:0 1px 2px rgba(0,0,0,.06);
+  --pin:#fbf8f1; --pinline:#d9d2c3;
+  --green:#2f8f5b; --amber:#c07f10; --red:#b5462f; --grey:#9aa0a6;
+  --do:#3f6f8f; --more:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+  --btnink:#ffffff;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#191b1e; --panel:#23262b; --ink:#e9e7e1; --soft:#a9afb6; --line:#34383e;
+    --hd:#f0eee8; --chipbg:#2f333a; --chipink:#b6bcc4;
+    --rowbg:#23262b; --shadow:0 1px 2px rgba(0,0,0,.35);
+    --pin:#22262c; --pinline:#3a3f47;
+    --green:#5bbd86; --amber:#e0a63a; --red:#e07a5f; --grey:#8b9199;
+    --do:#6f9fbf; --more:#e0a63a; --did:#5bbd86; --read:#9aa6b4; --kill:#cf9a6f;
+    --btnink:#161819;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#191b1e; --panel:#23262b; --ink:#e9e7e1; --soft:#a9afb6; --line:#34383e;
+  --hd:#f0eee8; --chipbg:#2f333a; --chipink:#b6bcc4;
+  --rowbg:#23262b; --shadow:0 1px 2px rgba(0,0,0,.35);
+  --pin:#22262c; --pinline:#3a3f47;
+  --green:#5bbd86; --amber:#e0a63a; --red:#e07a5f; --grey:#8b9199;
+  --do:#6f9fbf; --more:#e0a63a; --did:#5bbd86; --read:#9aa6b4; --kill:#cf9a6f;
+  --btnink:#161819;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:820px;margin:0 auto;padding:20px 16px 60px}
+header.top{padding:6px 2px 2px}
+.titleline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+h1{font-size:26px;margin:0;letter-spacing:.2px;color:var(--hd)}
+.vchip{font-size:11px;font-weight:bold;color:var(--chipink);background:var(--chipbg);border-radius:20px;padding:3px 9px;letter-spacing:.5px}
+.date{color:var(--soft);font-size:14px;margin:4px 0 2px}
+.lede{color:var(--soft);font-size:15px;margin:10px 2px 2px}
+
+/* pinned answer box */
+.pin{position:sticky;top:0;z-index:30;background:var(--pin);border:1px solid var(--pinline);border-radius:12px;padding:12px 12px 10px;margin:16px 0 8px;box-shadow:var(--shadow)}
+.pin h2{font-size:13px;margin:0 0 7px;color:var(--soft);font-weight:bold;text-transform:uppercase;letter-spacing:.6px}
+.pinrow{display:flex;gap:8px;align-items:flex-start}
+#answers{flex:1;width:100%;min-height:68px;resize:vertical;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+.copybtn{flex:0 0 auto;border:1px solid var(--line);background:var(--panel);color:var(--soft);border-radius:8px;padding:9px 12px;font-size:12px;font-weight:bold;cursor:pointer;font-family:inherit}
+.copybtn:active{transform:translateY(1px)}
+.pinhint{font-size:11.5px;color:var(--soft);margin:8px 2px 0}
+
+/* button key */
+.key{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:8px 0 18px;box-shadow:var(--shadow)}
+.key h2{font-size:13px;margin:0 0 9px;color:var(--soft);font-weight:bold;text-transform:uppercase;letter-spacing:.6px}
+.keyitem{font-size:13px;margin:5px 0;color:var(--soft)}
+.keyitem b{color:var(--ink)}
+.kdot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:baseline}
+
+.sectlabel{font-size:12px;font-weight:bold;letter-spacing:.7px;text-transform:uppercase;color:var(--soft);margin:22px 2px 8px}
+
+.row{background:var(--rowbg);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:12px;padding:14px 15px;margin:11px 0;box-shadow:var(--shadow)}
+.rowhead{display:flex;align-items:center;gap:9px;margin-bottom:5px}
+.light{flex:0 0 auto;width:13px;height:13px;border-radius:50%}
+.g-green{background:var(--green)} .g-amber{background:var(--amber)} .g-red{background:var(--red)} .g-grey{background:var(--grey)}
+.rowtitle{font-size:16.5px;font-weight:bold;color:var(--ink)}
+.rowbody{font-size:14px;color:var(--soft);margin:2px 0 8px}
+.rowbody p{margin:7px 0}
+.next{font-size:13.5px;color:var(--ink);margin:8px 0 2px}
+.next b{color:var(--ink)}
+.proof{font-size:11.5px;color:var(--soft);margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);font-family:Arial,Helvetica,sans-serif}
+.proj{margin:6px 0;font-size:13.5px;color:var(--soft)}
+.proj b{color:var(--ink)}
+
+.btns{display:flex;flex-wrap:wrap;gap:7px;margin-top:11px}
+.btn{border:none;border-radius:8px;padding:9px 14px;font-size:13px;font-weight:bold;color:var(--btnink);cursor:pointer;font-family:inherit}
+.btn:active{transform:translateY(1px)}
+.b-do{background:var(--do)} .b-more{background:var(--more)} .b-did{background:var(--did)} .b-read{background:var(--read)} .b-kill{background:var(--kill)}
+.btn[aria-pressed="true"]{outline:3px solid rgba(0,0,0,.18);outline-offset:1px}
+.statusline{font-size:12px;font-weight:bold;margin-top:9px;min-height:16px}
+.statusline.open{color:var(--amber)}
+.statusline.settled{color:var(--soft)}
+.cmt{width:100%;margin-top:9px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;resize:vertical;min-height:34px}
+.cmt::placeholder{color:var(--grey)}
+
+/* left-border colours once tapped */
+.row[data-choice="do"]{border-left-color:var(--do)}
+.row[data-choice="more"]{border-left-color:var(--more)}
+.row[data-choice="did"]{border-left-color:var(--did)}
+.row[data-choice="read"]{border-left-color:var(--read)}
+.row[data-choice="kill"]{border-left-color:var(--kill)}
+
+footer{color:var(--soft);font-size:12px;margin-top:26px;text-align:center}
+@media (max-width:640px){
+  h1{font-size:22px}
+  .pinrow{flex-direction:column}
+  .copybtn{width:100%}
+  .btn{flex:1 1 auto;text-align:center}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="titleline">
+    <h1>Morning Report</h1>
+    <span class="vchip">v1.0</span>
+  </div>
+  <div class="date">Sunday, November 8, 2026</div>
+  <p class="lede">A wide open Sunday. The overnight work ran clean and the website is updating again this morning. Three things want a minute of your attention, all on the money-and-plumbing side, none of them on fire.</p>
+</header>
+
+<!-- PINNED ANSWER BOX -->
+<section class="pin" aria-label="Your answers">
+  <h2>Your answers (copy this back into the chat)</h2>
+  <div class="pinrow">
+    <textarea id="answers" readonly placeholder="Tap a button on any card below and your choice shows up here. Then select all of this and paste it back into the chat.">MORNING REPORT, Nov 8 2026, my answers:
+(nothing tapped yet)</textarea>
+    <button class="copybtn" id="copyBtn" type="button">Copy</button>
+  </div>
+  <p class="pinhint">The box is the way your answers get back to me. If Copy does not work inside the panel, just select the text by hand and paste it. Nothing here is saved on its own.</p>
+</section>
+
+<!-- BUTTON KEY -->
+<section class="key" aria-label="What the buttons mean">
+  <h2>The five buttons</h2>
+  <div class="keyitem"><b>Do this</b>: go build it, run it, ship it. An instruction, not an answer. The card stays open until the work is done.</div>
+  <div class="keyitem"><b>Tell me more</b>: you lean yes, but want the cost, the risk or the reasoning first. The card stays open and the next move is mine.</div>
+  <div class="keyitem"><b>I did it</b>: you handled it yourself. The card settles.</div>
+  <div class="keyitem"><b>I read this</b>: just so you know. Nothing owed by anyone. The card settles, marked noted.</div>
+  <div class="keyitem"><b>Kill this task</b>: dead, and it never comes back as a question. The card settles.</div>
+  <div class="keyitem" style="margin-top:9px"><span class="kdot g-green"></span>green, done &nbsp; <span class="kdot g-amber"></span>amber, wants you &nbsp; <span class="kdot g-red"></span>red, broken or not started</div>
+</section>
+
+<div class="sectlabel">Wants you</div>
+
+<!-- ROW: GitHub token -->
+<div class="row" id="r_token" data-title="GitHub access key expired">
+  <div class="rowhead"><span class="light g-amber"></span><span class="rowtitle">A GitHub access key expired overnight</span></div>
+  <div class="rowbody">
+    <p>One of the keys your site uses to talk to GitHub reached its expiry date this morning. The good news is it has not broken anything yet: the site published and checked itself as live at 4:52am, so this morning's update went through fine.</p>
+    <p>The risk is future tense. An expired key keeps working for nothing, so the next job that needs it will quietly fail instead of publishing. Renewing it is a two minute job only you can do, since it lives in your GitHub account, not in the system.</p>
+  </div>
+  <div class="next"><b>Next:</b> Renew the expired key in GitHub when you have a moment, or tap Tell me more and I will lay out exactly where to click.</div>
+  <div class="btns" data-row="r_token">
+    <button class="btn b-do" data-c="do">Do this</button>
+    <button class="btn b-more" data-c="more">Tell me more</button>
+    <button class="btn b-did" data-c="did">I did it</button>
+    <button class="btn b-read" data-c="read">I read this</button>
+    <button class="btn b-kill" data-c="kill">Kill this task</button>
+  </div>
+  <div class="statusline" data-status="r_token"></div>
+  <textarea class="cmt" data-cmt="r_token" placeholder="Add a note (optional)"></textarea>
+  <div class="proof">Technical note: the GitHub email names the expired item as the fine grained token "cowork-ProjectYou", flagged Nov 8. The auto publish verified morning-report-2026-11-07 live in origin/main at 09:52 UTC, so the dispatch path is still authorised for now.</div>
+</div>
+
+<!-- ROW: Supabase quota -->
+<div class="row" id="r_quota" data-title="Database hit its usage limit">
+  <div class="rowhead"><span class="light g-amber"></span><span class="rowtitle">The database hit its monthly usage limit</span></div>
+  <div class="rowbody">
+    <p>Last night the service that stores everything behind your site sent a notice that your account went over its included usage for the period. That lines up with one publish attempt failing briefly around midnight before everything recovered.</p>
+    <p>Left alone, going over the limit can slow things down or, at the far end, pause the project until the next billing cycle or an upgrade. It is worth a look at the plan so a quiet Sunday warning does not turn into a stuck site later in the month.</p>
+  </div>
+  <div class="next"><b>Next:</b> Decide whether to top up or upgrade the plan. Tap Tell me more and I will pull what is driving the usage and roughly what the next tier costs.</div>
+  <div class="btns" data-row="r_quota">
+    <button class="btn b-do" data-c="do">Do this</button>
+    <button class="btn b-more" data-c="more">Tell me more</button>
+    <button class="btn b-did" data-c="did">I did it</button>
+    <button class="btn b-read" data-c="read">I read this</button>
+    <button class="btn b-kill" data-c="kill">Kill this task</button>
+  </div>
+  <div class="statusline" data-status="r_quota"></div>
+  <textarea class="cmt" data-cmt="r_quota" placeholder="Add a note (optional)"></textarea>
+  <div class="proof">Technical note: Supabase sent "org xrodgers28 exceeded its usage quota" at Nov 7 23:29 UTC. A single repository_dispatch run failed at 04:42 UTC, then recovered; publish_hook_log shows ok=true through 09:51 UTC.</div>
+</div>
+
+<!-- ROW: reconciliation drift -->
+<div class="row" id="r_drift" data-title="Site self-check flagged drift, 12th night">
+  <div class="rowhead"><span class="light g-amber"></span><span class="rowtitle">The site's nightly self-check keeps hitting the same wall</span></div>
+  <div class="rowbody">
+    <p>Every night the system compares its own map of how the pages fit together against the real thing and reports any drift. For the twelfth night running it flagged the same snag: the one check that needs to open a live page needs a tap to approve, and at 2am nobody is awake to give it.</p>
+    <p>So it read that one page out of storage instead and confirmed the other five were fine. Nothing is wrong with the site. The honest read is that one corner of the nightly check has been running half blind for almost two weeks, and it will keep saying "drift" until we either let it crawl once or tell it to stop asking.</p>
+  </div>
+  <div class="next"><b>Next:</b> Pick how to handle it. Tap Tell me more for the two options, or Do this to have me set up a once-a-day approved crawl so the warning clears.</div>
+  <div class="btns" data-row="r_drift">
+    <button class="btn b-do" data-c="do">Do this</button>
+    <button class="btn b-more" data-c="more">Tell me more</button>
+    <button class="btn b-did" data-c="did">I did it</button>
+    <button class="btn b-read" data-c="read">I read this</button>
+    <button class="btn b-kill" data-c="kill">Kill this task</button>
+  </div>
+  <div class="statusline" data-status="r_drift"></div>
+  <textarea class="cmt" data-cmt="r_drift" placeholder="Add a note (optional)"></textarea>
+  <div class="proof">Technical note: board_meta.system_map_last_verified = status "drift", Nov 7, twelfth night; the live site fetch needs an interactive approval, so the Data Flow Chart was decoded from the page store and the other five map pages were confirmed.</div>
+</div>
+
+<div class="sectlabel">Just so you know</div>
+
+<!-- ROW: overnight run -->
+<div class="row" id="r_overnight" data-title="Last night's run">
+  <div class="rowhead"><span class="light g-green"></span><span class="rowtitle">Last night's run clocked in and finished clean</span></div>
+  <div class="rowbody">
+    <p>The overnight run started at 2:13am and wrapped at 2:22am. It had nothing to build: every job on the list was either already done from an earlier night or sitting waiting on an answer from you, so it correctly did nothing rather than redo finished work.</p>
+    <p>The smaller housekeeping jobs all ran too. The food log tidy finished four of four at 4:21am, the chat check ran, and the site map refresh published and checked itself live at 4:52am. I opened the live site myself to confirm that last claim, and yesterday's report really is there, so the "verified" note is true, not just hopeful.</p>
+    <p>One honest footnote: the chat check found that no chat signed itself in all day on Nov 7. That is either a genuinely quiet Friday, or the chat log has gone quiet again. Worth a glance if you were expecting to see Friday's work logged.</p>
+  </div>
+  <div class="next"><b>Next:</b> Nothing.</div>
+  <div class="btns" data-row="r_overnight">
+    <button class="btn b-do" data-c="do">Do this</button>
+    <button class="btn b-more" data-c="more">Tell me more</button>
+    <button class="btn b-did" data-c="did">I did it</button>
+    <button class="btn b-read" data-c="read">I read this</button>
+    <button class="btn b-kill" data-c="kill">Kill this task</button>
+  </div>
+  <div class="statusline" data-status="r_overnight"></div>
+  <textarea class="cmt" data-cmt="r_overnight" placeholder="Add a note (optional)"></textarea>
+  <div class="proof">Technical note: board_meta.midnight_run_last_result "Nov 8 run: 0 built, 0 asked, 0 parked ... Finished 2:22am EST". run_log row foodlog-housekeeping-20261108 ok 4/4. Clone of origin/main shows morning-report-2026-11-07.html present. No queue item was marked overnight, so the buildable queue was empty by design.</div>
+</div>
+
+<!-- ROW: projects -->
+<div class="row" id="r_projects" data-title="Where your projects stand">
+  <div class="rowhead"><span class="light g-green"></span><span class="rowtitle">Where your projects stand this morning</span></div>
+  <div class="rowbody">
+    <p>A quick read across the six, with the one next step for each. Most are steady. The only loose thread with your name on it is the TreadWell feedback recording.</p>
+    <div class="proj"><b>TreadWell.</b> Steady, treated as legacy not income. One open item: Mike Cann's feedback recording from the Aug 7 call is still sitting unopened. Next: give it a listen, or hand it to me to transcribe and summarize.</div>
+    <div class="proj"><b>CrushingIt.</b> The habit board and time wheel are live and quiet. Next: nothing pending, it runs on its own.</div>
+    <div class="proj"><b>Project YOU.</b> The big one, and healthy. The overnight list is long on paper but every item is either finished or waiting on you. Next: clear a couple of the waiting decisions when you want to, there is no backlog of broken work.</div>
+    <div class="proj"><b>Clever Phrases.</b> The phrase library is stocked and feeding the cards. Next: nothing, it only needs a new quote when one grabs you.</div>
+    <div class="proj"><b>AI Intelligence.</b> The daily four card deck has a deep pool to draw from. Next: keep the daily tap going, the content well is full.</div>
+    <div class="proj"><b>2026 Calendar.</b> Clean. Your runs, rides and events are all on it, confirmed by the overnight check. Next: nothing.</div>
+  </div>
+  <div class="next"><b>Next:</b> Tap Do this on this card if you want me to take the TreadWell recording off your plate and summarize it.</div>
+  <div class="btns" data-row="r_projects">
+    <button class="btn b-do" data-c="do">Do this</button>
+    <button class="btn b-more" data-c="more">Tell me more</button>
+    <button class="btn b-did" data-c="did">I did it</button>
+    <button class="btn b-read" data-c="read">I read this</button>
+    <button class="btn b-kill" data-c="kill">Kill this task</button>
+  </div>
+  <div class="statusline" data-status="r_projects"></div>
+  <textarea class="cmt" data-cmt="r_projects" placeholder="Add a note (optional)"></textarea>
+  <div class="proof">Technical note: open items by project from session_todos: Project YOU 428 (376 general, 51 queued, 1 inbox), ProjectYOU OS 36, TreadWell 1 (id 230, Mike Cann recording). Others carry no open database items.</div>
+</div>
+
+<!-- ROW: daily scan -->
+<div class="row" id="r_scan" data-title="Daily scan, keep or discard">
+  <div class="rowhead"><span class="light g-green"></span><span class="rowtitle">The daily scan has a few finds waiting for a thumbs up</span></div>
+  <div class="rowbody">
+    <p>The inspiration scan that feeds The Wall pulled in six fresh finds over the last day and a half. They sit in the candidate pool until you keep or discard them, so there is a small pile waiting whenever you feel like a quick sort.</p>
+    <p>The similar projects scan also refreshed. It added a new entry worth a peek, a site called Time Mosaic that turns each day into one tappable colored tile, which is close to what your own daily tracking is reaching for. Nothing here is urgent, it is all the fun kind of backlog.</p>
+  </div>
+  <div class="next"><b>Next:</b> Do a keep or discard pass when you want, or tap Do this and I will triage the six new finds down to the best two or three.</div>
+  <div class="btns" data-row="r_scan">
+    <button class="btn b-do" data-c="do">Do this</button>
+    <button class="btn b-more" data-c="more">Tell me more</button>
+    <button class="btn b-did" data-c="did">I did it</button>
+    <button class="btn b-read" data-c="read">I read this</button>
+    <button class="btn b-kill" data-c="kill">Kill this task</button>
+  </div>
+  <div class="statusline" data-status="r_scan"></div>
+  <textarea class="cmt" data-cmt="r_scan" placeholder="Add a note (optional)"></textarea>
+  <div class="proof">Technical note: wall_candidates 6 new in last 36h (292 total), latest tested Nov 7 11:52 UTC. similar-projects.json regenerated to v1.4, dated Nov 7, new entry "Time Mosaic".</div>
+</div>
+
+<!-- ROW: usage -->
+<div class="row" id="r_usage" data-title="Claude weekly usage">
+  <div class="rowhead"><span class="light g-grey"></span><span class="rowtitle">Your Claude usage this week</span></div>
+  <div class="rowbody">
+    <p>Being straight with you: from where this run sits, I cannot see your weekly Claude usage meter. That number lives in your account settings, not in anything this report can reach, so I would be guessing if I put a figure here.</p>
+    <p>If you want to keep an eye on it, the Settings area of the Claude app shows where you stand for the week. If it ever feels tight, the overnight and morning runs are the heaviest regular users, and we can trim how deep they dig.</p>
+  </div>
+  <div class="next"><b>Next:</b> Nothing, unless you want me to look into a way to surface the meter here. Tap Do this and I will see what is possible.</div>
+  <div class="btns" data-row="r_usage">
+    <button class="btn b-do" data-c="do">Do this</button>
+    <button class="btn b-more" data-c="more">Tell me more</button>
+    <button class="btn b-did" data-c="did">I did it</button>
+    <button class="btn b-read" data-c="read">I read this</button>
+    <button class="btn b-kill" data-c="kill">Kill this task</button>
+  </div>
+  <div class="statusline" data-status="r_usage"></div>
+  <textarea class="cmt" data-cmt="r_usage" placeholder="Add a note (optional)"></textarea>
+</div>
+
+<div class="sectlabel">One small habit</div>
+<div class="row" style="border-left-color:var(--do)">
+  <div class="rowbody" style="margin:0">
+    <p>From Atomic Habits: the rule of never miss twice. Missing one day is an accident, missing two starts a new pattern. None of your streaks broke this week, so there is nothing to recover. The quiet value today is that an open Sunday is the easy day to keep a chain alive, not the day to let it slip. Do the two minute version of each habit and the chain holds.</p>
+  </div>
+</div>
+
+<footer>Tap the buttons, then copy the box at the top back into the chat.</footer>
+
+</div>
+
+<script>
+(function(){
+  var labels = {do:"Do this", more:"Tell me more", did:"I did it", read:"I read this", kill:"Kill this task"};
+  var openKinds = {do:true, more:true};
+  var state = {}; // rowId -> {choice, title, comment}
+
+  function rowTitle(rowId){
+    var el = document.getElementById(rowId);
+    return el ? (el.getAttribute("data-title") || rowId) : rowId;
+  }
+
+  function rebuild(){
+    var lines = ["MORNING REPORT, Nov 8 2026, my answers:"];
+    var any = false;
+    Object.keys(state).forEach(function(rowId){
+      var s = state[rowId];
+      if(!s || (!s.choice && !(s.comment && s.comment.trim()))) return;
+      any = true;
+      var tag = s.choice ? labels[s.choice] : "(comment only)";
+      var line = "- " + rowTitle(rowId) + " => " + tag;
+      if(s.comment && s.comment.trim()) line += "  | note: " + s.comment.trim();
+      lines.push(line);
+    });
+    if(!any) lines.push("(nothing tapped yet)");
+    document.getElementById("answers").value = lines.join("\n");
+  }
+
+  // button clicks
+  document.querySelectorAll(".btns").forEach(function(group){
+    var rowId = group.getAttribute("data-row");
+    var rowEl = document.getElementById(rowId);
+    var statusEl = document.querySelector('[data-status="'+rowId+'"]');
+    group.querySelectorAll(".btn").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var c = btn.getAttribute("data-c");
+        state[rowId] = state[rowId] || {};
+        state[rowId].choice = c;
+        state[rowId].title = rowTitle(rowId);
+        rowEl.setAttribute("data-choice", c);
+        group.querySelectorAll(".btn").forEach(function(b){ b.setAttribute("aria-pressed", b===btn ? "true":"false"); });
+        if(openKinds[c]){
+          statusEl.className = "statusline open";
+          statusEl.textContent = (c==="do" ? "Open, work owed. I am on it." : "Open, waiting on me to come back to you.");
+        } else {
+          statusEl.className = "statusline settled";
+          statusEl.textContent = (c==="read" ? "Settled, noted." : c==="did" ? "Settled, you handled it." : "Settled, killed.");
+        }
+        rebuild();
+      });
+    });
+  });
+
+  // comment boxes
+  document.querySelectorAll(".cmt").forEach(function(box){
+    var rowId = box.getAttribute("data-cmt");
+    box.addEventListener("input", function(){
+      state[rowId] = state[rowId] || {};
+      state[rowId].comment = box.value;
+      rebuild();
+    });
+  });
+
+  // copy
+  document.getElementById("copyBtn").addEventListener("click", function(){
+    var ta = document.getElementById("answers");
+    ta.removeAttribute("readonly");
+    ta.select(); ta.setSelectionRange(0, 99999);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch(e){ ok = false; }
+    if(navigator.clipboard){ navigator.clipboard.writeText(ta.value).then(function(){}, function(){}); }
+    ta.setAttribute("readonly","readonly");
+    this.textContent = ok ? "Copied" : "Select it";
+    var b = this;
+    setTimeout(function(){ b.textContent = "Copy"; }, 1800);
+  });
+
+  rebuild();
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
