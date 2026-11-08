@@ -18,7 +18,9 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          ref: main   # start from the newest saved copy, not the one from when the run was queued
 
       - name: Pull changed pages from Supabase and write files
         env:
@@ -94,5 +96,10 @@ jobs:
             echo "No changes to publish."
           else
             git commit -m "Publish pages from Supabase [skip ci]"
-            git push
+            # If another publish landed first, catch up and try again instead of failing.
+            for i in 1 2 3; do
+              git push && exit 0
+              git pull --rebase origin main || { git rebase --abort; exit 1; }
+            done
+            exit 1
           fi
