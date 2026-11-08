@@ -8,8 +8,12 @@
 :root{
   --ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--accent:#3f6f8f;
   --border:#e3e7ee;--bg:#eef1f6;--card:#ffffff;
-  --flight:#3f6f8f;--drive:#8a6d3b;--buffer:#9aa6b4;--lodging:#2F8A5B;
-  --activity:#c06a3a;--meal:#9c5fa8;--other:#5b6472;
+  /* exact swatches sampled from Scott's Keynote design */
+  --flight:#EAEAEA;--drive:#EECC8B;--buffer:#EECC8B;--lodging:#2F8A5B;
+  --activity:#7DCAFF;--meal:#A9CAE5;--other:#5b6472;
+  --hike:#C7D4D9;--beach:#E8D979;--pool:#7DCAFF;--dinner:#A9CAE5;--evening:#B0D4FD;--logistics:#EECC8B;
+  --head-antigua:#9BCCE7;--head-travel:#9AC39A;
+  --sunset-text:#DF7820;--home-ink:#767676;--check-green:#43A047;
   --h:44px; /* px per hour */
 }
 *{box-sizing:border-box}
@@ -22,8 +26,10 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,
 .wrap{overflow-x:auto;padding:0 10px 30px}
 .grid{display:grid;grid-template-columns:52px repeat(6,1fr) 52px;min-width:980px;background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .dayhead{border-bottom:1px solid var(--border);border-left:1px solid var(--border);padding:8px 6px;text-align:center;background:#f7f9fc}
+.dayhead.antigua{background:var(--head-antigua)}
+.dayhead.travel{background:var(--head-travel)}
 .dayhead .dow{font-weight:700;font-size:13px}
-.dayhead .status{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.dayhead .status{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:2px;font-weight:700}
 .dayhead .wx{margin-top:4px;font-size:11px;color:var(--ink);display:flex;align-items:center;justify-content:center;gap:4px}
 .dayhead .wx svg{width:14px;height:14px}
 .cornercell{border-bottom:1px solid var(--border)}
@@ -34,20 +40,47 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,
 .col.today{background:#f3f8fc}
 .hline{position:absolute;left:0;right:0;border-top:1px solid #eef0f3}
 .hline.half{border-top:1px dashed #f3f4f6}
-.sunset{position:absolute;left:4px;right:4px;display:flex;align-items:center;gap:4px;font-size:10px;color:#c9930f;pointer-events:none}
-.block{position:absolute;left:3px;right:3px;border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.3;overflow:hidden;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.08);color:#fff}
+.sunset{position:absolute;left:4px;right:4px;display:flex;align-items:center;gap:4px;font-size:10px;color:var(--sunset-text);font-weight:700;pointer-events:none}
+.block{position:absolute;left:3px;right:3px;border-radius:6px;padding:4px 6px;font-size:11px;line-height:1.3;overflow:hidden;cursor:grab;box-shadow:0 1px 2px rgba(0,0,0,.08);color:#1f2a44}
 .block .ti{font-weight:700;display:flex;align-items:center;gap:4px}
 .block .ti svg{width:11px;height:11px;flex:none}
-.block .loc{opacity:.9;font-size:10px;margin-top:1px}
-.block.suggested,.block.parsed{border:1.5px dashed rgba(255,255,255,.85);opacity:.92}
+.block .loc{opacity:.75;font-size:10px;margin-top:1px}
+.block.suggested,.block.parsed{border:1.5px dashed rgba(31,42,68,.45);opacity:.92}
+.block.dimmed{opacity:.55;filter:grayscale(.15)}
 .block .grip{position:absolute;left:0;right:0;bottom:0;height:7px;cursor:ns-resize}
 .block .fam{position:absolute;top:3px;right:4px;display:flex;gap:2px}
-.block .fam span{width:12px;height:12px;border-radius:99px;background:rgba(255,255,255,.9);color:#000;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.block .fam span{width:12px;height:12px;border-radius:99px;background:rgba(255,255,255,.85);color:#000;font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center}
 .foot{display:grid;grid-template-columns:52px repeat(6,1fr) 52px;border-top:1px solid var(--border);background:#f7f9fc}
 .foot .cell{padding:8px 6px;text-align:center;font-size:10.5px;color:var(--muted);border-left:1px solid var(--border)}
-.foot .cell.stay{color:var(--lodging);font-weight:600}
+.foot .cell.stay{color:var(--home-ink);font-weight:600}
 .foot .cell svg{width:13px;height:13px;vertical-align:-2px;margin-right:3px}
+.foot .cell .chk{color:var(--check-green);display:inline-block}
+.foot .cell .chk svg{width:12px;height:12px}
 .hint{padding:0 20px 14px;font-size:12px;color:var(--muted)}
+
+/* layout: grid + layers rail side by side */
+.wrap{overflow-x:auto;padding:0 10px 30px;display:flex;align-items:flex-start;gap:14px}
+.wrap .gridcol{flex:none}
+
+/* right-side Layers panel, modeled on calendar-week.html's .wkrail/#cals */
+.wkrail{width:208px;flex:none;background:#fff;border:1px solid var(--border);border-radius:10px;padding:12px;position:sticky;top:10px}
+.wkrail h2.raillab{font-size:12px;margin:0 0 8px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.cals{display:flex;flex-direction:column;gap:5px}
+.cal{display:flex;align-items:center;gap:7px;border:1px solid var(--border);border-radius:8px;padding:6px 8px;background:#fff;cursor:pointer;font-size:12px;color:var(--ink);text-align:left;width:100%;font-family:inherit}
+.cal.off{opacity:.42}
+.cal .dot{width:10px;height:10px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.12)}
+.cal .t{flex:1}
+.cal .n{font-size:10px;color:var(--faint);font-family:ui-monospace,monospace}
+.cals .allon{font-size:11px;font-weight:700;color:var(--accent);background:none;border:none;cursor:pointer;text-decoration:underline;font-family:inherit;padding:4px 2px;margin-top:2px}
+@media (max-width:860px){
+  .wrap{flex-direction:column}
+  .wkrail{width:auto;align-self:stretch;position:static}
+  .cals{flex-direction:row;flex-wrap:wrap}
+  .cal{width:auto}
+}
+
+.undobtn{border:1px solid var(--border);background:var(--card);color:var(--ink);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer}
+.undobtn:disabled{opacity:.4;cursor:default}
 
 /* modal */
 .ov{position:fixed;inset:0;background:rgba(20,28,40,.4);display:none;align-items:center;justify-content:center;z-index:50}
@@ -73,15 +106,22 @@ body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,
 
 <div class="top">
   <h1>Antigua</h1>
-  <span class="ver">v1.0 · Nov 8, 2026</span>
+  <span class="ver">v1.1 · Nov 8, 2026</span>
   <span class="countdown" id="countdown">—</span>
   <span class="statuspill" id="status">Loading…</span>
+  <button class="undobtn" id="bUndo" disabled>Undo</button>
 </div>
-<div class="hint">Drag a block to move it, drag the bottom edge to resize, tap a block to edit, tap empty space to add something.</div>
+<div class="hint">Drag a block to move it, drag the bottom edge to resize, tap a block to edit, tap empty space to add something. Ctrl/Cmd+Z undoes the last change.</div>
 
 <div class="wrap">
-  <div class="grid" id="grid"></div>
-  <div class="foot" id="foot"></div>
+  <div class="gridcol">
+    <div class="grid" id="grid"></div>
+    <div class="foot" id="foot"></div>
+  </div>
+  <div class="wkrail">
+    <h2 class="raillab">Layers</h2>
+    <div class="cals" id="cals"></div>
+  </div>
 </div>
 
 <div class="ov" id="ov">
@@ -135,7 +175,44 @@ var START_HOUR=6, END_HOUR=23, PXH=44;
 var DAYS=['2026-12-22','2026-12-23','2026-12-24','2026-12-25','2026-12-26','2026-12-27'];
 var DOW=['Tue','Wed','Thu','Fri','Sat','Sun'];
 var MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var KIND_LABEL={flight:'Flights',drive:'Drives',buffer:'Airport waiting',lodging:'Lodging',activity:'Activities',meal:'Meals',other:'Other'};
 var KIND_COLOR={flight:'var(--flight)',drive:'var(--drive)',buffer:'var(--buffer)',lodging:'var(--lodging)',activity:'var(--activity)',meal:'var(--meal)',other:'var(--other)'};
+/* Exact per-activity swatches lifted from Scott's Keynote screenshot — matched by
+   a keyword in the title, so any future trip's events fall back to the plain
+   per-kind colors above instead of breaking. */
+var TITLE_COLOR=[
+  [/hike/i,'var(--hike)'],
+  [/beach/i,'var(--beach)'],
+  [/pool/i,'var(--pool)'],
+  [/dinner/i,'var(--dinner)'],
+  [/slates|pillars/i,'var(--evening)'],
+  [/airport|drive.*airport|drive.*hotel|drive.*villa|travel home|home to ewr|ewr to home/i,'var(--logistics)']
+];
+function colorFor(ev){
+  var t=ev.title||'';
+  for(var i=0;i<TITLE_COLOR.length;i++){ if(TITLE_COLOR[i][0].test(t)) return TITLE_COLOR[i][1]; }
+  return KIND_COLOR[ev.kind]||KIND_COLOR.other;
+}
+/* Day-header band: blank on the arrival travel day (matches the screenshot,
+   which leaves Dec 22 unlabeled), "ANTIGUA" blue on full island days, "TRAVEL
+   DAY" green on the departure day. */
+var DAY_STATUS=[null,'antigua','antigua','antigua','antigua','travel'];
+function dayStatusInfo(idx){
+  var s=DAY_STATUS[idx];
+  if(s==='antigua') return {cls:'antigua', label:'Antigua'};
+  if(s==='travel') return {cls:'travel', label:'Travel day'};
+  return {cls:'', label:''};
+}
+/* which layers (kinds) are shown — persisted per-browser */
+var enabledKind={};
+(function loadLayerPrefs(){
+  try{
+    var saved=JSON.parse(localStorage.getItem('antigua-cal-layers')||'{}');
+    Object.keys(KIND_LABEL).forEach(function(k){ enabledKind[k]= saved[k]!==false; });
+  }catch(e){ Object.keys(KIND_LABEL).forEach(function(k){ enabledKind[k]=true; }); }
+})();
+function saveLayerPrefs(){ try{ localStorage.setItem('antigua-cal-layers', JSON.stringify(enabledKind)); }catch(e){} }
+function setKind(k,on){ enabledKind[k]=on; saveLayerPrefs(); render(); }
 var ICONS={
   flight:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2.5 1.5V22l4-1 4 1v-1.5L13 19v-5.5z"/></svg>',
   drive:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 17h14v-5l-2-5H7L5 12v5zm2.5-1a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm9 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM7 7h10l1.5 4h-13z"/></svg>',
@@ -160,6 +237,18 @@ function wxCode(code){
 
 var trip=null, people=[], events=[], weather={};
 var dragState=null, newBlockState=null;
+
+/* ---- undo: a stack of "how to put it back" actions ---- */
+var undoStack=[];
+function pushUndo(fn){ undoStack.push(fn); if(undoStack.length>25) undoStack.shift(); updateUndoBtn(); }
+function updateUndoBtn(){ var b=qs('bUndo'); if(b) b.disabled = undoStack.length===0; }
+async function performUndo(){
+  var fn=undoStack.pop();
+  updateUndoBtn();
+  if(!fn) return;
+  await fn();
+  await load();
+}
 
 function qs(id){return document.getElementById(id);}
 function pad(n){return (n<10?'0':'')+n;}
@@ -228,14 +317,46 @@ function dayLabel(d){
   var dt=new Date(d+'T00:00:00');
   return DOW[idx]+' '+MON[dt.getMonth()]+' '+dt.getDate();
 }
-function dayStatus(idx){
-  if(idx===0 || idx===DAYS.length-1) return 'Travel day';
-  return 'Antigua';
-}
-
 function render(){
   renderGrid();
   renderFoot();
+  drawLayers();
+}
+
+function drawLayers(){
+  var box=qs('cals'); if(!box) return;
+  box.innerHTML='';
+  var counts={};
+  events.forEach(function(ev){ counts[ev.kind]=(counts[ev.kind]||0)+1; });
+  Object.keys(KIND_LABEL).forEach(function(k){
+    var n=counts[k]||0;
+    var on=enabledKind[k]!==false;
+    var b=document.createElement('button');
+    b.className='cal'+(on?'':' off');
+    b.type='button';
+    b.title = on ? 'Hide '+KIND_LABEL[k] : 'Show '+KIND_LABEL[k];
+    var dot=document.createElement('span'); dot.className='dot'; dot.style.background=getComputedColor(KIND_COLOR[k]);
+    var t=document.createElement('span'); t.className='t'; t.textContent=KIND_LABEL[k];
+    b.appendChild(dot); b.appendChild(t);
+    if(n){ var nn=document.createElement('span'); nn.className='n'; nn.textContent=String(n); b.appendChild(nn); }
+    b.addEventListener('click', function(){ setKind(k, !on); });
+    box.appendChild(b);
+  });
+  var offCount=Object.keys(KIND_LABEL).filter(function(k){return enabledKind[k]===false;}).length;
+  if(offCount){
+    var a=document.createElement('button'); a.className='allon'; a.type='button';
+    a.textContent='Show all '+offCount+' hidden';
+    a.addEventListener('click', function(){ Object.keys(KIND_LABEL).forEach(function(k){ enabledKind[k]=true; }); saveLayerPrefs(); render(); });
+    box.appendChild(a);
+  }
+}
+/* dot swatches read a CSS custom property; resolve it against :root so the
+   little dot shows the real color rather than the literal var() string. */
+var _colorProbe=null;
+function getComputedColor(varExpr){
+  if(!_colorProbe){ _colorProbe=document.createElement('div'); _colorProbe.style.display='none'; document.body.appendChild(_colorProbe); }
+  _colorProbe.style.color=varExpr;
+  return getComputedStyle(_colorProbe).color;
 }
 
 function renderGrid(){
@@ -247,10 +368,12 @@ function renderGrid(){
   var corner=document.createElement('div'); corner.className='cornercell'; g.appendChild(corner);
 
   DAYS.forEach(function(d,i){
-    var h=document.createElement('div'); h.className='dayhead';
+    var h=document.createElement('div');
+    var st=dayStatusInfo(i);
+    h.className='dayhead'+(st.cls?' '+st.cls:'');
     var wx=weather[d];
     var wxHtml = wx && wx.hi_f!=null ? ('<div class="wx">'+(WX_ICON[wx.icon]||'')+' '+Math.round(wx.hi_f)+'°/'+Math.round(wx.lo_f)+'°'+(wx.source==='historical'?' <span style="opacity:.6">(avg)</span>':'')+'</div>') : '<div class="wx">…</div>';
-    h.innerHTML = '<div class="dow">'+dayLabel(d)+'</div><div class="status">'+dayStatus(i)+'</div>'+wxHtml;
+    h.innerHTML = '<div class="dow">'+dayLabel(d)+'</div>'+(st.label?'<div class="status">'+st.label+'</div>':'')+wxHtml;
     g.appendChild(h);
   });
 
@@ -284,7 +407,7 @@ function renderGrid(){
     col.addEventListener('mousedown', function(e){ onColMouseDown(e, this); });
     g.appendChild(col);
 
-    events.filter(function(ev){return ev.day_date===d;}).forEach(function(ev){
+    events.filter(function(ev){return ev.day_date===d && enabledKind[ev.kind]!==false;}).forEach(function(ev){
       col.appendChild(renderBlock(ev));
     });
   });
@@ -304,8 +427,7 @@ function sunsetMinutes(iso){
 
 function renderBlock(ev){
   var b=document.createElement('div'); b.className='block '+ev.confidence; b.dataset.id=ev.id;
-  var color=KIND_COLOR[ev.kind]||KIND_COLOR.other;
-  b.style.background=color;
+  b.style.background=colorFor(ev);
   var sMin = ev.start_time? timeToMin(ev.start_time) : START_HOUR*60;
   var eMin = ev.end_time? timeToMin(ev.end_time) : sMin+45;
   if(eMin<=sMin) eMin=sMin+30;
@@ -333,10 +455,14 @@ function renderFoot(){
   var c=document.createElement('div'); f.appendChild(c);
   DAYS.forEach(function(d,i){
     var cell=document.createElement('div'); cell.className='cell';
-    var staying = events.some(function(ev){ return ev.kind==='lodging' && ev.title.indexOf('Check in')>=0 && ev.day_date<=d; }) &&
-                  !events.some(function(ev){ return ev.kind==='lodging' && ev.title.indexOf('Check out')>=0 && ev.day_date<d; });
-    if(i!==0 && i!==DAYS.length-1){ cell.className+=' stay'; cell.innerHTML=ICONS.home+' Sea La Vie '+ICONS.check; }
-    else { cell.textContent = i===0?'Old Greenwich':'Old Greenwich'; }
+    var homeIcon='<span style="color:var(--home-ink)">'+ICONS.home+'</span>';
+    var checkIcon='<span class="chk">'+ICONS.check+'</span>';
+    if(i!==0 && i!==DAYS.length-1){
+      cell.className+=' stay';
+      cell.innerHTML=homeIcon+' Sea La Vie '+checkIcon;
+    } else {
+      cell.innerHTML=homeIcon+' Old Greenwich';
+    }
     f.appendChild(cell);
   });
   var c2=document.createElement('div'); f.appendChild(c2);
@@ -367,7 +493,11 @@ function onBlockMouseDown(e, ev, el){
     var newH = parseFloat(el.style.height);
     var sMin = yToMin(newTop);
     var eMin = yToMin(newTop+newH);
+    var prevStart=ev.start_time, prevEnd=ev.end_time, id=ev.id;
     saveEvent(Object.assign({}, ev, {start_time: minToTime(sMin), end_time: minToTime(eMin)}));
+    pushUndo(async function(){
+      await sb.from('trip_events').update({start_time:prevStart, end_time:prevEnd}).eq('id', id);
+    });
   }
   document.addEventListener('mousemove', onMove);
   document.addEventListener('mouseup', onUp);
@@ -398,10 +528,11 @@ function onColMouseDown(e, col){
 }
 
 /* ---- edit modal ---- */
-var editing=null, editFam=[];
+var editing=null, editFam=[], editFamOriginal=[];
 function openEdit(ev){
   editing=ev;
   editFam = (ev.trip_event_people||[]).map(function(x){return x.person_id;});
+  editFamOriginal = editFam.slice();
   qs('mTitle').textContent = ev.id? 'Edit' : 'Add something';
   qs('fTitle').value = ev.title||'';
   var sel=qs('fDay'); sel.innerHTML='';
@@ -429,6 +560,9 @@ function closeEdit(){ qs('ov').classList.remove('show'); editing=null; }
 qs('bCancel').addEventListener('click', closeEdit);
 qs('ov').addEventListener('click', function(e){ if(e.target===qs('ov')) closeEdit(); });
 qs('bSave').addEventListener('click', async function(){
+  var wasNew = !editing.id;
+  var prevRow = wasNew ? null : Object.assign({}, editing);
+  var prevFam = editFamOriginal.slice();
   var ev=Object.assign({}, editing, {
     title: qs('fTitle').value || 'Untitled',
     day_date: qs('fDay').value,
@@ -440,16 +574,47 @@ qs('bSave').addEventListener('click', async function(){
     source: editing.id? editing.source : 'manual',
     confidence: editing.id? editing.confidence : 'confirmed'
   });
-  await saveEvent(ev, editFam.slice());
+  var newFam = editFam.slice();
+  var savedId = await saveEvent(ev, newFam);
+  if(wasNew){
+    pushUndo(async function(){ if(savedId) await sb.from('trip_events').delete().eq('id', savedId); });
+  } else {
+    var id=editing.id;
+    pushUndo(async function(){
+      await sb.from('trip_events').update({
+        day_date:prevRow.day_date, start_time:prevRow.start_time, end_time:prevRow.end_time,
+        title:prevRow.title, kind:prevRow.kind, location_name:prevRow.location_name, note:prevRow.note,
+        source:prevRow.source, confidence:prevRow.confidence
+      }).eq('id', id);
+      await sb.from('trip_event_people').delete().eq('event_id', id);
+      if(prevFam.length) await sb.from('trip_event_people').insert(prevFam.map(function(pid){return {event_id:id, person_id:pid};}));
+    });
+  }
   closeEdit();
   await load();
 });
 qs('bDel').addEventListener('click', async function(){
   if(editing && editing.id){
+    var prevRow=Object.assign({}, editing);
+    var prevFam=editFamOriginal.slice();
     await sb.from('trip_events').delete().eq('id', editing.id);
+    pushUndo(async function(){
+      var row={trip_id:trip.id, day_date:prevRow.day_date, start_time:prevRow.start_time, end_time:prevRow.end_time,
+        title:prevRow.title, kind:prevRow.kind, location_name:prevRow.location_name, note:prevRow.note,
+        source:prevRow.source, confidence:prevRow.confidence};
+      var ins = await sb.from('trip_events').insert(row).select().single();
+      var newId = ins.data && ins.data.id;
+      if(newId && prevFam.length){
+        await sb.from('trip_event_people').insert(prevFam.map(function(pid){return {event_id:newId, person_id:pid};}));
+      }
+    });
   }
   closeEdit();
   await load();
+});
+qs('bUndo').addEventListener('click', performUndo);
+document.addEventListener('keydown', function(e){
+  if((e.ctrlKey||e.metaKey) && (e.key==='z'||e.key==='Z')){ e.preventDefault(); performUndo(); }
 });
 
 async function saveEvent(ev, fam){
@@ -470,6 +635,7 @@ async function saveEvent(ev, fam){
     }
   }
   if(!fam){ await load(); }
+  return id;
 }
 
 load();
