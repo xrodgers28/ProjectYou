@@ -87,6 +87,7 @@
   .empty{padding:40px 20px;text-align:center;color:var(--muted)}
   .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1f2a44;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:2147483002}
   .stamp{margin-top:20px;font-size:10.5px;color:var(--onbg);opacity:.45;text-align:center}
+  /* v4.3 (Nov 8, 2026): weekend back issues. When Workflow of the Day runs dry on a Saturday or Sunday, pull one unused AI Training tip (or Roundtable piece) and tag it with the existing .seenb badge so it's clear it's from an older issue. */
   /* v4.2 (Nov 8, 2026): Feeds panel. Tiny icon left of the timer opens a sheet showing today's deck mix by feed, on/off switches, and an add box */
   .tile .fic{position:absolute;top:12px;right:46px;width:26px;height:26px;border-radius:50%;border:1px solid var(--key);background:rgba(255,255,255,.92);display:grid;place-items:center;cursor:pointer;z-index:2;padding:0;box-shadow:0 1px 4px rgba(0,0,0,.18)}
   .tile .fic svg{width:14px;height:14px;fill:none;stroke:#5b6472;stroke-width:2;stroke-linecap:round}
@@ -131,12 +132,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; your daily AI workout</div>
-  <h1>AI Workout <span class="ver">v4.2</span></h1>
+  <h1>AI Workout <span class="ver">v4.3</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
   <div class="note">Each day: one tip, one insight, one GenAI Works pick, four new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable, two stories as two tiles (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That (three of the four). On weekends, two picks from GenAI Works&rsquo; Top 5 tools of the week. Tap the small feeds icon on any tile to see or switch the feeds.</div>
-  <div class="stamp" id="stamp">v4.2</div>
+  <div class="stamp" id="stamp">v4.3</div>
 </div>
 
 <script>
@@ -286,10 +287,36 @@ function dealWeekly(w,t){
     });
   });
 }
+/* v4.3 (Nov 8, 2026): weekend back issues. Workflow of the Day only refills from new
+   Rundown AI issues, and those stop arriving Friday night, so by the weekend the backlog
+   for that section is often empty. Scott's call (Nov 8): on a Saturday or Sunday where
+   nothing else got dealt, pull one unused AI Training tip first, Roundtable as backup,
+   and tag it so it reads as an older issue, not today's. */
+function isWeekendDay(iso){ var p=iso.split("-"), d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12)), g=d.getUTCDay(); return g===0||g===6; }
+function weekdayName(iso){
+  var p=String(iso).split("-"), d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12));
+  return ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getUTCDay()];
+}
+function backIssueFallback(t,already){
+  if(!isWeekendDay(t) || already) return Promise.resolve([]);
+  function tryBacklog(sec){
+    var S=encodeURIComponent(sec);
+    return api("rundown_items?select=*&section=eq."+S+"&seen_on=is.null"+hidQ()+"&order=issue_date.asc,id.asc&limit=1").then(function(rows){
+      if(!rows || !rows.length) return null;
+      var r=rows[0];
+      return api("rundown_items?id=eq."+r.id,{method:"PATCH",prefer:"return=representation",body:JSON.stringify({seen_on:t})})
+        .then(function(got){ var g=(got&&got[0])||r; g.__backissue=weekdayName(g.issue_date); return g; });
+    });
+  }
+  return tryBacklog("AI Training").then(function(r){ return r?r:tryBacklog("Roundtable"); }).then(function(r){ return r?[r]:[]; });
+}
 function dealRundown(){
   var t=today();
   var jobs=DAILY.map(function(q){ return dealOne(q,t); }).concat(WEEKLY.map(function(w){ return dealWeekly(w,t); }));
-  return Promise.all(jobs).then(function(all){ return [].concat.apply([],all); });
+  return Promise.all(jobs).then(function(all){
+    var flat=[].concat.apply([],all);
+    return backIssueFallback(t,flat.length>0).then(function(extra){ return flat.concat(extra); });
+  });
 }
 
 /* ---- tips, insights, platforms: the database deals them into ai_cards ---- */
@@ -421,7 +448,7 @@ function tileHTML(t,i,n){
     '<button class="dt" type="button" data-do="'+esc(t.key)+'" aria-pressed="'+(r.do_this?"true":"false")+'" title="Do this!">Do this</button>'+
     '<button class="st" type="button" data-save="'+esc(t.key)+'" aria-pressed="'+(r.saved?"true":"false")+'" aria-label="Keep this one">'+STAR+'</button>'+
     ((t.kind==="rd"&&r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.shot)?'<div class="pic wfpic"><div style="height:44px"></div><img data-enl="1" src="'+esc(r.ai_summary.shot)+'" alt="Screenshot from the reader\u2019s project" onerror="this.parentNode.remove()"><p class="hint">Tap the picture to enlarge</p></div>':(t.kind==="rd"&&r.img&&!(r.section==="Roundtable"&&r.ai_summary&&r.ai_summary.v===2))?'<div class="pic"><img src="'+esc(r.img)+'" alt="" onerror="this.parentNode.remove()"></div>':'<div style="height:52px"></div>')+
-    '<div class="top"><div class="k">'+esc(kick)+'</div>'+((t.kind==="ai"&&r.__seen)?'<div class="seenb">Seen before &middot; '+esc(nice(r.__seen))+'</div>':'')+'<h2'+(big?' class="bigq"':'')+'>'+esc(title)+'</h2>'+body+link+srcLine(t)+
+    '<div class="top"><div class="k">'+esc(kick)+'</div>'+((t.kind==="ai"&&r.__seen)?'<div class="seenb">Seen before &middot; '+esc(nice(r.__seen))+'</div>':'')+((t.kind==="rd"&&r.__backissue)?'<div class="seenb">From '+esc(r.__backissue)+'&rsquo;s issue</div>':'')+((t.kind==="ai"&&r.back_issue_label)?'<div class="seenb">'+esc(r.back_issue_label)+'</div>':'')+'<h2'+(big?' class="bigq"':'')+'>'+esc(title)+'</h2>'+body+link+srcLine(t)+
     '<button class="nx" type="button" data-nx="'+esc(t.key)+'">Don&rsquo;t show again</button>'+
     '</div>'+
     (last?'<div class="mintotal" id="mintotalLine"></div>':'')+
@@ -724,7 +751,7 @@ Promise.all([loadHidden(),loadFeeds()]).then(function(){ return Promise.all([dea
       .concat(rdRows.map(function(r){ return asTile("rd",r); }));
     tiles.sort(function(a,b){ return a.sort-b.sort; });
     ALLT=tiles; applyFeeds(); subLine();
-    document.getElementById("stamp").textContent="v4.2 · "+nice(today());
+    document.getElementById("stamp").textContent="v4.3 · "+nice(today());
     render();
   });
 }).catch(function(e){
