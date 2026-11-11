@@ -260,6 +260,7 @@
   <div class="toast" id="toast"></div>
 
 <script>
+/* v1.2 (Nov 10, 2026): a star now sits inside the card, top right, like the Bucket List card. It is the same Keep save (cue-fav.js, favorites table, Cue Card Library); tapping it presses Keep, and it lights gold when the card is kept. Built on the live v1.1 page. */
 /* v1.1 (Nov 4, 2026): the card now has the Keep star and Do this! button like every other cue card (cue-fav.js). Built on the live v1.0 page. Hide is refused because this deck deals one card a day. */
 /* ===== Wait, Really? v1.0 (Oct 10, 2026) =====
    One quiz card a day. Each card is one approved, sourced question shown with
@@ -622,7 +623,7 @@ function freeMode(msg){
 async function boot(){
   card=$('#card');
   var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
-  $('#stamp').textContent='Wait, Really?! v1.1 · sourced questions, each with proof links · as of '+f+' · all times EST';
+  $('#stamp').textContent='Wait, Really?! v1.2 · sourced questions, each with proof links · as of '+f+' · all times EST';
   if(!sb||window.__WR_FREE){freeMode('Could not reach the database. Browsing the cards, nothing recorded. Reload to try again.');return;}
   var s=await sb.auth.getSession();
   if(s.data.session){signedIn=true;$('#gate').classList.add('hidden');$('#stage').classList.remove('hidden');await boot2();}
@@ -633,6 +634,30 @@ boot();
 </script>
 <script src="cue-fav.js"></script>
 <script>CueFav.mount({module:"wait-really",label:"Wait, Really?!",hideInfo:function(){return {error:"This card is dealt once a day, so it cannot be hidden."};},current:function(){var c=(typeof CARDS!=="undefined"&&CUR>=0)?CARDS[CUR]:null;if(!c)return null;var t=String(c.ins||"").replace(/\s+/g," ").trim();return {key:c.id,title:t.length>110?t.slice(0,107)+"...":t,body:c.ins||"",type:"card",url:null,source:"Wait, Really?!"};}});</script>
+<style>.card .wrstar{position:absolute;top:12px;right:12px;font-size:19px;color:#c8cfd9;background:none;border:none;cursor:pointer;line-height:1;padding:2px 4px;z-index:2}.card .wrstar.on{color:#e0a52e}</style>
+<script>(function(){
+  var card=document.getElementById('card'); if(!card)return;
+  function kp(){return document.querySelector('#cuefav .kp');}
+  function sync(){
+    var k=kp(), bar=document.getElementById('cuefav');
+    var live=!!(k&&bar&&bar.style.display!=='none'&&typeof CUR!=='undefined'&&CUR>=0);
+    var b=card.querySelector(':scope > .wrstar');
+    if(!live){ if(b)b.remove(); return; }
+    if(!b){ b=document.createElement('button'); b.type='button'; b.className='wrstar';
+      b.addEventListener('click',function(e){e.preventDefault();e.stopPropagation();var x=kp();if(x)x.click();});
+      card.insertBefore(b,card.firstChild); }
+    var on=k.classList.contains('on'), t=on?'★':'☆', ti=on?'Kept in favourites (tap to remove)':'Save to favourites';
+    if(b.textContent!==t)b.textContent=t;
+    if(b.classList.contains('on')!==on)b.classList.toggle('on',on);
+    if(b.title!==ti){b.title=ti;b.setAttribute('aria-label',ti);}
+    b.setAttribute('aria-pressed',on?'true':'false');
+  }
+  var t=null; function soon(){clearTimeout(t);t=setTimeout(sync,60);}
+  new MutationObserver(soon).observe(card,{childList:true});
+  function watchBar(){var bar=document.getElementById('cuefav'); if(!bar){setTimeout(watchBar,300);return;}
+    new MutationObserver(soon).observe(bar,{attributes:true,subtree:true,childList:true,characterData:true}); soon();}
+  watchBar();
+})();</script>
 <script src="cue-visits.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script>
 </body>
 </html>
