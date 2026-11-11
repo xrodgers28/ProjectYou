@@ -216,7 +216,7 @@
 
   <div id="browse" class="hidden">
     <div class="wrap">
-    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v3.3</span><span class="date"></span></div>
+    <div class="secbar"><h1>Things Worth Knowing</h1><span class="ver">v3.4</span><span class="date"></span></div>
       <div class="add">
         <b>Add a phrase</b>
         <div class="r">
@@ -237,7 +237,7 @@
       <div class="grid" id="grid"></div>
     </div>
   </div>
-  <div class="badge">Things Worth Knowing v3.3</div>
+  <div class="badge">Things Worth Knowing v3.4</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -261,8 +261,6 @@ function cueRowTWK(q){return {module:CUE_MODULE_TWK,card_id:String(q.id),card_ty
 async function cueSetTWK(q,val){if(!q)return;if(val){var r=await sb.from('cue_favorites').upsert(cueRowTWK(q),{onConflict:'module,card_id'});if(r.error)throw r.error;}else{var r2=await sb.from('cue_favorites').delete().eq('module',CUE_MODULE_TWK).eq('card_id',String(q.id));if(r2.error)throw r2.error;}}
 async function hydrateFavs(){try{var r=await sb.from('cue_favorites').select('card_id').eq('module',CUE_MODULE_TWK);if(r.error)throw r.error;var set=new Set((r.data||[]).map(function(x){return String(x.card_id);}));ALL.forEach(function(q){q.favorite=set.has(String(q.id));});renderDaily();draw();if(!document.getElementById('great').classList.contains('hidden'))drawGreat();}catch(e){}}
 async function downloadCueFavorites(){var rows=[];try{var r=await sb.from('cue_favorites').select('*').order('starred_at',{ascending:false});if(r.error)throw r.error;rows=r.data||[];}catch(e){toast('Could not reach the server for favorites.');return;}if(!rows.length){toast('No favorites yet. Tap a star first.');return;}var head=['Module','Type','Title / Quote','Detail / Author','Source date','Starred at (UTC)'];var q=function(s){return '"'+String(s==null?'':s).replace(/"/g,'""')+'"';};var csv=head.map(q).join(',')+'\r\n'+rows.map(function(r){return [r.module,r.card_type,r.title,r.detail,r.source_date,r.starred_at].map(q).join(',');}).join('\r\n');var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});var url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='cue-cards-favorites.csv';document.body.appendChild(a);a.click();setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(url);},120);}
-function addFavBtn(){if(document.getElementById('favDl'))return;var b=document.createElement('button');b.id='favDl';b.innerHTML='\u2605 Download favorites';b.style.cssText='position:fixed;right:16px;bottom:16px;z-index:99999;background:#7a4f9c;color:#fff;border:none;border-radius:999px;padding:11px 16px;font:600 13px system-ui,-apple-system,sans-serif;box-shadow:0 6px 18px rgba(31,42,68,.22);cursor:pointer';b.onclick=downloadCueFavorites;document.body.appendChild(b);}
-document.addEventListener('DOMContentLoaded',addFavBtn);
 async function boot(){var ses=null;try{var r=await sb.auth.getSession();ses=r&&r.data&&r.data.session;}catch(e){}
   if(ses){try{await sb.realtime.setAuth(ses.access_token);}catch(e){} document.getElementById('login').classList.add('hidden');document.getElementById('app').classList.remove('hidden');load();}
   else{document.getElementById('login').classList.remove('hidden');document.getElementById('app').classList.add('hidden');}}
@@ -520,7 +518,7 @@ function __cueHandTick(){
   line.style.transform='rotate('+deg+'deg)';
 }
 var __cueTickId=setInterval(__cueHandTick,250);
-function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+'<span class="ver">v3.3</span></div>';}
+function twkHd(){return '<div class="hd"><span class="ic">'+TWK_ICON+'</span><div><div class="nm">Things Worth Knowing</div><div class="kd">Habit Module</div></div>'+'<span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(255,255,255,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="1.4" fill="#fff"/></svg></span>'+'<span class="ver">v3.4</span></div>';}
 function paras(t){return (t||'').split(/\n\s*\n/).map(function(p){return '<div class="mean">'+esc(p.trim())+'</div>';}).join('');}
 function posterHtml(c,text,big){return '<div class="poster" style="background:linear-gradient(135deg,'+c.acc+','+c.dark+')"><div class="'+(big?'big ':'')+'ptxt">'+esc(text)+'</div></div>';}
 function renderDaily(){
@@ -693,5 +691,13 @@ boot();
 <script>(function(){var d=new Date(),M=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],t=M[d.getMonth()]+' '+d.getDate()+', '+d.getFullYear();document.querySelectorAll('.secbar .date').forEach(function(e){e.textContent=t;});})();</script>
 <script src="cue-fav.js"></script>
 <script>CueFav.mount({module:'twk',label:'Things Worth Knowing',doOnly:true,current:function(){var b=document.querySelector('.big');if(!b||!b.offsetParent)return null;var t=b.textContent.trim();if(!t)return null;return {key:t,title:t};}});</script>
+<style id="cuefav-top">
+/* v3.4 (Nov 11, 2026): Do this! and Don't show again sit in a small white strip at the top right, under the menu, so they never cover each other on a phone. */
+#cuefav{position:sticky!important;left:auto!important;bottom:auto!important;top:60px;z-index:29!important;justify-content:flex-end;gap:6px!important;background:#fff;padding:4px 10px;border-bottom:1px solid #e3e7ee}
+#cuefav button{height:24px!important;padding:0 9px!important;font-size:11px!important;border-radius:12px!important;box-shadow:none!important}
+#cuefav a{font-size:10.5px!important;padding:5px 8px!important;box-shadow:none!important}
+#cuefav .tst{bottom:auto!important;top:100%;left:auto!important;right:10px;margin-top:6px}
+</style>
+<script>(function(){function place(){var b=document.getElementById('cuefav'),n=document.querySelector('.pynav');if(!b||!n)return;if(n.nextSibling!==b)n.parentNode.insertBefore(b,n.nextSibling);b.style.top=n.offsetHeight+'px';}var c=0,t=setInterval(function(){place();if(++c>20)clearInterval(t);},300);window.addEventListener('resize',place);window.addEventListener('load',place);})();</script>
 <script src="cue-visits.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
