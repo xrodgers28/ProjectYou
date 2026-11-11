@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report, Nov 11, 2026</title>
+<style>
+  :root{
+    --bg:#f4f2ee; --panel:#ffffff; --ink:#1f2328; --soft:#5a6069; --faint:#8a909a;
+    --line:#e3e0d9; --chip:#eceae4; --accent:#3f6f8f;
+    --dot-green:#2f8f5b; --dot-amber:#c07f10; --dot-red:#b4452f;
+    --do:#3f6f8f; --more:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+    --box:#faf9f6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#14171a; --panel:#1d2024; --ink:#eceef1; --soft:#aab0b8; --faint:#7d848d;
+      --line:#2c3137; --chip:#262a2f; --accent:#78a7c4;
+      --dot-green:#4bbd84; --dot-amber:#e0a63a; --dot-red:#e0765c;
+      --do:#5e93b4; --more:#d49a2e; --did:#4bbd84; --read:#8c98a6; --kill:#c58f63;
+      --box:#191c20;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#14171a; --panel:#1d2024; --ink:#eceef1; --soft:#aab0b8; --faint:#7d848d;
+    --line:#2c3137; --chip:#262a2f; --accent:#78a7c4;
+    --dot-green:#4bbd84; --dot-amber:#e0a63a; --dot-red:#e0765c;
+    --do:#5e93b4; --more:#d49a2e; --did:#4bbd84; --read:#8c98a6; --kill:#c58f63;
+    --box:#191c20;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:Arial, Helvetica, sans-serif; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:20px 16px 60px;}
+  header.top{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:2px;}
+  h1{font-size:23px; margin:0; letter-spacing:.2px;}
+  .vchip{font-size:11px; font-weight:700; color:var(--accent); border:1px solid var(--line);
+    border-radius:999px; padding:2px 8px; background:var(--chip);}
+  .datium{color:var(--soft); font-size:13px; margin:4px 0 16px;}
+
+  .glance{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:16px;}
+  .glance h2{font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--faint); margin:0 0 8px;}
+  .glance p{margin:0 0 7px; font-size:14px;}
+  .glance p:last-child{margin-bottom:0;}
+  .glance b{color:var(--ink);}
+
+  .key{background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin-bottom:14px;}
+  .key h2{font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--faint); margin:0 0 8px;}
+  .keyrow{display:flex; flex-wrap:wrap; gap:8px 14px; font-size:12.5px;}
+  .keyitem{display:flex; align-items:center; gap:6px; color:var(--soft);}
+  .kswatch{width:10px; height:10px; border-radius:3px; display:inline-block;}
+
+  .compiler{position:sticky; top:0; z-index:5; background:var(--panel); border:1px solid var(--accent);
+    border-radius:12px; padding:12px 14px; margin-bottom:20px; box-shadow:0 4px 14px rgba(0,0,0,.08);}
+  .compiler h2{font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--accent); margin:0 0 8px; display:flex; justify-content:space-between; align-items:center;}
+  .compiler .hint{font-weight:400; text-transform:none; letter-spacing:0; color:var(--faint); font-size:11.5px;}
+  textarea#out{width:100%; min-height:88px; resize:vertical; border:1px solid var(--line); border-radius:8px;
+    background:var(--box); color:var(--ink); font-family:Arial, Helvetica, sans-serif; font-size:13px; padding:10px; line-height:1.45;}
+  .cbtns{display:flex; gap:8px; margin-top:8px;}
+  button{font-family:Arial, Helvetica, sans-serif; cursor:pointer;}
+  .copy{border:1px solid var(--accent); background:transparent; color:var(--accent); border-radius:8px; padding:7px 14px; font-size:12.5px; font-weight:700;}
+  .copy:active{transform:translateY(1px);}
+
+  .row{background:var(--panel); border:1px solid var(--line); border-left:5px solid var(--line);
+    border-radius:12px; padding:14px 16px; margin-bottom:14px; transition:border-color .15s, opacity .15s;}
+  .row.settled{opacity:.72;}
+  .rhead{display:flex; align-items:flex-start; gap:10px;}
+  .dot{width:13px; height:13px; border-radius:50%; margin-top:4px; flex:0 0 auto;}
+  .dot.green{background:var(--dot-green);} .dot.amber{background:var(--dot-amber);} .dot.red{background:var(--dot-red);}
+  .rtitle{font-size:16px; font-weight:700; margin:0;}
+  .rbody{font-size:14px; color:var(--soft); margin:8px 0 10px;}
+  .rnext{font-size:13.5px; margin:0 0 12px;}
+  .rnext b{color:var(--ink);}
+  .status-tag{display:inline-block; font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; margin-left:8px; vertical-align:middle;}
+  .tag-open{background:var(--chip); color:var(--more); border:1px solid var(--line);}
+  .tag-done{background:var(--chip); color:var(--did); border:1px solid var(--line);}
+
+  .btns{display:flex; flex-wrap:wrap; gap:8px;}
+  .btn{border:none; border-radius:8px; padding:9px 14px; font-size:12.5px; font-weight:700; color:#fff;}
+  .btn.sel{outline:3px solid rgba(0,0,0,.18); outline-offset:1px;}
+  .b-do{background:var(--do);} .b-more{background:var(--more);} .b-did{background:var(--did);} .b-read{background:var(--read);} .b-kill{background:var(--kill);}
+  .cmt{width:100%; margin-top:10px; border:1px solid var(--line); border-radius:8px; background:var(--box); color:var(--ink);
+    font-family:Arial, Helvetica, sans-serif; font-size:13px; padding:8px 10px; min-height:34px; resize:vertical;}
+  .cmt::placeholder{color:var(--faint);}
+
+  .sublist{margin:8px 0 2px; padding-left:18px;}
+  .sublist li{font-size:13.5px; color:var(--soft); margin-bottom:4px;}
+
+  .atomic{background:var(--chip); border:1px solid var(--line); border-radius:12px; padding:12px 16px; margin:18px 0; font-size:13.5px; color:var(--soft);}
+  .atomic b{color:var(--ink);}
+
+  .tech{margin-top:22px; border-top:1px dashed var(--line); padding-top:12px; font-size:11.5px; color:var(--faint);}
+  .tech b{color:var(--soft);}
+  .foot{margin-top:16px; font-size:12px; color:var(--faint); text-align:center;}
+  a{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>Morning Report</h1>
+    <span class="vchip">v1.0</span>
+  </header>
+  <div class="datium">Wednesday, Nov 11, 2026 &middot; prepared around 5:00am EST</div>
+
+  <section class="glance">
+    <h2>Your day at a glance</h2>
+    <p><b>Calendar:</b> Wide open. One thing on it today, leave for squash at 4:30pm EST. Tomorrow is clear too.</p>
+    <p><b>Email:</b> About 20 unread, nearly all newsletters, receipts and shop promos. One personal note from Pat, and a little sales chatter about Carson. Nothing in the inbox is waiting on a reply from you.</p>
+    <p><b>Claude usage:</b> Your weekly usage number is not readable from this run, so I cannot give you a figure. You can see it in the Claude app under your plan settings.</p>
+  </section>
+
+  <section class="key">
+    <h2>What the five buttons mean</h2>
+    <div class="keyrow">
+      <span class="keyitem"><span class="kswatch" style="background:var(--do)"></span><b>Do this</b>&nbsp;go build or run it (stays open until done)</span>
+      <span class="keyitem"><span class="kswatch" style="background:var(--more)"></span><b>Tell me more</b>&nbsp;you want the cost or risk first (stays open)</span>
+      <span class="keyitem"><span class="kswatch" style="background:var(--did)"></span><b>I did it</b>&nbsp;handled</span>
+      <span class="keyitem"><span class="kswatch" style="background:var(--read)"></span><b>I read this</b>&nbsp;noted, nothing owed</span>
+      <span class="keyitem"><span class="kswatch" style="background:var(--kill)"></span><b>Kill this task</b>&nbsp;drop it for good</span>
+    </div>
+  </section>
+
+  <section class="compiler">
+    <h2>Your answers <span class="hint">taps land here &middot; select all and copy back into chat</span></h2>
+    <textarea id="out" readonly placeholder="Tap a button on any card below and your answer shows up here, ready to copy."></textarea>
+    <div class="cbtns">
+      <button class="copy" onclick="copyOut()">Copy answers</button>
+    </div>
+  </section>
+
+  <!-- ROWS -->
+  <div id="rows">
+
+    <article class="row" data-id="overnight-run" data-title="Last night's 4am run did not clock in">
+      <div class="rhead"><span class="dot red"></span>
+        <h3 class="rtitle">Last night's 4am run did not clock in, second morning running<span class="status-tag tag-open" data-tag>needs you</span></h3>
+      </div>
+      <p class="rbody">The overnight batch that normally runs at 4am left no record last night, and the same thing happened the night before. Your daily habit reset still shows Nov 10 as its last run, and the food-log housekeeping has not logged since Nov 9. The machine was not fully asleep though: two other overnight jobs did fire, the AI card deck added 6 new cards at 2am and the map check posted a fresh finding at 3:19am. So it is the 4am batch specifically that has stopped, not everything.</p>
+      <p class="rnext"><b>What you do next:</b> Tap Do this and I will dig into why the 4am batch stopped firing and get it clocking in again.</p>
+      <div class="btns"></div>
+      <textarea class="cmt" placeholder="Add a note (optional)"></textarea>
+    </article>
+
+    <article class="row" data-id="map-stale" data-title="Your six map pages are proven out of date">
+      <div class="rhead"><span class="dot amber"></span>
+        <h3 class="rtitle">Your six system-map pages are now proven out of date<span class="status-tag tag-open" data-tag>needs you</span></h3>
+      </div>
+      <p class="rbody">The nightly map check saved a fingerprint of all six map pages last night, and found not one had changed in 24 hours, the first hard proof instead of a guess. The worst is the Automated Tracking page, 68 days old, which still says in fixed text that Apple Health and Strava both stopped on Sep 4. Both are feeding again, a health reading landed Nov 9 evening and Strava wrote Nov 10 night, so the page is stating something that is simply false.</p>
+      <p class="rnext"><b>What you do next:</b> Tap Do this to have me refresh the map pages so they match the live system.</p>
+      <div class="btns"></div>
+      <textarea class="cmt" placeholder="Add a note (optional)"></textarea>
+    </article>
+
+    <article class="row" data-id="sept-decisions" data-title="Four September automation decisions still waiting">
+      <div class="rhead"><span class="dot amber"></span>
+        <h3 class="rtitle">Four &ldquo;set it and forget it&rdquo; decisions have waited since September<span class="status-tag tag-open" data-tag>needs you</span></h3>
+      </div>
+      <p class="rbody">Four automation ideas are parked on your yes or no, some since early September. Nothing moves on them until you pick, so they have just sat.</p>
+      <ul class="sublist">
+        <li>Count your real work hours, not just meetings, toward the 40-hour week.</li>
+        <li>One-tap log a connection when a calendar event matches someone you know.</li>
+        <li>Keep your travel history flowing on the same repeating job as everything else.</li>
+        <li>Drop three unused columns from a tracker table you already told me to kill.</li>
+      </ul>
+      <p class="rnext"><b>What you do next:</b> Tap Do this to build the ones you want, or Tell me more for the cost on any, and note which in the box. Kill this task clears the ones you have cooled on.</p>
+      <div class="btns"></div>
+      <textarea class="cmt" placeholder="Which ones? Build, hold, or drop"></textarea>
+    </article>
+
+    <article class="row" data-id="supabase-security" data-title="Supabase security warning is real">
+      <div class="rhead"><span class="dot red"></span>
+        <h3 class="rtitle">Supabase emailed you a security warning, and it is real<span class="status-tag tag-open" data-tag>needs you</span></h3>
+      </div>
+      <p class="rbody">Supabase sent an alert that 42 of your tables have their lock turned off, which means anyone holding the public key to your site could read or change those rows. Most are old backups, but a handful are live. I did not change anything. Turning the lock on without adding the right permissions would break those pages, so this needs a careful pass, not a quick flip of a switch.</p>
+      <p class="rnext"><b>What you do next:</b> Tap Do this and I will lock them down properly, one careful pass, or Tell me more for the full list first.</p>
+      <div class="btns"></div>
+      <textarea class="cmt" placeholder="Add a note (optional)"></textarea>
+    </article>
+
+    <article class="row" data-id="ai-scan" data-title="New AI and tool finds waiting for keep or discard">
+      <div class="rhead"><span class="dot amber"></span>
+        <h3 class="rtitle">Fresh AI and tool finds are waiting for your keep or discard<span class="status-tag tag-open" data-tag>needs you</span></h3>
+      </div>
+      <p class="rbody">The AI deck pulled 6 new cards this morning: four tools worth a look, Nemotron Transcribe, Eachlabs, GenStory and InstaWebAI, plus two short ideas. Separately, The Feed has 127 unread items stacked up waiting to be starred or skipped. Nothing is lost, they just keep piling until you glance at them.</p>
+      <p class="rnext"><b>What you do next:</b> Open the deck and The Feed to keep the good ones and clear the rest, or tap I read this.</p>
+      <div class="btns"></div>
+      <textarea class="cmt" placeholder="Add a note (optional)"></textarea>
+    </article>
+
+    <article class="row" data-id="food-log" data-title="The food log has been quiet for 17 days">
+      <div class="rhead"><span class="dot amber"></span>
+        <h3 class="rtitle">The food log has been quiet for 17 days<span class="status-tag tag-open" data-tag>needs you</span></h3>
+      </div>
+      <p class="rbody">No meal has been logged since Oct 23, and the overnight housekeeping that tends the food log last ran Nov 9. Photos are still arriving to the camera roll, but none are turning into meal entries, so it looks like the path from photo to meal is stuck rather than you simply stopping. This wants an attended look, not an overnight fix.</p>
+      <p class="rnext"><b>What you do next:</b> Tap Do this to have me look at why flagged photos are not becoming meals, or Kill this task if you have moved on from food logging.</p>
+      <div class="btns"></div>
+      <textarea class="cmt" placeholder="Add a note (optional)"></textarea>
+    </article>
+
+    <article class="row" data-id="family-note" data-title="Family note: COVID outbreak at the nursing center">
+      <div class="rhead"><span class="dot green"></span>
+        <h3 class="rtitle">A family note came in about the nursing center<span class="status-tag tag-open" data-tag>for your read</span></h3>
+      </div>
+      <p class="rbody">Pat forwarded a notice from the Gardenview unit at Brookhaven saying they have a COVID outbreak among residents and staff, with masking and shorter-visit guidance for families. It is informational and addressed to families, and nothing is asked of you directly. I am flagging it only so it does not get buried under the newsletters.</p>
+      <p class="rnext"><b>What you do next:</b> Nothing owed. Tap I read this once you have seen it.</p>
+      <div class="btns"></div>
+      <textarea class="cmt" placeholder="Add a note (optional)"></textarea>
+    </article>
+
+    <article class="row" data-id="open-day" data-title="Today is wide open">
+      <div class="rhead"><span class="dot green"></span>
+        <h3 class="rtitle">Today is wide open<span class="status-tag tag-open" data-tag>for your read</span></h3>
+      </div>
+      <p class="rbody">Your calendar holds one thing: leave for squash at 4:30pm. Tomorrow is clear as well. That is a rare open stretch, the kind of day best spent on the one thing that has been waiting rather than the many small ones.</p>
+      <p class="rnext"><b>What you do next:</b> Nothing owed. Tap I read this.</p>
+      <div class="btns"></div>
+      <textarea class="cmt" placeholder="Add a note (optional)"></textarea>
+    </article>
+
+  </div>
+
+  <div class="atomic">
+    <b>One Atomic Habits nudge.</b> Make the cue obvious. Those four September decisions have sat because nothing ever puts them in front of you. They are on your screen right now, so deciding even one while it is visible is the two-minute version of getting unstuck. The spot where a choice lives decides whether it gets made.
+  </div>
+
+  <div class="tech">
+    <b>Technical proof, ignore unless curious.</b> Overnight run: public.run_log has no row since Nov 9; public.app_meta.last_rollover still reads 2026-11-10; the AI deck wrote 6 ai_cards rows at 07:00 UTC and session_todos id 174 was appended by the map freshness check at 08:19 UTC. Map drift: six map pages returned identical content fingerprints across 24 hours. Food log: newest public.meals row is 2026-10-23, foodlog-housekeeping last logged 2026-11-09. Security: Supabase advisor flagged row-level security disabled on 42 tables. Desktop folder /Users/scottyex/Documents/SER FILES/CoWork was offline this run, so file-level reconciliation across the project folders is pending the next time the desktop is connected.
+  </div>
+
+  <div class="foot">Morning Report &middot; morning-report-2026-11-11.html</div>
+
+</div>
+
+<script>
+  var LABELS = {
+    "do":"Do this", "more":"Tell me more", "did":"I did it", "read":"I read this", "kill":"Kill this task"
+  };
+  var OPEN = {"do":true, "more":true, "did":false, "read":false, "kill":false};
+  var BTN_ORDER = ["do","more","did","read","kill"];
+  var BTN_CLASS = {"do":"b-do","more":"b-more","did":"b-did","read":"b-read","kill":"b-kill"};
+  var state = {}; // id -> {choice, title, comment}
+
+  function build(){
+    var rows = document.querySelectorAll(".row");
+    rows.forEach(function(r){
+      var id = r.getAttribute("data-id");
+      var title = r.getAttribute("data-title");
+      state[id] = {choice:null, title:title, comment:""};
+      var holder = r.querySelector(".btns");
+      BTN_ORDER.forEach(function(k){
+        var b = document.createElement("button");
+        b.className = "btn " + BTN_CLASS[k];
+        b.textContent = LABELS[k];
+        b.onclick = function(){ pick(r, id, k, b); };
+        holder.appendChild(b);
+      });
+      var cmt = r.querySelector(".cmt");
+      cmt.addEventListener("input", function(){ state[id].comment = cmt.value.trim(); render(); });
+    });
+  }
+
+  function pick(r, id, k, btn){
+    state[id].choice = k;
+    // highlight selected button
+    r.querySelectorAll(".btn").forEach(function(x){ x.classList.remove("sel"); });
+    btn.classList.add("sel");
+    // left border color
+    var cssVar = getComputedStyle(document.documentElement).getPropertyValue("--" + k);
+    r.style.borderLeftColor = cssVar.trim();
+    // open vs settled
+    var tag = r.querySelector("[data-tag]");
+    if(OPEN[k]){
+      r.classList.remove("settled");
+      tag.textContent = "open";
+      tag.className = "status-tag tag-open";
+    } else {
+      r.classList.add("settled");
+      tag.textContent = LABELS[k];
+      tag.className = "status-tag tag-done";
+    }
+    render();
+  }
+
+  function render(){
+    var lines = [];
+    lines.push("MORNING REPORT, Nov 11 2026, my answers:");
+    lines.push("");
+    document.querySelectorAll(".row").forEach(function(r){
+      var id = r.getAttribute("data-id");
+      var s = state[id];
+      if(s.choice || s.comment){
+        var verb = s.choice ? LABELS[s.choice] : "(comment only)";
+        var line = "- " + s.title + " -> " + verb;
+        if(s.comment){ line += "  | note: " + s.comment; }
+        lines.push(line);
+      }
+    });
+    if(lines.length === 2){ lines.push("(nothing tapped yet)"); }
+    document.getElementById("out").value = lines.join("\n");
+  }
+
+  function copyOut(){
+    var ta = document.getElementById("out");
+    ta.removeAttribute("readonly");
+    ta.select();
+    ta.setSelectionRange(0, 99999);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch(e){ ok = false; }
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(ta.value).catch(function(){});
+    }
+    ta.setAttribute("readonly","readonly");
+    var btn = document.querySelector(".copy");
+    var old = btn.textContent;
+    btn.textContent = ok ? "Copied" : "Select the text and copy";
+    setTimeout(function(){ btn.textContent = old; }, 1800);
+  }
+
+  build();
+  render();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
