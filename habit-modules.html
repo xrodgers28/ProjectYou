@@ -16,7 +16,7 @@
 <script src="social-log.js"></script>
 <script src="safari-log.js"></script>
 <!-- v6.95 (Oct 12, 2026): the What gave me energy card now has a Park button and parks into the Parked area. -->
-<!-- v6.107 (Nov 6, 2026): Repeat After Me card added beside Wait, Really?! (repeat-after-me.html, habit "Repeat After Me", deck repeat-after-me). -->
+<!-- v6.108 (Nov 6, 2026): Repeat After Me card added beside Wait, Really?! (repeat-after-me.html, habit "Repeat After Me", deck repeat-after-me). -->
 <!-- v6.106 (Nov 1, 2026): streak freeze. A frozen day (table cue_streak_freezes) bridges the streak instead of breaking it, and shows an ice icon. Starts with Oct 31, 2026. -->
 <!-- v6.105 (Nov 1, 2026): counter cards were missing because the relationship check-in crashed the page load (PYBackfill.dateKey did not exist). Added it. -->
 <!-- v6.104 (Oct 21, 2026): Wait, Really?! card added beside Mindset Training. -->
@@ -902,6 +902,9 @@
   .pjcol{display:flex;flex-direction:column;gap:6px;min-width:0}
   .pjlcol.pjplist{border-radius:12px;padding:6px 8px 7px;box-shadow:none;border-color:var(--line)}
   .pjplist .pjplhead{font-size:9.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#7c8695;margin:0 0 3px 2px}
+  .pjplinks{display:flex;flex-direction:column;gap:6px;margin:0 0 8px}
+  .pjplinks a{display:block;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:14px;font-weight:700;color:#3f6f8f;text-decoration:none}
+  .pjplinks a:active{background:#eef3f7}
   .pjplist .pjlitems{gap:1px}
   .pjplist .pjlmain{gap:2px}
   .pjplist .pjlmain .pjlt{padding:2px 7px;font-size:12px;line-height:1.2;border:none;font-weight:400;border-radius:6px}
@@ -974,13 +977,13 @@ if(window.PYBackfill&&!window.PYBackfill.dateKey){window.PYBackfill.dateKey=func
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v6.107</span>
+    <span class="pn-ver">v6.108</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.107</span></h1>
+      <h1><span class="em">1%</span> Better Every Day <span class="ver">v6.108</span></h1>
       <div class="pjtog" id="pjtog" role="group" aria-label="Which board to show">
         <button type="button" data-view="cards" class="on">Cue Cards</button>
         <button type="button" data-view="projects">Projects</button>
@@ -4486,10 +4489,6 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
       '<div class="pjbody">' +
         '<div class="pjname">' + esc(p.name) + '</div>' +
         '<span class="pjchip ' + tone + '">' + esc(p.state) + '</span>' +
-        '<p class="pjstat">' + rich(p.status) + '</p>' +
-        (figs ? '<div class="pjfigs">' + figs + '</div>' : '') +
-        (p.last_text ? '<p class="pjlast"><span class="k">' + esc(p.last_label || 'Last thing finished') +
-           '</span>' + rich(p.last_text) + '</p>' : '') +
       '</div>';
     var safe = typeof p.url === 'string' && /^[a-zA-Z0-9._\-\/]+\.html(#.*)?$/.test(p.url);
     return safe
@@ -4499,9 +4498,21 @@ document.addEventListener('visibilitychange',function(){if(!document.hidden&&sig
 
   var PLOADED = false;
   function pslug(p){ return String(p.slug || p.name || '').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+  var PROJ_LINKS = {
+    'treadwell': [
+      {t:'TreadWell Antigua: Activities', u:'https://claude.ai/artifact/VvLHvzV5q7brFDDhVdEtTc'},
+      {t:'TreadWell Boston: Activities', u:'https://claude.ai/artifact/AZ8kUnDjvivJJQ2REswfcj'}
+    ]
+  };
+  function projLinks(p){
+    var L = PROJ_LINKS[pslug(p)];
+    if(!L) return '';
+    return '<div class="pjplinks">' + L.map(function(l){
+      return '<a href="' + esc(l.u) + '" target="_blank" rel="noopener">' + esc(l.t) + '</a>'; }).join('') + '</div>';
+  }
   function projList(p){
     var id = 'p:' + pslug(p);
-    return '<div class="pjlcol pjplist pjwait" data-listid="' + esc(id) + '">' +
+    return projLinks(p) + '<div class="pjlcol pjplist pjwait" data-listid="' + esc(id) + '">' +
       '<div class="pjplhead">' + esc(p.name) + ' list</div>' +
       '<div class="pjlitems" data-listid="' + esc(id) + '"></div>' +
       '<button type="button" class="pjladd" data-listid="' + esc(id) + '">+ Add an item</button>' +
