@@ -284,7 +284,7 @@ window.PAGE_VERSIONS = {
   "environmental.html": "v1.5",
   "feed.html": "v1.5",
   "habit-modules.html": "v6.49",
-  "phone-habits.html": "v2.1",
+  "phone-habits.html": "v2.2",
   "creativity.html": "v1.1",
   "habit-worksheets.html": "v3.4",
   "life-snapshot.html": "v1.0",
