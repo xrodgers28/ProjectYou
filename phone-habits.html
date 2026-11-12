@@ -92,6 +92,7 @@ section.sec[data-id=parkedcards] .key{cursor:default}
 .floating{position:fixed;z-index:50;pointer-events:none;opacity:.95;transform:scale(1.12);filter:drop-shadow(0 8px 14px rgba(0,0,0,.4))}
 .floating .rm{display:none}
 #ind{position:fixed;display:none;width:3px;border-radius:2px;background:var(--text);z-index:40;pointer-events:none}
+html,body{overflow-x:hidden;max-width:100%}.app{overflow-x:clip}.disc{width:40px;height:40px}.lbl{font-size:9.5px}.led{width:23px;height:23px}.body{grid-template-columns:52px minmax(0,1fr)}.tmw{width:52px}.dnav{display:flex;align-items:center;justify-content:center;gap:10px;margin:14px 0 4px;padding-bottom:calc(10px + env(safe-area-inset-bottom))}.dnav.past .dnp{outline:2px solid #b8962f;outline-offset:2px}.dnp{display:flex;align-items:center;gap:6px;background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:5px}.dnp button{appearance:none;border:0;background:var(--bg);color:var(--text);width:34px;height:34px;border-radius:50%;font-size:20px;font-weight:700;line-height:1;font-family:inherit}.dnp button:disabled{opacity:.3}.dnp span{min-width:128px;text-align:center;font:700 14px/1 -apple-system,Arial,sans-serif;color:var(--text)}.dnb{appearance:none;border:0;background:none;color:var(--muted);font:600 13px -apple-system,Arial,sans-serif;padding:8px}.dnb[hidden]{display:none}.dnv{text-align:center;color:var(--muted);font:11px -apple-system,Arial,sans-serif;opacity:.6;margin:0 0 6px}.pastbar{margin:6px 0 0;padding:6px 10px;border-radius:10px;background:#b8962f;color:#14110a;font:700 12px -apple-system,Arial,sans-serif;text-align:center}
 .note{font-size:12px;line-height:1.4;color:var(--muted);margin:8px 0 0}
 .parked{margin-top:6px;border-top:1px solid var(--line)}
 .shade{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;color:var(--muted);font:inherit;font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;min-height:44px;padding:0;cursor:pointer;text-align:left}
@@ -418,6 +419,7 @@ function render(){
     var shut = isShut(id);
     var l = items.filter(function(it){ return !isDone(it); }).length;
     if (id !== 'bonus' && id !== 'parkedcards' && !shut) { left += l; total += items.length; }
+    if (!editing && (id === 'cards' || id === 'parkedcards')) items = items.slice(0, 6);
     var core = items.filter(function(it){ return it[4] === 'core'; }), sm = items.filter(function(it){ return it[4] !== 'core'; });
     var secHtml = '<section class="sec' + (shut ? ' shut' : '') + '" data-id="' + id + '"><div class="sh">' +
       '<button class="grip" type="button" data-grip="' + id + '" aria-label="Move ' + esc(nameOf(id)) + '. Drag, or use the up and down arrow keys."><i></i></button>' +
@@ -444,7 +446,7 @@ function render(){
   document.getElementById('hint').innerHTML = editing
     ? 'Drag a dotted handle to move a section. Tap a section name to rename it. Press and drag a key to move it to another section. Tap × to park a key. Tap Done when finished.' +
         '<span class="prev"><button type="button" data-prev="row">Preview a row celebration</button><button type="button" data-prev="day">Preview the day celebration</button><button type="button" data-prev="board">Preview a board change</button><button type="button" data-prev="bday">Preview a birthday</button></span>'
-    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v2.0';
+    : '';
   document.getElementById('app').className = 'app' + (editing ? ' editing' : '');
   document.getElementById('edit').textContent = editing ? 'Done' : 'Edit';
   document.getElementById('edit').setAttribute('aria-pressed', editing);
@@ -792,6 +794,11 @@ var DECK_ID = {takeaways:'takeaways', 'open-mode':'openmode', environmental:'env
 var pending = 0, booted = false, lastSig = '', pollT = null, cloudT = null, loadedOnce = false;
 
 function mondayOf(day){ var d = new Date(day + 'T12:00:00Z'); var dow = (d.getUTCDay() + 6) % 7; d.setUTCDate(d.getUTCDate() - dow); return d.toISOString().slice(0, 10); }
+/* ---- v2.1: the day being viewed. null means today (2am Eastern rule). Past days are logged into, like the Cue Cards page. ---- */
+var VIEW = null;
+function VD(){ return VIEW || PY.today(); }
+function addDays(d, n){ var t = new Date(d + 'T12:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return t.toISOString().slice(0, 10); }
+function niceDay(d){ var p = d.split('-'), m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return m[+p[1]-1] + ' ' + (+p[2]) + ', ' + p[0]; }
 function rowsFor(id, rows){
   var sp = SPEC[id]; if (!sp) return [];
   var names = [sp.task].concat(sp.alt || []).map(norm);
@@ -799,13 +806,13 @@ function rowsFor(id, rows){
 }
 
 function setEyebrow(){
-  try { var p = PY.today().split('-'), m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    document.querySelector('.eyebrow').innerHTML = 'Today &middot; ' + m[+p[1]-1] + ' ' + (+p[2]) + ', ' + p[0]; } catch (e) {}
+  try { var p = VD().split('-'), m = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var eb = document.querySelector('.eyebrow'); eb.innerHTML = (VIEW ? 'Viewing' : 'Today') + ' &middot; ' + m[+p[1]-1] + ' ' + (+p[2]) + ', ' + p[0]; eb.style.color = VIEW ? '#d9b24a' : ''; } catch (e) {}
 }
 /* ---- read everything the screen shows ---- */
 async function refresh(){
   if (!sb || !window.PY) return;
-  var day = PY.today(); setEyebrow();
+  var day = VD(); setEyebrow();
   var res;
   try {
     res = await Promise.all([
@@ -852,7 +859,7 @@ async function refresh(){
 /* ---- write one habit row, the way the Cue Cards page does ---- */
 async function tickRow(id, on, o){
   o = o || {};
-  var sp = SPEC[id], day = PY.today(), now = new Date().toISOString();
+  var sp = SPEC[id], day = VD(), now = new Date().toISOString();
   var r = await sb.from('todos').select('id,task,tracker,done,skipped,actual_minutes').eq('is_habit', true).eq('for_date', day);
   if (r.error) throw r.error;
   var rows = rowsFor(id, r.data || []);
@@ -892,7 +899,7 @@ async function commit(id, mode){
   if (!sp) { toast('No habit record for that key yet.'); return; }
   pending++;
   try {
-    var day = PY.today();
+    var day = VD();
     if (sp.table) {                                   /* Coffee and Water keep one row per cup or glass */
       if (mode === 'tap') {
         var row = {day:day}; if (id === 'coffee') row.strength = 'full';
@@ -947,7 +954,7 @@ function lazyScript(src){ return new Promise(function(res){ if (document.querySe
 var TRANSIT = /rail|train|station|airport|medical|hospital|parking|gas|office/i;
 async function guessSafari(){
   try {
-    var r = await sb.from('checkins').select('venue,city,state,category,ts').eq('day', PY.today()).order('ts', {ascending:false}).limit(40);
+    var r = await sb.from('checkins').select('venue,city,state,category,ts').eq('day', VD()).order('ts', {ascending:false}).limit(40);
     var rows = (r.data || []).filter(function(c){ return c.venue && !TRANSIT.test(c.category || ''); });
     var away = rows.filter(function(c){ return c.state && c.state !== 'CT' && c.state !== 'NY'; })[0];
     var near = rows.filter(function(c){ return c.city && c.city !== 'Old Greenwich'; })[0];
@@ -959,7 +966,7 @@ async function guessMeetup(){
   try {
     var n = await sb.from('calendar_social_names').select('source_calendar').eq('active', true);
     var cals = (n.data || []).map(function(x){ return x.source_calendar; }).filter(Boolean); if (!cals.length) return {};
-    var e = await sb.from('calendar_events').select('title,start_time,hidden,dismissed,skipped').eq('date', PY.today()).in('source_calendar', cals).order('start_time', {ascending:false});
+    var e = await sb.from('calendar_events').select('title,start_time,hidden,dismissed,skipped').eq('date', VD()).in('source_calendar', cals).order('start_time', {ascending:false});
     var now = new Date(), hhmm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
     var ev = (e.data || []).filter(function(x){ return !x.hidden && !x.dismissed && !x.skipped && x.title && (!x.start_time || String(x.start_time).slice(0, 5) <= hhmm); })[0];
     return ev ? {title: ev.title} : {};
@@ -998,14 +1005,14 @@ root.addEventListener('click', async function(e){
       await lazyScript('safari-log.js');
       if (!window.PYSafari) { toast('The safari log could not load.'); return; }
       var g = await guessSafari();
-      PYSafari.open({sb: sb, when: PY.today(), place: g.place || '', town: g.town || '', onSaved: async function(res){ try { if (!(res && (res.future || (res.date && res.date !== PY.today()) || (res.happened_on && res.happened_on !== PY.today())))) await tickRow('local', true); } catch (e) {} afterForm('local'); }});
+      PYSafari.open({sb: sb, when: VD(), place: g.place || '', town: g.town || '', onSaved: async function(res){ try { if (!(res && (res.future || (res.date && res.date !== VD()) || (res.happened_on && res.happened_on !== VD())))) await tickRow('local', true); } catch (e) {} afterForm('local'); }});
     } else {
       await lazyScript('social-log.js');
       if (!window.PYSocial) { toast('The social log could not load.'); return; }
       var m = await guessMeetup();
-      PYSocial.open({sb: sb, when: PY.today(), title: m.title || '', onSaved: async function(res){
+      PYSocial.open({sb: sb, when: VD(), title: m.title || '', onSaved: async function(res){
         /* the social form ticks the Social habit; the Meet up key is its own habit row, so tick that too (only if it already happened) */
-        try { if (res && !res.future && res.connectionId && res.date === PY.today()) { var it0 = ITEMS.meetup, sid0 = sectionOf('meetup'), rb = rowDone(sid0), db = dayDone(), wd = isDone(it0); await tickRow('meetup', true); S.done.meetup = 1; render(); await afterFormTicked(wd, rb, db, sid0); return; } } catch (er) { toast('Meet up did not tick: ' + (er.message || er)); }
+        try { if (res && !res.future && res.connectionId && res.date === VD()) { var it0 = ITEMS.meetup, sid0 = sectionOf('meetup'), rb = rowDone(sid0), db = dayDone(), wd = isDone(it0); await tickRow('meetup', true); S.done.meetup = 1; render(); await afterFormTicked(wd, rb, db, sid0); return; } } catch (er) { toast('Meet up did not tick: ' + (er.message || er)); }
         afterForm('meetup');
       }});
     }
@@ -1039,39 +1046,65 @@ root.addEventListener('click', async function(e){
 async function tmCommit(mode, dir){
   pending++;
   try {
-    if (dir > 0) { var ins = await sb.from('transport_log').insert({mode: mode}); if (ins.error) throw ins.error; }
+    if (dir > 0) { var ins = await sb.from('transport_log').insert({mode: mode, day: VD()}); if (ins.error) throw ins.error; }
     else {
-      var last = await sb.from('transport_log').select('id').eq('day', PY.today()).eq('mode', mode).order('at', {ascending:false}).limit(1);
+      var last = await sb.from('transport_log').select('id').eq('day', VD()).eq('mode', mode).order('at', {ascending:false}).limit(1);
       if (last.data && last.data[0]) { var del = await sb.from('transport_log').delete().eq('id', last.data[0].id); if (del.error) throw del.error; }
     }
   } catch (e) { toast('Transport did not save: ' + (e.message || e)); }
   finally { pending--; if (pending === 0) refresh(); }
 }
-root.addEventListener('click', function(e){
-  var b = e.target.closest && e.target.closest('[data-tm]'); if (!b || editing) return;
-  e.stopImmediatePropagation();
-  if (window.__lp) { window.__lp = 0; return; }
-  var m = b.getAttribute('data-tm'); S.counts.tm = S.counts.tm || {}; S.counts.tm[m] = (S.counts.tm[m] || 0) + 1;
-  render(); tmCommit(m, 1);
-  if (navigator.vibrate) navigator.vibrate(10);
-}, true);
+/* v2.1: tapping the little strip opens a pop-up with big icons (the strip itself is too small to tap one) */
 (function(){
-  var t = null, sx = 0, sy = 0;
-  function clear(){ clearTimeout(t); t = null; }
-  root.addEventListener('pointerdown', function(e){
-    if (editing) return;
-    var b = e.target.closest('[data-tm]'); if (!b) return;
-    var m = b.getAttribute('data-tm'); sx = e.clientX; sy = e.clientY;
-    t = setTimeout(function(){
-      t = null; var c = S.counts.tm || {}; if (!(c[m] > 0)) return;
-      window.__lp = 1; setTimeout(function(){ window.__lp = 0; }, 450);
-      c[m]--; render(); tmCommit(m, -1);
-      if (navigator.vibrate) navigator.vibrate(18);
-    }, 600);
+  var css = document.createElement('style');
+  css.textContent = '.tmo{position:fixed;inset:0;z-index:99991;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}.tmo[hidden]{display:none}' +
+   '.tmc{width:100%;max-width:520px;background:var(--bg);color:var(--text);border-top:1px solid var(--line);border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:12px;font-family:-apple-system,Arial,sans-serif}' +
+   '.tmc h3{margin:0;font:700 22px/1.1 Georgia,serif}.tmc p{margin:0;color:var(--muted);font-size:14px;line-height:1.4}' +
+   '.tmg{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}' +
+   '.tmt{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 4px 10px;border-radius:14px;border:1.5px solid var(--line);background:var(--chip);color:var(--muted);font:600 12px -apple-system,Arial,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}' +
+   '.tmt svg{width:38px;height:38px}.tmt.on{color:var(--text);border-color:#d08a12;background:var(--bg)}' +
+   '.tmt b{position:absolute;top:5px;right:7px;font:700 12px -apple-system,Arial,sans-serif;color:#d08a12}' +
+   '.tmt i{position:absolute;top:2px;left:3px;font-style:normal;font-weight:700;font-size:20px;line-height:1;color:var(--muted);width:30px;height:30px;display:flex;align-items:center;justify-content:center;border-radius:50%}' +
+   '.tmr{display:flex;gap:10px}.tmr button{flex:1;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:13px;font-size:16px;font-weight:600;font-family:inherit}.tmr button:disabled{opacity:.35}.tmr .go{background:#d08a12;border-color:#d08a12;color:#14110a}';
+  document.head.appendChild(css);
+  var el = document.createElement('div'); el.className = 'tmo'; el.hidden = true;
+  el.innerHTML = '<div class="tmc" role="dialog" aria-label="Modes of transport"><h3>How did you get around?</h3><p id="tmoSub"></p><div class="tmg" id="tmoG"></div><div class="tmr"><button id="tmoU">Undo last trip</button><button class="go" id="tmoD">Done</button></div></div>';
+  document.body.appendChild(el);
+  var G = el.querySelector('#tmoG'), U = el.querySelector('#tmoU');
+  function paint(){
+    var c = S.counts.tm || {}, total = 0;
+    G.innerHTML = tmOrdered().map(function(m){
+      var n = c[m[0]] || 0; total += n;
+      return '<div class="tmt' + (n ? ' on' : '') + '" role="button" tabindex="0" data-m="' + m[0] + '" aria-label="' + m[1] + ', ' + n + ' trips. Tap to add one.">' +
+        (n ? '<i data-minus="' + m[0] + '" aria-label="Take one ' + m[1] + ' trip back">\u2212</i><b>' + n + '</b>' : '') +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + m[2] + '</svg>' + m[1] + '</div>';
+    }).join('');
+    U.disabled = total === 0;
+    el.querySelector('#tmoSub').textContent = (VIEW ? niceDay(VIEW) + '. ' : '') + 'Tap a mode for each trip. Tap the minus to take one back.';
+  }
+  function bump(m, d){
+    S.counts.tm = S.counts.tm || {}; var c = S.counts.tm;
+    if (d < 0 && !(c[m] > 0)) return;
+    c[m] = (c[m] || 0) + d; paint(); render(); tmCommit(m, d);
+    if (navigator.vibrate) navigator.vibrate(10);
+  }
+  el.addEventListener('click', async function(e){
+    if (e.target === el || e.target.id === 'tmoD') { el.hidden = true; return; }
+    var mi = e.target.closest('[data-minus]'); if (mi) { bump(mi.getAttribute('data-minus'), -1); return; }
+    var t = e.target.closest('[data-m]'); if (t) { bump(t.getAttribute('data-m'), 1); return; }
+    if (e.target.id === 'tmoU') {
+      var r = await sb.from('transport_log').select('id,mode').eq('day', VD()).order('at', {ascending:false}).limit(1);
+      if (r.data && r.data[0]) {
+        var d = await sb.from('transport_log').delete().eq('id', r.data[0].id);
+        if (d.error) { toast('Could not undo: ' + d.error.message); return; }
+        var c = S.counts.tm || {}; if (c[r.data[0].mode] > 0) c[r.data[0].mode]--; paint(); render();
+      }
+    }
   });
-  root.addEventListener('pointermove', function(e){ if (t && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) clear(); });
-  root.addEventListener('pointerup', clear);
-  root.addEventListener('pointercancel', clear);
+  root.addEventListener('click', function(e){
+    var w = e.target.closest && e.target.closest('.tmw'); if (!w || editing) return;
+    e.stopImmediatePropagation(); e.preventDefault(); paint(); el.hidden = false;
+  }, true);
 })();
 
 
@@ -1177,6 +1210,32 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
 });
 
 
+
+/* ---- v2.1: day control at the bottom (replaces the help text). Same idea as the Cue Cards page: back a day at a time; taps are saved on the day shown ---- */
+(function(){
+  var hint = document.getElementById('hint'); if (!hint) return;
+  var bar = document.createElement('div'); bar.className = 'pastbar'; bar.id = 'pastbar'; bar.hidden = true; root.parentNode.insertBefore(bar, root);
+  var nav = document.createElement('div'); nav.className = 'dnav'; nav.id = 'dnav';
+  nav.innerHTML = '<div class="dnp"><button type="button" id="dnP" aria-label="Previous day">\u2039</button><span id="dnL">Today</span><button type="button" id="dnN" aria-label="Next day">\u203a</button></div><button type="button" class="dnb" id="dnT" hidden>Back to today</button>';
+  hint.parentNode.insertBefore(nav, hint.nextSibling);
+  var ver = document.createElement('p'); ver.className = 'dnv'; ver.textContent = 'v2.1'; nav.parentNode.insertBefore(ver, nav.nextSibling);
+  function paint(){
+    var t = PY.today(), v = VD(), min = addDays(t, -365);
+    document.getElementById('dnL').textContent = v === t ? 'Today' : niceDay(v);
+    document.getElementById('dnP').disabled = v <= min; document.getElementById('dnN').disabled = v >= t;
+    document.getElementById('dnT').hidden = v === t; nav.classList.toggle('past', v !== t);
+    bar.hidden = v === t; bar.textContent = 'Viewing ' + niceDay(v) + '. Anything you tap is saved on this day, not today.';
+  }
+  function go(d){
+    var t = PY.today(); if (d > t) d = t; VIEW = d === t ? null : d; paint(); setEyebrow();
+    S.done = {}; S.counts = {}; lastSig = ''; refresh();
+  }
+  document.getElementById('dnP').addEventListener('click', function(){ go(addDays(VD(), -1)); });
+  document.getElementById('dnN').addEventListener('click', function(){ go(addDays(VD(), 1)); });
+  document.getElementById('dnT').addEventListener('click', function(){ go(PY.today()); });
+  window.addEventListener('pageshow', paint);
+})();
+
 /* ---- v1.9: Energy key. Opens a dictation box; each line is saved into energy_notes (the same notes It's a wrap reads) */
 (function(){
   var css = document.createElement('style');
@@ -1192,13 +1251,13 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
   el.innerHTML = '<div class="esc" role="dialog" aria-label="What gave me energy"><h3>What gave me energy today</h3>' +
     '<p>Tap the microphone on your keyboard and list them out loud. Each sentence or line becomes its own entry.</p>' +
     '<textarea id="esT" placeholder="Rooftop at Citizen M. Flow time on the train. Lunch with a friend." autocapitalize="sentences"></textarea>' +
-    '<div class="row"><button id="esX">Close</button><button class="go" id="esS">Save</button></div>' +
+    '<div class="row"><button id="esC">Clear</button><button id="esX">Close</button><button class="go" id="esS">Save</button></div>' +
     '<p id="esM"></p><ul id="esL"></ul></div>';
   document.body.appendChild(el);
   var T = el.querySelector('#esT'), M = el.querySelector('#esM'), L = el.querySelector('#esL');
   function split(s){ return String(s || '').split(/[\n.;!?]+/).map(function(x){ return x.replace(/^[\s\-•,]+|[\s,]+$/g, ''); }).filter(Boolean).map(function(x){ return x.charAt(0).toUpperCase() + x.slice(1); }); }
   async function list(){
-    var d = await sb.from('energy_notes').select('id,text').eq('day', PY.today()).order('position', {ascending:true});
+    var d = await sb.from('energy_notes').select('id,text').eq('day', VD()).order('position', {ascending:true});
     var rows = d.data || []; S.counts.energy = rows.length; render();
     L.innerHTML = rows.map(function(r){ return '<li data-id="' + r.id + '"><span></span><b title="Remove">×</b></li>'; }).join('');
     Array.prototype.forEach.call(L.children, function(li, i){ li.firstChild.textContent = rows[i].text; });
@@ -1206,6 +1265,7 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
   async function open(){ el.hidden = false; M.textContent = ''; try { await list(); } catch (e) { M.textContent = 'Could not load today’s list.'; } setTimeout(function(){ T.focus(); }, 150); }
   el.addEventListener('click', async function(e){
     if (e.target === el || e.target.id === 'esX') { el.hidden = true; return; }
+    if (e.target.id === 'esC') { T.value = ''; M.textContent = ''; T.focus(); return; }
     if (e.target.tagName === 'B' && e.target.parentNode.getAttribute('data-id')) {
       var r = await sb.from('energy_notes').delete().eq('id', e.target.parentNode.getAttribute('data-id'));
       if (r.error) { M.textContent = 'Could not remove it: ' + r.error.message; return; } await list(); return;
@@ -1214,7 +1274,7 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
       var items = split(T.value); if (!items.length) { M.textContent = 'Nothing to save yet.'; return; }
       e.target.disabled = true; M.textContent = 'Saving...';
       try {
-        var day = PY.today(), mx = await sb.from('energy_notes').select('position').eq('day', day).order('position', {ascending:false}).limit(1);
+        var day = VD(), mx = await sb.from('energy_notes').select('position').eq('day', day).order('position', {ascending:false}).limit(1);
         var p = (mx.data && mx.data[0]) ? mx.data[0].position + 1 : 0, now = new Date().toISOString();
         var ins = await sb.from('energy_notes').insert(items.map(function(t, i){ return {day:day, text:t, tag:'', position:p + i, status:'sent', sent_at:now}; }));
         if (ins.error) throw ins.error;
@@ -1263,5 +1323,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v2.0--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v2.1--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
