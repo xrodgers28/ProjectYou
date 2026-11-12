@@ -520,19 +520,19 @@ function celebrateRow(sid, itemId){
   var secEl = document.querySelector('section.sec[data-id="' + sid + '"]'); if (!secEl) return;
   var cell = document.querySelector('[data-cell="' + itemId + '"]'), cr = (cell || secEl).getBoundingClientRect();
   var x = cr.left + cr.width / 2, y = cr.top + cr.height / 2;
-  if (Math.random() < 0.5 || !window.PYFireworks) { if (window.celebrate) celebrate({x: x, y: y, scale: 0.9}); return; }
+  if (Math.random() < 0.5 || !window.PYFireworks) { if (window.celebrate) celebrate({x: x, y: y, scale: 0.9, force: true}); return; }
   var r = secEl.getBoundingClientRect(), w = Math.min(window.innerWidth - 16, Math.max(r.width, 300)), h = 190;
   var left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)), top = Math.max(8, Math.min(window.innerHeight - h - 8, r.top + r.height / 2 - h / 2));
   var f = fxBox('left:' + left + 'px;top:' + top + 'px;width:' + w + 'px;height:' + h + 'px;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,.45)', 2900);
   var api = PYFireworks.attach(f.canvas), kinds = PYFireworks.kinds;
-  api.play(kinds[(Math.random() * kinds.length) | 0], {scale: 0.95});
+  api.play(kinds[(Math.random() * kinds.length) | 0], {scale: 0.95, force: true});
 }
 function dayKey(){ if (window.PY && PY.today) return PY.today(); var d = new Date(Date.now() - 2*3600*1000); return d.getFullYear() + '-' + (d.getMonth()+1) + '-' + d.getDate(); } /* the day ends at 2am Eastern */
 function celebrateDay(){
   if (!window.PYFireworks) return;
   var f = fxBox('left:0;top:0;width:100%;height:100%', 5200);
   var api = PYFireworks.attach(f.canvas);
-  api.finale(7, {scale: 1.15});
+  api.finale(7, {scale: 1.15, force: true});
 }
 
 var root = document.getElementById('app');
@@ -855,7 +855,17 @@ async function refresh(){
   counts.water = res[3].count || 0;
   counts.tm = {}; (res[7].data || []).forEach(function(r){ counts.tm[r.mode] = (counts.tm[r.mode] || 0) + 1; });
   counts.energy = (res[8] && res[8].count) || 0;
+  var rb = null, db0 = false;
+  if (loadedOnce && !VIEW) { try { rb = {}; S.order.forEach(function(sid){ rb[sid] = rowDone(sid); }); db0 = dayDone(); } catch (e) { rb = null; } }
   S.done = done; S.counts = counts;
+  if (rb) { try {   /* something got finished on another page or device while this screen was open: celebrate it here too */
+    var tk0 = dayKey();
+    if (dayDone() && !db0 && S.fxDay !== tk0) { S.fxDay = tk0; save(); celebrateDay(); }
+    else S.order.forEach(function(sid){
+      if (sid === 'bonus' || sid === 'parkedcards' || isShut(sid)) return;
+      if (rowDone(sid) && !rb[sid]) { var first = (S.layout[sid] || [])[0]; if (first) celebrateRow(sid, first); }
+    });
+  } catch (e) {} }
   var pl = []; try { pl = (res[4].data && res[4].data.value) || []; } catch (e) {}
   PARKED_LIST = pl.map(function(x){ return BOARD_ID[x] || x; });
   READ_DECKS = (res[5].data || []).map(function(r){ return DECK_ID[r.deck]; }).filter(Boolean);
@@ -1244,7 +1254,7 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
   var nav = document.createElement('div'); nav.className = 'dnav'; nav.id = 'dnav';
   nav.innerHTML = '<div class="dnp"><button type="button" id="dnP" aria-label="Previous day">\u2039</button><span id="dnL">Today</span><button type="button" id="dnN" aria-label="Next day">\u203a</button></div><button type="button" class="dnb" id="dnT" hidden>Back to today</button>';
   hint.parentNode.insertBefore(nav, hint.nextSibling);
-  var ver = document.createElement('p'); ver.className = 'dnv'; ver.textContent = 'v2.2'; nav.parentNode.insertBefore(ver, nav.nextSibling);
+  var ver = document.createElement('p'); ver.className = 'dnv'; ver.textContent = 'v2.3'; nav.parentNode.insertBefore(ver, nav.nextSibling);
   function paint(){
     var t = PY.today(), v = VD(), min = addDays(t, -365);
     document.getElementById('dnL').textContent = v === t ? 'Today' : niceDay(v);
@@ -1349,5 +1359,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v2.2--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v2.3--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
