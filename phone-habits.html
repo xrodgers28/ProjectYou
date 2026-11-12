@@ -388,7 +388,7 @@ function render(){
   document.getElementById('hint').innerHTML = editing
     ? 'Drag a dotted handle to move a section. Tap a section name to rename it. Press and drag a key to move it to another section. Tap × to park a key. Tap Done when finished.' +
         '<span class="prev"><button type="button" data-prev="row">Preview a row celebration</button><button type="button" data-prev="day">Preview the day celebration</button><button type="button" data-prev="board">Preview a board change</button><button type="button" data-prev="bday">Preview a birthday</button></span>'
-    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v1.4';
+    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v1.5';
   document.getElementById('app').className = 'app' + (editing ? ' editing' : '');
   document.getElementById('edit').textContent = editing ? 'Done' : 'Edit';
   document.getElementById('edit').setAttribute('aria-pressed', editing);
@@ -908,6 +908,16 @@ function afterForm(id){
     }
   });
 }
+function afterFormTicked(wasDone, rowBefore, dayBefore, sid){
+  return refresh().then(function(){
+    var it = ITEMS.meetup;
+    if (isDone(it) && !wasDone) {
+      var tk = dayKey();
+      if (dayDone() && !dayBefore && S.fxDay !== tk) { S.fxDay = tk; save(); celebrateDay(); }
+      else if (rowDone(sid) && !rowBefore) celebrateRow(sid, 'meetup');
+    }
+  });
+}
 var formBusy = false;
 root.addEventListener('click', async function(e){
   var k = e.target.closest && e.target.closest('[data-key]'); if (!k || editing) return;
@@ -926,7 +936,11 @@ root.addEventListener('click', async function(e){
       await lazyScript('social-log.js');
       if (!window.PYSocial) { toast('The social log could not load.'); return; }
       var m = await guessMeetup();
-      PYSocial.open({sb: sb, when: PY.today(), title: m.title || '', onSaved: function(){ afterForm('meetup'); }});
+      PYSocial.open({sb: sb, when: PY.today(), title: m.title || '', onSaved: async function(res){
+        /* the social form ticks the Social habit; the Meet up key is its own habit row, so tick that too (only if it already happened) */
+        try { if (res && !res.future && res.connectionId && res.date === PY.today()) { var it0 = ITEMS.meetup, sid0 = sectionOf('meetup'), rb = rowDone(sid0), db = dayDone(), wd = isDone(it0); await tickRow('meetup', true); S.done.meetup = 1; render(); await afterFormTicked(wd, rb, db, sid0); return; } } catch (er) { toast('Meet up did not tick: ' + (er.message || er)); }
+        afterForm('meetup');
+      }});
     }
   } catch (err) { toast('Could not open the log: ' + (err.message || err)); }
 }, true);
@@ -1027,5 +1041,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v1.4--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v1.5--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
