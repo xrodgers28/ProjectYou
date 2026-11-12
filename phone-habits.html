@@ -125,11 +125,15 @@ section.sec[data-id=parkedcards] .key{cursor:default}
 .done .gly.wtr{filter:grayscale(1);opacity:.45}
 .done .gly.wtr .wl{display:none}
 .done .led,.cell.wet .led{display:none}
-.tmw{display:flex;flex-direction:column;align-items:center;gap:7px;margin:12px 0 4px;padding-top:12px;border-top:1px solid var(--line)}
-.tm{position:relative;width:34px;height:34px;border-radius:50%;border:1.5px solid transparent;background:transparent;color:var(--muted);opacity:.42;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .15s,background .15s,color .15s}
-.tm svg{width:20px;height:20px;display:block}
+.tmw{position:relative;width:58px;height:190px;margin:12px 0 0 -3px;border-top:1px solid var(--line)}
+.tm{position:absolute;top:calc(var(--i) * var(--tmstep, 20px) + 10px);width:27px;height:27px;border-radius:50%;border:1.5px solid transparent;background:transparent;color:var(--muted);opacity:.42;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .15s,background .15s,color .15s}
+.tm.l{left:0}.tm.r{right:0}
+.tmw.ed .tm{opacity:.85;border-color:var(--line);touch-action:none;cursor:grab}
+.tm.ghost{opacity:.2}
+.tm.floating{position:fixed;z-index:50;pointer-events:none;opacity:.95;box-shadow:0 6px 16px rgba(0,0,0,.35);background:var(--open);color:#12233f}
+.tm svg{width:17px;height:17px;display:block}
 .tm.on{opacity:1;color:#12233f;background:var(--open);border-color:#2b8cf0;box-shadow:0 2px 8px rgba(43,140,240,.4)}
-.tm b{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#2b8cf0;color:#fff;font:700 10px/16px -apple-system,Arial,sans-serif;text-align:center;padding:0 3px}
+.tm b{position:absolute;top:-5px;right:-5px;min-width:15px;height:15px;border-radius:8px;background:#2b8cf0;color:#fff;font:700 9px/15px -apple-system,Arial,sans-serif;text-align:center;padding:0 3px}
 </style>
 </head>
 <body>
@@ -360,15 +364,29 @@ var TM = [
   ['waymo','Waymo','<path d="M4 15l1.8-4.5a2 2 0 0 1 1.9-1.3h8.6a2 2 0 0 1 1.9 1.3L20 15v3h-2.5v-1.5h-11V18H4z"/><circle cx="12" cy="6" r="1.5"/><path d="M12 7.5v1.7"/>'],
   ['bus','Bus','<path d="M5 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v11H5z"/><path d="M5 11h14M7 17v3M17 17v3"/><circle cx="8.5" cy="14.2" r=".6"/><circle cx="15.5" cy="14.2" r=".6"/>']
 ];
+function tmOrdered(){
+  var o = (S.tmOrder || []).filter(function(id){ return TM.some(function(m){ return m[0] === id; }); });
+  TM.forEach(function(m){ if (o.indexOf(m[0]) < 0) o.push(m[0]); });
+  return o.map(function(id){ return TM.filter(function(m){ return m[0] === id; })[0]; });
+}
 function transportHtml(){
-  var c = S.counts.tm || {};
-  return '<div class="tmw" role="group" aria-label="Modes of transport today">' + TM.map(function(m){
+  var c = S.counts.tm || {}, list = tmOrdered();
+  return '<div class="tmw' + (editing ? ' ed' : '') + '" role="group" aria-label="Modes of transport today">' + list.map(function(m){
     var n = c[m[0]] || 0;
-    return '<button type="button" class="tm' + (n ? ' on' : '') + '" data-tm="' + m[0] + '" aria-label="' + m[1] + (n ? ', ' + n + (n === 1 ? ' trip' : ' trips') + ' today' : ', not used today') + '">' +
+    return '<button type="button" class="tm ' + (list.indexOf(m) % 2 ? 'r' : 'l') + (n ? ' on' : '') + '" style="--i:' + list.indexOf(m) + '" data-tm="' + m[0] + '" aria-label="' + m[1] + (n ? ', ' + n + (n === 1 ? ' trip' : ' trips') + ' today' : ', not used today') + '">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + m[2] + '</svg>' +
       (n > 1 ? '<b>' + n + '</b>' : '') + '</button>';
   }).join('') + '</div>';
 }
+function fitTm(){
+  var t = document.querySelector('.tmw'); if (!t) return;
+  var secs = document.querySelectorAll('#secs section.sec'); if (!secs.length) return;
+  var avail = secs[secs.length - 1].getBoundingClientRect().bottom - t.getBoundingClientRect().top - 6;
+  var size = 27, step = Math.max(15, Math.min(24, (avail - size - 10) / 7));
+  t.style.setProperty('--tmstep', step + 'px'); t.style.height = Math.ceil(7 * step + size + 12) + 'px';
+}
+window.addEventListener('resize', function(){ try { fitTm(); } catch (e) {} });
+window.addEventListener('load', function(){ try { fitTm(); } catch (e) {} });
 function keyHtml(it){
   var done = isDone(it), cn = S.counts[it[0]] || 0;
   var note = it[5] ? '<em>' + cn + ' of ' + it[5] + '</em>' : (it[0] === 'coffee' && cn ? '<em>' + cn + (cn === 1 ? ' cup' : ' cups') + '</em>' : '');
@@ -403,7 +421,7 @@ function render(){
     if (id === 'counters') railHtml = secHtml; else html += secHtml;
   });
   document.getElementById('secs').innerHTML = html;
-  document.getElementById('rail').innerHTML = railHtml ? railHtml + transportHtml() : railHtml;
+  document.getElementById('rail').innerHTML = railHtml ? railHtml + transportHtml() : railHtml; try { fitTm(); } catch (e) {}
   document.getElementById('body').className = 'body' + (railHtml ? '' : ' norail');
   var hd = document.getElementById('head');
   hd.textContent = left === 0 ? 'Lights out' : left + (left === 1 ? ' light still on' : ' lights still on');
@@ -419,7 +437,7 @@ function render(){
   document.getElementById('hint').innerHTML = editing
     ? 'Drag a dotted handle to move a section. Tap a section name to rename it. Press and drag a key to move it to another section. Tap × to park a key. Tap Done when finished.' +
         '<span class="prev"><button type="button" data-prev="row">Preview a row celebration</button><button type="button" data-prev="day">Preview the day celebration</button><button type="button" data-prev="board">Preview a board change</button><button type="button" data-prev="bday">Preview a birthday</button></span>'
-    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v1.7';
+    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v1.8';
   document.getElementById('app').className = 'app' + (editing ? ' editing' : '');
   document.getElementById('edit').textContent = editing ? 'Done' : 'Edit';
   document.getElementById('edit').setAttribute('aria-pressed', editing);
@@ -629,7 +647,7 @@ function findTarget(x, y){
     if (d < nd) { nd = d; nearest = c; }
   });
   var r = nearest.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-  var before = Math.abs(y - cy) < r.height * 0.6 ? x < cx : y < cy;
+  var before = sid === 'counters' ? y < cy : (Math.abs(y - cy) < r.height * 0.6 ? x < cx : y < cy);
   var nid = nearest.getAttribute('data-cell');
   var base = S.layout[sid].indexOf(nid);
   return {sec: best, sid: sid, idx: base + (before ? 0 : 1), rect: r, before: before};
@@ -639,8 +657,15 @@ function showTarget(t){
   if (!t) return;
   if (t.empty) { t.sec.classList.add('target'); return; }
   ind.style.display = 'block';
-  ind.style.left = (t.before ? t.rect.left - 3 : t.rect.right + 0) + 'px';
-  ind.style.top = t.rect.top + 'px'; ind.style.height = t.rect.height + 'px';
+  if (t.sid === 'counters') {
+    ind.style.width = Math.max(t.rect.width, 44) + 'px'; ind.style.height = '3px';
+    ind.style.left = (t.rect.left + t.rect.width / 2 - Math.max(t.rect.width, 44) / 2) + 'px';
+    ind.style.top = (t.before ? t.rect.top - 4 : t.rect.bottom + 1) + 'px';
+  } else {
+    ind.style.width = '3px';
+    ind.style.left = (t.before ? t.rect.left - 3 : t.rect.right + 0) + 'px';
+    ind.style.top = t.rect.top + 'px'; ind.style.height = t.rect.height + 'px';
+  }
 }
 function activateKey(){
   if (!kd || kd.active) return;
@@ -1040,6 +1065,64 @@ root.addEventListener('click', function(e){
   root.addEventListener('pointercancel', clear);
 })();
 
+
+/* ---- Edit: drag the transport icons into the order you want; a line shows where one will land ---- */
+var tmd = null;
+function tmTarget(y){
+  var bs = [].slice.call(document.querySelectorAll('.tmw .tm')).filter(function(x){ return x !== tmd.btn; }), idx = bs.length;
+  for (var i = 0; i < bs.length; i++) { var r = bs[i].getBoundingClientRect(); if (y < r.top + r.height / 2) { idx = i; break; } }
+  return {idx: idx, bs: bs};
+}
+function tmShow(t){
+  var w = document.querySelector('.tmw').getBoundingClientRect(), y, bs = t.bs;
+  if (!bs.length) y = w.top + 10;
+  else if (t.idx === 0) y = bs[0].getBoundingClientRect().top - 3;
+  else if (t.idx >= bs.length) y = bs[bs.length - 1].getBoundingClientRect().bottom + 2;
+  else { var a = bs[t.idx - 1].getBoundingClientRect(), c = bs[t.idx].getBoundingClientRect(); y = ((a.top + a.height / 2) + (c.top + c.height / 2)) / 2; }
+  ind.style.display = 'block'; ind.style.left = w.left + 'px'; ind.style.width = w.width + 'px'; ind.style.top = y + 'px'; ind.style.height = '3px';
+}
+function tmActivate(){
+  if (!tmd || tmd.active) return;
+  tmd.active = true; dragging = true;
+  var r = tmd.btn.getBoundingClientRect(); tmd.dx = tmd.x - r.left; tmd.dy = tmd.y - r.top;
+  var c = tmd.btn.cloneNode(true); c.classList.add('floating'); c.style.left = r.left + 'px'; c.style.top = r.top + 'px'; c.style.right = 'auto'; c.style.width = r.width + 'px'; c.style.height = r.height + 'px';
+  document.body.appendChild(c); tmd.clone = c; tmd.btn.classList.add('ghost');
+  try { if (navigator.vibrate) navigator.vibrate(12); } catch (e) {}
+  scrollRaf = requestAnimationFrame(tick);
+}
+function tmMove(e){
+  if (!tmd || e.pointerId !== tmd.pid) return;
+  tmd.x = e.clientX; tmd.y = e.clientY; lastY = e.clientY;
+  if (!tmd.active) {
+    var dist = Math.hypot(tmd.x - tmd.sx, tmd.y - tmd.sy);
+    if (tmd.type === 'mouse') { if (dist > 4) tmActivate(); } else if (dist > 8) { clearTimeout(tmd.timer); tmStop(); }
+    return;
+  }
+  tmd.clone.style.left = (tmd.x - tmd.dx) + 'px'; tmd.clone.style.top = (tmd.y - tmd.dy) + 'px';
+  tmShow(tmd.t = tmTarget(tmd.y));
+}
+function tmStop(){
+  window.removeEventListener('pointermove', tmMove); window.removeEventListener('pointerup', tmUp); window.removeEventListener('pointercancel', tmUp);
+  if (tmd) { clearTimeout(tmd.timer); if (tmd.clone) tmd.clone.remove(); if (tmd.btn) tmd.btn.classList.remove('ghost'); }
+  ind.style.display = 'none'; cancelAnimationFrame(scrollRaf); dragging = false; tmd = null;
+}
+function tmUp(e){
+  if (!tmd || e.pointerId !== tmd.pid) return;
+  var moved = tmd.active, t = moved && e.type === 'pointerup' ? tmTarget(tmd.y) : null, id = tmd.id;
+  tmStop();
+  if (moved && t) {
+    var order = t.bs.map(function(x){ return x.getAttribute('data-tm'); });
+    order.splice(t.idx, 0, id); S.tmOrder = order; save(); render();
+  }
+}
+root.addEventListener('pointerdown', function(e){
+  if (!editing || tmd || kd) return;
+  var b = e.target.closest && e.target.closest('[data-tm]'); if (!b) return;
+  tmd = {id: b.getAttribute('data-tm'), btn: b, sx: e.clientX, sy: e.clientY, x: e.clientX, y: e.clientY, pid: e.pointerId, type: e.pointerType, active: false};
+  window.addEventListener('pointermove', tmMove); window.addEventListener('pointerup', tmUp); window.addEventListener('pointercancel', tmUp);
+  if (e.pointerType !== 'mouse') tmd.timer = setTimeout(tmActivate, 230);
+});
+
 /* ---- this screen's own layout, saved in the cloud so every device agrees ---- */
 var DIRTY = 'phr-dirty-v1', lastC = null;
 function markDirty(on){ try { if (on) localStorage.setItem(DIRTY, String(Date.now())); else localStorage.removeItem(DIRTY); } catch (e) {} }
@@ -1117,5 +1200,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v1.7--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v1.8--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
