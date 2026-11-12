@@ -1051,9 +1051,12 @@ function pushNow(){
   return sb.from('page_prefs').upsert({page:'phone-habits', key:'layout', value:c, updated_at:new Date().toISOString()}, {onConflict:'page,key'})
     .then(function(r){ if (r.error) { toast('Layout did not save: ' + r.error.message); } else if (JSON.stringify(lastC) === stamp) markDirty(false); });
 }
+var layoutLoaded = false;
 window.cloudSave = function(c){
   if (!booted || !sb) return;
-  lastC = c; markDirty(true);
+  lastC = c;
+  if (!layoutLoaded) return;                 /* never write before the saved layout was read successfully */
+  markDirty(true);
   clearTimeout(cloudT);
   cloudT = setTimeout(pushNow, 300);
 };
@@ -1063,7 +1066,7 @@ async function loadLayout(){
   var cloudOk = false;
   try {
     var r = await sb.from('page_prefs').select('value').eq('page', 'phone-habits').eq('key', 'layout').maybeSingle();
-    if (!r.error) cloudOk = true;
+    if (!r.error) { cloudOk = true; layoutLoaded = true; }
     /* edits made here that never reached the cloud win over an older cloud copy */
     if (!isDirty() && r.data && r.data.value && r.data.value.layout && r.data.value.order) { var v = r.data.value; for (var k in v) if (k !== 'done' && k !== 'counts') S[k] = v[k]; hadLocal = true; }
   } catch (e) {}
