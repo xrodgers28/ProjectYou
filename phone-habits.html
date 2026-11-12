@@ -118,6 +118,11 @@ section.sec[data-id=parkedcards] .key{cursor:default}
 .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
 .app{padding-top:max(0px,env(safe-area-inset-top))}
 #head,#sub{display:none}
+.gly.wtr{color:#1b2433}
+.cell.wet .disc{background:#07080c;border-color:var(--c)}
+.cell.wet .gly.wtr{color:#d4e0f7}
+.done .gly.wtr{filter:grayscale(1);opacity:.45}
+.done .gly.wtr .wl{display:none}
 </style>
 </head>
 <body>
@@ -233,7 +238,16 @@ var SHORT = {env:'Environment', rec:'Recreation'};
 function label(it){ return SHORT[it[0]] || it[1]; }
 function tightCls(n){ return Math.max.apply(null, (SHORT[n] || n).split(/\s+/).map(function(w){return w.length;})) >= 10 ? ' tight' : ''; }
 function colorOf(it){ return SECC[it[3]] || it[3]; }
+function waterSvg(cn, goal){
+  var frac = Math.max(0, Math.min(1, (goal - cn) / goal)), y = 44 - 28 * frac;
+  var shape = 'M19 8h10v4c0 1.2 5 2.2 5 6v22a4 4 0 0 1-4 4H18a4 4 0 0 1-4-4V18c0-3.8 5-4.8 5-6z';
+  return '<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><defs><clipPath id="wbc"><path d="' + shape + '"/></clipPath></defs>' +
+    '<rect class="wl" x="12" y="' + y.toFixed(1) + '" width="24" height="' + (28 * frac + 2).toFixed(1) + '" fill="#2a9bff" clip-path="url(#wbc)"/>' +
+    '<path d="' + shape + '" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round"/>' +
+    '<rect x="18.5" y="3" width="11" height="5" rx="1.5" fill="currentColor"/></svg>';
+}
 function iconHtml(it){
+  if (it[0] === 'water') return '<span class="gly wtr" aria-hidden="true">' + waterSvg(S.counts.water || 0, it[5] || 4) + '</span>';
   if (it[2].indexOf('g:') === 0) return '<span class="gly" aria-hidden="true">' + (GLY[it[2].slice(2)] || '') + '</span>';
   return '<img alt="" draggable="false" src="' + ICON[it[2]] + '">';
 }
@@ -327,7 +341,7 @@ function keyHtml(it){
   var done = isDone(it), cn = S.counts[it[0]] || 0;
   var note = it[5] ? '<em>' + cn + ' of ' + it[5] + '</em>' : (it[0] === 'coffee' && cn ? '<em>' + cn + (cn === 1 ? ' cup' : ' cups') + '</em>' : '');
   var aria = it[1] + (it[5] ? ', ' + cn + ' of ' + it[5] : (it[0] === 'coffee' && cn ? ', ' + cn + ' cups' : '')) + (done ? ', done' : ', still to do');
-  return '<div class="cell ' + (done ? 'done' : '') + '" data-cell="' + it[0] + '" style="--c:' + colorOf(it) + '">' +
+  return '<div class="cell ' + (done ? 'done' : '') + (it[0] === 'water' && cn > 0 && !done ? ' wet' : '') + '" data-cell="' + it[0] + '" style="--c:' + colorOf(it) + '">' +
     '<button class="rm" type="button" data-rm="' + it[0] + '" aria-label="Park ' + esc(it[1]) + '"><span aria-hidden="true">×</span></button>' +
     '<button class="key" type="button" data-key="' + it[0] + '" aria-label="' + esc(aria) + '" aria-pressed="' + done + '">' +
     '<span class="disc">' + iconHtml(it) + '<span class="led"></span></span>' +
@@ -373,7 +387,7 @@ function render(){
   document.getElementById('hint').innerHTML = editing
     ? 'Drag a dotted handle to move a section. Tap a section name to rename it. Press and drag a key to move it to another section. Tap × to park a key. Tap Done when finished.' +
         '<span class="prev"><button type="button" data-prev="row">Preview a row celebration</button><button type="button" data-prev="day">Preview the day celebration</button><button type="button" data-prev="board">Preview a board change</button><button type="button" data-prev="bday">Preview a birthday</button></span>'
-    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. · v1.0';
+    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v1.3';
   document.getElementById('app').className = 'app' + (editing ? ' editing' : '');
   document.getElementById('edit').textContent = editing ? 'Done' : 'Edit';
   document.getElementById('edit').setAttribute('aria-pressed', editing);
@@ -859,6 +873,85 @@ async function commit(id, mode){
   root.addEventListener('pointercancel', clear);
 })();
 
+
+/* ---- Meet up and Local Safari open the real log forms, with a smart first guess ---- */
+function lazyScript(src){ return new Promise(function(res){ if (document.querySelector('script[data-lazy="' + src + '"]')) return res(); var s = document.createElement('script'); s.src = src; s.setAttribute('data-lazy', src); s.onload = res; s.onerror = res; document.head.appendChild(s); }); }
+var TRANSIT = /rail|train|station|airport|medical|hospital|parking|gas|office/i;
+async function guessSafari(){
+  try {
+    var r = await sb.from('checkins').select('venue,city,state,category,ts').eq('day', PY.today()).order('ts', {ascending:false}).limit(40);
+    var rows = (r.data || []).filter(function(c){ return c.venue && !TRANSIT.test(c.category || ''); });
+    var away = rows.filter(function(c){ return c.state && c.state !== 'CT' && c.state !== 'NY'; })[0];
+    var near = rows.filter(function(c){ return c.city && c.city !== 'Old Greenwich'; })[0];
+    var c = away || near; if (!c) return {};
+    return {place: c.venue, town: (c.city || '') + (c.state ? ', ' + c.state : '')};
+  } catch (e) { return {}; }
+}
+async function guessMeetup(){
+  try {
+    var n = await sb.from('calendar_social_names').select('source_calendar').eq('active', true);
+    var cals = (n.data || []).map(function(x){ return x.source_calendar; }).filter(Boolean); if (!cals.length) return {};
+    var e = await sb.from('calendar_events').select('title,start_time,hidden,dismissed,skipped').eq('date', PY.today()).in('source_calendar', cals).order('start_time', {ascending:false});
+    var now = new Date(), hhmm = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+    var ev = (e.data || []).filter(function(x){ return !x.hidden && !x.dismissed && !x.skipped && x.title && (!x.start_time || String(x.start_time).slice(0, 5) <= hhmm); })[0];
+    return ev ? {title: ev.title} : {};
+  } catch (e2) { return {}; }
+}
+function afterForm(id){
+  var it = ITEMS[id], sid = sectionOf(id), rowBefore = rowDone(sid), dayBefore = dayDone(), wasDone = isDone(it);
+  return refresh().then(function(){
+    if (isDone(it) && !wasDone) {
+      var tk = dayKey();
+      if (dayDone() && !dayBefore && S.fxDay !== tk) { S.fxDay = tk; save(); celebrateDay(); }
+      else if (rowDone(sid) && !rowBefore) celebrateRow(sid, id);
+    }
+  });
+}
+var formBusy = false;
+root.addEventListener('click', async function(e){
+  var k = e.target.closest && e.target.closest('[data-key]'); if (!k || editing) return;
+  var id = k.getAttribute('data-key'); if (id !== 'meetup' && id !== 'local') return;
+  if (sectionOf(id) === 'parkedcards') return;
+  e.stopImmediatePropagation(); e.preventDefault();
+  if (window.__lp) { window.__lp = 0; return; }
+  if (formBusy) return; formBusy = true; setTimeout(function(){ formBusy = false; }, 800);
+  try {
+    if (id === 'local') {
+      await lazyScript('safari-log.js');
+      if (!window.PYSafari) { toast('The safari log could not load.'); return; }
+      var g = await guessSafari();
+      PYSafari.open({sb: sb, when: PY.today(), place: g.place || '', town: g.town || '', onSaved: function(){ afterForm('local'); }});
+    } else {
+      await lazyScript('social-log.js');
+      if (!window.PYSocial) { toast('The social log could not load.'); return; }
+      var m = await guessMeetup();
+      PYSocial.open({sb: sb, when: PY.today(), title: m.title || '', onSaved: function(){ afterForm('meetup'); }});
+    }
+  } catch (err) { toast('Could not open the log: ' + (err.message || err)); }
+}, true);
+/* press and hold a done Meet up or Local Safari to take today's tick back */
+(function(){
+  var t = null, sx = 0, sy = 0;
+  function clear(){ clearTimeout(t); t = null; }
+  root.addEventListener('pointerdown', function(e){
+    if (editing) return;
+    var k = e.target.closest('[data-key]'); if (!k) return;
+    var id = k.getAttribute('data-key'); if (id !== 'meetup' && id !== 'local') return;
+    sx = e.clientX; sy = e.clientY;
+    t = setTimeout(async function(){
+      t = null; if (!S.done[id]) return;
+      window.__lp = 1; setTimeout(function(){ window.__lp = 0; }, 450);
+      delete S.done[id]; render();
+      try { await tickRow(id, false); toast(SPEC[id].tr + ' unticked for today.'); } catch (er) { toast('Did not save: ' + (er.message || er)); }
+      refresh();
+      if (navigator.vibrate) navigator.vibrate(18);
+    }, 700);
+  });
+  root.addEventListener('pointermove', function(e){ if (t && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) clear(); });
+  root.addEventListener('pointerup', clear);
+  root.addEventListener('pointercancel', clear);
+})();
+
 /* ---- this screen's own layout, saved in the cloud so every device agrees ---- */
 var DIRTY = 'phr-dirty-v1', lastC = null;
 function markDirty(on){ try { if (on) localStorage.setItem(DIRTY, String(Date.now())); else localStorage.removeItem(DIRTY); } catch (e) {} }
@@ -904,6 +997,7 @@ async function start(){
   if (booted) return;
   await loadLayout();
   booted = true;
+  lazyScript('safari-log.js'); lazyScript('social-log.js');
   document.documentElement.setAttribute('data-theme', S.theme === 'light' ? 'light' : 'dark');
   document.getElementById('thDark').setAttribute('aria-pressed', S.theme !== 'light');
   document.getElementById('thLight').setAttribute('aria-pressed', S.theme === 'light');
@@ -932,5 +1026,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v1.2--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v1.3--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
