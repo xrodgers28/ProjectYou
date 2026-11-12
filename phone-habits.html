@@ -56,7 +56,7 @@ section.sec.target{background:var(--chip);outline:2px dashed var(--muted);outlin
 .grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px 0;align-items:start}
 .grid.small{margin-top:6px}
 .shbody{display:grid;grid-template-rows:1fr;transition:grid-template-rows .3s ease,opacity .25s}
-.shbody>.shin{overflow:hidden;min-height:0}
+.shbody>.shin{overflow:hidden;min-height:0;padding:16px 16px 8px;margin:-16px -16px -8px}
 section.sec.shut .shbody{grid-template-rows:0fr;opacity:0}
 .nc{grid-column:4 / -1;align-self:center;justify-self:center;padding:0 6px}
 .nc button,.st.reopen{background:none;border:1px solid var(--line);color:var(--muted);font:inherit;font-size:11px;border-radius:99px;padding:6px 12px;min-height:32px;cursor:pointer;opacity:.75}
@@ -74,8 +74,8 @@ section.sec[data-id=parkedcards] .key{cursor:default}
 .gly{width:62%;height:62%;display:block;color:var(--c);pointer-events:none}.gly svg{width:100%;height:100%;display:block}
 .done .gly{filter:grayscale(1);opacity:.5}
 .disc img{width:76%;height:76%;object-fit:contain;mix-blend-mode:multiply;display:block;pointer-events:none}
-.led{position:absolute;top:-3px;right:-3px;width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 6px var(--c)}
-.small .led{width:8px;height:8px}
+.led{position:absolute;top:-2px;right:-2px;width:6px;height:6px;border-radius:50%;background:var(--c);box-shadow:0 0 5px 1px var(--c),0 0 12px 3px color-mix(in srgb,var(--c) 60%,transparent),0 0 22px 7px color-mix(in srgb,var(--c) 28%,transparent)}
+.small .led{width:5px;height:5px}
 .done .disc{background:var(--done);border-color:var(--doneb);box-shadow:none}
 .done .disc img{filter:grayscale(1);opacity:.5}
 .done .led{background:var(--doneb);box-shadow:none}
@@ -860,20 +860,34 @@ async function commit(id, mode){
 })();
 
 /* ---- this screen's own layout, saved in the cloud so every device agrees ---- */
+var DIRTY = 'phr-dirty-v1', lastC = null;
+function markDirty(on){ try { if (on) localStorage.setItem(DIRTY, String(Date.now())); else localStorage.removeItem(DIRTY); } catch (e) {} }
+function isDirty(){ try { return !!localStorage.getItem(DIRTY); } catch (e) { return false; } }
+function pushNow(){
+  if (!booted || !sb || !lastC) return Promise.resolve();
+  clearTimeout(cloudT);
+  var c = lastC, stamp = JSON.stringify(c);
+  return sb.from('page_prefs').upsert({page:'phone-habits', key:'layout', value:c, updated_at:new Date().toISOString()}, {onConflict:'page,key'})
+    .then(function(r){ if (r.error) { toast('Layout did not save: ' + r.error.message); } else if (JSON.stringify(lastC) === stamp) markDirty(false); });
+}
 window.cloudSave = function(c){
   if (!booted || !sb) return;
+  lastC = c; markDirty(true);
   clearTimeout(cloudT);
-  cloudT = setTimeout(function(){
-    sb.from('page_prefs').upsert({page:'phone-habits', key:'layout', value:c, updated_at:new Date().toISOString()}, {onConflict:'page,key'})
-      .then(function(r){ if (r.error) toast('Layout did not save: ' + r.error.message); });
-  }, 500);
+  cloudT = setTimeout(pushNow, 300);
 };
+document.addEventListener('visibilitychange', function(){ if (document.hidden && isDirty()) pushNow(); });
+window.addEventListener('pagehide', function(){ if (isDirty()) pushNow(); });
 async function loadLayout(){
+  var cloudOk = false;
   try {
     var r = await sb.from('page_prefs').select('value').eq('page', 'phone-habits').eq('key', 'layout').maybeSingle();
-    if (r.data && r.data.value && r.data.value.layout && r.data.value.order) { var v = r.data.value; for (var k in v) if (k !== 'done' && k !== 'counts') S[k] = v[k]; hadLocal = true; }
+    if (!r.error) cloudOk = true;
+    /* edits made here that never reached the cloud win over an older cloud copy */
+    if (!isDirty() && r.data && r.data.value && r.data.value.layout && r.data.value.order) { var v = r.data.value; for (var k in v) if (k !== 'done' && k !== 'counts') S[k] = v[k]; hadLocal = true; }
   } catch (e) {}
   if (!hadLocal) { S.m35 = S.m310 = S.m312 = S.m313 = 1; }   /* the default layout is already the finished one */
+  if (isDirty()) { lastC = layoutOnly(); }
 }
 
 /* ---- sign in once, then it remembers ---- */
@@ -890,7 +904,10 @@ async function start(){
   if (booted) return;
   await loadLayout();
   booted = true;
-  setTheme(S.theme === 'light' ? 'light' : 'dark');
+  document.documentElement.setAttribute('data-theme', S.theme === 'light' ? 'light' : 'dark');
+  document.getElementById('thDark').setAttribute('aria-pressed', S.theme !== 'light');
+  document.getElementById('thLight').setAttribute('aria-pressed', S.theme === 'light');
+  if (isDirty()) pushNow();
   await refresh();
   if (!loadedOnce) render();
   clearInterval(pollT);
@@ -915,5 +932,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v1.0--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v1.1--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
