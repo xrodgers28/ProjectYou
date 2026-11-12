@@ -123,6 +123,7 @@ section.sec[data-id=parkedcards] .key{cursor:default}
 .cell.wet .gly.wtr{color:#d4e0f7}
 .done .gly.wtr{filter:grayscale(1);opacity:.45}
 .done .gly.wtr .wl{display:none}
+.done .led,.cell.wet .led{display:none}
 </style>
 </head>
 <body>
@@ -325,7 +326,7 @@ function ensure(){
   }
   ids.forEach(function(i){ if (S.order.indexOf(i) < 0) S.order.push(i); if (!S.layout[i]) S.layout[i] = []; });
 }
-function isDone(it){ return it[5] ? (S.counts[it[0]] || 0) >= it[5] : !!S.done[it[0]]; }
+function isDone(it){ return it[0] === 'water' ? (S.counts.water || 0) >= 1 : (it[5] ? (S.counts[it[0]] || 0) >= it[5] : !!S.done[it[0]]); }
 function restoreCommute(){
   var mv = (S.shut && S.shut.moved) || [];
   mv.forEach(function(id){
@@ -341,7 +342,7 @@ function keyHtml(it){
   var done = isDone(it), cn = S.counts[it[0]] || 0;
   var note = it[5] ? '<em>' + cn + ' of ' + it[5] + '</em>' : (it[0] === 'coffee' && cn ? '<em>' + cn + (cn === 1 ? ' cup' : ' cups') + '</em>' : '');
   var aria = it[1] + (it[5] ? ', ' + cn + ' of ' + it[5] : (it[0] === 'coffee' && cn ? ', ' + cn + ' cups' : '')) + (done ? ', done' : ', still to do');
-  return '<div class="cell ' + (done ? 'done' : '') + (it[0] === 'water' && cn > 0 && !done ? ' wet' : '') + '" data-cell="' + it[0] + '" style="--c:' + colorOf(it) + '">' +
+  return '<div class="cell ' + (done && !(it[0] === 'water' && cn < it[5]) ? 'done' : '') + (it[0] === 'water' && cn > 0 && cn < it[5] ? ' wet' : '') + '" data-cell="' + it[0] + '" style="--c:' + colorOf(it) + '">' +
     '<button class="rm" type="button" data-rm="' + it[0] + '" aria-label="Park ' + esc(it[1]) + '"><span aria-hidden="true">×</span></button>' +
     '<button class="key" type="button" data-key="' + it[0] + '" aria-label="' + esc(aria) + '" aria-pressed="' + done + '">' +
     '<span class="disc">' + iconHtml(it) + '<span class="led"></span></span>' +
@@ -387,7 +388,7 @@ function render(){
   document.getElementById('hint').innerHTML = editing
     ? 'Drag a dotted handle to move a section. Tap a section name to rename it. Press and drag a key to move it to another section. Tap × to park a key. Tap Done when finished.' +
         '<span class="prev"><button type="button" data-prev="row">Preview a row celebration</button><button type="button" data-prev="day">Preview the day celebration</button><button type="button" data-prev="board">Preview a board change</button><button type="button" data-prev="bday">Preview a birthday</button></span>'
-    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v1.3';
+    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v1.4';
   document.getElementById('app').className = 'app' + (editing ? ' editing' : '');
   document.getElementById('edit').textContent = editing ? 'Done' : 'Edit';
   document.getElementById('edit').setAttribute('aria-pressed', editing);
@@ -835,7 +836,7 @@ async function commit(id, mode){
       }
       var n = S.counts[id] || 0;
       if (id === 'coffee') { if (n > 0) await tickRow(id, true, {mins:1, count:n, label:'cups'}); else await tickRow(id, false); }
-      else { if (n >= sp.goal) await tickRow(id, true, {mins:1, count:n, label:'glasses'}); else await tickRow(id, false); }
+      else { if (n >= 1) await tickRow(id, true, {mins:1, count:n, label:'glasses'}); else await tickRow(id, false); }
     } else {
       var want = !!S.done[id];
       var out = await tickRow(id, want);
@@ -1026,5 +1027,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v1.3--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v1.4--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
