@@ -125,6 +125,11 @@ section.sec[data-id=parkedcards] .key{cursor:default}
 .done .gly.wtr{filter:grayscale(1);opacity:.45}
 .done .gly.wtr .wl{display:none}
 .done .led,.cell.wet .led{display:none}
+.tmw{display:flex;flex-direction:column;align-items:center;gap:7px;margin:12px 0 4px;padding-top:12px;border-top:1px solid var(--line)}
+.tm{position:relative;width:34px;height:34px;border-radius:50%;border:1.5px solid transparent;background:transparent;color:var(--muted);opacity:.42;display:flex;align-items:center;justify-content:center;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:opacity .15s,background .15s,color .15s}
+.tm svg{width:20px;height:20px;display:block}
+.tm.on{opacity:1;color:#12233f;background:var(--open);border-color:#2b8cf0;box-shadow:0 2px 8px rgba(43,140,240,.4)}
+.tm b{position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;border-radius:8px;background:#2b8cf0;color:#fff;font:700 10px/16px -apple-system,Arial,sans-serif;text-align:center;padding:0 3px}
 </style>
 </head>
 <body>
@@ -274,7 +279,7 @@ function syncBoard(){
   if (!S.layout.parkedcards) S.layout.parkedcards = [];
   /* anything not a known habit goes; a parked board card leaves every other section and waits in Parked cue cards */
   Object.keys(S.layout).forEach(function(s){
-    S.layout[s] = S.layout[s].filter(function(id){ return ITEMS[id] && (s === 'parkedcards' ? off.indexOf(id) > -1 : off.indexOf(id) < 0); });
+    S.layout[s] = S.layout[s].filter(function(id){ return ITEMS[id] && (s === 'parkedcards' ? (off.indexOf(id) > -1 || id === 'ride') : off.indexOf(id) < 0); });
   });
   S.parked = (S.parked || []).filter(function(r){ return ITEMS[r.id] && boardIds.indexOf(r.id) < 0 || on.indexOf(r.id) > -1; });
   off.forEach(function(id){ if (S.layout.parkedcards.indexOf(id) < 0) S.layout.parkedcards.push(id); });
@@ -319,6 +324,12 @@ function ensure(){
     S.layout.counters.unshift('photo');
     S.m313 = 1;
   }
+  if (!S.m314) { /* v1.7: Ride is parked with the cue cards */
+    Object.keys(S.layout).forEach(function(s){ S.layout[s] = S.layout[s].filter(function(x){ return x !== 'ride'; }); });
+    S.parked = (S.parked || []).filter(function(r){ return r.id !== 'ride'; });
+    S.layout.parkedcards = (S.layout.parkedcards || []).concat(['ride']);
+    S.m314 = 1; save();
+  }
   if (!S.layout.bonus) {
     var bonusIds = ['stretch','balance','asa'];
     Object.keys(S.layout).forEach(function(s){ S.layout[s] = S.layout[s].filter(function(x){ return bonusIds.indexOf(x) < 0; }); });
@@ -339,6 +350,25 @@ function restoreCommute(){
 function isShut(id){ return id === 'commute' && S.shut && S.shut.commute === dayKey(); }
 function esc(t){ return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
+var TM = [
+  ['train','Train','<rect x="6" y="3" width="12" height="14" rx="3"/><path d="M6 10.5h12"/><circle cx="9.5" cy="14" r=".6"/><circle cx="14.5" cy="14" r=".6"/><path d="M8.5 17l-2 4M15.5 17l2 4"/>'],
+  ['subway','Subway','<circle cx="12" cy="12" r="9"/><path d="M7.5 16.5V8l4.5 5 4.5-5v8.5"/>'],
+  ['uber','Uber or taxi','<path d="M4 14l1.8-5a2 2 0 0 1 1.9-1.4h8.6A2 2 0 0 1 18.2 9L20 14v4h-2.5v-1.5h-11V18H4z"/><rect x="10.3" y="4.2" width="3.4" height="1.8" rx=".5"/><circle cx="7.5" cy="14" r=".6"/><circle cx="16.5" cy="14" r=".6"/>'],
+  ['airplane','Airplane','<path d="M21 14l-8-3V5.5a1.5 1.5 0 0 0-3 0V11l-8 3v2l8-1.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-4.5l8 1.5z" transform="rotate(90 12 12)"/>'],
+  ['bike','Bicycle','<circle cx="6" cy="16" r="3.6"/><circle cx="18" cy="16" r="3.6"/><path d="M6 16l4-8h4l4 8M10 8l3 8M9 6h3"/>'],
+  ['ferry','Ferry','<path d="M3 15h18l-2.5 5h-13z"/><path d="M6 15v-5h12v5M10 10V6h4v4"/>'],
+  ['waymo','Waymo','<path d="M4 15l1.8-4.5a2 2 0 0 1 1.9-1.3h8.6a2 2 0 0 1 1.9 1.3L20 15v3h-2.5v-1.5h-11V18H4z"/><circle cx="12" cy="6" r="1.5"/><path d="M12 7.5v1.7"/>'],
+  ['bus','Bus','<path d="M5 6a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v11H5z"/><path d="M5 11h14M7 17v3M17 17v3"/><circle cx="8.5" cy="14.2" r=".6"/><circle cx="15.5" cy="14.2" r=".6"/>']
+];
+function transportHtml(){
+  var c = S.counts.tm || {};
+  return '<div class="tmw" role="group" aria-label="Modes of transport today">' + TM.map(function(m){
+    var n = c[m[0]] || 0;
+    return '<button type="button" class="tm' + (n ? ' on' : '') + '" data-tm="' + m[0] + '" aria-label="' + m[1] + (n ? ', ' + n + (n === 1 ? ' trip' : ' trips') + ' today' : ', not used today') + '">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + m[2] + '</svg>' +
+      (n > 1 ? '<b>' + n + '</b>' : '') + '</button>';
+  }).join('') + '</div>';
+}
 function keyHtml(it){
   var done = isDone(it), cn = S.counts[it[0]] || 0;
   var note = it[5] ? '<em>' + cn + ' of ' + it[5] + '</em>' : (it[0] === 'coffee' && cn ? '<em>' + cn + (cn === 1 ? ' cup' : ' cups') + '</em>' : '');
@@ -373,7 +403,7 @@ function render(){
     if (id === 'counters') railHtml = secHtml; else html += secHtml;
   });
   document.getElementById('secs').innerHTML = html;
-  document.getElementById('rail').innerHTML = railHtml;
+  document.getElementById('rail').innerHTML = railHtml ? railHtml + transportHtml() : railHtml;
   document.getElementById('body').className = 'body' + (railHtml ? '' : ' norail');
   var hd = document.getElementById('head');
   hd.textContent = left === 0 ? 'Lights out' : left + (left === 1 ? ' light still on' : ' lights still on');
@@ -389,7 +419,7 @@ function render(){
   document.getElementById('hint').innerHTML = editing
     ? 'Drag a dotted handle to move a section. Tap a section name to rename it. Press and drag a key to move it to another section. Tap × to park a key. Tap Done when finished.' +
         '<span class="prev"><button type="button" data-prev="row">Preview a row celebration</button><button type="button" data-prev="day">Preview the day celebration</button><button type="button" data-prev="board">Preview a board change</button><button type="button" data-prev="bday">Preview a birthday</button></span>'
-    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v1.6';
+    : 'A lit key with a glowing corner light is still to do. A grey key is done. Tap a key and it saves. Coffee and Water: press and hold to take one back. Meet up and Local Safari open their log. · v1.7';
   document.getElementById('app').className = 'app' + (editing ? ' editing' : '');
   document.getElementById('edit').textContent = editing ? 'Done' : 'Edit';
   document.getElementById('edit').setAttribute('aria-pressed', editing);
@@ -753,7 +783,8 @@ async function refresh(){
       sb.from('water_glasses').select('id', {count:'exact', head:true}).eq('day', day),
       sb.from('page_prefs').select('value').eq('page', 'habit-modules').eq('key', 'parked').maybeSingle(),
       sb.from('deck_state').select('deck,status').eq('status', 'read'),
-      sb.from('birthdays').select('person,bmonth,bday')
+      sb.from('birthdays').select('person,bmonth,bday'),
+      sb.from('transport_log').select('mode').eq('day', day)
     ]);
   } catch (e) { return; }
   if (pending > 0) return;                       /* a tap is still saving: do not overwrite it */
@@ -770,6 +801,7 @@ async function refresh(){
   });
   counts.coffee = res[2].count || 0; if (counts.coffee) done.coffee = 1;
   counts.water = res[3].count || 0;
+  counts.tm = {}; (res[7].data || []).forEach(function(r){ counts.tm[r.mode] = (counts.tm[r.mode] || 0) + 1; });
   S.done = done; S.counts = counts;
   var pl = []; try { pl = (res[4].data && res[4].data.value) || []; } catch (e) {}
   PARKED_LIST = pl.map(function(x){ return BOARD_ID[x] || x; });
@@ -968,6 +1000,46 @@ root.addEventListener('click', async function(e){
   root.addEventListener('pointercancel', clear);
 })();
 
+
+/* ---- transport strip: each tap is one trip in the transport log; press and hold takes one back ---- */
+async function tmCommit(mode, dir){
+  pending++;
+  try {
+    if (dir > 0) { var ins = await sb.from('transport_log').insert({mode: mode}); if (ins.error) throw ins.error; }
+    else {
+      var last = await sb.from('transport_log').select('id').eq('day', PY.today()).eq('mode', mode).order('at', {ascending:false}).limit(1);
+      if (last.data && last.data[0]) { var del = await sb.from('transport_log').delete().eq('id', last.data[0].id); if (del.error) throw del.error; }
+    }
+  } catch (e) { toast('Transport did not save: ' + (e.message || e)); }
+  finally { pending--; if (pending === 0) refresh(); }
+}
+root.addEventListener('click', function(e){
+  var b = e.target.closest && e.target.closest('[data-tm]'); if (!b || editing) return;
+  e.stopImmediatePropagation();
+  if (window.__lp) { window.__lp = 0; return; }
+  var m = b.getAttribute('data-tm'); S.counts.tm = S.counts.tm || {}; S.counts.tm[m] = (S.counts.tm[m] || 0) + 1;
+  render(); tmCommit(m, 1);
+  if (navigator.vibrate) navigator.vibrate(10);
+}, true);
+(function(){
+  var t = null, sx = 0, sy = 0;
+  function clear(){ clearTimeout(t); t = null; }
+  root.addEventListener('pointerdown', function(e){
+    if (editing) return;
+    var b = e.target.closest('[data-tm]'); if (!b) return;
+    var m = b.getAttribute('data-tm'); sx = e.clientX; sy = e.clientY;
+    t = setTimeout(function(){
+      t = null; var c = S.counts.tm || {}; if (!(c[m] > 0)) return;
+      window.__lp = 1; setTimeout(function(){ window.__lp = 0; }, 450);
+      c[m]--; render(); tmCommit(m, -1);
+      if (navigator.vibrate) navigator.vibrate(18);
+    }, 600);
+  });
+  root.addEventListener('pointermove', function(e){ if (t && (Math.abs(e.clientX - sx) > 8 || Math.abs(e.clientY - sy) > 8)) clear(); });
+  root.addEventListener('pointerup', clear);
+  root.addEventListener('pointercancel', clear);
+})();
+
 /* ---- this screen's own layout, saved in the cloud so every device agrees ---- */
 var DIRTY = 'phr-dirty-v1', lastC = null;
 function markDirty(on){ try { if (on) localStorage.setItem(DIRTY, String(Date.now())); else localStorage.removeItem(DIRTY); } catch (e) {} }
@@ -1042,5 +1114,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v1.6--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v1.7--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
