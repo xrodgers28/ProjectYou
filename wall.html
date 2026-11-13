@@ -13,6 +13,22 @@
 .wallx{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);right:12px;z-index:9999;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:400 26px/1 Arial,Helvetica,sans-serif;text-decoration:none;color:#1f2a44;background:rgba(255,255,255,.94);border:1px solid #c3c9d2;box-shadow:0 2px 8px rgba(0,0,0,.18)}
 .wallx:hover{background:#fff;border-color:#1f2a44}
 .wallx:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px}
+
+  /* v2.27 (Nov 13, 2026): Morning sparks. Five pictures a day, a contact sheet at the top of the board. Star saves, Hide skips. Nothing grows or zooms. */
+  .w2sparks{margin:0 0 10px}
+  .w2sparks .w2shelf small{font-weight:400;opacity:.7;margin-left:6px}
+  .spgrid{display:grid;grid-template-columns:repeat(5,minmax(0,156px));gap:22px;justify-content:start;margin-top:8px}
+  .spcell{min-width:0;display:flex;flex-direction:column;gap:5px}
+  .spart{display:block;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:var(--line)}
+  .spart img{width:100%;height:100%;object-fit:cover;display:block}
+  .spcap{font-size:12.5px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .spwhy{font-size:11.5px;line-height:1.35;opacity:.75;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .spsrc{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;opacity:.55}
+  .spact{display:flex;gap:6px;margin-top:2px}
+  .spact button{flex:1;font:inherit;font-size:12.5px;font-weight:600;padding:5px 0;border-radius:8px;border:1px solid var(--line);background:transparent;color:inherit;cursor:pointer}
+  .spact button[aria-pressed="true"]{background:var(--star);color:#fff;border-color:var(--star)}
+  .spcell.gone .spart,.spcell.gone .spcap,.spcell.gone .spwhy{opacity:.3}
+  @media(max-width:700px){.spgrid{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:136px;overflow-x:auto;gap:14px;padding-bottom:6px}}
 </style>
 <a class="wallx" id="wallx" href="habit-modules.html" aria-label="Close and go back to the Cue Cards board" title="Close, back to the board">&times;</a>
 <div class="pynav"></div>
@@ -742,7 +758,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.26</span></h1>
+      <h1>Sparkboard <span class="ver">v2.27</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -850,7 +866,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.26</div>
+  <div class="stamp" id="stamp">v2.27</div>
 </div>
 
 <aside class="stx-col">
@@ -1804,6 +1820,7 @@ function paint(){
   document.getElementById("stage").innerHTML=drawFeed();
   applyOpened();
   ideaPaint();
+  sparksPaint();
   paintSize();
   var sb=document.getElementById("sizebtn"); if(sb) sb.onclick=toggleSize;
   var saved=ITEMS.filter(function(i){return i.saved;}).length;
@@ -2742,8 +2759,65 @@ document.addEventListener("click",function(e){
   var star=e.target.closest ? e.target.closest(".hirow .st") : null;
   if(star){ e.preventDefault(); hiToggleStar(+star.getAttribute("data-i")); }
 });
+
+/* v2.27 (Nov 13, 2026): Morning sparks. Today's five come from wall_sparks, picked overnight. Star uses the same saved list as every other tile; Hide only dims it and tells the picker to skip things like it. */
+var SPARKS=null;
+function sparksDay(){ try{ if(window.PY&&PY.today) return PY.today(); }catch(e){} return ideaToday(); }
+function sparksFmt(iso){ var m=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"], p=String(iso).split("-"); return m[+p[1]-1]+" "+(+p[2])+", "+p[0]; }
+function sparksLoad(){
+  var today=sparksDay();
+  return api("wall_sparks?select=day&day=lte."+today+"&order=day.desc&limit=1").then(function(r){
+    if(!r||!r.length){ SPARKS=null; return; }
+    var d=r[0].day;
+    return api("wall_sparks?select=id,slot,topic,why,origin,status,item_id,wall_items(title,link,img)&day=eq."+d+"&order=slot.asc").then(function(rows){
+      var ids=rows.map(function(x){return x.item_id;}).join(",");
+      return api("wall_saved?select=item_id&item_id=in.("+ids+")").then(function(sv){
+        var set={}; (sv||[]).forEach(function(s){ set[s.item_id]=1; });
+        rows.forEach(function(x){ x.saved=!!set[x.item_id]; });
+        SPARKS={day:d,rows:rows,isToday:d===today};
+      });
+    });
+  }).then(sparksPaint).catch(function(){ SPARKS=null; });
+}
+function sparksPaint(){
+  var old=document.getElementById("sparksRow"); if(old) old.remove();
+  if(!SPARKS||!SPARKS.rows.length) return;
+  var st=document.getElementById("sbwall"); if(!st) return;
+  var d=document.createElement("div"); d.id="sparksRow"; d.className="w2sparks";
+  var h='<div class="w2shelf">Morning sparks<small>'+esc(sparksFmt(SPARKS.day))+(SPARKS.isToday?'':' · today’s are on the way')+'</small></div><div class="spgrid">';
+  SPARKS.rows.forEach(function(x){
+    var it=x.wall_items||{};
+    h+='<div class="spcell'+(x.status==="hidden"?' gone':'')+'" data-sp="'+x.item_id+'">'+
+      '<a class="spart" href="'+esc(it.link)+'" target="_blank" rel="noopener noreferrer"><img src="'+esc(it.img)+'" alt="'+esc(it.title)+'" loading="lazy" decoding="async"></a>'+
+      '<div class="spcap">'+esc(it.title)+'</div>'+
+      '<div class="spwhy">'+esc(x.why||"")+'</div>'+
+      '<div class="spsrc">'+esc(x.origin||"")+'</div>'+
+      '<div class="spact"><button type="button" data-spark="star" aria-pressed="'+(x.saved?"true":"false")+'">'+(x.saved?"Starred":"Star")+'</button>'+
+      '<button type="button" data-spark="hide">'+(x.status==="hidden"?"Undo":"Hide")+'</button></div></div>';
+  });
+  d.innerHTML=h+'</div>';
+  st.insertBefore(d,st.firstChild);
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest?e.target.closest("[data-spark]"):null; if(!b||!SPARKS) return;
+  var cell=b.closest("[data-sp]"), id=+cell.getAttribute("data-sp");
+  var x=SPARKS.rows.filter(function(r){ return r.item_id===id; })[0]; if(!x) return;
+  if(b.getAttribute("data-spark")==="star"){
+    var want=!x.saved; x.saved=want;
+    b.setAttribute("aria-pressed",want?"true":"false"); b.textContent=want?"Starred":"Star";
+    var p=want?api("wall_saved",{method:"POST",body:JSON.stringify({item_id:id}),prefer:"resolution=ignore-duplicates"}):api("wall_saved?item_id=eq."+id,{method:"DELETE"});
+    p.catch(function(){ x.saved=!want; b.setAttribute("aria-pressed",x.saved?"true":"false"); b.textContent=x.saved?"Starred":"Star"; toast("That star did not save. Try again."); });
+  }else{
+    var hide=x.status!=="hidden"; x.status=hide?"hidden":"new";
+    cell.classList.toggle("gone",hide); b.textContent=hide?"Undo":"Hide";
+    fetch(SB+"/rest/v1/rpc/spark_set_status",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},body:JSON.stringify({p_item_id:id,p_status:x.status})})
+      .then(function(r){ if(!r.ok) throw new Error(r.status); })
+      .catch(function(){ x.status=hide?"new":"hidden"; cell.classList.toggle("gone",!hide); b.textContent=hide?"Hide":"Undo"; toast("That did not save. Try again."); });
+  }
+});
 boot();
 ideaLoad();
+sparksLoad();
 loadWatch();
 loadHarpers();
 loadSportsTicker();
