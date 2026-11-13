@@ -66,7 +66,7 @@ window.NAV_CONFIG = {
   "Parking Lot": [
     /* Nov 12 2026, Scott: All Lists is a dropdown, same format as Editors. The five pages are the same five as
        LISTS_NAV below, in the same order. The small grey LISTS word is hidden (see NAV_GROUP_RENAME). */
-    { "label": "All Lists", "children": [
+    { "label": "All Lists", "href": "all-lists.html", "children": [
       { "label": "Connections", "href": "connections.html" },
       { "label": "Movies", "href": "movies.html" },
       { "label": "Bucket List", "href": "my-bucket-list.html" },
@@ -86,7 +86,7 @@ window.NAV_CONFIG = {
      it opens the Travel Log, and the Travel tab strip (TRAVEL_NAV below) carries Where I've Been, Future Travel
      and Safari Log. The small grey word above is hidden (see NAV_GROUP_RENAME). */
   "Travel": [
-    { "label": "Travel", "href": "where-ive-been.html", "children": [
+    { "label": "Travel", "href": "travel.html", "children": [
       { "label": "Where I've Been", "href": "where-ive-been.html" },
       { "label": "Future Travel", "href": "future-travel.html" },
       { "label": "Safari Log", "href": "safari-log.html" },
@@ -97,7 +97,7 @@ window.NAV_CONFIG = {
      are nested inside it, in that order. Habit Worksheets came out of Habit Modules (it lives here only).
      The small grey group word is hidden (see NAV_GROUP_RENAME) because it would only repeat the button. */
   "Editors": [
-    { "label": "Editors", "href": "habit-worksheets.html", "children": [
+    { "label": "Editors", "href": "editors.html", "children": [
       { "label": "Habit Worksheets", "href": "habit-worksheets.html" },
       { "label": "Stack Builder", "href": "stack-builder.html" },
       { "label": "Daily Habits", "href": "daily-template.html" }
@@ -327,6 +327,9 @@ window.PAGE_VERSIONS = {
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
   "qs-dashboard.html": "v3.6",
+  "all-lists.html": "v1.0",
+  "travel.html": "v1.0",
+  "editors.html": "v1.0",
   "reconciliation.html": "v1.0",
   "recreational.html": "v1.3",
   "session-tracker-2026-08-18-compass-sources-shipped.html": "v1.0",
