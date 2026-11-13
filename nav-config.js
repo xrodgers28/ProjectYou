@@ -39,11 +39,15 @@ window.NAV_CONFIG = {
      it is now the fifth tab. Intrinsic Capacity came off the bar entirely and is
      reached from Mission Control. What is left is the hub and the wheel. */
   "Quantified Self": [
-    { "label": "YouMatics", "href": "qs-dashboard.html" },
+    /* Nov 12 2026, Scott: Time Bandit Wheel moved under YouMatics and is called Time Bandit Wheel 2. YouMatics
+       itself still opens its page when tapped; the small menu drops from it (an item with BOTH href and children). */
+    { "label": "YouMatics", "href": "qs-dashboard.html", "children": [
+      { "label": "Time Bandit Wheel 2", "href": "time-bandit-wheel-v2.html" }
+    ] }
     /* Oct 8 2026, Scott: the end-of-week review (now "Habit Dashboard") moved to Habit Modules, right after the Daily Habit Tracker. */
     /* Oct 8 2026, Scott: the old wheel (index.html#wheel) came off this bar and now sits under Maps & Diagrams
        (see MAPS_NAV) and on Mission Control. The v2 page took over the name "Time Bandit Wheel" here. */
-    { "label": "Time Bandit<br>Wheel", "href": "time-bandit-wheel-v2.html" }
+    /* Nov 12 2026: Time Bandit Wheel came off the bar here (see YouMatics above). */
   ],
   /* Displayed as LISTS - see NAV_GROUP_RENAME below. The key stays "Parking Lot"
      because that string is baked into every page's markup and is what navpatch
@@ -71,7 +75,7 @@ window.NAV_CONFIG = {
      it opens the Travel Log, and the Travel tab strip (TRAVEL_NAV below) carries Where I've Been, Future Travel
      and Safari Log. The small grey word above is hidden (see NAV_GROUP_RENAME). */
   "Travel": [
-    { "label": "Travel", "href": "travel-log.html" }
+    { "label": "Travel", "href": "where-ive-been.html" }
   ],
   /* Nov 12 2026, Scott: Editors is ONE dropdown in the bar. Habit Worksheets, Stack Builder and Daily Habits
      are nested inside it, in that order. Habit Worksheets came out of Habit Modules (it lives here only).
@@ -213,11 +217,12 @@ window.TRAVEL_NAV = {
   "label": "Travel",
   "ver": "Travel",
   "items": [
-    { "label": "Travel Log", "href": "travel-log.html" },
+    /* Nov 12 2026, Scott: tab order is Where I've Been, Future Travel, Safari Log, Travel Log. The first tab is the one
+       the Travel button in the top bar opens (and the one it lights up on), so the button points at it too. */
     { "label": "Where I've Been", "href": "where-ive-been.html" },
     { "label": "Future Travel", "href": "future-travel.html" },
-    /* Nov 12 2026, Scott: Safari Log moved here from under Environmental Health, as the fourth tab. */
-    { "label": "Safari Log", "href": "safari-log.html" }
+    { "label": "Safari Log", "href": "safari-log.html" },
+    { "label": "Travel Log", "href": "travel-log.html" }
   ]
 };
 
@@ -305,7 +310,7 @@ window.PAGE_VERSIONS = {
   "habit-worksheets.html": "v3.4",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
-  "qs-dashboard.html": "v3.3",
+  "qs-dashboard.html": "v3.4",
   "reconciliation.html": "v1.0",
   "recreational.html": "v1.3",
   "session-tracker-2026-08-18-compass-sources-shipped.html": "v1.0",
