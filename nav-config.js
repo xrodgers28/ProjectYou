@@ -67,6 +67,12 @@ window.NAV_CONFIG = {
      Sub-nav principle: the top bar holds sections, and the Style Guide is a
      thing you look up rather than a place you go, so it lives as a card on
      mission.html under "Maps & dashboards". Do not put it back in the bar. */
+  /* Nov 12 2026, Scott: Travel is back in the main bar (it came off Sep 3). One slot, same as the old Lists pattern:
+     it opens the Travel Log, and the Travel tab strip (TRAVEL_NAV below) carries Where I've Been, Future Travel
+     and Safari Log. The small grey word above is hidden (see NAV_GROUP_RENAME). */
+  "Travel": [
+    { "label": "Travel", "href": "travel-log.html" }
+  ],
   /* Nov 12 2026, Scott: Editors is ONE dropdown in the bar. Habit Worksheets, Stack Builder and Daily Habits
      are nested inside it, in that order. Habit Worksheets came out of Habit Modules (it lives here only).
      The small grey group word is hidden (see NAV_GROUP_RENAME) because it would only repeat the button. */
@@ -114,6 +120,7 @@ window.NAV_GROUP_LINKS = {
 window.NAV_GROUP_RENAME = {
   /* Nov 12 2026: non-breaking spaces, so the grey words above the Editors and All Lists buttons are blank but keep their height. */
   "Editors": "\u00a0",
+  "Travel": "\u00a0",
   "Parking Lot": "\u00a0"
 };
 
@@ -208,7 +215,9 @@ window.TRAVEL_NAV = {
   "items": [
     { "label": "Travel Log", "href": "travel-log.html" },
     { "label": "Where I've Been", "href": "where-ive-been.html" },
-    { "label": "Future Travel", "href": "future-travel.html" }
+    { "label": "Future Travel", "href": "future-travel.html" },
+    /* Nov 12 2026, Scott: Safari Log moved here from under Environmental Health, as the fourth tab. */
+    { "label": "Safari Log", "href": "safari-log.html" }
   ]
 };
 
