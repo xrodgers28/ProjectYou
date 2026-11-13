@@ -31,16 +31,9 @@ window.NAV_CONFIG = {
        moved here to sit right after the Daily Habit Tracker. */
     { "label": "Habit Cue<br>Cards", "href": "habit-modules.html" },
     { "label": "Daily Habit<br>Tracker", "href": "daily-habit-tracker.html" },
-    { "label": "Habit<br>Dashboard", "href": "weekly-review.html" },
-    { "label": "Habit<br>Worksheets", "href": "habit-worksheets.html" },
+    { "label": "Habit<br>Dashboard", "href": "weekly-review.html" }
     /* Oct 8 2026, Scott: Compass Time folded into Habit Worksheets (counts-toward-totals tick, minutes, Compass point = the sheet). The page stays only as a redirect. */
-    /* Oct 3 2026, Scott: Safari Log goes "under Environmental Health". There was no
-       Environmental Health slot in the bar, so this adds one as a dropdown: the
-       section page, then its log. */
-    { "label": "Environmental<br>Health", "children": [
-      { "label": "Environmental Health", "href": "environmental.html" },
-      { "label": "Safari Log", "href": "safari-log.html" }
-    ] }
+    /* Nov 12 2026, Scott: Environmental Health came off the main bar. It lives on the Habit Cue Cards board as a card, and on Mission Control. */
   ],
   /* Sep 3 2026, Scott. Two items left this group. Food Log moved to LISTS, where
      it is now the fifth tab. Intrinsic Capacity came off the bar entirely and is
@@ -56,7 +49,15 @@ window.NAV_CONFIG = {
      because that string is baked into every page's markup and is what navpatch
      matches on. Aug 24 2026, Scott. */
   "Parking Lot": [
-    { "label": "All Lists", "href": "connections.html" }
+    /* Nov 12 2026, Scott: All Lists is a dropdown, same format as Editors. The five pages are the same five as
+       LISTS_NAV below, in the same order. The small grey LISTS word is hidden (see NAV_GROUP_RENAME). */
+    { "label": "All Lists", "children": [
+      { "label": "Connections", "href": "connections.html" },
+      { "label": "Movies", "href": "movies.html" },
+      { "label": "Bucket List", "href": "my-bucket-list.html" },
+      { "label": "Asa Activities", "href": "asa-activities.html" },
+      { "label": "Food Log", "href": "food-log.html" }
+    ] }
   ],
   /* Sep 3 2026, Scott: "travel list should be removed from main nav, it already
      sits in Where I've Been." The Travel slot is gone from the top bar. The three
@@ -66,10 +67,15 @@ window.NAV_CONFIG = {
      Sub-nav principle: the top bar holds sections, and the Style Guide is a
      thing you look up rather than a place you go, so it lives as a card on
      mission.html under "Maps & dashboards". Do not put it back in the bar. */
+  /* Nov 12 2026, Scott: Editors is ONE dropdown in the bar. Habit Worksheets, Stack Builder and Daily Habits
+     are nested inside it, in that order. Habit Worksheets came out of Habit Modules (it lives here only).
+     The small grey group word is hidden (see NAV_GROUP_RENAME) because it would only repeat the button. */
   "Editors": [
-    /* Oct 4 2026, Scott: Stack Builder goes under Editors, listed first. */
-    { "label": "Stack<br>Builder", "href": "stack-builder.html" },
-    { "label": "Daily<br>Habits", "href": "daily-template.html" }
+    { "label": "Editors", "children": [
+      { "label": "Habit Worksheets", "href": "habit-worksheets.html" },
+      { "label": "Stack Builder", "href": "stack-builder.html" },
+      { "label": "Daily Habits", "href": "daily-template.html" }
+    ] }
   ],
   "Operating System": [
     /* Oct 8 2026, Scott: Automated Tracking came off the bar and now sits on Mission Control (Launch tab, Tools & pages). */
@@ -94,8 +100,7 @@ window.NAV_CONFIG = {
    When a group name here has a URL, navpatch.js renders its grey label as a
    clickable link (and marks it active on that page). */
 window.NAV_GROUP_LINKS = {
-  "Habit Modules": "habit-modules.html",
-  "Parking Lot": "connections.html"
+  "Habit Modules": "habit-modules.html"
 };
 
 /* Rename a group WITHOUT touching a single page.
@@ -107,7 +112,9 @@ window.NAV_GROUP_LINKS = {
    Example:  "Habit Modules": "Cue Cards",
    Delete a line to go back to the original name. */
 window.NAV_GROUP_RENAME = {
-  "Parking Lot": "LISTS"
+  /* Nov 12 2026: non-breaking spaces, so the grey words above the Editors and All Lists buttons are blank but keep their height. */
+  "Editors": "\u00a0",
+  "Parking Lot": "\u00a0"
 };
 
 /* Maps & Diagrams subsection.
