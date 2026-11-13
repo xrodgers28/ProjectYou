@@ -39,6 +39,11 @@
   .tcard .pill.nogeo{background:#fdf3e6;color:#b5762a}
   .tcard .del{position:absolute;top:9px;right:10px;font-size:15px;color:#c9cfd6;cursor:pointer;line-height:1}
   .tcard .del:hover{color:var(--hot)}
+  .tcard .rph{height:120px;margin:-14px -15px 8px;background:#e6eefa;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .tcard .rph img{width:100%;height:100%;object-fit:cover;display:block}
+  .tcard .rcr{font-size:10.5px;color:#6b7a90;margin:-4px 0 4px}
+  .tcard .rlink{color:inherit;text-decoration:none;border-bottom:1px solid #6f8fc4}
+  .tcard .del{z-index:2;text-shadow:0 0 3px #fff}
   .empty{color:var(--muted);font-size:14px;padding:16px 2px}
   #login{max-width:340px;margin:12vh auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 14px 40px rgba(31,42,68,.16)}
   #login h1{font-size:18px;color:var(--accent);margin-bottom:4px}#login p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
@@ -105,7 +110,7 @@
 
 <div id="app" class="hidden">
 <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link on">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v1.2</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
-  <div class="secbar-wrap"><div class="secbar"><h1>🏝️ Future Travel</h1><span class="ver">v1.5</span><span class="date"></span></div></div>
+  <div class="secbar-wrap"><div class="secbar"><h1>🏝️ Future Travel</h1><span class="ver">v1.6</span><span class="date"></span></div></div>
   <div class="wrap">
     <div class="intro">Your someday map. Every dream destination tagged by country, nearest city, and who put you onto it. Tip: say <b>"add [place] to Future Travel"</b> in any Claude chat and it lands right here.</div>
     <div class="addbar" id="addbar">
@@ -122,7 +127,7 @@
     <div class="grid" id="cards"></div>
     <div id="livepane" class="hidden"></div>
   </div>
-  <div class="badge">Future Travel v1.5</div>
+  <div class="badge">Future Travel v1.6</div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -183,8 +188,14 @@ function renderCards(){
     if(p.city) pills+='<span class="pill">📍 '+esc(p.city)+'</span>';
     if(p.recommender) pills+='<span class="pill rec">🗣️ '+esc(p.recommender)+'</span>';
     if(view!=='bucket' && (p.lat==null||p.lng==null)) pills+='<span class="pill nogeo">no map pin yet</span>';
-    return '<div class="tcard"><span class="del" title="Remove" onclick="delPlace(\''+p.id+'\')">✕</span>'+
-      '<div class="flag">'+flag+'</div><div class="place">'+esc(p.place)+'</div>'+
+    let top='', nm=esc(p.place);
+    if(p.kind==='restaurant'){
+      if(p.photo) top='<div class="rph"><img loading="lazy" alt="'+nm+'" src="'+p.photo.replace(/"/g,'')+'"></div>'+(p.photo_credit?'<div class="rcr">'+esc(p.photo_credit)+'</div>':'');
+      else top='<div class="rph none"><svg viewBox="0 0 48 48" width="40" height="40" fill="none" stroke="#2b4a7a" stroke-width="2.2" stroke-linecap="round"><circle cx="24" cy="26" r="13"/><circle cx="24" cy="26" r="7"/><path d="M6 8v12M10 8v12M14 8v12M10 20v20M40 8c-4 3-5 9-5 14h5v18"/></svg></div>';
+      if(p.url && /^https:\/\/www\.the50\.com\//.test(p.url)) nm='<a class="rlink" href="'+esc(p.url)+'" target="_blank" rel="noopener">'+nm+' ↗</a>';
+    }
+    return '<div class="tcard">'+top+'<span class="del" title="Remove" onclick="delPlace(\''+p.id+'\')">✕</span>'+
+      '<div class="flag">'+flag+'</div><div class="place">'+nm+'</div>'+
       '<div class="row">'+pills+'</div></div>';
   }).join('');
 }
