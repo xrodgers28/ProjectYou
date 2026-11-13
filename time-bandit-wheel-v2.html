@@ -4836,7 +4836,8 @@ function habitTargetMinutes(){
 const EXERCISE_HABITS = new Set(['Walk', 'Ride']);
 function habitMinutesToday(){
   const m = habitMinutesMap();
-  let mins = 0; for (const k in m) if (!EXERCISE_HABITS.has(k)) mins += m[k];
+  const UT = habitBorrowedMap();   /* Nov 12 2026: a ~ borrowed estimate is never added to the counter */
+  let mins = 0; for (const k in m) if (!EXERCISE_HABITS.has(k) && !UT.get(k)) mins += m[k];
   return mins;
 }
 function exerciseMinutesToday(){
@@ -5198,7 +5199,7 @@ function renderHabitTable(){
       }
       const v = mins[task] || 0;
       const isEx = EXERCISE_HABITS.has(task);          /* v6.38: shown, not added to habit time */
-      if (!isEx) { total += v; sub += v; }
+      if (!isEx && !UNTIMED.get(task)) { total += v; sub += v; }   /* Nov 12 2026: a ~ borrowed estimate is shown, never added (only what happened) */
       h += '<tr data-hl="hab:' + escA(hlk(task)) + '" style="background:' + g.style.bg + '">';
       // rowspan covers the group's rows PLUS its subtotal row, so the coloured rail
       // runs the full height of the group.
@@ -5222,7 +5223,7 @@ function renderHabitTable(){
   /* The key sits under the numbers it explains, not elsewhere on the page. It only
      appears on a day that actually has a borrowed number on it. */
   if (UNTIMED.size) h += '<div class="habnote"><b>~</b> You ticked it but did not type a time, '
-    + 'so this is how long it usually takes you. Type the minutes in the <b>act</b> box on '
+    + 'so this is how long it usually takes you. It is shown but NOT counted in the subtotal or Total. Type the minutes in the <b>act</b> box on '
     + 'Todays Tasks and the real number replaces it.</div>';
   if (hasExtra) h += '<div class="habnote"><b>†</b> On your day today. It sits on the calendar as '
     + 'Personal time, so it is counted there, not in the habit totals.</div>';
