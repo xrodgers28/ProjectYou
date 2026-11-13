@@ -42,7 +42,18 @@ window.NAV_CONFIG = {
     /* Nov 12 2026, Scott: Time Bandit Wheel moved under YouMatics and is called Time Bandit Wheel 2. YouMatics
        itself still opens its page when tapped; the small menu drops from it (an item with BOTH href and children). */
     { "label": "YouMatics", "href": "qs-dashboard.html", "children": [
-      { "label": "Time Bandit Wheel 2", "href": "time-bandit-wheel-v2.html" }
+      { "label": "YouMatics Dashboard", "href": "ym-dashboard.html" },
+      { "label": "Time Bandit Wheel 2", "href": "time-bandit-wheel-v2.html" },
+      { "label": "Habits Tracker", "href": "qs-log.html" },
+      { "label": "Cue Cards", "href": "habit-modules.html" },
+      { "label": "Clarity Compass", "href": "qs-wheel.html" },
+      { "label": "Life Snapshot", "href": "life-snapshot.html" },
+      { "label": "Travel Dashboard", "href": "where-ive-been.html" },
+      { "label": "Coffee Days", "href": "coffee-days.html" },
+      { "label": "Decade View", "href": "decade.html" },
+      { "label": "Winners and Losers", "href": "winners-losers.html" },
+      { "label": "Stack Builder", "href": "stack-builder.html" },
+      { "label": "Similar Projects", "href": "similar-projects.html" }
     ] }
     /* Oct 8 2026, Scott: the end-of-week review (now "Habit Dashboard") moved to Habit Modules, right after the Daily Habit Tracker. */
     /* Oct 8 2026, Scott: the old wheel (index.html#wheel) came off this bar and now sits under Maps & Diagrams
@@ -75,7 +86,12 @@ window.NAV_CONFIG = {
      it opens the Travel Log, and the Travel tab strip (TRAVEL_NAV below) carries Where I've Been, Future Travel
      and Safari Log. The small grey word above is hidden (see NAV_GROUP_RENAME). */
   "Travel": [
-    { "label": "Travel", "href": "where-ive-been.html" }
+    { "label": "Travel", "href": "where-ive-been.html", "children": [
+      { "label": "Where I've Been", "href": "where-ive-been.html" },
+      { "label": "Future Travel", "href": "future-travel.html" },
+      { "label": "Safari Log", "href": "safari-log.html" },
+      { "label": "Travel Log", "href": "travel-log.html" }
+    ] }
   ],
   /* Nov 12 2026, Scott: Editors is ONE dropdown in the bar. Habit Worksheets, Stack Builder and Daily Habits
      are nested inside it, in that order. Habit Worksheets came out of Habit Modules (it lives here only).
@@ -310,7 +326,7 @@ window.PAGE_VERSIONS = {
   "habit-worksheets.html": "v3.4",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
-  "qs-dashboard.html": "v3.4",
+  "qs-dashboard.html": "v3.5",
   "reconciliation.html": "v1.0",
   "recreational.html": "v1.3",
   "session-tracker-2026-08-18-compass-sources-shipped.html": "v1.0",
