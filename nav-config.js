@@ -97,7 +97,7 @@ window.NAV_CONFIG = {
      are nested inside it, in that order. Habit Worksheets came out of Habit Modules (it lives here only).
      The small grey group word is hidden (see NAV_GROUP_RENAME) because it would only repeat the button. */
   "Editors": [
-    { "label": "Editors", "children": [
+    { "label": "Editors", "href": "habit-worksheets.html", "children": [
       { "label": "Habit Worksheets", "href": "habit-worksheets.html" },
       { "label": "Stack Builder", "href": "stack-builder.html" },
       { "label": "Daily Habits", "href": "daily-template.html" }
