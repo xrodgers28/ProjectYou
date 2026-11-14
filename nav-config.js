@@ -45,6 +45,7 @@ window.NAV_CONFIG = {
     { "label": "YouMatics", "href": "qs-dashboard.html", "children": [
       { "label": "YouMatics Dashboard", "href": "ym-dashboard.html" },
       { "label": "Time Bandit Wheel 2", "href": "time-bandit-wheel-v2.html" },
+      { "label": "Time Bandit Wheel (original)", "href": "index.html#wheel" },
       { "label": "Habits Tracker", "href": "qs-log.html" },
       { "label": "Clarity Compass", "href": "qs-wheel.html" },
       { "label": "Life Snapshot", "href": "life-snapshot.html" },
@@ -163,8 +164,7 @@ window.MAPS_NAV = {
     { "label": "Data Flow Chart", "href": "dfd.html" },
     { "label": "Data Flow Map", "href": "data-flow-map.html" },
     { "label": "Spider Diagram", "href": "knowledge-graph.html" },
-    { "label": "Adding to Knowledge Graph", "href": "kg-ingest-process.html" },
-    { "label": "Time Bandit Wheel (original)", "href": "index.html#wheel" }
+    { "label": "Adding to Knowledge Graph", "href": "kg-ingest-process.html" }
   ]
 };
 
@@ -328,7 +328,7 @@ window.PAGE_VERSIONS = {
   "habit-worksheets.html": "v3.4",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
-  "qs-dashboard.html": "v3.7",
+  "qs-dashboard.html": "v3.8",
   "all-lists.html": "v1.3",
   "travel.html": "v1.1",
   "drink-log.html": "v1.3",
