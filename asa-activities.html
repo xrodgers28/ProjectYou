@@ -100,6 +100,10 @@
   .lks{margin-top:5px;display:flex;flex-wrap:wrap;gap:5px}
   .lks a{font-size:11.5px;font-weight:700;color:var(--accent,#3f6f8f);text-decoration:none;border:1px solid var(--line);background:#fff;border-radius:999px;padding:2px 9px;white-space:nowrap}
   .lks a:hover{background:#eef4f9;text-decoration:underline}
+  .lks .lk{display:inline-flex;align-items:center;gap:3px}
+  .lks .cp{font:inherit;font-size:11.5px;font-weight:700;color:#5b6472;border:1px solid var(--line);background:#f1f4f8;border-radius:999px;padding:2px 9px;cursor:pointer;white-space:nowrap}
+  .lks .cp:hover{background:#e3eaf2;color:var(--accent2)}
+  .lks .cp.ok{background:#e3f4e8;color:#2f7a45;border-color:#b8dfc4}
   .leaflet-popup-content .lks{margin-top:6px}
   .drv{display:inline-block;font-size:10.5px;font-weight:700;color:#5b6472;background:#f1f4f8;border:1px solid var(--line);border-radius:999px;padding:2px 8px;margin:0 4px 0 0;white-space:nowrap}
   .legend .drvnote{flex-basis:100%;margin-top:2px;color:#9aa6b4}
@@ -136,7 +140,7 @@
 <div id="app" class="hidden">
 <div class="pynav"></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1><img id="hico" alt="" style="display:none;width:32px;height:32px;vertical-align:-8px;margin-right:6px">Asa Activities</h1><span class="ver">v1.3</span><span class="date"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1><img id="hico" alt="" style="display:none;width:32px;height:32px;vertical-align:-8px;margin-right:6px">Asa Activities</h1><span class="ver">v1.4</span><span class="date"></span></div></div>
 
 <div class="wrap">
   <div class="intro">Two lists you and Åsa are building together. <b>Date Ideas</b> is the actionable one &mdash; things to go and do, ticked off as you do them. <b>Things we like to do together</b> is the reference list the ideas come from.</div>
@@ -172,7 +176,7 @@
     <div id="sugLike"></div>
   </div>
 </div>
-<div class="badge">Asa Activities v1.3</div>
+<div class="badge">Asa Activities v1.4</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -306,7 +310,25 @@ function drawFilters(rows){
 function linksHtml(r){
   const L=Array.isArray(r.links)?r.links:[];
   const ok=L.filter(l=>l&&/^https?:\/\//i.test(l.url||''));
-  return ok.length?'<div class="lks">'+ok.map(l=>'<a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(l.url)+'">\u2197 '+esc(l.label||'Website')+'</a>').join('')+'</div>':'';
+  return ok.length?'<div class="lks">'+ok.map(l=>'<span class="lk"><a href="'+esc(l.url)+'" target="_blank" rel="noopener noreferrer" title="'+esc(l.url)+'">\u2197 '+esc(l.label||'Website')+'</a><button type="button" class="cp" title="Copy this idea and link as text" onclick="copyIdea(\''+r.id+'\','+L.indexOf(l)+',this)">Copy</button></span>').join('')+'</div>':'';
+}
+/* Copy one idea plus one of its links as plain text, ready to paste into a message. */
+function ideaText(r,l){
+  const lines=[r.item];
+  const sub=[r.place,r.notes].filter(Boolean).join(' \u00b7 ');
+  if(sub)lines.push(sub);
+  const dv=fmtDrive(r);if(dv)lines.push('About '+dv.split(' \u00b7 ')[0]+' drive');
+  lines.push((l.label&&l.label!=='Website'?l.label+': ':'')+l.url);
+  return lines.join('\n');
+}
+async function copyIdea(id,i,btn){
+  const r=ROWS.find(x=>x.id===id);if(!r)return;
+  const l=(r.links||[])[i];if(!l)return;
+  const txt=ideaText(r,l);
+  try{await navigator.clipboard.writeText(txt);}
+  catch(e){const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(_){}document.body.removeChild(ta);}
+  if(btn){const o=btn.textContent;btn.textContent='Copied \u2713';btn.classList.add('ok');setTimeout(()=>{btn.textContent=o;btn.classList.remove('ok');},1600);}
+  toast('Copied. Ready to paste.');
 }
 function ideaCard(r){
   const done=r.status==='done';
