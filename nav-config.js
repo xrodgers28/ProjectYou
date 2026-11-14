@@ -332,7 +332,7 @@ window.PAGE_VERSIONS = {
   "qs-dashboard.html": "v3.6",
   "all-lists.html": "v1.0",
   "travel.html": "v1.0",
-  "drink-log.html": "v1.0",
+  "drink-log.html": "v1.1",
   "editors.html": "v1.0",
   "reconciliation.html": "v1.0",
   "recreational.html": "v1.3",
