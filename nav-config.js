@@ -41,17 +41,16 @@ window.NAV_CONFIG = {
   "Quantified Self": [
     /* Nov 12 2026, Scott: Time Bandit Wheel moved under YouMatics and is called Time Bandit Wheel 2. YouMatics
        itself still opens its page when tapped; the small menu drops from it (an item with BOTH href and children). */
+    /* Nov 14 2026, Scott: Cue Cards (now Habit Cue Cards), Stack Builder (now under Editors) and Coffee Days (now Life Logging) came out of YouMatics because they appear in other sections. */
     { "label": "YouMatics", "href": "qs-dashboard.html", "children": [
       { "label": "YouMatics Dashboard", "href": "ym-dashboard.html" },
       { "label": "Time Bandit Wheel 2", "href": "time-bandit-wheel-v2.html" },
       { "label": "Habits Tracker", "href": "qs-log.html" },
-      { "label": "Cue Cards", "href": "habit-modules.html" },
       { "label": "Clarity Compass", "href": "qs-wheel.html" },
       { "label": "Life Snapshot", "href": "life-snapshot.html" },
       { "label": "Travel Dashboard", "href": "where-ive-been.html" },
       { "label": "Decade View", "href": "decade.html" },
       { "label": "Winners and Losers", "href": "winners-losers.html" },
-      { "label": "Stack Builder", "href": "stack-builder.html" },
       { "label": "Similar Projects", "href": "similar-projects.html" }
     ] }
     /* Oct 8 2026, Scott: the end-of-week review (now "Habit Dashboard") moved to Habit Modules, right after the Daily Habit Tracker. */
