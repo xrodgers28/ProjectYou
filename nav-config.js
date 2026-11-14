@@ -89,6 +89,8 @@ window.NAV_CONFIG = {
   "Travel": [
     { "label": "Travel", "href": "travel.html", "children": [
       { "label": "Where I've Been", "href": "where-ive-been.html" },
+      /* Nov 14 2026, Scott: Modes of Transport (was "Moving through 2026" under Maps) is the second page in Travel. */
+      { "label": "Modes of Transport", "href": "modes-of-transport.html" },
       { "label": "Future Travel", "href": "future-travel.html" },
       { "label": "Safari Log", "href": "safari-log.html" },
       { "label": "Travel Log", "href": "travel-log.html" },
@@ -237,6 +239,7 @@ window.TRAVEL_NAV = {
     /* Nov 12 2026, Scott: tab order is Where I've Been, Future Travel, Safari Log, Travel Log. The first tab is the one
        the Travel button in the top bar opens (and the one it lights up on), so the button points at it too. */
     { "label": "Where I've Been", "href": "where-ive-been.html" },
+    { "label": "Modes of Transport", "href": "modes-of-transport.html" },
     { "label": "Future Travel", "href": "future-travel.html" },
     { "label": "Safari Log", "href": "safari-log.html" },
     { "label": "Travel Log", "href": "travel-log.html" },
@@ -331,6 +334,7 @@ window.PAGE_VERSIONS = {
   "qs-dashboard.html": "v3.8",
   "all-lists.html": "v1.3",
   "travel.html": "v1.1",
+  "modes-of-transport.html": "v1.11",
   "drink-log.html": "v1.3",
   "editors.html": "v1.0",
   "reconciliation.html": "v1.0",
