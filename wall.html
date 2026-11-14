@@ -781,7 +781,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.34</span></h1>
+      <h1>Sparkboard <span class="ver">v2.35</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -832,6 +832,7 @@
     </div>
     <div class="vfoot">
       <div class="vsrc" id="vsrc"></div>
+      <a class="vt" id="vsave" target="_blank" rel="noopener noreferrer" hidden>Save to Pinterest</a>
       <a class="vt" id="vopen" target="_blank" rel="noopener noreferrer">Open the original</a>
     </div>
   </div>
@@ -889,7 +890,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.34</div>
+  <div class="stamp" id="stamp">v2.35</div>
 </div>
 
 <aside class="stx-col">
@@ -1912,6 +1913,14 @@ function vPaint(){
   var tr=document.getElementById("vtrans");
   if(it.translation){ tr.textContent="In English: "+it.translation; tr.hidden=false; } else { tr.hidden=true; }
   document.getElementById("vopen").href=it.link||"#";
+  /* v2.35: Pinterest pictures open here on black with the arrows. Save goes to Pinterest's own board picker; the star is hidden for them. */
+  var vsv=document.getElementById("vsave"), vkp=document.getElementById("vkeep");
+  vsv.hidden=!it.pin; vkp.style.display=it.pin?"none":"";
+  document.getElementById("vopen").textContent=it.pin?"Open on Pinterest":"Open the original";
+  if(it.pin){
+    vsv.href="https://www.pinterest.com/pin/create/button/?url="+encodeURIComponent(it.link||"")+"&media="+encodeURIComponent(it.img||"")+"&description="+encodeURIComponent(it.title||"");
+    if(typeof sparkMarkOpened==="function") sparkMarkOpened(it.item_id);
+  }
   var k=document.getElementById("vkeep");
   k.setAttribute("aria-pressed", it.saved?"true":"false");
   [1,-1,2].forEach(function(s){
@@ -1929,6 +1938,20 @@ function vOpen(id){
   for(var i=0;i<VORDER.length;i++){ if(VORDER[i].item_id===id){ n=i; break; } }
   if(n<0) return;
   VIEW=n;
+  var vw=document.getElementById("viewer");
+  vw.hidden=false;
+  document.body.style.overflow="hidden";
+  vPaint();
+  try{
+    if(!document.fullscreenElement && vw.requestFullscreen){
+      FSMINE=true;
+      var pr=vw.requestFullscreen();
+      if(pr && pr.catch) pr.catch(function(){ FSMINE=false; });
+    }
+  }catch(e){ FSMINE=false; }
+}
+function vOpenList(list,n){
+  VORDER=list; VIEW=n;
   var vw=document.getElementById("viewer");
   vw.hidden=false;
   document.body.style.overflow="hidden";
@@ -2032,14 +2055,14 @@ document.getElementById("vclose").onclick=vClose;
 document.getElementById("vcap").onclick=function(){ this.classList.toggle("open"); };
 document.getElementById("vprev").onclick=function(){ vGo(-1); };
 document.getElementById("vnext").onclick=function(){ vGo(1); };
-document.getElementById("vkeep").onclick=function(){ if(VORDER[VIEW]) toggle(VORDER[VIEW]); };
+document.getElementById("vkeep").onclick=function(){ if(VORDER[VIEW]&&!VORDER[VIEW].pin) toggle(VORDER[VIEW]); };
 
 document.addEventListener("keydown",function(e){
   if(VIEW<0) return;
   if(e.key==="ArrowRight"){ e.preventDefault(); vGo(1); }
   else if(e.key==="ArrowLeft"){ e.preventDefault(); vGo(-1); }
   else if(e.key==="Escape"){ e.preventDefault(); vClose(); }
-  else if(e.key==="s"||e.key==="S"){ e.preventDefault(); if(VORDER[VIEW]) toggle(VORDER[VIEW]); }
+  else if(e.key==="s"||e.key==="S"){ e.preventDefault(); if(VORDER[VIEW]&&!VORDER[VIEW].pin) toggle(VORDER[VIEW]); }
 });
 
 (function(){
@@ -2851,15 +2874,26 @@ function sparksPaint(){
     if(pc&&pc.parentNode) pc.parentNode.insertBefore(s2,pc); else st.appendChild(s2);
   }
 }
+function sparkMarkOpened(pid){
+  if(!SPARKS) return;
+  var px=SPARKS.rows.filter(function(r){ return r.item_id===pid; })[0];
+  if(px&&px.status==="new"){
+    px.status="opened";
+    var c=document.querySelector('[data-sp="'+pid+'"]'); if(c) c.classList.add("gone");
+    fetch(SB+"/rest/v1/rpc/spark_opened",{method:"POST",keepalive:true,headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},body:JSON.stringify({p_item_id:pid})}).catch(function(){});
+  }
+}
 document.addEventListener("click",function(e){
   var pa=e.target.closest?e.target.closest("[data-pin] .spart"):null;
   if(pa&&SPARKS){
+    if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
+    e.preventDefault();
     var pc=pa.closest("[data-sp]"), pid=+pc.getAttribute("data-sp");
     var px=SPARKS.rows.filter(function(r){ return r.item_id===pid; })[0];
-    if(px&&px.status==="new"){
-      px.status="opened"; pc.classList.add("gone");
-      fetch(SB+"/rest/v1/rpc/spark_opened",{method:"POST",keepalive:true,headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},body:JSON.stringify({p_item_id:pid})}).catch(function(){});
-    }
+    var plist=SPARKS.rows.filter(function(r){ return px&&r.origin===px.origin; }).map(function(r){ var w=r.wall_items||{}; return {item_id:r.item_id,title:w.title,img:w.img,link:w.link,source:r.origin,pin:true,saved:false}; });
+    var pn=0; plist.forEach(function(q,i){ if(q.item_id===pid) pn=i; });
+    vOpenList(plist,pn);
+    return;
   }
   var rf=e.target.closest?e.target.closest("[data-sprefresh]"):null;
   if(rf&&SPARKS){
