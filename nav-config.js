@@ -50,7 +50,6 @@ window.NAV_CONFIG = {
       { "label": "Life Snapshot", "href": "life-snapshot.html" },
       { "label": "Travel Dashboard", "href": "where-ive-been.html" },
       { "label": "Coffee Days", "href": "coffee-days.html" },
-      { "label": "Drink Log", "href": "drink-log.html" },
       { "label": "Decade View", "href": "decade.html" },
       { "label": "Winners and Losers", "href": "winners-losers.html" },
       { "label": "Stack Builder", "href": "stack-builder.html" },
@@ -72,7 +71,8 @@ window.NAV_CONFIG = {
       { "label": "Movies", "href": "movies.html" },
       { "label": "Bucket List", "href": "my-bucket-list.html" },
       { "label": "Asa Activities", "href": "asa-activities.html" },
-      { "label": "Food Log", "href": "food-log.html" }
+      { "label": "Food Log", "href": "food-log.html" },
+      { "label": "Drink Log", "href": "drink-log.html" }
     ] }
   ],
   /* Sep 3 2026, Scott: "travel list should be removed from main nav, it already
@@ -194,7 +194,9 @@ window.LISTS_NAV = {
        the END because the order here is fixed and never re-sorts. No `count` key:
        v_list_counts has no row for meals, and a tab with no count simply shows no
        number, which is the honest thing to show rather than a wrong one. */
-    { "label": "Food Log",       "href": "food-log.html" }
+    { "label": "Food Log",       "href": "food-log.html" },
+    /* Nov 14 2026, Scott: Drink Log lives in All Lists, not YouMatics. */
+    { "label": "Drink Log",      "href": "drink-log.html" }
   ]
 };
 
