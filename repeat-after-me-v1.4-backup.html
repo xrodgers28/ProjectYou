@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repeat After Me &middot; ProjectYou</title>
+<script src="py-day.js"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--key:#c2c8d1;--accent:#3f6f8f;--acc:#8f5f3f}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  a{color:inherit}
+  /* shared ProjectYou nav */
+  .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;gap:1px}
+  .pynav::-webkit-scrollbar{height:0}
+  .pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+  .pn-logo img{height:28px;width:auto;display:block}
+  .pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+  .pn-group.first{border-left:none}
+  .pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+  a.pn-label{text-decoration:none;cursor:pointer}a.pn-label:hover{color:var(--accent)}a.pn-label.on{color:var(--accent)}
+  .pn-links{display:flex;gap:1px;align-items:stretch}
+  .pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+  .pn-link:hover{background:#eef2f8;color:#3f6f8f}.pn-link.on{background:#3f6f8f;color:#fff}.pn-link.pn-solo{min-height:31px}
+  .pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+  .pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+  .pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+  .pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+  .pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+  .pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+  .pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+  .pn-drop{position:relative;display:inline-flex;align-items:stretch}.pn-dropbtn{cursor:pointer;user-select:none}
+  .pn-menu{position:fixed;background:#fff;border:1px solid #e3e7ee;border-radius:9px;box-shadow:0 10px 28px rgba(31,42,68,.16);padding:5px;display:none;flex-direction:column;min-width:200px;z-index:60}
+  .pn-menu.open{display:flex}.pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}
+
+    .stage{max-width:560px;margin:0 auto;padding:20px 16px 70px}
+  .now{text-align:center;margin:2px 0 8px}
+  .now .nm{font-size:14.5px;font-weight:800;color:var(--ink)}
+  .now .kd{font-size:8px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#8a93a0;margin-top:1px}
+  .lockline{text-align:center;font-size:11px;color:var(--muted);margin:0 0 2px}
+  .endtile{background:#fff;border:1px solid var(--key);border-top:3px solid var(--acc);border-radius:16px;box-shadow:0 12px 34px rgba(31,42,68,.10);padding:22px 20px 20px;min-height:430px;display:flex;flex-direction:column}
+  .endtile .step{font-size:10px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--acc)}
+  .endtile h2{font-size:22px;line-height:1.22;margin-top:7px}
+  .endtile .body{font-size:14.5px;color:#46516a;line-height:1.38;margin-top:11px;flex:1}
+  .rback{width:100%;margin-top:14px;padding:10px;border:none;border-radius:999px;background:var(--acc);color:#fff;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+  .now{position:relative}
+  .now .cuetimer{position:absolute;left:4px;top:2px;width:22px;height:22px;border-radius:50%;background:#eef2f8;display:flex;align-items:center;justify-content:center}
+  .now .cuetimer svg{width:100%;height:100%;display:block}
+  .now .cuehand{transform-origin:12px 12px}
+  .mintotal{font-size:11.5px;color:#8a93a0;font-weight:700;margin-top:4px}
+  .mintotal.hidden{display:none}
+  .back{font-size:13px;font-weight:700;color:#a6adba;cursor:pointer;background:none;border:none;font-family:inherit;padding:4px 2px}
+  .back.off{color:#d3d8e0;cursor:default}
+  .next{font-size:13px;font-weight:800;color:#fff;background:var(--accent);border-radius:10px;padding:9px 18px;cursor:pointer;border:none;font-family:inherit}
+  .back:focus-visible,.next:focus-visible,.pk:focus-visible,.dot:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+  .hint{text-align:center;font-size:11.5px;color:#9aa6b4;margin-top:16px}
+  .stamp{text-align:center;font-size:11px;color:#b0b8c4;margin-top:8px;font-style:italic}
+  .bkboard{display:block;text-align:center;font-size:12.5px;font-weight:800;color:var(--accent);text-decoration:none;margin-top:18px}
+  .minin{width:62px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:13px;font-family:inherit;text-align:center}
+  .gate{max-width:340px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 8px 22px rgba(31,42,68,.07)}
+  .gate h2{font-size:17px;margin-bottom:4px}
+  .gate p{font-size:12.5px;color:var(--muted);margin-bottom:14px}
+  .gate input{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:14px;margin-bottom:9px;font-family:inherit}
+  .gate button{width:100%;padding:10px;border:none;border-radius:9px;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit}
+  .gate .err{color:#c0453b;font-size:12px;margin-top:8px;min-height:16px}
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:26px;background:#1f2a44;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 8px 24px rgba(31,42,68,.28);opacity:0;pointer-events:none;transition:opacity .2s;z-index:80}
+  .toast.on{opacity:1}
+  .hidden{display:none!important}
+  /* ===== Repeat After Me v1.3: one static card, Mindset Training size ===== */
+  .sub{text-align:center;font-size:12.5px;color:var(--muted);margin:-4px 0 12px;font-style:italic}
+  .deck{position:relative;max-width:400px;margin:0 auto;padding:2px 2px 8px}
+  .tile{container-type:inline-size;position:relative;width:100%;background:#fff;border:2px solid #a9adb5;border-radius:6.5%/4.2%;box-shadow:0 12px 34px rgba(31,42,68,.10);overflow:hidden;display:block}
+  .tin{--u:calc(100cqw/344);display:flex;flex-direction:column;min-height:calc(var(--u)*531);color:#2d3a4a;font-family:Lato,Calibri,Carlito,Arial,Helvetica,sans-serif;font-size:calc(var(--u)*14);line-height:1.4;text-align:left}
+  .thead{flex:none;height:calc(var(--u)*84);position:relative}.thead img{position:absolute}
+  .ttt{position:absolute;top:0;bottom:0;right:calc(var(--u)*14);display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:"Source Serif 4",Georgia,serif;font-weight:600;color:#2d3a4a;text-align:center;line-height:1.15}
+  .tsec{font:900 calc(var(--u)*9.5)/1 Lato,Arial,sans-serif;letter-spacing:calc(var(--u)*1.4);text-transform:uppercase;color:#5b6573;margin-bottom:calc(var(--u)*5)}
+  .tq{padding:calc(var(--u)*18) calc(var(--u)*24) 0;font-family:"Source Serif 4",Georgia,serif;font-style:italic;font-weight:500;font-size:calc(var(--u)*23);line-height:1.25;color:#2d3a4a}
+  .tsrc{display:block;padding:calc(var(--u)*7) calc(var(--u)*24) 0;font-size:calc(var(--u)*12);color:#5b6573;text-decoration:none}a.tsrc:hover{text-decoration:underline}
+  .tblk{margin:calc(var(--u)*14) calc(var(--u)*20) 0;border-top:1px solid #e6e9ee;padding-top:calc(var(--u)*10)}
+  .tblk.nr{border-top:0;padding-top:0;margin-top:calc(var(--u)*10)}
+  .lbl{font:900 calc(var(--u)*10.5)/1.2 Lato,Arial,sans-serif;letter-spacing:calc(var(--u)*1.4);text-transform:uppercase;color:#5b6573;margin-bottom:calc(var(--u)*3)}
+  .lbl.out{color:#9a4a2e}
+  .tblk p{margin:0;font-size:calc(var(--u)*14);line-height:1.4}
+  .tout{font-weight:900;font-size:calc(var(--u)*17);line-height:1.25}
+  .tspace{flex:1;min-height:calc(var(--u)*8)}
+  .tbot{padding:0 calc(var(--u)*20) calc(var(--u)*12);display:flex;flex-direction:column;gap:8px}
+  .chips{display:flex;gap:6px}
+  .chip{flex:1;min-width:0;min-height:44px;border:2px solid transparent;border-radius:22px;background:#eef1f6;font:700 14px Lato,Arial,sans-serif;color:#2d3a4a;cursor:pointer}
+  .chip.oth{flex:1.4;background:#fff;border-color:#4a6a8a}
+  .chip.on{background:#3d5a78;color:#fff;border-color:#3d5a78}
+  .otherrow{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:700;color:#5b6573}
+  .minin{width:72px;padding:8px 9px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;text-align:center}
+  .tdone{min-height:44px;border:0;border-radius:22px;background:#3d5a78;color:#fff;font:900 16px Lato,Arial,sans-serif;cursor:pointer}
+  .tdone:disabled{opacity:.6;cursor:default}
+  .tfine{font-size:calc(var(--u)*11);color:#5b6573;text-align:center}.tfine a{color:#3d5a78}
+  .mintotal{font-size:11.5px;color:#8a93a0;font-weight:700;text-align:center}
+  .hint{text-align:center;font-size:11.5px;color:#9aa6b4;margin-top:8px}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:wght@400;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="mindset-tile.js"></script>
+</head>
+<body>
+  <div class="pynav">
+    <a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a>
+    <span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link">Staging<br>Area</a></span></span>
+    <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
+    <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
+    <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
+    <span class="pn-ver">v1.4</span>
+    <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="now"><span class="cuetimer" id="cueTimerBadge" title="Timing this card"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10.5" fill="none" stroke="rgba(63,111,143,.45)" stroke-width="1.4"/><line class="cuehand" x1="12" y1="12" x2="12" y2="5" stroke="#3f6f8f" stroke-width="2" stroke-linecap="round"/></svg></span><div class="nm" id="nowNm">Repeat After Me</div><div class="kd" id="nowKd">One belief a day</div></div>
+    <div class="sub">Build habits that reinforce the person you want to become.</div>
+    <div class="lockline" id="lockline"></div>
+    <div class="deck"><div class="tile" id="card"></div></div>
+    <div class="hint">One card a day. Pick your minutes, then Done.</div>
+    <a class="bkboard" href="habit-modules.html">&larr; Back to the Cue Cards board</a>
+    <div class="stamp" id="stamp"></div>
+  </div>
+
+  <div class="gate hidden" id="gate">
+    <h2>Sign in</h2>
+    <p>The deck remembers which belief it has shown you, and the tick has to reach the wheel, so this page needs your account.</p>
+    <input id="email" type="email" placeholder="Email" autocomplete="username">
+    <input id="pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button onclick="signIn()">Sign in</button>
+    <div class="err" id="gateErr"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* v1.4 (Nov 14, 2026): Social Well-Being cards now wear a Social logo (Friends icon + label) like the other six sections. */
+/* v1.3 (Nov 13, 2026), Scott: one static card sized to the Mindset Training tiles (338 x 521, grows taller if the words need it). Large unboxed quote, then Why this matters, Outcome, minutes chips, Done. Typing game, Show me options, Skip and Reveal removed. Each card wears its own section logo; the drawings are kept in the data but not shown. */
+/* v1.2 (Nov 6, 2026), Scott: redesigned to the Mindset Training tile look (white portrait tile, section band with icon, Lato, rounded drawing, big quote). Two tiles now: Say it (quote, drawing, the line to type, the reveal in place), then Why this matters (Insight, Outcome, statement, sources) which slides in from the right. */
+/* v1.1 (Nov 6, 2026), Scott: layout L4, the quote owns the upper area and the drawing sits in a small tilted postcard frame, never under the text. His picks applied to every card's drawing; card 11 gets the eye with a charging meter inside. */
+/* ===== Repeat After Me v1.0 (Nov 6, 2026) =====
+   One identity line a day, from the Identity column of the Habit Worksheets
+   (worksheet_rows.identity, read live, so editing a worksheet edits this card).
+   Three tiles: Say it (poster: a sourced quote over the picture, the habit as a
+   sub-headline, the identity line with its tail missing, which you type back
+   with loose key-word checking or pick from hidden options), Reveal (the whole
+   line, with the verdict), Why (the worksheet's Insight and Outcome, the
+   statement, every source linked). Simple rotation: every card once before any
+   repeats, deck_progress deck 'repeat-after-me' (tile_key = card id). When the
+   last card has been dealt the deck resets itself (deck_reset) and starts over.
+   Finishing ticks the habit "Repeat After Me" (todos.task, qs_log.tracker and
+   MODS in habit-modules.html all use that name; rename one, rename all).
+   Built on the Wait, Really?! page: same nav, sign-in, card clock, deck and
+   todos wiring, no schema change. The 'I lived this today' vote was scrapped. */
+
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); }catch(e){ sb=null; }
+const HABIT="Repeat After Me", DECK="repeat-after-me", VER="v1.4";
+/* Cue card clock v2 (Sep 29, 2026). The start time is saved in this browser, so a reload or coming back from another page no longer restarts the clock. After 2+ hours with no touch, Done asks how many minutes instead of guessing. */
+var __CUE_IDLE=2*3600*1000, __CUE_STALE=12*3600*1000, __cueAway=false, __cueSt=null, __cueKey='', __cueLastW=0;
+function __cueSave(force){ var n=Date.now(); if(!force&&n-__cueLastW<8000) return; __cueLastW=n; try{ localStorage.setItem(__cueKey,JSON.stringify(__cueSt)); }catch(e){} }
+function __cueClockInit(){
+  var now=Date.now(), st=null;
+  __cueKey='cueclock:'+(location.pathname.split('/').pop()||'card');
+  try{ st=JSON.parse(localStorage.getItem(__cueKey)||'null'); }catch(e){ st=null; }
+  if(!st||st.fin||!(st.s>0)||st.s>now||(now-(st.l||st.s))>__CUE_STALE) st={s:now,l:now};
+  if(!(st.l>0)) st.l=now;
+  if(now-st.l>__CUE_IDLE) __cueAway=true;
+  __cueSt=st; __cueSave(true);
+  function touch(){ var n=Date.now(); if(n-__cueSt.l>__CUE_IDLE) __cueAway=true; __cueSt.l=n; __cueSave(false); }
+  ['pointerdown','touchstart','keydown','click','scroll'].forEach(function(ev){ try{ window.addEventListener(ev,touch,{capture:true,passive:true}); }catch(e){} });
+  return st.s;
+}
+function __cueAskIfIdle(){
+  var el=document.getElementById('tmin')||document.getElementById('mins'); var __or=document.getElementById('otherRow'); if(__or) __or.classList.remove('hidden');
+  var typed=(el&&String(el.value).trim()!=='')?parseInt(el.value,10):NaN;
+  if(!(typed>0&&typed<=180)&&__cueAway&&el){
+    var m=document.getElementById('cueAskMsg');
+    if(!m){ m=document.createElement('div'); m.id='cueAskMsg'; m.setAttribute('role','status'); m.style.cssText='flex-basis:100%;width:100%;margin:8px 0 0;font-size:13.5px;font-weight:600;color:#b45309;line-height:1.4'; var host=el.closest('label')||el.parentNode; host.insertAdjacentElement('afterend',m); }
+    m.textContent='It has been a while since you touched this card, so the clock cannot be trusted. How many minutes did you spend? Type it in the Minutes box, then tap done again.';
+    try{ el.focus(); }catch(e){}
+    return true;
+  }
+  if(__cueSt){ __cueSt.fin=Date.now(); __cueSave(true); }
+  return false;
+}
+var __cueStart=__cueClockInit();
+function __cueHandTick(){
+  var h=document.getElementById('cueTimerBadge'); if(!h) return;
+  var line=h.querySelector('.cuehand'); if(!line) return;
+  var deg=((Date.now()-__cueStart)%60000)/60000*360;
+  line.style.transform='rotate('+deg+'deg)';
+}
+var __cueTickId=setInterval(__cueHandTick,250);
+
+const CARDS=[{"id": "c13", "hb": "Daylight in the eyes within an hour of waking", "row": 13, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><rect y=\"170\" width=\"400\" height=\"90\" fill=\"#3b8f7f\" opacity=\".35\"/><circle cx=\"200\" cy=\"170\" r=\"54\" fill=\"#f2b84b\"/><rect y=\"170\" width=\"400\" height=\"4\" fill=\"#2d3a4a\"/><path d=\"M0 200q60-10 120 0t120 0 160 0\" stroke=\"#2d3a4a\" stroke-width=\"3\" fill=\"none\" opacity=\".4\"/><circle cx=\"110\" cy=\"190\" r=\"7\" fill=\"#2d3a4a\"/><rect x=\"104\" y=\"197\" width=\"12\" height=\"26\" rx=\"4\" fill=\"#2d3a4a\"/><g stroke=\"#e07a5f\" stroke-width=\"5\" stroke-linecap=\"round\"><path d=\"M200 90V60M140 110l-20-20M260 110l20-20M120 160H90M310 160h-30\"/></g></svg>", "sect": "Physical Health", "col": "#e7abbb", "q": "Your mind evolved outdoors, not among office buildings and relentless motion.", "qs": "Thinking, Outside and Inside, Mindset Training", "qu": "takeaways.html", "st": "Morning light sets the clock that makes you tired at the right time tonight.", "ss": "Habit Worksheet, Insight column", "su": "habit-worksheets.html", "prefix": "I am someone who", "fb": "I am someone who starts the day outside."}, {"id": "c36", "hb": "Local Safari", "row": 36, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><path d=\"M60 200q70-120 140-60t140-60\" fill=\"none\" stroke=\"#b8b2a7\" stroke-width=\"4\" stroke-dasharray=\"10 10\"/><path d=\"M60 200c-20-28-30-42-30-58a30 30 0 0 1 60 0c0 16-10 30-30 58z\" fill=\"#3b8f7f\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><circle cx=\"60\" cy=\"142\" r=\"10\" fill=\"#f6efe6\"/><path d=\"M200 140c-20-28-30-42-30-58a30 30 0 0 1 60 0c0 16-10 30-30 58z\" fill=\"#e07a5f\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><circle cx=\"200\" cy=\"82\" r=\"10\" fill=\"#f6efe6\"/><path d=\"M340 80c-20-28-30-42-30-58a30 30 0 0 1 60 0c0 16-10 30-30 58z\" fill=\"#f2b84b\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><circle cx=\"340\" cy=\"22\" r=\"10\" fill=\"#f6efe6\"/></svg>", "sect": "Environmental Health", "col": "#a4d6ca", "q": "Open, natural spaces let you pause, restore and imagine. Walled spaces give you a private place to test and tinker.", "qs": "Thinking, Outside and Inside, Mindset Training", "qu": "takeaways.html", "st": "Environment is the invisible hand that shapes human behavior.", "ss": "James Clear, Atomic Habits", "su": "james-clear.html", "prefix": "I'm someone who", "fb": "I'm someone who changes environments to generate better ideas."}, {"id": "c47", "hb": "Social Opp Inbound", "row": 47, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><rect width=\"400\" height=\"260\" fill=\"#2d3a4a\"/><rect x=\"150\" y=\"40\" width=\"110\" height=\"200\" fill=\"#fff\" opacity=\".15\"/><path d=\"M150 40l110 30v170l-110 0z\" fill=\"#f2b84b\"/><path d=\"M260 70l100 190H150z\" fill=\"#f2b84b\" opacity=\".35\"/><circle cx=\"242\" cy=\"160\" r=\"5\" fill=\"#2d3a4a\"/></svg>", "sect": "Social Well-Being", "col": "#a6c4e8", "q": "Every person you meet is holding an idea you have not had yet.", "qs": "Habit Worksheets, Social Well-Being", "qu": "habit-worksheets.html", "st": "Most of the good things socially arrive as an inconvenient invitation.", "ss": "Habit Worksheet, Insight column", "su": "habit-worksheets.html", "prefix": "I am someone who", "fb": "I am someone who believes in opportunistic awareness."}, {"id": "c44", "hb": "Connect with one friend every week", "row": 44, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><circle cx=\"320\" cy=\"70\" r=\"34\" fill=\"#f2b84b\"/><rect x=\"0\" y=\"190\" width=\"400\" height=\"70\" fill=\"#e4d5c3\"/><g fill=\"#3b8f7f\"><rect x=\"90\" y=\"120\" width=\"14\" height=\"80\" rx=\"4\"/><rect x=\"90\" y=\"150\" width=\"70\" height=\"14\" rx=\"4\"/><rect x=\"146\" y=\"150\" width=\"12\" height=\"50\" rx=\"4\"/></g><g fill=\"#e07a5f\"><rect x=\"296\" y=\"120\" width=\"14\" height=\"80\" rx=\"4\"/><rect x=\"240\" y=\"150\" width=\"70\" height=\"14\" rx=\"4\"/><rect x=\"242\" y=\"150\" width=\"12\" height=\"50\" rx=\"4\"/></g><rect x=\"176\" y=\"160\" width=\"48\" height=\"8\" rx=\"3\" fill=\"#2d3a4a\"/><rect x=\"196\" y=\"168\" width=\"8\" height=\"32\" fill=\"#2d3a4a\"/><circle cx=\"188\" cy=\"152\" r=\"7\" fill=\"#fff\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><circle cx=\"212\" cy=\"152\" r=\"7\" fill=\"#fff\" stroke=\"#2d3a4a\" stroke-width=\"3\"/></svg>", "sect": "Social Well-Being", "col": "#a6c4e8", "q": "Adult friendship is arithmetic, not chemistry.", "qs": "Fifty hours, Social Fitness", "qu": "social-fitness.html", "st": "People with strong relationships are 50% less likely to die early.", "ss": "Vivek Murthy, Together", "su": "", "prefix": "I am someone who", "fb": "I am someone who keeps his close friendships alive."}, {"id": "c50", "hb": "Play a game, cards, board or puzzle", "row": 50, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><g transform=\"translate(110 130) rotate(-14)\"><rect x=\"-34\" y=\"-48\" width=\"68\" height=\"96\" rx=\"7\" fill=\"#fff\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><path d=\"M0 14c-14-9-18-16-18-23a9 9 0 0 1 18-3a9 9 0 0 1 18 3c0 7-4 14-18 23z\" fill=\"#e07a5f\"/></g><g transform=\"translate(170 122) rotate(4)\"><rect x=\"-34\" y=\"-48\" width=\"68\" height=\"96\" rx=\"7\" fill=\"#fff\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><path d=\"M0-14c12 10 17 16 17 22a8 8 0 0 1-14 5l3 9h-12l3-9a8 8 0 0 1-14-5c0-6 5-12 17-22z\" fill=\"#2d3a4a\"/></g><g transform=\"translate(230 134) rotate(18)\"><rect x=\"-34\" y=\"-48\" width=\"68\" height=\"96\" rx=\"7\" fill=\"#fff\" stroke=\"#2d3a4a\" stroke-width=\"3\"/><path d=\"M0-16l12 16-12 16-12-16z\" fill=\"#e07a5f\"/></g><path transform=\"translate(318 92) rotate(-10)\" d=\"M-30-30h20a10 10 0 0 1 20 0h20v22a10 10 0 0 0 0 16v22h-60z\" fill=\"#3b8f7f\" stroke=\"#2d3a4a\" stroke-width=\"3\" stroke-linejoin=\"round\"/><path transform=\"translate(300 178) rotate(8)\" d=\"M-30-30h20a10 10 0 0 1 20 0h20v22a10 10 0 0 0 0 16v22h-60z\" fill=\"#f2b84b\" stroke=\"#2d3a4a\" stroke-width=\"3\" stroke-linejoin=\"round\"/><path transform=\"translate(355 200) rotate(24)\" d=\"M-30-30h20a10 10 0 0 1 20 0h20v22a10 10 0 0 0 0 16v22h-60z\" fill=\"#e07a5f\" stroke=\"#2d3a4a\" stroke-width=\"3\" stroke-linejoin=\"round\"/></svg>", "sect": "Recreational Health", "col": "#f3c6a1", "q": "Nothing lights up the brain like play.", "qs": "Stuart Brown, Play", "qu": "", "st": "Regular play with no outcome attached.", "ss": "Habit Worksheet, Outcome column", "su": "habit-worksheets.html", "prefix": "I am someone who", "fb": "I am someone who makes space for play."}, {"id": "c54", "hb": "Attend one creative retreat", "row": 54, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><rect x=\"40\" y=\"110\" width=\"320\" height=\"60\" rx=\"8\" fill=\"#e4d5c3\"/><circle cx=\"80\" cy=\"60\" r=\"20\" fill=\"#2d3a4a\"/><circle cx=\"140\" cy=\"220\" r=\"20\" fill=\"#3b8f7f\"/><circle cx=\"200\" cy=\"60\" r=\"20\" fill=\"#e07a5f\"/><circle cx=\"260\" cy=\"220\" r=\"20\" fill=\"#f2b84b\"/><circle cx=\"320\" cy=\"60\" r=\"20\" fill=\"#2d3a4a\"/><circle cx=\"380\" cy=\"220\" r=\"20\" fill=\"#3b8f7f\"/><rect x=\"66\" y=\"124\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#e07a5f\"/><rect x=\"126\" y=\"136\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#f2b84b\"/><rect x=\"186\" y=\"124\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#3b8f7f\"/><rect x=\"246\" y=\"136\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#2d3a4a\"/><rect x=\"306\" y=\"124\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#e07a5f\"/><rect x=\"366\" y=\"136\" width=\"28\" height=\"14\" rx=\"3\" fill=\"#f2b84b\"/><circle cx=\"200\" cy=\"140\" r=\"9\" fill=\"#fff\"/></svg>", "sect": "Recreational Health", "col": "#f3c6a1", "q": "Every person you meet is holding an idea you have not had yet.", "qs": "Habit Worksheets, Social Well-Being", "qu": "habit-worksheets.html", "st": "", "ss": "", "su": "", "prefix": "I feed off", "fb": "I feed off other creatives."}, {"id": "c3", "hb": "Mental Fitness (Elevate, Imprint, Impulse)", "row": 3, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><path d=\"M40 230H370M40 230V30\" stroke=\"#2d3a4a\" stroke-width=\"4\" stroke-linecap=\"round\" fill=\"none\"/><path d=\"M40 228q120-2 200-40t120-150\" stroke=\"#3b8f7f\" stroke-width=\"9\" fill=\"none\" stroke-linecap=\"round\"/><path d=\"M40 226q150 0 320-30\" stroke=\"#b8b2a7\" stroke-width=\"4\" fill=\"none\" stroke-dasharray=\"8 8\"/><circle cx=\"360\" cy=\"40\" r=\"10\" fill=\"#e07a5f\"/><text x=\"300\" y=\"28\" font-family=\"Helvetica\" font-weight=\"700\" font-size=\"22\" fill=\"#2d3a4a\">1%</text></svg>", "sect": "Mental Fitness", "col": "#f0dd93", "q": "If it feels slightly hard, it's working.", "qs": "Cognitive Friction, Mindset Training", "qu": "takeaways.html", "st": "Habits are the compound interest of self-improvement.", "ss": "James Clear, Atomic Habits", "su": "james-clear.html", "prefix": "I am someone who", "fb": "I am someone who compounds learning in small daily doses."}, {"id": "c91", "hb": "Mindset Training", "row": 91, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><circle cx=\"185\" cy=\"120\" r=\"88\" fill=\"#3b8f7f\"/><rect x=\"150\" y=\"190\" width=\"70\" height=\"70\" fill=\"#3b8f7f\"/><rect x=\"150\" y=\"82\" width=\"76\" height=\"76\" rx=\"6\" fill=\"#f6efe6\" stroke=\"#2d3a4a\" stroke-width=\"4\"/><path d=\"M188 82v76M150 120h76\" stroke=\"#2d3a4a\" stroke-width=\"4\"/><g fill=\"none\" stroke=\"#e07a5f\" stroke-width=\"5\" stroke-linecap=\"round\"><path d=\"M300 60q10-12 20 0q10-12 20 0\"/><path d=\"M335 105q10-12 20 0q10-12 20 0\"/><path d=\"M295 140q10-12 20 0q10-12 20 0\"/></g></svg>", "sect": "Mental Fitness", "col": "#f0dd93", "q": "Go to bed smarter than when you woke up.", "qs": "attributed to Charlie Munger", "qu": "", "st": "Fill your brain regularly with new ideas.", "ss": "Scott", "su": "", "prefix": "I repeatedly expose myself to", "fb": "I repeatedly expose myself to ideas that influence how I think and act."}, {"id": "c68", "hb": "Log what gives me energy", "row": 68, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><path d=\"M30 130C90 50 310 50 370 130C310 210 90 210 30 130z\" fill=\"#fff\" stroke=\"#2d3a4a\" stroke-width=\"6\" stroke-linejoin=\"round\"/><path d=\"M30 130C90 50 310 50 370 130\" fill=\"none\" stroke=\"#2d3a4a\" stroke-width=\"6\"/><rect x=\"116\" y=\"100\" width=\"168\" height=\"60\" rx=\"10\" fill=\"#2d3a4a\"/><rect x=\"284\" y=\"118\" width=\"12\" height=\"24\" rx=\"3\" fill=\"#2d3a4a\"/><rect x=\"128\" y=\"112\" width=\"16\" height=\"36\" rx=\"3\" fill=\"#e7abbb\"/><rect x=\"150\" y=\"112\" width=\"16\" height=\"36\" rx=\"3\" fill=\"#a4d6ca\"/><rect x=\"172\" y=\"112\" width=\"16\" height=\"36\" rx=\"3\" fill=\"#a6c4e8\"/><rect x=\"194\" y=\"112\" width=\"16\" height=\"36\" rx=\"3\" fill=\"#f3c6a1\"/><rect x=\"216\" y=\"112\" width=\"16\" height=\"36\" rx=\"3\" fill=\"#e6d3a2\"/><rect x=\"238\" y=\"112\" width=\"16\" height=\"36\" rx=\"3\" fill=\"#f0dd93\"/><rect x=\"260\" y=\"112\" width=\"16\" height=\"36\" rx=\"3\" fill=\"#c6b9e8\"/><path d=\"M212 96l-14 24h11l-8 22 20-28h-11z\" fill=\"#fff\" opacity=\".9\"/></svg>", "sect": "Emotional Health", "col": "#c6b9e8", "q": "Observation changes behaviour. The logging is the intervention.", "qs": "Project YOU Knowledge Base", "qu": "mission.html#docs", "st": "Know what actually fuels you.", "ss": "Habit Worksheet, Outcome column", "su": "habit-worksheets.html", "prefix": "I am someone who", "fb": "I am someone who notices and tracks what energises me."}, {"id": "c80", "hb": "Compass YIR", "row": 80, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#2d3a4a\"/><defs><pattern id=\"d0\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#e7abbb\"/></pattern><pattern id=\"d1\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#a4d6ca\"/></pattern><pattern id=\"d2\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#a6c4e8\"/></pattern><pattern id=\"d3\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#f3c6a1\"/></pattern><pattern id=\"d4\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#e6d3a2\"/></pattern><pattern id=\"d5\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#f0dd93\"/></pattern><pattern id=\"d6\" width=\"3.6\" height=\"4.4\" patternUnits=\"userSpaceOnUse\"><circle cx=\"1.8\" cy=\"2.2\" r=\"1.3\" fill=\"#c6b9e8\"/></pattern></defs><rect x=\"20.0\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d0)\"/><rect x=\"71.4\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d1)\"/><rect x=\"122.9\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d2)\"/><rect x=\"174.3\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d3)\"/><rect x=\"225.7\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d4)\"/><rect x=\"277.1\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d5)\"/><rect x=\"328.6\" y=\"20\" width=\"51.4\" height=\"220\" fill=\"url(#d6)\"/><rect x=\"19\" y=\"19\" width=\"362\" height=\"222\" fill=\"none\" stroke=\"#f6efe6\" stroke-width=\"2\" opacity=\".35\"/></svg>", "sect": "Emotional Health", "col": "#c6b9e8", "q": "How we spend our days is, of course, how we spend our lives.", "qs": "Annie Dillard, The Writing Life", "qu": "", "st": "", "ss": "", "su": "", "prefix": "I am intentional about", "fb": "I am intentional about the life I am living."}, {"id": "ctw", "hb": "TreadWell", "row": 124, "pic": "<svg viewBox=\"0 0 400 260\" preserveAspectRatio=\"xMidYMid slice\" xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"400\" height=\"260\" fill=\"#f6efe6\"/><rect y=\"170\" width=\"400\" height=\"90\" fill=\"#3b8f7f\" opacity=\".3\"/><circle cx=\"330\" cy=\"60\" r=\"30\" fill=\"#f2b84b\"/><g><circle cx=\"80\" cy=\"120\" r=\"14\" fill=\"#2d3a4a\"/><rect x=\"71\" y=\"134\" width=\"18\" height=\"46\" rx=\"6\" fill=\"#e07a5f\"/><path d=\"M71 140l-22-22M89 140l22-22\" stroke=\"#e07a5f\" stroke-width=\"7\" stroke-linecap=\"round\"/></g><g><circle cx=\"160\" cy=\"120\" r=\"14\" fill=\"#2d3a4a\"/><rect x=\"151\" y=\"134\" width=\"18\" height=\"46\" rx=\"6\" fill=\"#3b8f7f\"/><path d=\"M151 140l-22-22M169 140l22-22\" stroke=\"#3b8f7f\" stroke-width=\"7\" stroke-linecap=\"round\"/></g><g><circle cx=\"240\" cy=\"120\" r=\"14\" fill=\"#2d3a4a\"/><rect x=\"231\" y=\"134\" width=\"18\" height=\"46\" rx=\"6\" fill=\"#f2b84b\"/><path d=\"M231 140l-22-22M249 140l22-22\" stroke=\"#f2b84b\" stroke-width=\"7\" stroke-linecap=\"round\"/></g><g><circle cx=\"320\" cy=\"120\" r=\"14\" fill=\"#2d3a4a\"/><rect x=\"311\" y=\"134\" width=\"18\" height=\"46\" rx=\"6\" fill=\"#e07a5f\"/><path d=\"M311 140l-22-22M329 140l22-22\" stroke=\"#e07a5f\" stroke-width=\"7\" stroke-linecap=\"round\"/></g></svg>", "sect": "Sense of Purpose", "col": "#e6d3a2", "q": "Your ikigai sits where what you love, what you are good at, what the world needs and what sustains you overlap.", "qs": "García and Miralles, Ikigai", "qu": "habit-worksheets.html", "st": "Turn any trip into a positive footprint.", "ss": "TreadWell", "su": "", "prefix": "In Japan, the village of Ogimi", "fb": "In Japan, the village of Ogimi has no word for retirement."}];
+function $(s,r){return (r||document).querySelector(s);}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function shuffle(a){a=a.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function todayKey(){return PY.today();}
+function toast(m){var t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._x);t._x=setTimeout(function(){t.classList.remove('on');},2400);}
+
+var SERVED={}, CUR=-1, signedIn=false, habitRow=null, FREE=false, card=null, IDX=0, ROWS={}, verdict=null;
+
+/* ---- the identity line, live from the worksheet ---- */
+function clean(s){return String(s||'').replace(/^[\s“"']+|[\s”"']+$/g,'').trim();}
+function lineFor(c){var r=ROWS[c.row];return clean((r&&r.identity)||c.fb);}
+function habitFor(c){var r=ROWS[c.row];return (r&&r.habit)||c.hb||'';}
+/* ---- the card: quote, why it matters, outcome, minutes, Done (static; no typing game since v1.3) ---- */
+var CATKEY={'Physical Health':'physical','Environmental Health':'environmental','Social Well-Being':'social','Recreational Health':'recreational','Sense of Purpose':'purpose','Mental Fitness':'mental','Emotional Health':'emotional'};
+var SOCIAL={label:'Social Well-Being',band:'#dfe8f7',x:20,y:13,w:100,h:104,img:'data:image/png;base64,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'}; /* Social logo: Friends icon from the Icons MASTER plus the section label, drawn to match the other six in mindset-tile.js */
+function cat(c){var k=CATKEY[c.sect]||'mental';return (window.MT&&MT.CATS&&MT.CATS[k])||SOCIAL;}
+function headHtml(c){
+  var k=cat(c), nm=habitFor(c)||'', K=344/531, fs=nm.length<=12?24.5:(nm.length<=19?22.5:(nm.length<=36?20:17));
+  var icon=k.img?'<img src="'+k.img+'" alt="'+esc(k.label)+'" style="left:calc(var(--u)*'+(k.x*K).toFixed(1)+');top:calc(var(--u)*'+(k.y*K).toFixed(1)+');width:calc(var(--u)*'+(k.w*K).toFixed(1)+')">':'';
+  var left=k.img?((k.x+k.w)*K+6):14;
+  return '<div class="thead" style="background:'+k.band+'">'+icon+'<div class="ttt" style="left:calc(var(--u)*'+left.toFixed(1)+');font-size:calc(var(--u)*'+fs+')">'+(k.img?'':'<span class="tsec">'+esc(k.label)+'</span>')+'<span>'+esc(nm)+'</span></div></div>';
+}
+var MINSEL=null;
+function show(){
+  var c=CARDS[CUR], r=ROWS[c.row]||{}, why=r.insight||'', out=r.outcome||'';
+  if(!why&&!out&&c.st) why=c.st;
+  $('#nowKd').textContent='card '+(CUR+1)+' of '+CARDS.length;
+  var h='<div class="tin">'+headHtml(c)
+    +'<div class="tq">'+esc(c.q)+'</div>'
+    +(c.qu?'<a class="tsrc" href="'+esc(c.qu)+'">'+esc(c.qs)+'</a>':'<span class="tsrc">'+esc(c.qs)+'</span>')
+    +(why?'<div class="tblk"><div class="lbl">Why this matters</div><p>'+esc(why)+'</p></div>':'')
+    +(out?'<div class="tblk'+(why?' nr':'')+'"><div class="lbl out">Outcome</div><div class="tout">'+esc(out)+'</div></div>':'')
+    +'<div class="tspace"></div>'
+    +'<div class="tbot"><div class="chips">'+[5,10,15,20].map(function(n){return '<button class="chip" data-m="'+n+'">'+n+'</button>';}).join('')+'<button class="chip oth" id="chipOther">Other</button></div>'
+    +'<div class="otherrow hidden" id="otherRow"><label>Minutes <input class="minin" id="mins" type="number" min="1" max="180" inputmode="numeric" placeholder="auto"></label></div>'
+    +'<button class="tdone" id="btnNext">Done, minutes &check;</button><span class="mintotal hidden" id="minTotal"></span>'
+    +'<div class="tfine">Source: <a href="habit-worksheets.html">Habit Worksheets</a>, row '+c.row+'</div></div></div>';
+  card.innerHTML=h; MINSEL=null;
+  var chips=card.querySelectorAll('.chip[data-m]'), mins=$('#mins'), done=$('#btnNext');
+  function paint(){chips.forEach(function(b){b.classList.toggle('on',MINSEL!==null&&+b.dataset.m===MINSEL);});$('#chipOther').classList.toggle('on',MINSEL==='o');done.innerHTML=(typeof MINSEL==='number')?'Done, '+MINSEL+' min &check;':'Done, minutes &check;';}
+  chips.forEach(function(b){b.onclick=function(){var n=+b.dataset.m; MINSEL=(MINSEL===n)?null:n; mins.value=(MINSEL===null)?'':MINSEL; $('#otherRow').classList.add('hidden'); paint();};});
+  $('#chipOther').onclick=function(){MINSEL='o'; $('#otherRow').classList.remove('hidden'); mins.value=''; paint(); try{mins.focus({preventScroll:true});}catch(e){}};
+  mins.oninput=function(){MINSEL='o';paint();};
+  done.onclick=finish;
+}
+
+/* ---- the deck: one card a day, every card once, then round again ---- */
+async function loadRows(){
+  if(!sb) return;
+  var ids=CARDS.map(function(c){return c.row;});
+  var r=await sb.from('worksheet_rows').select('id,habit,identity,insight,outcome').in('id',ids);
+  (r.data||[]).forEach(function(x){ROWS[x.id]=x;});
+}
+async function loadDeck(){
+  var t=todayKey();
+  var r=await sb.from('deck_progress').select('tile_key,served_on').eq('deck',DECK);
+  SERVED={};(r.data||[]).forEach(function(x){SERVED[x.tile_key]=x.served_on;});
+  var today=-1;for(var i=0;i<CARDS.length;i++) if(SERVED[CARDS[i].id]===t){today=i;break;}
+  if(today<0){
+    for(var j=0;j<CARDS.length;j++) if(!SERVED[CARDS[j].id]){today=j;break;}
+    if(today<0){ /* every card has been dealt once: start the next round */
+      var rs=await sb.rpc('deck_reset',{p_deck:DECK}); if(!rs.error){SERVED={};today=0;$('#lockline').textContent='Every belief has had its day. Starting the next round.';}
+    }
+    if(today>=0){var ins=await sb.from('deck_progress').upsert([{deck:DECK,tile_key:CARDS[today].id,served_on:t}],{onConflict:'deck,tile_key'});if(!ins.error)SERVED[CARDS[today].id]=t;}
+  }
+  CUR=today<0?0:today;
+}
+async function loadHabit(){
+  var r=await sb.from('todos').select('id,task,done,actual_minutes,for_date').eq('is_habit',true).eq('task',HABIT).order('for_date',{ascending:false}).limit(1);
+  habitRow=(r.data&&r.data[0])||null;
+}
+async function ensureRow(){
+  if(habitRow)return habitRow;
+  var ins=await sb.from('todos').insert({
+    task:HABIT, section:'Core To-Dos', subsection:'HABIT BANDIT', category:'HABIT BANDIT',
+    is_habit:true, bucket:'today', est_minutes:5, position:21.5,
+    for_date:todayKey(), done:false, status:'todo'
+  }).select().single();
+  if(ins.error){toast('Could not create the habit row: '+ins.error.message);return null;}
+  habitRow=ins.data;return habitRow;
+}
+async function finish(){
+  if(!sb||!signedIn){toast('Sign in first so the tick reaches the wheel.');return;}
+  if(window.__cvFin)return;
+  if(__cueAskIfIdle())return;
+  clearInterval(__cueTickId);
+  var el=$('#mins'),typed=(el&&el.value.trim()!=='')?parseInt(el.value,10):NaN;
+  var totMin=(typed>0&&typed<=180)?typed:Math.max(1,Math.round((Date.now()-__cueStart)/60000));
+  if(el){el.value=totMin;el.disabled=true;}
+  var totEl=$('#minTotal');if(totEl){totEl.textContent='Timer total: '+totMin+' min';totEl.classList.remove('hidden');}
+  var nx=$('#btnNext');if(nx)nx.disabled=true;
+  var row=await ensureRow();if(!row)return;
+  var now=new Date().toISOString(),today=todayKey();
+  var res=await sb.from('todos').update({done:true,status:'done',done_at:now,actual_minutes:totMin,for_date:today,updated_at:now}).eq('id',row.id);
+  if(res.error){toast('Did not save: '+res.error.message);return;}
+  habitRow.done=true;habitRow.for_date=today;
+  toast('Repeat After Me → wheel ✓, '+totMin+' min');
+  window.__cvFin=1;if(window.CueVisits){CueVisits.finish({sb:sb,card:'repeat',habit:HABIT,minutes:totMin,url:'habit-modules.html?done=repeat'});}else{setTimeout(function(){location.href='habit-modules.html?done=repeat';},3000);}
+}
+document.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target&&e.target.id==='mins'){e.preventDefault();finish();}});
+
+async function boot2(){ await loadRows(); await loadDeck(); await loadHabit(); show(); }
+async function signIn(){
+  var email=$('#email').value.trim(),pass=$('#pass').value;
+  var r=await sb.auth.signInWithPassword({email:email,password:pass});
+  if(r.error){$('#gateErr').textContent=r.error.message;return;}
+  $('#gate').classList.add('hidden');$('#stage').classList.remove('hidden');
+  signedIn=true;await boot2();
+}
+function freeMode(msg){ FREE=true;SERVED={};$('#gate').classList.add('hidden');$('#stage').classList.remove('hidden'); CUR=Math.floor(Math.random()*CARDS.length); show(); if(msg)$('#lockline').textContent=msg; }
+async function boot(){
+  card=$('#card');
+  var f=new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'}).format(new Date());
+  $('#stamp').textContent='Repeat After Me '+VER+' · '+CARDS.length+' beliefs, read live from the Habit Worksheets · as of '+f+' · all times EST';
+  if(!sb){freeMode('Could not reach the database. Browsing the cards, nothing recorded. Reload to try again.');return;}
+  var s=await sb.auth.getSession();
+  if(s.data.session){signedIn=true;$('#gate').classList.add('hidden');$('#stage').classList.remove('hidden');await boot2();}
+  else{$('#stage').classList.add('hidden');$('#gate').classList.remove('hidden');}
+}
+boot();
+</script>
+<script src="cue-fav.js"></script>
+<script>CueFav.mount({module:"repeat-after-me",label:"Repeat After Me",hideInfo:function(){return {error:"This card is dealt once a day, so it cannot be hidden."};},current:function(){var c=(typeof CARDS!=="undefined"&&CUR>=0)?CARDS[CUR]:null;if(!c)return null;var line=(typeof lineFor==="function")?lineFor(c):c.fb;return {key:c.id,title:line,body:"“"+c.q+"” — "+c.qs+(c.st?"\n"+c.st:""),type:"card",url:null};}});</script>
+<script src="cue-visits.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>
