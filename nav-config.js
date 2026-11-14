@@ -49,6 +49,7 @@ window.NAV_CONFIG = {
       { "label": "Clarity Compass", "href": "qs-wheel.html" },
       { "label": "Life Snapshot", "href": "life-snapshot.html" },
       { "label": "Travel Dashboard", "href": "where-ive-been.html" },
+      { "label": "Coffee Days", "href": "coffee-days.html" },
       { "label": "Decade View", "href": "decade.html" },
       { "label": "Winners and Losers", "href": "winners-losers.html" },
       { "label": "Stack Builder", "href": "stack-builder.html" },
@@ -65,20 +66,14 @@ window.NAV_CONFIG = {
   "Parking Lot": [
     /* Nov 12 2026, Scott: All Lists is a dropdown, same format as Editors. The five pages are the same five as
        LISTS_NAV below, in the same order. The small grey LISTS word is hidden (see NAV_GROUP_RENAME). */
-    /* Nov 14 2026, Scott: All Lists is now LIFE LOGGING (quantified self: things that happened). Same page address
-       (all-lists.html) so no link breaks. Bucket List moved to Wish Lists below, Asa Activities moved under Travel,
-       Coffee Days came over from YouMatics. */
-    { "label": "Life Logging", "href": "all-lists.html", "children": [
+    { "label": "All Lists", "href": "all-lists.html", "children": [
       { "label": "Connections", "href": "connections.html" },
       { "label": "Movies", "href": "movies.html" },
+      { "label": "Bucket List", "href": "my-bucket-list.html" },
+      { "label": "Asa Activities", "href": "asa-activities.html" },
       { "label": "Food Log", "href": "food-log.html" },
-      { "label": "Drink Log", "href": "drink-log.html" },
-      { "label": "Coffee Days", "href": "coffee-days.html" }
+      { "label": "Booze Log", "href": "drink-log.html" }
     ] }
-  ],
-  /* Nov 14 2026, Scott: future-facing lists (things you hope to do, not things you logged) get their own small group. */
-  "Wish Lists": [
-    { "label": "Bucket<br>List", "href": "my-bucket-list.html" }
   ],
   /* Sep 3 2026, Scott: "travel list should be removed from main nav, it already
      sits in Where I've Been." The Travel slot is gone from the top bar. The three
@@ -96,9 +91,7 @@ window.NAV_CONFIG = {
       { "label": "Where I've Been", "href": "where-ive-been.html" },
       { "label": "Future Travel", "href": "future-travel.html" },
       { "label": "Safari Log", "href": "safari-log.html" },
-      { "label": "Travel Log", "href": "travel-log.html" },
-      /* Nov 14 2026, Scott: Asa Activities (date ideas) lives under Travel. */
-      { "label": "Asa Activities", "href": "asa-activities.html" }
+      { "label": "Travel Log", "href": "travel-log.html" }
     ] }
   ],
   /* Nov 12 2026, Scott: Editors is ONE dropdown in the bar. Habit Worksheets, Stack Builder and Daily Habits
@@ -189,17 +182,21 @@ window.MAPS_NAV = {
    fill the number beside each tab. A list with no `count` key simply shows no
    number - nothing breaks. */
 window.LISTS_NAV = {
-  /* Nov 14 2026, Scott: renamed Life Logging. Bucket List and Asa Activities moved out (see top of file);
-     Coffee Days joined. ORDER IS FIXED. */
-  "label": "Life Logging",
+  "label": "Lists",
   "ver": "Lists",
   "counts": "v_list_counts",
   "items": [
     { "label": "Connections",    "href": "connections.html",    "count": "connections" },
     { "label": "Movies",         "href": "movies.html",         "count": "movies" },
+    { "label": "Bucket List",    "href": "my-bucket-list.html", "count": "bucket_list" },
+    { "label": "Asa Activities", "href": "asa-activities.html", "count": "asa_activities" },
+    /* Sep 3 2026, Scott: "move food log out of main nav and into lists." Added at
+       the END because the order here is fixed and never re-sorts. No `count` key:
+       v_list_counts has no row for meals, and a tab with no count simply shows no
+       number, which is the honest thing to show rather than a wrong one. */
     { "label": "Food Log",       "href": "food-log.html" },
-    { "label": "Drink Log",      "href": "drink-log.html" },
-    { "label": "Coffee Days",    "href": "coffee-days.html" }
+    /* Nov 14 2026, Scott: Booze Log (was Drink Log) lives in All Lists, not YouMatics. */
+    { "label": "Booze Log",      "href": "drink-log.html" }
   ]
 };
 
@@ -244,8 +241,7 @@ window.TRAVEL_NAV = {
     { "label": "Where I've Been", "href": "where-ive-been.html" },
     { "label": "Future Travel", "href": "future-travel.html" },
     { "label": "Safari Log", "href": "safari-log.html" },
-    { "label": "Travel Log", "href": "travel-log.html" },
-    { "label": "Asa Activities", "href": "asa-activities.html" }
+    { "label": "Travel Log", "href": "travel-log.html" }
   ]
 };
 
@@ -334,9 +330,9 @@ window.PAGE_VERSIONS = {
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
   "qs-dashboard.html": "v3.6",
-  "all-lists.html": "v1.1",
+  "all-lists.html": "v1.0",
   "travel.html": "v1.0",
-  "drink-log.html": "v1.2",
+  "drink-log.html": "v1.3",
   "editors.html": "v1.0",
   "reconciliation.html": "v1.0",
   "recreational.html": "v1.3",
