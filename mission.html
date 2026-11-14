@@ -44,7 +44,12 @@
   .mod a{display:inline-block;margin-top:9px;font-size:12.5px;font-weight:700;color:var(--accent);text-decoration:none}
   .mod.soon{opacity:.65}
   /* v4.7 (Oct 21 2026): Quiz Card Templates card added to Editors. */
+  /* v4.8 (Nov 14 2026): thumbnails and card names are links to their pages. */
   /* v4.4 (Oct 9 2026): old staging-area.html moved to Retired. v4.3 (Oct 9 2026): Staging Area and Claude's List cards added to Tools & pages (they left the main nav). v4.2 (Oct 8 2026): page thumbnails. Pictures come from thumbs.json; a card with no picture shows its first letter. */
+  .mod a.cardlink,a.cardlink{display:block;margin-top:0;font-size:inherit;font-weight:inherit;color:inherit;text-decoration:none;cursor:pointer}
+  a.cardlink:hover h3{color:var(--accent);text-decoration:underline}
+  a.cardlink:hover .thumb{border-color:var(--accent)}
+  td a.cardlink{display:inline}
   .thumb{aspect-ratio:8/5;border-radius:9px;overflow:hidden;background:var(--chip);margin:0 0 10px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:800;font-size:26px}
   .thumb img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
   .pg-thumb{float:left;width:64px;height:40px;border-radius:5px;overflow:hidden;background:var(--chip);border:1px solid var(--line);margin:0 10px 0 0;display:flex;align-items:center;justify-content:center;color:var(--accent);font-weight:800;font-size:14px}
@@ -169,7 +174,7 @@
 
   <div class="wrap">
     <header class="hero">
-      <div class="secbar"><h1>Mission Control</h1><span class="ver">v4.7</span><span class="date"></span></div>
+      <div class="secbar"><h1>Mission Control</h1><span class="ver">v4.8</span><span class="date"></span></div>
       <p>One screen for everything. Speak or type, and I route it to the right place.</p>
       <div class="tiles">
         <div class="tile"><b id="tOpen">-</b><span>Todays Tasks open</span></div>
@@ -303,7 +308,7 @@
   <div class="stamp">As of Oct 8, 2026</div>
     </div>
   </div>
-  <div class="badge">Mission Control v4.7</div>
+  <div class="badge">Mission Control v4.8</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -318,10 +323,17 @@ var DOCS=[{"n":"00","s":"start-here","t":"Start Here","d":"The front door. Which
 var LAUNCH_SECS=['Habit Modules','Editors','Tools & pages','Maps & dashboards'];
 
 function cardHtml(e){
-  var c=e.c,tf=(e.f&&e.f!=='#'&&e.f.indexOf('http')!==0)?e.f.split('#')[0]:'',h='<div class="mod'+(c.soon?' soon':'')+'"><div class="thumb" data-f="'+tf+'" data-l="'+c.t.replace(/"/g,'').charAt(0)+'"></div><h3>'+c.t+'</h3><p'+(c.id?' id="'+c.id+'"':'')+'>'+c.d+'</p>';
+  var c=e.c,tf=(e.f&&e.f!=='#'&&e.f.indexOf('http')!==0)?e.f.split('#')[0]:'';
+  var isInbox=(c.act==='inbox'),isExt=!!c.ext,live=!c.soon;
+  var open,close='</a>';
+  if(!live){open='<span>';close='</span>';}
+  else if(isInbox)open='<a class="cardlink" href="#" onclick="showInbox();return false;">';
+  else if(isExt)open='<a class="cardlink" href="'+e.f+'" target="_blank" rel="noopener">';
+  else open='<a class="cardlink" href="'+e.f+'">';
+  var h='<div class="mod'+(c.soon?' soon':'')+'">'+open+'<div class="thumb" data-f="'+tf+'" data-l="'+c.t.replace(/"/g,'').charAt(0)+'"></div><h3>'+c.t+'</h3>'+close+'<p'+(c.id?' id="'+c.id+'"':'')+'>'+c.d+'</p>';
   if(c.soon)h+='<span>On the roadmap</span>';
-  else if(c.act==='inbox')h+='<a href="#" onclick="showInbox();return false;">View →</a>';
-  else if(c.ext)h+='<a href="'+e.f+'" target="_blank" rel="noopener">Open &rarr;</a>';
+  else if(isInbox)h+='<a href="#" onclick="showInbox();return false;">View →</a>';
+  else if(isExt)h+='<a href="'+e.f+'" target="_blank" rel="noopener">Open &rarr;</a>';
   else h+='<a href="'+e.f+'">Open →</a>';
   return h+'</div>';
 }
@@ -388,7 +400,7 @@ function buildPages(){
     if(!rows.length)return;
     h+='<h2 class="lsec">'+g+'</h2><table><tr><th>Page</th><th>What it is</th><th>Status</th></tr>';
     rows.forEach(function(p){
-      h+='<tr><td>'+(p.s!=='off'?'<span class="pg-thumb" data-f="'+p.f.split('#')[0]+'" data-l="'+p.t.replace(/["&<]/g,'').charAt(0)+'"></span>':'')+'<a href="'+p.f+'">'+p.t+'</a><div style="font-size:11px;color:#8b93a1">'+p.f+'</div></td><td>'+p.d+'</td><td><span class="st '+p.s+'">'+(p.s=='live'?'Live':p.s=='warn'?'Check':'Retired')+'</span></td></tr>';
+      h+='<tr><td>'+(p.s!=='off'?'<a href="'+p.f+'" class="cardlink"><span class="pg-thumb" data-f="'+p.f.split('#')[0]+'" data-l="'+p.t.replace(/["&<]/g,'').charAt(0)+'"></span></a>':'')+'<a href="'+p.f+'">'+p.t+'</a><div style="font-size:11px;color:#8b93a1">'+p.f+'</div></td><td>'+p.d+'</td><td><span class="st '+p.s+'">'+(p.s=='live'?'Live':p.s=='warn'?'Check':'Retired')+'</span></td></tr>';
     });
     h+='</table>';
   });
