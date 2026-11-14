@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Drink Log &middot; Project YOU</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--accent:#3f6f8f;--green:#1e8e5a;--hot:#c0453b;--wine:#7a2e3f;--winebg:#f6e9ec;--winelt:#e6c9d0}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.45;font-size:14px}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px 14px;font-weight:800;font-size:13.5px;cursor:pointer;font-family:inherit}
+  .btn.big{background:var(--wine);font-size:15px;padding:12px 20px}
+  .btn.alt{background:#fff;color:var(--wine);border:1px solid var(--winelt)}
+  .btn.ghost{background:#fff;color:var(--muted);border:1px solid var(--line)}
+  .secbar-wrap{max-width:900px;margin:0 auto;padding:12px 20px 0}
+  .secbar{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:10px}
+  .secbar h1{font-size:20px}
+  .secbar .ver{font-size:11px;font-weight:800;color:var(--wine);background:var(--winebg);border:1px solid var(--winelt);border-radius:999px;padding:2px 9px}
+  .secbar .date{font-size:11.5px;color:#9aa6b4;font-weight:700;margin-left:auto}
+  .wrap{max-width:900px;margin:0 auto;padding:16px 20px 80px}
+  .sub{font-size:13.5px;color:var(--muted);max-width:720px;line-height:1.6}
+  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin:16px 0}
+  .tile{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:0 4px 12px rgba(31,42,68,.05)}
+  .tile .v{font-size:30px;font-weight:800;color:var(--wine);line-height:1.15}
+  .tile .l{font-size:12.5px;font-weight:700;margin-top:3px}
+  .tile .x{font-size:11.5px;color:#9aa6b4;margin-top:2px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px;box-shadow:0 4px 12px rgba(31,42,68,.05)}
+  .cardhead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+  .cardhead h2{font-size:16px}
+  .dlabel{font-size:12px;color:#9aa6b4;font-weight:700}
+  .glassrow{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 4px}
+  .gl{width:34px;height:52px;border:2px solid var(--winelt);border-radius:6px 6px 17px 17px;cursor:pointer;background:#fff;position:relative;overflow:hidden}
+  .gl.on{background:var(--wine);border-color:var(--wine)}
+  .gl.half{background:linear-gradient(to top,var(--wine) 50%,#fff 50%);border-color:var(--wine)}
+  .count{margin:6px 0 12px;font-size:14px;color:var(--muted)}
+  .count b{font-size:34px;color:var(--wine)}
+  .btns{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}
+  .chips{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 8px}
+  .chip{background:var(--winebg);border:1px solid var(--winelt);color:var(--wine);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700;cursor:pointer}
+  textarea,input[type=text],input[type=number],input[type=date]{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-family:inherit;font-size:14px}
+  .form{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .form label{font-size:11.5px;font-weight:800;color:var(--muted);display:flex;flex-direction:column;gap:4px;width:150px}
+  .form label.grow{flex:1;min-width:200px;width:auto}
+  .tiny{font-size:11.5px;color:#9aa6b4;margin-top:6px}
+  .msg{font-size:12.5px;color:var(--green);font-weight:700;min-height:16px}
+  .yrs{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+  .yr{font-size:12px;font-weight:800;padding:4px 11px;border-radius:999px;border:1px solid var(--line);color:var(--muted);cursor:pointer;background:#fff}
+  .yr.on{background:var(--wine);color:#fff;border-color:var(--wine)}
+  .row{display:flex;gap:14px;padding:10px 4px;border-top:1px solid #f0f2f6;cursor:pointer;align-items:flex-start}
+  .row:hover{background:#fafbfd}
+  .rd{width:110px;font-weight:700;font-size:13px;flex:none}
+  .rq{width:36px;text-align:center;font-weight:800;color:var(--wine);background:var(--winebg);border-radius:8px;padding:2px 0;flex:none}
+  .rw{font-size:13.5px;flex:1}
+  .rn{font-size:12px;color:#9aa6b4;margin-top:2px}
+  .mut{color:#b3bcc8}
+  .loading{color:#9aa6b4;font-size:13px;padding:14px 0}
+  .foot{font-size:12px;color:#9aa6b4;margin-top:20px;line-height:1.7}
+  .foot code{background:#fff;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:11.5px}
+  .pynav{position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e3e7ee;display:flex;align-items:center;flex-wrap:nowrap;overflow-x:auto;padding:6px 12px;gap:1px}
+  .pynav::-webkit-scrollbar{height:0}
+  .pn-logo{display:flex;align-items:center;margin-right:5px;flex:none}
+  .pn-logo img{height:28px;width:auto;display:block}
+  .pn-group{display:inline-flex;flex-direction:column;align-items:flex-start;gap:2px;padding:2px 7px;margin:2px 0;border-left:1px solid #edf0f4;flex:none}
+  .pn-group.first{border-left:none}
+  .pn-label{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#aab2bd;white-space:nowrap;padding-left:3px}
+  a.pn-label{text-decoration:none;cursor:pointer}
+  a.pn-label:hover,a.pn-label.on{color:var(--accent)}
+  .pn-links{display:flex;gap:1px;align-items:stretch}
+  .pn-link{font-size:11.5px;font-weight:700;color:#5b6472;text-decoration:none;padding:3px 6px;border-radius:7px;white-space:normal;text-align:center;line-height:1.08;display:inline-flex;align-items:center;flex:none}
+  .pn-link:hover{background:#eef2f8;color:#3f6f8f}
+  .pn-link.on{background:#3f6f8f;color:#fff}
+  .pn-ver{margin-left:auto;font-size:10.5px;font-weight:700;color:#9aa6b4;font-variant-numeric:tabular-nums;padding:0 6px;flex:none}
+  .pn-user{display:flex;align-items:center;gap:8px;background:#f4f6f9;border:1px solid #e3e7ee;border-radius:999px;padding:3px 11px 3px 3px;margin-left:6px;flex:none}
+  .pn-ava{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid #4cc07a;flex:none;background:#dfe7f0}
+  .pn-ava img{width:100%;height:100%;object-fit:cover;display:block}
+  .pn-uinfo{display:flex;flex-direction:column;line-height:1.05}
+  .pn-uname{font-size:12px;font-weight:800;color:#1f2a44}
+  .pn-usub{font-size:8px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#2f8f5b}
+  .pn-dot{width:9px;height:9px;border-radius:50%;background:#2fbf71;box-shadow:0 0 0 2px #d7f0e0}
+  .pn-drop{position:relative;display:inline-flex;align-items:stretch}
+  .pn-dropbtn{cursor:pointer;user-select:none}
+  .pn-menu{position:fixed;background:#fff;border:1px solid #e3e7ee;border-radius:9px;box-shadow:0 10px 28px rgba(31,42,68,.16);padding:5px;display:none;flex-direction:column;min-width:200px;z-index:60}
+  .pn-menu.open{display:flex}
+  .pn-menu .pn-link{white-space:nowrap;text-align:left;justify-content:flex-start;padding:6px 9px}
+</style>
+</head>
+<body>
+<div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link">Staging<br>Area</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a><a href="where-ive-been.html" class="pn-link">Where I've<br>Been</a><a href="coffee-days.html" class="pn-link">Coffee<br>Days</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span><span class="pn-ver">v1.0</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Drink Log</h1><span class="ver">v1.0</span><span class="date" id="today"></span></div></div>
+<div class="wrap">
+<p class="sub">Your full drinking history in one place. Tap to log tonight, add a reason, or fix a past night. The Sober Curious map reads from this list. A day with no entry is a dry day.</p>
+
+<div class="tiles" id="tiles"><div class="loading">Loading your history...</div></div>
+
+<div class="card" id="tonight">
+  <div class="cardhead"><h2>Tonight</h2><span class="dlabel" id="tDay"></span></div>
+  <div class="glassrow" id="glasses"></div>
+  <div class="count"><b id="tCount">0</b> <span id="tUnit">glasses</span></div>
+  <div class="btns">
+    <button class="btn big" onclick="bump(1)">+ 1 glass</button>
+    <button class="btn alt" onclick="bump(0.5)">+ &frac12;</button>
+    <button class="btn ghost" onclick="bump(-0.5)">&minus; &frac12;</button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <textarea id="tWhy" rows="2" placeholder="Why? (optional, one line)"></textarea>
+  <div class="btns"><button class="btn" onclick="saveWhy()">Save reason</button><span class="msg" id="tMsg"></span></div>
+  <div class="tiny">The day ends at 2am, so a drink at 1am still counts for the night before.</div>
+</div>
+
+<div class="card">
+  <div class="cardhead"><h2>Add or fix a past night</h2></div>
+  <div class="form">
+    <label>Date <input type="date" id="pDate"></label>
+    <label>Glasses <input type="number" id="pQty" min="0" step="0.5" value="2"></label>
+    <label class="grow">Reason <input type="text" id="pWhy" placeholder="Optional"></label>
+    <button class="btn" onclick="savePast()">Save night</button>
+  </div>
+  <div class="tiny">Saving 0 glasses removes the night, so that day counts as dry again.</div>
+  <div class="msg" id="pMsg"></div>
+</div>
+
+<div class="card">
+  <div class="cardhead"><h2>Full history</h2>
+    <div class="yrs" id="yrs"></div></div>
+  <div id="list"><div class="loading">Loading...</div></div>
+</div>
+
+<div class="foot">Every night from your sheet (Jul 2023 to Nov 2026), plus anything logged since. Notes from your sheet show in grey under each night.<br>Technical: reads and writes <code>drink_log</code> and <code>drink_notes</code>; the Cue Cards wine tap adds to the same list.</div>
+</div>
+<script>
+const SUPABASE_URL="https://arnjntspmrhigodlssbn.supabase.co";
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const REASONS=['Stress','Social','Celebrating','Relief','Habit','Trip','Bored'];
+let LOG=[],NOTES={},TODAY=null,YEAR='all';
+function fmt(d){var p=d.split('-');return MO[+p[1]-1]+' '+(+p[2])+', '+p[0];}
+function num(n){n=+n;return (n%1===0)?String(n):n.toFixed(1);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+async function getToday(){
+  try{const r=await sb.rpc('py_today');if(r&&r.data)return String(r.data).slice(0,10);}catch(e){}
+  const t=new Date(Date.now()-2*3600*1000);
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York'}).format(t);
+}
+function dayDiff(a,b){return Math.round((new Date(a+'T12:00:00Z')-new Date(b+'T12:00:00Z'))/86400000);}
+async function load(){
+  TODAY=await getToday();
+  const [a,b]=await Promise.all([
+    sb.from('drink_log').select('day,drinks,why,source').order('day',{ascending:false}).limit(2000),
+    sb.from('drink_notes').select('day,note,approx_day').order('id').limit(2000)]);
+  LOG=(a.data||[]);NOTES={};
+  (b.data||[]).forEach(n=>{(NOTES[n.day]=NOTES[n.day]||[]).push(n)});
+  render();
+}
+function cur(){return LOG.find(r=>r.day===TODAY);}
+function render(){
+  document.getElementById('today').textContent=fmt(TODAY);
+  document.getElementById('tDay').textContent=fmt(TODAY);
+  const c=cur();const q=c&&c.drinks?+c.drinks:0;
+  document.getElementById('tCount').textContent=num(q);
+  document.getElementById('tUnit').textContent=q===1?'glass':'glasses';
+  let g='';const n=Math.max(4,Math.ceil(q));
+  for(let i=0;i<n;i++){const full=q>=i+1,half=!full&&q>i;g+='<span class="gl'+(full?' on':half?' half':'')+'" onclick="setQ('+(i+1)+')"></span>';}
+  document.getElementById('glasses').innerHTML=g;
+  document.getElementById('tWhy').value=(c&&c.why)||'';
+  // tiles
+  const yrs=[...new Set(LOG.map(r=>r.day.slice(0,4)))].sort().reverse();
+  const last=LOG.filter(r=>+r.drinks>0)[0];
+  const dry=last?dayDiff(TODAY,last.day):0;
+  const y26=LOG.filter(r=>r.day.startsWith(TODAY.slice(0,4)));
+  const sum=a=>a.reduce((s,r)=>s+(+r.drinks||0),0);
+  document.getElementById('tiles').innerHTML=
+   '<div class="tile"><div class="v">'+(last&&last.day===TODAY?0:dry)+'</div><div class="l">dry days in a row</div><div class="x">last drink '+(last?fmt(last.day):'none')+'</div></div>'+
+   '<div class="tile"><div class="v">'+y26.length+'</div><div class="l">drinking nights in '+TODAY.slice(0,4)+'</div><div class="x">'+num(sum(y26))+' glasses</div></div>'+
+   '<div class="tile"><div class="v">'+LOG.length+'</div><div class="l">nights on record</div><div class="x">'+num(sum(LOG))+' glasses since Jul 2023</div></div>';
+  document.getElementById('chips').innerHTML=REASONS.map(r=>'<span class="chip" onclick="addChip(\''+r+'\')">'+r+'</span>').join('');
+  document.getElementById('yrs').innerHTML=['all'].concat(yrs).map(y=>'<span class="yr'+(y===YEAR?' on':'')+'" onclick="setYear(\''+y+'\')">'+(y==='all'?'All':y)+'</span>').join('');
+  const rows=LOG.filter(r=>YEAR==='all'||r.day.startsWith(YEAR));
+  document.getElementById('list').innerHTML=rows.map(r=>{
+    const ns=(NOTES[r.day]||[]).map(n=>esc(n.note)+(n.approx_day?' (date approximate)':'')).join(' &middot; ');
+    const q=r.drinks==null?'?':num(r.drinks);
+    return '<div class="row" onclick="editRow(\''+r.day+'\')"><div class="rd">'+fmt(r.day)+'</div><div class="rq">'+q+'</div><div class="rw">'+(r.why?esc(r.why):'<span class="mut">no reason yet</span>')+(ns&&ns!==esc(r.why||'')?'<div class="rn">'+ns+'</div>':'')+'</div></div>';
+  }).join('')||'<div class="loading">Nothing here.</div>';
+}
+function setYear(y){YEAR=y;render();}
+async function write(day,drinks,why){
+  const ex=LOG.find(r=>r.day===day);
+  if(drinks!=null&&+drinks<=0&&!why){
+    if(ex){await sb.from('drink_log').delete().eq('day',day);LOG=LOG.filter(r=>r.day!==day);}
+    return;
+  }
+  if(ex){
+    const u={updated_at:new Date().toISOString()};
+    if(drinks!=null)u.drinks=drinks; if(why!=null)u.why=why||null;
+    const {error}=await sb.from('drink_log').update(u).eq('day',day);
+    if(error)throw error; Object.assign(ex,{drinks:drinks!=null?drinks:ex.drinks,why:why!=null?(why||null):ex.why});
+  }else{
+    const row={day:day,drinks:drinks==null?0:drinks,why:why||null,source:'log-page'};
+    const {error}=await sb.from('drink_log').insert(row);
+    if(error)throw error; LOG.push(row); LOG.sort((a,b)=>b.day.localeCompare(a.day));
+  }
+}
+async function bump(d){
+  const c=cur();const q=Math.max(0,(c&&+c.drinks||0)+d);
+  try{await write(TODAY,q,null);flash('tMsg','Saved');}catch(e){flash('tMsg','Could not save: '+e.message);}
+  render();
+}
+async function setQ(n){const c=cur();const q=(c&&+c.drinks===n)?n-1:n;
+  try{await write(TODAY,q,null);}catch(e){flash('tMsg','Could not save');}render();}
+function addChip(r){const t=document.getElementById('tWhy');t.value=t.value?t.value.replace(/[. ]+$/,'')+', '+r.toLowerCase():r;}
+async function saveWhy(){
+  const w=document.getElementById('tWhy').value.trim();
+  try{
+    if(!cur()||!(+cur().drinks>0)){flash('tMsg','Add a glass first, then save the reason.');return;}
+    await write(TODAY,null,w);
+    flash('tMsg','Reason saved');
+  }catch(e){flash('tMsg','Could not save: '+e.message);}
+  render();
+}
+async function savePast(){
+  const day=document.getElementById('pDate').value;
+  const q=parseFloat(document.getElementById('pQty').value);
+  const why=document.getElementById('pWhy').value.trim();
+  if(!day||isNaN(q)){flash('pMsg','Pick a date and a number of glasses.');return;}
+  if(day>TODAY){flash('pMsg','That date has not happened yet.');return;}
+  try{
+    const ex=LOG.find(r=>r.day===day);
+    if(q<=0){ if(ex&&!confirm('Remove '+fmt(day)+' and count it as a dry day?'))return; await write(day,0,'');}
+    else await write(day,q,why||(ex?null:''));
+    flash('pMsg','Saved '+fmt(day));document.getElementById('pWhy').value='';
+  }catch(e){flash('pMsg','Could not save: '+e.message);}
+  render();
+}
+function editRow(day){
+  const r=LOG.find(x=>x.day===day);
+  document.getElementById('pDate').value=day;
+  document.getElementById('pQty').value=r&&r.drinks!=null?r.drinks:2;
+  document.getElementById('pWhy').value=(r&&r.why)||'';
+  document.getElementById('pDate').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function flash(id,t){const e=document.getElementById(id);e.textContent=t;setTimeout(()=>{e.textContent='';},3000);}
+load().catch(e=>{document.getElementById('tiles').innerHTML='<div class="loading">Could not load: '+esc(e.message)+'</div>';});
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script>
+</body>
+</html>
