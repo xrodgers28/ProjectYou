@@ -17,7 +17,7 @@
   /* v2.27 (Nov 13, 2026): Morning sparks. Five pictures a day, a contact sheet at the top of the board. Star saves, Hide skips. Nothing grows or zooms. */
   .w2sparks{margin:0 0 10px}
   .w2sparks .w2shelf small{font-weight:400;opacity:.7;margin-left:6px}
-  .spgrid{display:grid;grid-template-columns:repeat(5,minmax(0,156px));gap:22px;justify-content:start;margin-top:8px}
+  .spgrid{display:grid;grid-template-columns:repeat(6,minmax(0,156px));gap:22px;justify-content:start;margin-top:8px}
   .spcell{min-width:0;display:flex;flex-direction:column;gap:5px}
   .spart{display:block;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:var(--line)}
   .spart img{width:100%;height:100%;object-fit:cover;display:block}
@@ -28,6 +28,12 @@
   .spact button{flex:1;font:inherit;font-size:12.5px;font-weight:600;padding:5px 0;border-radius:8px;border:1px solid var(--line);background:transparent;color:inherit;cursor:pointer}
   .spact button[aria-pressed="true"]{background:var(--star);color:#fff;border-color:var(--star)}
   .spcell.gone .spart,.spcell.gone .spcap,.spcell.gone .spwhy{opacity:.3}
+  /* v2.28 (Nov 14, 2026): vote tile at the end of the Morning sparks row: keep or drop the source. */
+  .spvote{border:1px dashed var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;justify-content:center;min-width:0}
+  .spvote .q{font-size:12.5px;font-weight:600;line-height:1.3}
+  .spvote .src{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;opacity:.6}
+  .spvote .says{font-size:11.5px;line-height:1.35;opacity:.75}
+  .spvote .spact button[aria-pressed="true"]{background:var(--star);color:#fff;border-color:var(--star)}
   @media(max-width:700px){.spgrid{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:136px;overflow-x:auto;gap:14px;padding-bottom:6px}}
 </style>
 <a class="wallx" id="wallx" href="habit-modules.html" aria-label="Close and go back to the Cue Cards board" title="Close, back to the board">&times;</a>
@@ -758,7 +764,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.27</span></h1>
+      <h1>Sparkboard <span class="ver">v2.28</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -866,7 +872,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.27</div>
+  <div class="stamp" id="stamp">v2.28</div>
 </div>
 
 <aside class="stx-col">
@@ -2771,10 +2777,11 @@ function sparksLoad(){
     var d=r[0].day;
     return api("wall_sparks?select=id,slot,topic,why,origin,status,item_id,wall_items(title,link,img)&day=eq."+d+"&order=slot.asc").then(function(rows){
       var ids=rows.map(function(x){return x.item_id;}).join(",");
-      return api("wall_saved?select=item_id&item_id=in.("+ids+")").then(function(sv){
-        var set={}; (sv||[]).forEach(function(s){ set[s.item_id]=1; });
+      return Promise.all([api("wall_saved?select=item_id&item_id=in.("+ids+")"),api("wall_spark_votes?select=origin,vote").catch(function(){return [];})]).then(function(res){
+        var sv=res[0], set={}; (sv||[]).forEach(function(s){ set[s.item_id]=1; });
         rows.forEach(function(x){ x.saved=!!set[x.item_id]; });
-        SPARKS={day:d,rows:rows,isToday:d===today};
+        var votes={}; (res[1]||[]).forEach(function(v){ votes[v.origin]=v.vote; });
+        SPARKS={day:d,rows:rows,isToday:d===today,votes:votes};
       });
     });
   }).then(sparksPaint).catch(function(){ SPARKS=null; });
@@ -2795,10 +2802,31 @@ function sparksPaint(){
       '<div class="spact"><button type="button" data-spark="star" aria-pressed="'+(x.saved?"true":"false")+'">'+(x.saved?"Starred":"Star")+'</button>'+
       '<button type="button" data-spark="hide">'+(x.status==="hidden"?"Undo":"Hide")+'</button></div></div>';
   });
+  var seen={};
+  SPARKS.rows.forEach(function(x){
+    var o=x.origin; if(!o||seen[o]) return; seen[o]=1;
+    var v=(SPARKS.votes||{})[o]||"";
+    h+='<div class="spvote" data-origin="'+esc(o)+'"><div class="src">'+esc(o)+'</div>'+
+      '<div class="q">Keep sourcing from here?</div>'+
+      '<div class="says">'+(v==="keep"?"You said keep. Tap again to undo.":v==="drop"?"You said drop. Tap again to undo.":"Your vote decides if tomorrow\u2019s sparks come from here.")+'</div>'+
+      '<div class="spact"><button type="button" data-spvote="keep" aria-pressed="'+(v==="keep"?"true":"false")+'">Keep</button>'+
+      '<button type="button" data-spvote="drop" aria-pressed="'+(v==="drop"?"true":"false")+'">Drop</button></div></div>';
+  });
   d.innerHTML=h+'</div>';
   st.insertBefore(d,st.firstChild);
 }
 document.addEventListener("click",function(e){
+  var vb=e.target.closest?e.target.closest("[data-spvote]"):null;
+  if(vb&&SPARKS){
+    var box=vb.closest("[data-origin]"), o=box.getAttribute("data-origin"), want=vb.getAttribute("data-spvote");
+    var prev=(SPARKS.votes||{})[o]||"", next=(prev===want)?"":want;
+    SPARKS.votes=SPARKS.votes||{}; if(next) SPARKS.votes[o]=next; else delete SPARKS.votes[o];
+    sparksPaint();
+    fetch(SB+"/rest/v1/rpc/spark_vote",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},body:JSON.stringify({p_origin:o,p_vote:next||"clear"})})
+      .then(function(r){ if(!r.ok) throw new Error(r.status); toast(next==="keep"?"Kept. "+o+" stays in the mix.":next==="drop"?"Dropped. No more sparks from "+o+".":"Vote cleared."); })
+      .catch(function(){ if(prev) SPARKS.votes[o]=prev; else delete SPARKS.votes[o]; sparksPaint(); toast("That vote did not save. Try again."); });
+    return;
+  }
   var b=e.target.closest?e.target.closest("[data-spark]"):null; if(!b||!SPARKS) return;
   var cell=b.closest("[data-sp]"), id=+cell.getAttribute("data-sp");
   var x=SPARKS.rows.filter(function(r){ return r.item_id===id; })[0]; if(!x) return;
