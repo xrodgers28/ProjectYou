@@ -68,9 +68,9 @@ window.NAV_CONFIG = {
     { "label": "Life Logging", "href": "all-lists.html", "children": [
       { "label": "Connections", "href": "connections.html" },
       { "label": "Movies", "href": "movies.html" },
+      { "label": "Coffee Days", "href": "coffee-days.html" },
       { "label": "Food Log", "href": "food-log.html" },
       { "label": "Booze Log", "href": "drink-log.html" },
-      { "label": "Coffee Days", "href": "coffee-days.html" },
       { "label": "Bucket List", "href": "my-bucket-list.html" }
     ] }
   ],
@@ -191,9 +191,9 @@ window.LISTS_NAV = {
   "items": [
     { "label": "Connections",    "href": "connections.html",    "count": "connections" },
     { "label": "Movies",         "href": "movies.html",         "count": "movies" },
+    { "label": "Coffee Days",    "href": "coffee-days.html" },
     { "label": "Food Log",       "href": "food-log.html" },
     { "label": "Booze Log",      "href": "drink-log.html" },
-    { "label": "Coffee Days",    "href": "coffee-days.html" },
     { "label": "Bucket List",    "href": "my-bucket-list.html", "count": "bucket_list" }
   ]
 };
@@ -328,9 +328,9 @@ window.PAGE_VERSIONS = {
   "habit-worksheets.html": "v3.4",
   "life-snapshot.html": "v1.0",
   "open-mode.html": "v1.5",
-  "qs-dashboard.html": "v3.6",
-  "all-lists.html": "v1.2",
-  "travel.html": "v1.0",
+  "qs-dashboard.html": "v3.7",
+  "all-lists.html": "v1.3",
+  "travel.html": "v1.1",
   "drink-log.html": "v1.3",
   "editors.html": "v1.0",
   "reconciliation.html": "v1.0",
