@@ -95,7 +95,9 @@ window.NAV_CONFIG = {
       { "label": "Safari Log", "href": "safari-log.html" },
       { "label": "Travel Log", "href": "travel-log.html" },
       /* Nov 14 2026, Scott: Asa Activities (date ideas) lives under Travel. */
-      { "label": "Asa Activities", "href": "asa-activities.html" }
+      { "label": "Asa Activities", "href": "asa-activities.html" },
+      /* Nov 14 2026, Scott: Travel Badges (Travel set, Give-back set, ladders) lives under Travel. */
+      { "label": "Travel Badges", "href": "badges.html" }
     ] }
   ],
   /* Nov 12 2026, Scott: Editors is ONE dropdown in the bar. Habit Worksheets, Stack Builder and Daily Habits
@@ -243,7 +245,8 @@ window.TRAVEL_NAV = {
     { "label": "Future Travel", "href": "future-travel.html" },
     { "label": "Safari Log", "href": "safari-log.html" },
     { "label": "Travel Log", "href": "travel-log.html" },
-    { "label": "Asa Activities", "href": "asa-activities.html" }
+    { "label": "Asa Activities", "href": "asa-activities.html" },
+    { "label": "Travel Badges", "href": "badges.html" }
   ]
 };
 
@@ -333,7 +336,8 @@ window.PAGE_VERSIONS = {
   "open-mode.html": "v1.5",
   "qs-dashboard.html": "v3.8",
   "all-lists.html": "v1.3",
-  "travel.html": "v1.1",
+  "travel.html": "v1.2",
+  "badges.html": "v1.0",
   "modes-of-transport.html": "v1.11",
   "drink-log.html": "v1.3",
   "editors.html": "v1.0",
