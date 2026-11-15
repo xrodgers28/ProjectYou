@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unlogged time: what filled the gaps</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap"><style>
+:root{
+  --ground:#eef1f5;
+  --surface:#ffffff;
+  --surface-2:#f7f9fb;
+  --line:#dde3ea;
+  --line-soft:#e9edf2;
+  --ink:#233140;
+  --ink-2:#4a5a6b;
+  --muted:#7d8b9a;
+  --accent:#3f6f8f;
+  --accent-soft:#e2ecf3;
+  --amber:#b8801f;
+  --amber-soft:#f8eed6;
+  --good:#3f7d5f;
+  --good-soft:#e0efe6;
+  --warn:#b06a2c;
+  --warn-soft:#f7e9dc;
+  --shadow:0 1px 2px rgba(35,49,64,.05), 0 8px 24px -16px rgba(35,49,64,.35);
+  --on-accent:#ffffff;
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#131a21;
+    --surface:#1b242d;
+    --surface-2:#212c36;
+    --line:#2e3b47;
+    --line-soft:#27333d;
+    --ink:#e3e9ef;
+    --ink-2:#b6c2ce;
+    --muted:#8695a3;
+    --accent:#89b8d6;
+    --accent-soft:#22323e;
+    --amber:#e0ab52;
+    --amber-soft:#33291a;
+    --good:#78bd97;
+    --good-soft:#1c2c24;
+    --warn:#dda06a;
+    --warn-soft:#302319;
+    --on-accent:#0e151b;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131a21;
+  --surface:#1b242d;
+  --surface-2:#212c36;
+  --line:#2e3b47;
+  --line-soft:#27333d;
+  --ink:#e3e9ef;
+  --ink-2:#b6c2ce;
+  --muted:#8695a3;
+  --accent:#89b8d6;
+  --accent-soft:#22323e;
+  --amber:#e0ab52;
+  --amber-soft:#33291a;
+  --good:#78bd97;
+  --good-soft:#1c2c24;
+  --warn:#dda06a;
+  --warn-soft:#302319;
+  --on-accent:#0e151b;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.8);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--ground);
+  color:var(--ink);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  font-size:16px;
+  line-height:1.55;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:860px;margin:0 auto;padding:0 20px 96px}
+
+/* ---------- masthead ---------- */
+.top{padding:44px 0 26px}
+.eyebrow{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 14px;
+}
+h1{
+  font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+  font-weight:800;font-size:clamp(30px,5vw,44px);line-height:1.08;
+  letter-spacing:-.02em;margin:0 0 12px;text-wrap:balance;
+}
+.standfirst{font-size:17px;color:var(--ink-2);margin:0;max-width:60ch}
+
+/* ---------- progress bar ---------- */
+.tally{
+  position:sticky;top:0;z-index:20;
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:12px 16px;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  margin:0 0 30px;
+}
+.tally .count{
+  font-family:"IBM Plex Mono",monospace;font-weight:600;font-size:13px;
+  font-variant-numeric:tabular-nums;color:var(--ink);white-space:nowrap;
+}
+.meter{flex:1;min-width:120px;height:6px;background:var(--line-soft);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .28s ease}
+@media (prefers-reduced-motion: reduce){.meter i{transition:none}}
+.tally .hint{font-size:13px;color:var(--muted)}
+
+/* ---------- status of the three jobs ---------- */
+.jobs{display:grid;gap:10px;margin:0 0 40px}
+@media(min-width:680px){.jobs{grid-template-columns:repeat(3,1fr)}}
+.job{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:14px 15px;display:flex;flex-direction:column;gap:6px;
+}
+.job .n{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;
+  color:var(--muted);
+}
+.job .t{font-weight:600;font-size:14.5px;line-height:1.3}
+.job .s{
+  align-self:flex-start;font-size:11.5px;font-weight:600;
+  padding:2px 8px;border-radius:99px;letter-spacing:.02em;
+}
+.s.done{background:var(--good-soft);color:var(--good)}
+.s.wait{background:var(--warn-soft);color:var(--warn)}
+
+/* ---------- sections ---------- */
+section{margin:0 0 52px;scroll-margin-top:80px}
+.sec-head{display:flex;align-items:baseline;gap:12px;margin:0 0 6px}
+.sec-num{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;
+  color:var(--accent);flex:none;padding-top:4px;
+}
+h2{
+  font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+  font-weight:600;font-size:24px;line-height:1.2;letter-spacing:-.015em;
+  margin:0;text-wrap:balance;
+}
+.sec-sub{color:var(--ink-2);margin:0 0 22px 30px;max-width:62ch;font-size:15.5px}
+@media(max-width:520px){.sec-sub{margin-left:0}}
+
+/* ---------- finding card ---------- */
+.card{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:20px 20px 18px;margin:0 0 14px;
+}
+.card h3{
+  font-family:"Bricolage Grotesque","IBM Plex Sans",sans-serif;
+  font-weight:600;font-size:18px;line-height:1.25;margin:0 0 8px;letter-spacing:-.01em;
+}
+.card p{margin:0 0 12px;color:var(--ink-2);font-size:15px;max-width:64ch}
+.card p:last-of-type{margin-bottom:14px}
+.card strong{color:var(--ink);font-weight:600}
+
+/* numbers strip */
+.figs{
+  display:flex;flex-wrap:wrap;gap:0;margin:0 0 16px;
+  border:1px solid var(--line-soft);border-radius:8px;overflow:hidden;
+  background:var(--surface-2);
+}
+.fig{padding:10px 16px;flex:1 1 auto;min-width:104px;border-right:1px solid var(--line-soft)}
+.fig:last-child{border-right:0}
+.fig b{
+  display:block;font-family:"IBM Plex Mono",monospace;font-weight:600;
+  font-size:20px;font-variant-numeric:tabular-nums;color:var(--ink);line-height:1.2;
+}
+.fig span{display:block;font-size:11.5px;color:var(--muted);letter-spacing:.02em;margin-top:2px}
+
+/* evidence / quoted rows */
+.rows{
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.7;
+  background:var(--surface-2);border:1px solid var(--line-soft);border-radius:8px;
+  padding:12px 14px;margin:0 0 16px;overflow-x:auto;white-space:pre-wrap;
+  color:var(--ink-2);
+}
+.rows .hi{color:var(--amber);font-weight:600}
+
+details.more{margin:0 0 16px;border-top:1px solid var(--line-soft);padding-top:10px}
+details.more summary{
+  cursor:pointer;font-size:13px;font-weight:600;color:var(--accent);
+  list-style:none;display:inline-flex;align-items:center;gap:6px;
+}
+details.more summary::-webkit-details-marker{display:none}
+details.more summary::before{content:"+";font-family:"IBM Plex Mono",monospace}
+details.more[open] summary::before{content:"–"}
+details.more summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+details.more .body{margin-top:10px}
+
+/* ---------- ask block ---------- */
+.ask{
+  border-top:1px solid var(--line);margin-top:4px;padding-top:14px;
+}
+.ask .q{
+  font-size:11px;font-family:"IBM Plex Mono",monospace;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted);margin:0 0 8px;
+}
+.ask .qt{font-weight:600;font-size:15.5px;margin:0 0 10px;color:var(--ink)}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);
+  border-radius:99px;padding:7px 14px;font-size:14px;font-weight:500;
+  cursor:pointer;transition:background .12s ease,border-color .12s ease,color .12s ease;
+  font-family:inherit;
+}
+@media (prefers-reduced-motion: reduce){.pill{transition:none}}
+.pill:hover{border-color:var(--accent);color:var(--ink)}
+.pill input{position:absolute;opacity:0;width:0;height:0}
+.pill .tick{
+  width:14px;height:14px;border-radius:99px;border:1.5px solid var(--muted);flex:none;
+}
+.pill.on{background:var(--accent-soft);border-color:var(--accent);color:var(--ink);font-weight:600}
+.pill.on .tick{border-color:var(--accent);background:var(--accent);box-shadow:inset 0 0 0 2.5px var(--surface)}
+.pill:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.rec{
+  font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--amber);
+}
+
+.note{
+  margin-top:10px;width:100%;border:1px solid var(--line);background:var(--surface-2);
+  color:var(--ink);border-radius:8px;padding:9px 11px;font-family:inherit;font-size:14px;
+  resize:vertical;min-height:38px;
+}
+.note::placeholder{color:var(--muted)}
+.note:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+
+/* ---------- todo ---------- */
+.todo{
+  background:var(--amber-soft);border:1px solid var(--amber);border-radius:var(--radius);
+  padding:18px 20px;margin:0 0 44px;
+}
+.todo h2{font-size:19px;margin:0 0 4px}
+.todo p{margin:0 0 12px;color:var(--ink-2);font-size:14.5px}
+.todo ol{margin:0;padding-left:20px;display:grid;gap:9px}
+.todo li{font-size:15px;color:var(--ink)}
+.todo code{
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;
+  background:var(--surface);padding:1px 5px;border-radius:4px;border:1px solid var(--line);
+}
+
+/* ---------- finish ---------- */
+.finish{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:22px;
+}
+.finish h2{font-size:20px;margin:0 0 6px}
+.finish p{margin:0 0 14px;color:var(--ink-2);font-size:15px}
+.btn{
+  font-family:inherit;font-size:15px;font-weight:600;cursor:pointer;
+  background:var(--accent);color:var(--on-accent);border:1px solid var(--accent);
+  padding:10px 18px;border-radius:8px;
+}
+.btn:hover{filter:brightness(1.06)}
+.btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.btn.ghost{background:transparent;color:var(--accent);border-color:var(--line)}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.said{font-size:13.5px;color:var(--good);font-weight:600}
+#out{
+  margin-top:14px;width:100%;min-height:200px;border:1px solid var(--line);
+  border-radius:8px;background:var(--surface-2);color:var(--ink);
+  font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.6;padding:12px;
+}
+.hidden{display:none}
+
+footer{
+  margin-top:40px;padding-top:18px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--muted);
+  display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+}
+footer .mono{font-family:"IBM Plex Mono",monospace}
+</style></head><body>
+<div class="wrap">
+<div class="top"><p class="eyebrow">Project YOU &middot; Nov 15, 2026</p>
+<h1>74 hours of last week are unlogged. Seven quick answers make it accurate.</h1>
+<p class="standfirst">Guessing would make the banner wrong, so I listed the gaps between everything you logged, awake time only (Apple Watch wake to lights out), gaps of 30 minutes or more. Tell me what mostly filled each day and I will turn it into a rule, so future weeks fill themselves.</p></div>
+<div class="tally"><span class="count" id="count"></span><span class="meter"><i id="bar"></i></span><span class="hint">Your answers save in this browser as you go.</span></div>
+<section id="s1"><div class="sec-head"><h2>Last week, day by day</h2></div>
+<p class="sec-sub">Pick what mostly filled the gaps. If a day was split, choose Mixed and tell me which hours in the note.</p>
+<div class="card"><h3>Monday Nov 2</h3><p>Awake gaps with nothing on Todays Tasks.</p><div class="rows">7:15 a.m. to 12:00 p.m.   4.8 h
+2:00 p.m. to 2:30 p.m.   0.5 h
+11:00 p.m. to 12:08 a.m.   1.1 h</div><div class="ask" data-q="mon"><p class="q">Question 1</p><p class="qt">What mostly filled these gaps on Monday?</p><div class="pills"><label class="pill"><input type="radio" name="mon" value="Day Job (Amazon)"><span class="tick"></span>Day Job (Amazon) <span class="rec">suggested</span></label><label class="pill"><input type="radio" name="mon" value="Creative Time (Project YOU or TreadWell)"><span class="tick"></span>Creative Time (Project YOU or TreadWell)</label><label class="pill"><input type="radio" name="mon" value="Meals, chores or personal"><span class="tick"></span>Meals, chores or personal</label><label class="pill"><input type="radio" name="mon" value="Family or social"><span class="tick"></span>Family or social</label><label class="pill"><input type="radio" name="mon" value="Mixed, I will explain"><span class="tick"></span>Mixed, I will explain</label><label class="pill"><input type="radio" name="mon" value="Leave it unlogged"><span class="tick"></span>Leave it unlogged</label></div><textarea class="note" data-note="mon" rows="1" placeholder="Anything to add? (optional)"></textarea></div></div><div class="card"><h3>Tuesday Nov 3</h3><p>Awake gaps with nothing on Todays Tasks.</p><div class="rows">8:00 a.m. to 3:00 p.m.   7.0 h
+5:00 p.m. to 8:00 p.m.   3.0 h
+8:16 p.m. to 9:26 p.m.   1.2 h
+9:33 p.m. to 12:18 a.m.   2.8 h</div><div class="ask" data-q="tue"><p class="q">Question 2</p><p class="qt">What mostly filled these gaps on Tuesday?</p><div class="pills"><label class="pill"><input type="radio" name="tue" value="Day Job (Amazon)"><span class="tick"></span>Day Job (Amazon) <span class="rec">suggested</span></label><label class="pill"><input type="radio" name="tue" value="Creative Time (Project YOU or TreadWell)"><span class="tick"></span>Creative Time (Project YOU or TreadWell)</label><label class="pill"><input type="radio" name="tue" value="Meals, chores or personal"><span class="tick"></span>Meals, chores or personal</label><label class="pill"><input type="radio" name="tue" value="Family or social"><span class="tick"></span>Family or social</label><label class="pill"><input type="radio" name="tue" value="Mixed, I will explain"><span class="tick"></span>Mixed, I will explain</label><label class="pill"><input type="radio" name="tue" value="Leave it unlogged"><span class="tick"></span>Leave it unlogged</label></div><textarea class="note" data-note="tue" rows="1" placeholder="Anything to add? (optional)"></textarea></div></div><div class="card"><h3>Wednesday Nov 4</h3><p>Awake gaps with nothing on Todays Tasks.</p><div class="rows">8:55 a.m. to 10:00 a.m.   1.1 h
+2:30 p.m. to 7:21 p.m.   4.9 h
+8:06 p.m. to 10:12 p.m.   2.1 h
+10:16 p.m. to 11:42 p.m.   1.4 h</div><div class="ask" data-q="wed"><p class="q">Question 3</p><p class="qt">What mostly filled these gaps on Wednesday?</p><div class="pills"><label class="pill"><input type="radio" name="wed" value="Day Job (Amazon)"><span class="tick"></span>Day Job (Amazon) <span class="rec">suggested</span></label><label class="pill"><input type="radio" name="wed" value="Creative Time (Project YOU or TreadWell)"><span class="tick"></span>Creative Time (Project YOU or TreadWell)</label><label class="pill"><input type="radio" name="wed" value="Meals, chores or personal"><span class="tick"></span>Meals, chores or personal</label><label class="pill"><input type="radio" name="wed" value="Family or social"><span class="tick"></span>Family or social</label><label class="pill"><input type="radio" name="wed" value="Mixed, I will explain"><span class="tick"></span>Mixed, I will explain</label><label class="pill"><input type="radio" name="wed" value="Leave it unlogged"><span class="tick"></span>Leave it unlogged</label></div><textarea class="note" data-note="wed" rows="1" placeholder="Anything to add? (optional)"></textarea></div></div><div class="card"><h3>Thursday Nov 5</h3><p>Awake gaps with nothing on Todays Tasks.</p><div class="rows">6:30 a.m. to 7:22 a.m.   0.9 h
+7:51 a.m. to 9:00 a.m.   1.2 h
+9:15 a.m. to 2:30 p.m.   5.3 h
+3:00 p.m. to 5:00 p.m.   2.0 h
+5:30 p.m. to 7:21 p.m.   1.9 h
+8:08 p.m. to 10:12 p.m.   2.1 h
+10:16 p.m. to 11:48 p.m.   1.5 h</div><div class="ask" data-q="thu"><p class="q">Question 4</p><p class="qt">What mostly filled these gaps on Thursday?</p><div class="pills"><label class="pill"><input type="radio" name="thu" value="Day Job (Amazon)"><span class="tick"></span>Day Job (Amazon) <span class="rec">suggested</span></label><label class="pill"><input type="radio" name="thu" value="Creative Time (Project YOU or TreadWell)"><span class="tick"></span>Creative Time (Project YOU or TreadWell)</label><label class="pill"><input type="radio" name="thu" value="Meals, chores or personal"><span class="tick"></span>Meals, chores or personal</label><label class="pill"><input type="radio" name="thu" value="Family or social"><span class="tick"></span>Family or social</label><label class="pill"><input type="radio" name="thu" value="Mixed, I will explain"><span class="tick"></span>Mixed, I will explain</label><label class="pill"><input type="radio" name="thu" value="Leave it unlogged"><span class="tick"></span>Leave it unlogged</label></div><textarea class="note" data-note="thu" rows="1" placeholder="Anything to add? (optional)"></textarea></div></div><div class="card"><h3>Friday Nov 6</h3><p>Awake gaps with nothing on Todays Tasks.</p><div class="rows">6:20 a.m. to 7:29 a.m.   1.2 h
+7:46 a.m. to 10:30 a.m.   2.7 h
+9:00 p.m. to 11:23 p.m.   2.4 h</div><div class="ask" data-q="fri"><p class="q">Question 5</p><p class="qt">What mostly filled these gaps on Friday?</p><div class="pills"><label class="pill"><input type="radio" name="fri" value="Day Job (Amazon)"><span class="tick"></span>Day Job (Amazon) <span class="rec">suggested</span></label><label class="pill"><input type="radio" name="fri" value="Creative Time (Project YOU or TreadWell)"><span class="tick"></span>Creative Time (Project YOU or TreadWell)</label><label class="pill"><input type="radio" name="fri" value="Meals, chores or personal"><span class="tick"></span>Meals, chores or personal</label><label class="pill"><input type="radio" name="fri" value="Family or social"><span class="tick"></span>Family or social</label><label class="pill"><input type="radio" name="fri" value="Mixed, I will explain"><span class="tick"></span>Mixed, I will explain</label><label class="pill"><input type="radio" name="fri" value="Leave it unlogged"><span class="tick"></span>Leave it unlogged</label></div><textarea class="note" data-note="fri" rows="1" placeholder="Anything to add? (optional)"></textarea></div></div><div class="card"><h3>Saturday Nov 7</h3><p>Awake gaps with nothing on Todays Tasks.</p><div class="rows">6:30 a.m. to 8:21 a.m.   1.9 h
+10:38 a.m. to 2:39 p.m.   4.0 h
+3:18 p.m. to 12:07 a.m.   8.8 h</div><div class="ask" data-q="sat"><p class="q">Question 6</p><p class="qt">What mostly filled these gaps on Saturday?</p><div class="pills"><label class="pill"><input type="radio" name="sat" value="Day Job (Amazon)"><span class="tick"></span>Day Job (Amazon)</label><label class="pill"><input type="radio" name="sat" value="Creative Time (Project YOU or TreadWell)"><span class="tick"></span>Creative Time (Project YOU or TreadWell)</label><label class="pill"><input type="radio" name="sat" value="Meals, chores or personal"><span class="tick"></span>Meals, chores or personal <span class="rec">suggested</span></label><label class="pill"><input type="radio" name="sat" value="Family or social"><span class="tick"></span>Family or social</label><label class="pill"><input type="radio" name="sat" value="Mixed, I will explain"><span class="tick"></span>Mixed, I will explain</label><label class="pill"><input type="radio" name="sat" value="Leave it unlogged"><span class="tick"></span>Leave it unlogged</label></div><textarea class="note" data-note="sat" rows="1" placeholder="Anything to add? (optional)"></textarea></div></div><div class="card"><h3>Sunday Nov 8</h3><p>Awake gaps with nothing on Todays Tasks.</p><div class="rows">12:00 p.m. to 1:00 p.m.   1.0 h
+6:29 p.m. to 9:21 p.m.   2.9 h
+9:29 p.m. to 11:36 p.m.   2.1 h</div><div class="ask" data-q="sun"><p class="q">Question 7</p><p class="qt">What mostly filled these gaps on Sunday?</p><div class="pills"><label class="pill"><input type="radio" name="sun" value="Day Job (Amazon)"><span class="tick"></span>Day Job (Amazon)</label><label class="pill"><input type="radio" name="sun" value="Creative Time (Project YOU or TreadWell)"><span class="tick"></span>Creative Time (Project YOU or TreadWell)</label><label class="pill"><input type="radio" name="sun" value="Meals, chores or personal"><span class="tick"></span>Meals, chores or personal <span class="rec">suggested</span></label><label class="pill"><input type="radio" name="sun" value="Family or social"><span class="tick"></span>Family or social</label><label class="pill"><input type="radio" name="sun" value="Mixed, I will explain"><span class="tick"></span>Mixed, I will explain</label><label class="pill"><input type="radio" name="sun" value="Leave it unlogged"><span class="tick"></span>Leave it unlogged</label></div><textarea class="note" data-note="sun" rows="1" placeholder="Anything to add? (optional)"></textarea></div></div></section>
+<div class="card"><h3>What I will do with your answers</h3><p>I will not touch your logged hours. I will turn each answer into a plain rule (for example: weekdays 9 to 6 with no other entry count as Day Job), show you the rule before it goes live, and the banner and the Unlogged number will follow it every week.</p></div>
+<div class="finish"><h2>Send me your answers</h2><p>Tap the button, then paste into the chat. Unanswered days are marked so I leave them alone.</p>
+<div class="btnrow"><button class="btn" id="copy">Copy my answers</button><button class="btn ghost" id="show">Show the text</button><span class="said hidden" id="said">Copied.</span></div><textarea id="out" class="hidden" readonly></textarea></div>
+<footer><span>Project YOU &middot; Unlogged time</span><span class="mono">Nov 15, 2026</span></footer></div>
+<script>
+(function(){
+  /* ONE ENTRY PER QUESTION, in page order. k must match both the radio
+     group's name= and the ask block's data-q=. q is the question as it will
+     appear in the text he pastes back, so write it so it stands alone.
+     RULE 3: seven is the ceiling. Past that he stops tapping. */
+  var QS=[{k:'mon',q:'What mostly filled the gaps on Monday Nov 2?'},{k:'tue',q:'What mostly filled the gaps on Tuesday Nov 3?'},{k:'wed',q:'What mostly filled the gaps on Wednesday Nov 4?'},{k:'thu',q:'What mostly filled the gaps on Thursday Nov 5?'},{k:'fri',q:'What mostly filled the gaps on Friday Nov 6?'},{k:'sat',q:'What mostly filled the gaps on Saturday Nov 7?'},{k:'sun',q:'What mostly filled the gaps on Sunday Nov 8?'}];
+  /* Namespace the storage key by page and date so two reviews never collide. */
+  var KEY='dr-unlogged-2026-11-15';
+  var state={};
+
+  try{ var raw=localStorage.getItem(KEY); if(raw) state=JSON.parse(raw)||{}; }catch(e){ state={}; }
+
+  function save(){ try{ localStorage.setItem(KEY,JSON.stringify(state)); }catch(e){} }
+
+  function paint(){
+    QS.forEach(function(o){
+      var v=state[o.k]&&state[o.k].choice;
+      document.querySelectorAll('input[name="'+o.k+'"]').forEach(function(i){
+        var on=(i.value===v);
+        i.checked=on;
+        i.closest('.pill').classList.toggle('on',on);
+      });
+      var n=document.querySelector('[data-note="'+o.k+'"]');
+      if(n) n.value=(state[o.k]&&state[o.k].note)||'';
+    });
+    var done=QS.filter(function(o){return state[o.k]&&state[o.k].choice;}).length;
+    document.getElementById('count').textContent=done+' of '+QS.length+' answered';
+    document.getElementById('bar').style.width=Math.round(done/QS.length*100)+'%';
+  }
+
+  document.querySelectorAll('.pill input[type=radio]').forEach(function(i){
+    i.addEventListener('change',function(){
+      var k=i.name;
+      state[k]=state[k]||{};
+      state[k].choice=i.value;
+      save(); paint();
+    });
+  });
+  document.querySelectorAll('.note').forEach(function(n){
+    n.addEventListener('input',function(){
+      var k=n.getAttribute('data-note');
+      state[k]=state[k]||{};
+      state[k].note=n.value;
+      save();
+    });
+  });
+
+  function build(){
+    var out=['My answers: Unlogged time by day, Nov 15, 2026',''];
+    QS.forEach(function(o,idx){
+      var s=state[o.k]||{};
+      out.push((idx+1)+'. '+o.q);
+      out.push('   → '+(s.choice||'(not answered: leave this one)'));
+      if(s.note&&s.note.trim()) out.push('   note: '+s.note.trim());
+      out.push('');
+    });
+    return out.join('\n');
+  }
+
+  var said=document.getElementById('said'), out=document.getElementById('out');
+  function flash(t){ said.textContent=t; said.classList.remove('hidden'); setTimeout(function(){said.classList.add('hidden');},2600); }
+
+  document.getElementById('copy').addEventListener('click',function(){
+    var txt=build();
+    out.value=txt;
+    var ok=false;
+    try{
+      out.classList.remove('hidden');
+      out.select(); out.setSelectionRange(0,txt.length);
+      ok=document.execCommand&&document.execCommand('copy');
+    }catch(e){ ok=false; }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){ flash('Copied.'); },function(){ flash(ok?'Copied.':'Select the text below and copy it.'); });
+    }else{
+      flash(ok?'Copied.':'Select the text below and copy it.');
+    }
+  });
+  document.getElementById('show').addEventListener('click',function(){
+    out.value=build();
+    out.classList.toggle('hidden');
+  });
+
+  paint();
+})();
+</script><script src="nav-config.js"></script><script src="navpatch.js"></script></body></html>
