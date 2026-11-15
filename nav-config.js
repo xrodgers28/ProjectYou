@@ -338,7 +338,7 @@ window.PAGE_VERSIONS = {
   "all-lists.html": "v1.3",
   "travel.html": "v1.2",
   "badges.html": "v1.0",
-  "modes-of-transport.html": "v1.11",
+  "modes-of-transport.html": "v1.12",
   "drink-log.html": "v1.3",
   "editors.html": "v1.0",
   "reconciliation.html": "v1.0",
