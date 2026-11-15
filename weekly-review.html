@@ -1232,7 +1232,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
 /* v6.36, Nov 6 2026, Scott: Local Safari cards: maps a third of the height and dimmed 50%, dotted 40% border, X moved to the corner so it no longer covers the stamp, photos 15% taller, Log Safari Moment and Add photos on one line in the outlined style, title plural when there is more than one. */
 /* v6.35, Nov 6 2026, Scott: Local Safari maps use the muted Project YOU blue look with a blue diamond pin (see the .safmini and .safpin styles). */
 /* v6.40, Nov 7 2026, Scott: the minutes picker always has a 5m option. */
-const VERSION='v6.45'; /* v6.45, Nov 15, 2026, Scott: new Methods of Transport banner under Upcoming Trips. Weekly summary of the modes used, with a pull-down shade of lanes. */
+const VERSION='v6.46'; /* v6.46, Nov 15, 2026, Scott: Methods of Transport now opens by default, follows the week arrows at the top, and fills past weeks from trips (flights, Amtrak, ferries). */ /* v6.45, Nov 15, 2026, Scott: new Methods of Transport banner under Upcoming Trips. Weekly summary of the modes used, with a pull-down shade of lanes. */
 (function(){ /* v6.05: Sleep Synopsis refresh button. Icon choice: A circular arrow, B two chasing arrows, C cloud with down arrow. */
   const SLP_REFRESH_ICON='A';
   const ICONS_R={
@@ -4857,7 +4857,7 @@ hkRenderStars();
       else if(w.kind==='cycling'){add('bike',1,+w.minutes||0,0,{mi:(+w.distance||0)*0.621371});cycDays[w.day]=1;}
     });
     S.rows.forEach(function(r){
-      var k=LOGMAP[r.mode]; if(!k)return;
+      var k=r.k; if(!k)return;
       if(k==='bike'&&cycDays[r.day])return; /* the same ride is already counted from the workout */
       var d=DEF[k]; add(k,1,d.typ,d.wait); M[k].est=true;
     });
@@ -4953,7 +4953,7 @@ hkRenderStars();
     list.forEach(function(m){tN+=m.n;tT+=m.t;});
     var anyEst=list.some(function(m){return m.est;});
     var h='<div class="stage">'+'<h2 class="ttl">Methods of Transport</h2><div class="dsc">My week on the move · '+wk+'</div>'
-      +'<div class="smp">'+(S.failed?'Could not load this week':(S.end>=todayStr()?'Week in progress':'Week complete'))+'</div>';
+      +'<div class="smp">'+(S.failed?'Could not load this week':(S.start>todayStr()?'Week ahead':(S.end>=todayStr()?'Week in progress':'Week complete')))+'</div>';
     var fl=figs(list);
     fl.forEach(function(f){
       var st=pc(f.x,f.y,f.w,f.h);
@@ -4978,23 +4978,66 @@ hkRenderStars();
     S.list=list;
   }
   /* ---------- load ---------- */
+  function weekRange(){
+    var we=(typeof WEEK_END!=='undefined'&&/^\d{4}-\d{2}-\d{2}$/.test(WEEK_END))?WEEK_END:weekOf(todayStr())[1];
+    return[iso(new Date(pd(we).getTime()-6*864e5)),we];
+  }
+  function isLocal(loc){return !loc||/,\s*(NY|CT|NJ)\b/i.test(loc);}
+  var TAPTYPE={airplane:'flight',ferry:'ferry',train:'train'};
+  function reconcile(taps,trips,segs){
+    var T=(trips||[]).filter(function(t){return !t.is_generic;}),out=[],have={},today=todayStr();
+    function tripOn(d){for(var i=0;i<T.length;i++)if(T[i].start_day<=d&&d<=T[i].end_day)return T[i];return null;}
+    taps.forEach(function(r){
+      var tr=tripOn(r.day),k;
+      if(r.mode==='train')k=(tr&&!isLocal(tr.location))?'amtrak':'mn'; /* a train tap while away on a trip outside NY, CT or NJ is Amtrak */
+      else k=LOGMAP[r.mode];
+      if(!k)return;
+      if(tr&&TAPTYPE[r.mode])have[tr.trip_id+'|'+TAPTYPE[r.mode]]=1;
+      out.push({day:r.day,k:k});
+    });
+    /* trips with no phone taps: take the journeys from the trip itself (first half out on the first day, the rest back on the last day) */
+    var by={};(segs||[]).forEach(function(g){var key=g.trip_id+'|'+g.seg_type;(by[key]=by[key]||[]).push(g);});
+    T.forEach(function(t){['flight','ferry','train'].forEach(function(ty){
+      var L=by[t.trip_id+'|'+ty];if(!L||have[t.trip_id+'|'+ty])return;
+      L.sort(function(a,b){return a.seg_order-b.seg_order;});
+      L.forEach(function(g,i){
+        var day=(i<L.length/2)?t.start_day:t.end_day;
+        if(day>today||day<S.start||day>S.end)return;
+        out.push({day:day,k:ty==='flight'?'air':ty==='ferry'?'ferry':(isLocal(t.location)?'mn':'amtrak'),trip:1});
+      });
+    });});
+    return out;
+  }
+  var seq=0;
   function load(){
-    var t=todayStr(),w=weekOf(t);S.start=w[0];S.end=w[1];
-    if(!window.sb){S.failed=true;render();return Promise.resolve();}
+    var w=weekRange();S.start=w[0];S.end=w[1];var my=++seq;
+    if(!window.sb){S.failed=true;render();reveal();return Promise.resolve();}
     var a=window.sb.from('transport_log').select('day,mode').gte('day',S.start).lte('day',S.end);
     var b=window.sb.from('health_workouts').select('day,kind,minutes,distance').gte('day',S.start).lte('day',S.end).in('kind',['walking','running','cycling']);
-    return Promise.all([a,b]).then(function(r){
-      S.failed=!!(r[0].error&&r[1].error);
-      S.rows=(r[0].data)||[];S.wk=(r[1].data)||[];S.loaded=true;render();reveal();
-    }).catch(function(){S.failed=true;render();reveal();});
+    var c=window.sb.from('tripit_trips').select('trip_id,location,start_day,end_day,is_generic').lte('start_day',S.end).gte('end_day',S.start);
+    return Promise.all([a,b,c]).then(function(r){
+      if(my!==seq)return;
+      var trips=(r[2]&&r[2].data)||[];
+      var ids=trips.map(function(t){return t.trip_id;});
+      var sp=ids.length?window.sb.from('tripit_segments').select('trip_id,seg_type,seg_order').in('trip_id',ids):Promise.resolve({data:[]});
+      return sp.then(function(sr){
+        if(my!==seq)return;
+        S.failed=!!(r[0].error&&r[1].error);
+        S.wk=(r[1].data)||[];
+        S.rows=reconcile((r[0].data)||[],trips,(sr&&sr.data)||[]);
+        S.loaded=true;render();reveal();
+      });
+    }).catch(function(){if(my!==seq)return;S.failed=true;render();reveal();});
   }
+  (function(){var w0=weekRange();S.start=w0[0];S.end=w0[1];})();
   render();
   function go(){load();}
   try{
     if(window.sb&&window.sb.auth){window.sb.auth.getSession().then(function(r){if(r&&r.data&&r.data.session)go();else window.sb.auth.onAuthStateChange(function(ev,ses){if(ses&&!S.loaded)go();});}).catch(go);}
     else go();
   }catch(e){go();}
-  document.addEventListener('visibilitychange',function(){if(!document.hidden&&S.loaded){if(S.end<todayStr()||true)load();}});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&S.loaded){load();}});
+  (function(){var lab=document.getElementById('weekLabel'),tm=null;if(lab&&window.MutationObserver)new MutationObserver(function(){clearTimeout(tm);tm=setTimeout(function(){if(S.loaded)load();},150);}).observe(lab,{childList:true,characterData:true,subtree:true});})();
   window.__TM={state:S,render:render,load:load,build:build};
 })();
 
