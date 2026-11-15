@@ -117,6 +117,7 @@ function today(){try{if(window.PY&&PY.today)return PY.today()}catch(e){}return n
 function lastWeekStart(){var t=today(),dow=new Date(ymd(t)).getUTCDay(),thisMon=addD(t,-((dow+6)%7));return addD(thisMon,-7)}
 function mins(str,base){var m=/^(\d{4}-\d{2}-\d{2})T(\d\d):(\d\d)/.exec(str||'');if(!m)return null;return Math.round((ymd(m[1])-ymd(base))/864e5)*1440+(+m[2])*60+(+m[3])}
 function lab(s){var a=s.split('-');return MON[+a[1]-1]+' '+(+a[2])}
+var CAP={'2026-11-08|966':15};/* Scott, Nov 15: Sunday walk logged as 143 min shows as 15 on the banner only */
 function build(mon,bl,hm,hh){
  var days=[],sleep={};
  hm.forEach(function(r){var x=r.extras||{};if(x.sleepStart&&x.sleepEnd&&!sleep[r.day])sleep[r.day]=x});
@@ -133,8 +134,9 @@ function build(mon,bl,hm,hh){
   cue.sort(function(a,c){return a.s-c.s});var cur=null;
   cue.forEach(function(c){if(cur&&c.s<=cur.s+cur.m+2){cur.m=Math.max(cur.m,c.s+c.m-cur.s)}else{if(cur)b.push({s:cur.s,m:cur.m,t:'mind',l:'Cue cards'});cur={s:c.s,m:c.m}}});
   if(cur)b.push({s:cur.s,m:cur.m,t:'mind',l:'Cue cards'});
-  if(!meds){if(hh.some(function(h){return h.day===day}))b.push({s:380,m:10,t:'mind',l:'Meditate'});else miss.push(380)}
+  if(!meds&&!hh.some(function(h){return h.day===day}))miss.push(380);/* Meditate only shows where a real time was tagged on the cue card page */
   var rise=sleep[day]?mins(sleep[day].sleepEnd,day):null,bed=sleep[nx]?mins(sleep[nx].sleepStart,day):null;
+  b.forEach(function(x){if(CAP[day+'|'+x.s]&&x.m>CAP[day+'|'+x.s])x.m=CAP[day+'|'+x.s]});
   days.push({d:DN[i],dt:lab(day),rise:rise,bed:bed,blocks:b,miss:miss})}
  var rs=days.filter(function(d){return d.rise!=null}),bs=days.filter(function(d){return d.bed!=null});
  var ar=rs.length?Math.round(rs.reduce(function(a,d){return a+d.rise},0)/rs.length):300,ab=bs.length?Math.round(bs.reduce(function(a,d){return a+d.bed},0)/bs.length):1740;
