@@ -58,6 +58,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,
 .weeklabel{font-size:12.5px;font-weight:700;color:var(--muted);min-width:150px;text-align:center}
 .btn{border:1px solid #cfd3d9;background:#fff;border-radius:6px;padding:3px 10px;font-size:12px;cursor:pointer;color:#333;text-decoration:none}
 /* v6.27, Nov 4, 2026, Scott: Nested Boxes tab wears the same colours as Checkerboard (soft section tints, Amazon apricot, Project YOU pink, dark text). */
+/* v6.44, Nov 14, 2026, Scott: the Sleep Synopsis warning now also names nights missing in the middle of the week, not only a feed that has gone quiet at the end. */
 /* v6.42, Nov 11 2026, Scott: Safari cards with no picture borrow a Swarm venue photo (kept in SAF_VPHOTO). */
 /* v6.41, Nov 9, 2026, Scott: the orange "trip coming up soon" ring around the trip banner is thinner (2px to 1px), both themes. */
 /* v6.32, Nov 6, 2026, Scott: the trip banner countdown label now reads DAYS TO GO (was DAYS LEFT); one day reads DAY TO GO. */
@@ -1230,7 +1231,7 @@ sb.auth.onAuthStateChange((_ev,_ss)=>{if(!_ss){var _a=document.getElementById('a
 /* v6.36, Nov 6 2026, Scott: Local Safari cards: maps a third of the height and dimmed 50%, dotted 40% border, X moved to the corner so it no longer covers the stamp, photos 15% taller, Log Safari Moment and Add photos on one line in the outlined style, title plural when there is more than one. */
 /* v6.35, Nov 6 2026, Scott: Local Safari maps use the muted Project YOU blue look with a blue diamond pin (see the .safmini and .safpin styles). */
 /* v6.40, Nov 7 2026, Scott: the minutes picker always has a 5m option. */
-const VERSION='v6.43';
+const VERSION='v6.44';
 (function(){ /* v6.05: Sleep Synopsis refresh button. Icon choice: A circular arrow, B two chasing arrows, C cloud with down arrow. */
   const SLP_REFRESH_ICON='A';
   const ICONS_R={
@@ -2133,7 +2134,19 @@ function renderSleep(){
     if(last<addDays(PY.today(),-1)){
       box.innerHTML='Last sleep received: <b>'+esc(fmt(last,true))+'</b>. Your phone has not sent newer Apple Health data since.';
       box.style.display='';
-    }else{box.style.display='none';}
+    }else{
+      /* v6.44, Nov 14, 2026, Scott: the line above only catches a feed that has gone quiet at the END.
+         Nov 10 and 11 were missing in the MIDDLE of the week (the phone caught up on later nights only),
+         so nothing warned. Now any night before today with no sleep reading is named. Today is left
+         out because this morning's sleep arrives with the morning send. */
+      const today=PY.today();
+      const gone=(S2.nights||[]).filter(n=>n.rating==null&&n.d<today).map(n=>n.d);
+      if(gone.length){
+        const names=gone.length<=3?gone.map(d=>esc(fmt(d))).join(gone.length===2?' and ':', '):(gone.length+' nights, '+esc(fmt(gone[0]))+' to '+esc(fmt(gone[gone.length-1])));
+        box.innerHTML='No sleep received for <b>'+names+'</b>. If your watch recorded them, open Health Auto Export on your phone and re-send those dates.';
+        box.style.display='';
+      }else{box.style.display='none';}
+    }
   }catch(e){}})();
 }
 /* v4.4: the window shade. One control, three things behind it. */
