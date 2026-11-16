@@ -21,6 +21,7 @@
   /* v2.32 (Nov 14, 2026): one source per row, keep tile last; suggested source row sits above Photographers. */
   #sparksSuggest{margin:6px 0 14px}
   .w2sparks .spshade + .spshade{margin-top:18px}
+  /* v2.37 (Nov 15, 2026): thumbs down, or New ones, on a suggested source closes it for the day and deals five from a different museum out of the library. Votes now work for any source, not just two. */
   /* v2.36 (Nov 14, 2026): Keep rolls the row up like a window shade and drops a new tile into Everything else; Drop makes the row disappear. */
   .spshade{position:relative;overflow:hidden;transition:height .75s cubic-bezier(.55,.05,.25,1),margin .75s cubic-bezier(.55,.05,.25,1)}
   .spshade .spin{transition:transform .75s cubic-bezier(.55,.05,.25,1),opacity .6s ease .1s}
@@ -795,7 +796,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.36</span></h1>
+      <h1>Sparkboard <span class="ver">v2.37</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -904,7 +905,7 @@
   </div>
 
   <div id="err"></div>
-  <div class="stamp" id="stamp">v2.36</div>
+  <div class="stamp" id="stamp">v2.37</div>
 </div>
 
 <aside class="stx-col">
@@ -2927,9 +2928,13 @@ document.addEventListener("click",function(e){
     fetch(SB+"/rest/v1/rpc/spark_refresh",{method:"POST",headers:{apikey:KEY,Authorization:"Bearer "+KEY,"Content-Type":"application/json"},body:JSON.stringify({p_origin:ro})})
       .then(function(r){ if(!r.ok) throw new Error(r.status); return r.json(); })
       .then(function(n){
-        if(n>0){ return sparksLoad().then(function(){ toast("Fresh pictures from "+ro+"."); }); }
+        if(n>0){ return sparksLoad().then(function(){
+          if(ro==="Pinterest"){ toast("Fresh pictures from "+ro+"."); return; }
+          var last=SPARKS&&SPARKS.rows.length?SPARKS.rows[SPARKS.rows.length-1].origin:"";
+          toast("Closed "+ro+" for today. Five new ones from "+last+".");
+        }); }
         rf.disabled=false; rf.classList.remove("spin");
-        toast(ro==="Pinterest"?"No fresh Pinterest finds are banked. Ask Claude to restock them.":"No fresh ones are banked from "+ro+" yet.");
+        toast(ro==="Pinterest"?"No fresh Pinterest finds are banked. Ask Claude to restock them.":"No other source has fresh cards left. Ask Claude to restock the library.");
       })
       .catch(function(){ rf.disabled=false; rf.classList.remove("spin"); toast("That refresh did not work. Try again."); });
     return;
@@ -2958,13 +2963,13 @@ document.addEventListener("click",function(e){
       SPARKS.votes[o]=want; SPARKS.shaded=SPARKS.shaded||{}; SPARKS.shaded[o]=1;
       var key=res[0];
       var y=window.pageYOffset;
-      return sparkRefreshBoard().then(function(){
+      return sparkRefreshBoard().then(function(){ return go?null:sparksLoad(); }).then(function(){
         window.scrollTo(0,y);
         if(go&&key){
           var t=document.querySelector('.w2t[data-k="'+key+'"]');
           if(t){ t.classList.add("spring"); try{ t.scrollIntoView({block:"nearest",behavior:"smooth"}); }catch(e){} }
         }
-        toast(go?"Added "+o+" to Everything else.":"Dropped "+o+". Those pictures are gone.","Undo",function(){
+        toast(go?"Added "+o+" to Everything else.":(key?"Closed "+o+" for today. Five new ones from "+key+".":"Closed "+o+" for today. No other source has fresh cards left."),"Undo",function(){
           delete SPARKS.votes[o]; if(SPARKS.shaded) delete SPARKS.shaded[o];
           sparkRpc(o,"clear").then(function(){ return sparkRefreshBoard(); }).then(function(){ return sparksLoad(); })
             .then(function(){ toast("Back as it was."); }).catch(function(){ toast("That did not undo. Try again."); });
