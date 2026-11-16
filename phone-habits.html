@@ -178,6 +178,7 @@ var DEF = [
     ['platform','Train platform','trainplatform','Men','core'],
     ['walkwork','Walk to work','walk','Phys','core'],
     ['walkgc','Walk to GC','walk-gc','Phys','core'],
+    ['cwater','Water','water-v2','Phys','core'],
     ['mental','Mental Fitness','cogelevate','Men','core'],
     ['master','MasterClass','cap-v2','Men','sec']]},
   {id:'cards', title:'Habit Cue Cards', items:[]},
@@ -350,6 +351,11 @@ function ensure(){
       var at = S.layout.commute.indexOf('platform'); S.layout.commute.splice(at < 0 ? 0 : at + 1, 0, x);
     });
     S.m316 = 1; save();
+  }
+  if (!S.m317) { /* v2.5: a Water key joins Commute, after the walks */
+    var inW = Object.keys(S.layout).some(function(s){ return S.layout[s].indexOf('cwater') > -1; }) || (S.parked || []).some(function(r){ return r.id === 'cwater'; });
+    if (!inW && S.layout.commute) { var aw = Math.max(S.layout.commute.indexOf('walkgc'), S.layout.commute.indexOf('walkwork'), S.layout.commute.indexOf('platform')); S.layout.commute.splice(aw + 1, 0, 'cwater'); }
+    S.m317 = 1; save();
   }
   if (!S.layout.bonus) {
     var bonusIds = ['stretch','balance','asa'];
@@ -581,9 +587,11 @@ root.addEventListener('click', function(e){
     if (window.__lp) { window.__lp = 0; return; }
     var wasDone = isDone(it);
     if (it[5] || it[0] === 'coffee') { S.counts[it[0]] = (S.counts[it[0]] || 0) + 1; if (it[0] === 'coffee') S.done.coffee = 1; }
-    else { if (S.done[it[0]]) delete S.done[it[0]]; else S.done[it[0]] = 1; }
+    else { if (S.done[it[0]]) delete S.done[it[0]]; else S.done[it[0]] = 1;
+      if (it[0] === 'cwater') S.counts.water = Math.max(0, (S.counts.water || 0) + (S.done.cwater ? 1 : -1)); }  /* v2.5: commute Water adds (or takes back) one glass on the Water counter */
     render();
     commit(it[0], 'tap');
+    if (it[0] === 'cwater') commit('water', S.done.cwater ? 'tap' : 'undo');
     if (isDone(it) && !wasDone) {
       var tk = dayKey();
       if (dayDone() && !dayBefore && S.fxDay !== tk) { S.fxDay = tk; save(); celebrateDay(); }
@@ -772,6 +780,7 @@ var SPEC = {
   walk:{tr:'Walk', task:'Walk', grp:'Physical Health', est:10},
   walkwork:{tr:'Walk to work', task:'Walk to work', grp:'Physical Health', est:10},
   walkgc:{tr:'Walk to GC', task:'Walk to GC', grp:'Physical Health', est:10},
+  cwater:{tr:'Water on commute', task:'Water on commute', grp:'Physical Health', est:1},
   wiwut:{tr:'What I Woke Up To', task:'WIWUT', alt:['What I Woke Up To'], grp:'Environmental Health', est:1},
   platform:{tr:'Train platform', task:'Train platform', grp:'Mental Fitness', est:5},
   mental:{tr:'Mental Fitness', task:'Mental Fitness (Elevate, Imprint, Impulse)', alt:['Mental Fitness'], grp:'Mental Fitness', est:15},
@@ -1267,7 +1276,7 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
   var nav = document.createElement('div'); nav.className = 'dnav'; nav.id = 'dnav';
   nav.innerHTML = '<div class="dnp"><button type="button" id="dnP" aria-label="Previous day">\u2039</button><span id="dnL">Today</span><button type="button" id="dnN" aria-label="Next day">\u203a</button></div><button type="button" class="dnb" id="dnT" hidden>Back to today</button>';
   hint.parentNode.insertBefore(nav, hint.nextSibling);
-  var ver = document.createElement('p'); ver.className = 'dnv'; ver.textContent = 'v2.4'; nav.parentNode.insertBefore(ver, nav.nextSibling);
+  var ver = document.createElement('p'); ver.className = 'dnv'; ver.textContent = 'v2.5'; nav.parentNode.insertBefore(ver, nav.nextSibling);
   function paint(){
     var t = PY.today(), v = VD(), min = addDays(t, -365);
     document.getElementById('dnL').textContent = v === t ? 'Today' : niceDay(v);
@@ -1372,5 +1381,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v2.4--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v2.5--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
