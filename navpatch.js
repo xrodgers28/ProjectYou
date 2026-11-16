@@ -1,3 +1,10 @@
+/* ROBOTO, SITEWIDE (Nov 16, 2026, Scott: "replace any instances of SF Mono with Roboto" across Project YOU).
+   Loads Roboto once for every page that loads this file, and keeps digits equal-width so
+   chart numbers, timers and columns still line up now that the fixed-width font is gone. */
+(function(){try{if(document.getElementById('py-roboto'))return;var h=document.head||document.documentElement;
+var l=document.createElement('link');l.id='py-roboto';l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap';h.appendChild(l);
+var s=document.createElement('style');s.id='py-roboto-num';s.textContent='html{font-variant-numeric:tabular-nums}';h.appendChild(s);}catch(e){}})();
+
 /* EMBEDDED PAGES CARRY NO NAV (Aug 23 2026, Scott: "clicking a sub page in the
    maps section creates a 2nd main nav row").
    The Maps hub previews each map in an iframe. The embedded page is a whole
