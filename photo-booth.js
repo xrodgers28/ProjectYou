@@ -128,7 +128,7 @@
     ".pbx-fold{display:flex;align-items:center;gap:8px;width:100%;background:none;border:0;border-top:1px dashed #e2e6ea;font:inherit;color:inherit;padding:8px 2px 2px;margin-top:4px;cursor:pointer;text-align:left}",
     ".pbx-fold:hover .pbx-flab{color:#3f6f8f}",
     ".pbx-fold:focus-visible{outline:2px solid #3f6f8f;outline-offset:2px;border-radius:4px}",
-    ".pbx-fchev{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;color:#7b8794;width:11px;flex:none;text-align:center}",
+    ".pbx-fchev{font-family:Roboto,Arial,sans-serif;font-size:12px;color:#7b8794;width:11px;flex:none;text-align:center}",
     ".pbx-flab{font-size:11.5px;color:#68737f}",
     ".pbx-fmeta{margin-left:auto;font-size:10px;color:#8b95a1;white-space:nowrap;font-variant-numeric:tabular-nums}",
     "@media (max-width:430px){.pbx-fold{flex-wrap:wrap}.pbx-fmeta{margin-left:19px;width:100%}}",
