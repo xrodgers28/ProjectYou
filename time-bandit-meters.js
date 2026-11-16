@@ -154,13 +154,13 @@
     '@media (max-width:900px){.tbm .tbmgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}',
     '.tbm .met{background:#fbfcfd;border:1px solid #edf0f5;border-radius:12px;padding:13px 10px 11px;',
     '  display:flex;flex-direction:column;align-items:center}',
-    '.tbm .big{font-family:ui-monospace,Menlo,Roboto,Arial,sans-serif;font-size:34px;font-weight:800;',
+    '.tbm .big{font-family:Roboto,Arial,sans-serif;font-size:34px;font-weight:800;',
     '  color:#1e8e5a;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}',
     '.tbm .big .of{font-size:20px;color:#8a8f99;font-weight:700}',
     '.tbm .biglab{font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#8a8f99;',
-    '  font-family:ui-monospace,Menlo,Roboto,Arial,sans-serif;margin:1px 0 9px}',
+    '  font-family:Roboto,Arial,sans-serif;margin:1px 0 9px}',
     '.tbm .mname{font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:#5b6472;',
-    '  font-family:ui-monospace,Menlo,Roboto,Arial,sans-serif;margin-top:9px;text-align:center;line-height:1.3}',
+    '  font-family:Roboto,Arial,sans-serif;margin-top:9px;text-align:center;line-height:1.3}',
     /* .mwrap is the link in the chain v1.3 first missed: it sits between the host
        and the pile, so if IT shrinks to fit then the pile's width:100% is 100% of
        nothing all over again. Full width, and it centres what it holds. */
@@ -185,7 +185,7 @@
     '.tbm .scol{display:flex;flex-direction:column;align-items:center;gap:3px}',
     '.tbm .stube{width:24px;background:#fff;border:1px solid #e3e7ee;border-radius:5px;display:flex;',
     '  flex-direction:column-reverse;padding:2px;gap:2px;overflow:hidden;position:relative}',
-    '.tbm .skey{font-family:ui-monospace,Menlo,Roboto,Arial,sans-serif;font-size:8.5px;color:#8a8f99;letter-spacing:.02em}',
+    '.tbm .skey{font-family:Roboto,Arial,sans-serif;font-size:8.5px;color:#8a8f99;letter-spacing:.02em}',
     '.tbm .scol.full .skey{color:#1e8e5a;font-weight:700}',
     /* thermo */
     '.tbm .thermo{width:40px;background:#eef2f8;border:1px solid #e3e7ee;border-radius:13px;display:flex;',

@@ -122,8 +122,8 @@ window.GUARDRAILS = [
       '.gr-tag.live{color:#1e8e5a;background:#e8f5ef}.gr-tag.proposed{color:#b07d1e;background:#fbf2e0}'+
       '.gr-lbl{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;display:block;margin-top:8px}'+
       '.gr-txt{font-size:12.5px;color:#5b6472;line-height:1.5}'+
-      '.gr-where{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#3f6f8f}'+
-      '.gr-rec{display:inline-block;margin-top:8px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;'+
+      '.gr-where{font-family:Roboto,Arial,sans-serif;font-size:11.5px;color:#3f6f8f}'+
+      '.gr-rec{display:inline-block;margin-top:8px;font-family:Roboto,Arial,sans-serif;font-size:11.5px;'+
         'color:#3f6f8f;background:#eef2f8;border-radius:7px;padding:4px 8px}'+
       '.gr-line{display:flex;gap:12px;align-items:baseline;padding:7px 0;border-bottom:1px solid #eef1f6}'+
       '.gr-line:last-child{border-bottom:0}'+
