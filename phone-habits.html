@@ -344,19 +344,18 @@ function ensure(){
     if (!inAny && S.layout.counters) S.layout.counters.push('energy');
     S.m315 = 1; save();
   }
-  if (!S.m316) { /* v2.4: two walk keys join Commute, after Train platform */
-    ['walkgc','walkwork'].forEach(function(x){
-      var inAny = Object.keys(S.layout).some(function(s){ return S.layout[s].indexOf(x) > -1; }) || (S.parked || []).some(function(r){ return r.id === x; });
-      if (inAny || !S.layout.commute) return;
-      var at = S.layout.commute.indexOf('platform'); S.layout.commute.splice(at < 0 ? 0 : at + 1, 0, x);
+  /* v2.6: Commute keys are added whenever they are missing (a saved layout from before v2.4 could hide them) */
+  (function(){
+    var added = false;
+    function has(x){ return Object.keys(S.layout).some(function(s){ return S.layout[s].indexOf(x) > -1; }) || (S.parked || []).some(function(r){ return r.id === x; }); }
+    if (!S.layout.commute) return;
+    ['walkwork','walkgc','cwater'].forEach(function(x, i, arr){
+      if (has(x)) return;
+      var at = -1; ['platform'].concat(arr.slice(0, i)).forEach(function(p){ var j = S.layout.commute.indexOf(p); if (j > at) at = j; });
+      S.layout.commute.splice(at + 1, 0, x); added = true;
     });
-    S.m316 = 1; save();
-  }
-  if (!S.m317) { /* v2.5: a Water key joins Commute, after the walks */
-    var inW = Object.keys(S.layout).some(function(s){ return S.layout[s].indexOf('cwater') > -1; }) || (S.parked || []).some(function(r){ return r.id === 'cwater'; });
-    if (!inW && S.layout.commute) { var aw = Math.max(S.layout.commute.indexOf('walkgc'), S.layout.commute.indexOf('walkwork'), S.layout.commute.indexOf('platform')); S.layout.commute.splice(aw + 1, 0, 'cwater'); }
-    S.m317 = 1; save();
-  }
+    if (added) save();
+  })();
   if (!S.layout.bonus) {
     var bonusIds = ['stretch','balance','asa'];
     Object.keys(S.layout).forEach(function(s){ S.layout[s] = S.layout[s].filter(function(x){ return bonusIds.indexOf(x) < 0; }); });
@@ -1276,7 +1275,7 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
   var nav = document.createElement('div'); nav.className = 'dnav'; nav.id = 'dnav';
   nav.innerHTML = '<div class="dnp"><button type="button" id="dnP" aria-label="Previous day">\u2039</button><span id="dnL">Today</span><button type="button" id="dnN" aria-label="Next day">\u203a</button></div><button type="button" class="dnb" id="dnT" hidden>Back to today</button>';
   hint.parentNode.insertBefore(nav, hint.nextSibling);
-  var ver = document.createElement('p'); ver.className = 'dnv'; ver.textContent = 'v2.5'; nav.parentNode.insertBefore(ver, nav.nextSibling);
+  var ver = document.createElement('p'); ver.className = 'dnv'; ver.textContent = 'v2.6'; nav.parentNode.insertBefore(ver, nav.nextSibling);
   function paint(){
     var t = PY.today(), v = VD(), min = addDays(t, -365);
     document.getElementById('dnL').textContent = v === t ? 'Today' : niceDay(v);
@@ -1381,5 +1380,5 @@ async function boot(){
 boot();
 
 </script>
-<!--ver v2.5--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+<!--ver v2.6--><script src="nav-config.js"></script><script src="navpatch.js"></script></body>
 </html>
