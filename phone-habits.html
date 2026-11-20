@@ -1277,7 +1277,7 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
   var nav = document.createElement('div'); nav.className = 'dnav'; nav.id = 'dnav';
   nav.innerHTML = '<div class="dnp"><button type="button" id="dnP" aria-label="Previous day">\u2039</button><span id="dnL">Today</span><button type="button" id="dnN" aria-label="Next day">\u203a</button></div><button type="button" class="dnb" id="dnT" hidden>Back to today</button>';
   hint.parentNode.insertBefore(nav, hint.nextSibling);
-  var ver = document.createElement('p'); ver.className = 'dnv'; ver.textContent = 'v2.7'; nav.parentNode.insertBefore(ver, nav.nextSibling);
+  var ver = document.createElement('p'); ver.className = 'dnv'; ver.textContent = 'v2.8'; nav.parentNode.insertBefore(ver, nav.nextSibling);
   function paint(){
     var t = PY.today(), v = VD(), min = addDays(t, -365);
     document.getElementById('dnL').textContent = v === t ? 'Today' : niceDay(v);
@@ -1301,7 +1301,7 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
   css.textContent = '.esh{position:fixed;inset:0;z-index:99990;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center}.esh[hidden]{display:none}' +
    '.esc{width:100%;max-width:520px;background:var(--bg);color:var(--text);border-top:1px solid var(--line);border-radius:18px 18px 0 0;padding:16px 16px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;max-height:88vh;overflow:auto;font-family:-apple-system,Arial,sans-serif}' +
    '.esc h3{margin:0;font:700 22px/1.1 Georgia,serif}.esc p{margin:0;color:var(--muted);font-size:14px;line-height:1.4}' +
-   '.esc textarea{width:100%;box-sizing:border-box;min-height:120px;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:12px;font-size:17px;line-height:1.35;font-family:inherit;resize:vertical}' +
+   '.esc textarea::placeholder{color:var(--muted);opacity:.45;font-style:italic}.esc textarea{width:100%;box-sizing:border-box;min-height:120px;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:12px;font-size:17px;line-height:1.35;font-family:inherit;resize:vertical}' +
    '.esc .row{display:flex;gap:10px}.esc button{flex:1;border-radius:12px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:13px;font-size:16px;font-weight:600;font-family:inherit}' +
    '.esc button.go{background:#d08a12;border-color:#d08a12;color:#14110a}' +
    '.esc ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}.esc li{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:15px}.esc li span{flex:1}.esc li b{font-weight:400;color:var(--muted);padding:2px 8px;cursor:pointer}';
@@ -1309,7 +1309,7 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
   var el = document.createElement('div'); el.className = 'esh'; el.hidden = true;
   el.innerHTML = '<div class="esc" role="dialog" aria-label="What gave me energy"><h3>What gave me energy today</h3>' +
     '<p>Tap the microphone on your keyboard and list them out loud. Each sentence or line becomes its own entry.</p>' +
-    '<textarea id="esT" placeholder="Rooftop at Citizen M. Flow time on the train. Lunch with a friend." autocapitalize="sentences"></textarea>' +
+    '<textarea id="esT" placeholder="Example: Rooftop at Citizen M. Flow time on the train. Lunch with a friend." autocapitalize="sentences"></textarea>' +
     '<div class="row"><button id="esC">Clear</button><button id="esX">Close</button><button class="go" id="esS">Save</button></div>' +
     '<p id="esM"></p><ul id="esL"></ul></div>';
   document.body.appendChild(el);
@@ -1321,6 +1321,7 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
     L.innerHTML = rows.map(function(r){ return '<li data-id="' + r.id + '"><span></span><b title="Remove">×</b></li>'; }).join('');
     Array.prototype.forEach.call(L.children, function(li, i){ li.firstChild.textContent = rows[i].text; });
   }
+  el.querySelector('#esX').addEventListener('touchend', function(ev){ ev.preventDefault(); el.hidden = true; }, {passive:false});
   async function open(){ el.hidden = false; M.textContent = ''; try { await list(); } catch (e) { M.textContent = 'Could not load today’s list.'; } setTimeout(function(){ T.focus(); }, 150); }
   el.addEventListener('click', async function(e){
     if (e.target === el || e.target.id === 'esX') { el.hidden = true; return; }
@@ -1330,14 +1331,14 @@ document.getElementById('gateForm').addEventListener('submit', async function(e)
       if (r.error) { M.textContent = 'Could not remove it: ' + r.error.message; return; } await list(); return;
     }
     if (e.target.id === 'esS') {
-      var items = split(T.value); if (!items.length) { M.textContent = 'Nothing to save yet.'; return; }
+      var items = split(T.value); if (!items.length) { M.textContent = 'The box is empty. Anything you already saved is in the list below.'; return; }
       e.target.disabled = true; M.textContent = 'Saving...';
       try {
         var day = VD(), mx = await sb.from('energy_notes').select('position').eq('day', day).order('position', {ascending:false}).limit(1);
         var p = (mx.data && mx.data[0]) ? mx.data[0].position + 1 : 0, now = new Date().toISOString();
         var ins = await sb.from('energy_notes').insert(items.map(function(t, i){ return {day:day, text:t, tag:'', position:p + i, status:'sent', sent_at:now}; }));
         if (ins.error) throw ins.error;
-        T.value = ''; M.textContent = 'Saved ' + items.length + (items.length === 1 ? ' entry.' : ' entries.'); await list(); toast('Energy saved: ' + items.length);
+        T.value = ''; M.textContent = 'Saved ' + items.length + (items.length === 1 ? ' entry.' : ' entries.'); await list(); toast('Energy saved: ' + items.length); setTimeout(function(){ el.hidden = true; }, 900);
       } catch (err) { M.textContent = 'Could not save: ' + (err.message || err); }
       e.target.disabled = false;
     }
