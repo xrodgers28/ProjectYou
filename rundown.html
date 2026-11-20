@@ -90,7 +90,7 @@
   .empty{padding:40px 20px;text-align:center;color:var(--muted)}
   .toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#1f2a44;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;z-index:2147483002}
   .stamp{margin-top:20px;font-size:10.5px;color:var(--onbg);opacity:.45;text-align:center}
-  /* v4.4 (Nov 14, 2026): all tile pictures capped to one shape (about twice as wide as tall); tip and insight tiles can show a picture. */
+  /* v4.5 (Nov 20, 2026): AI Agents tiles get a workflow layout. v4.4 (Nov 14, 2026): all tile pictures capped to one shape (about twice as wide as tall); tip and insight tiles can show a picture. */
   /* v4.3 (Nov 8, 2026): weekend back issues. When Workflow of the Day runs dry on a Saturday or Sunday, pull one unused AI Training tip (or Roundtable piece) and tag it with the existing .seenb badge so it's clear it's from an older issue. */
   /* v4.2 (Nov 8, 2026): Feeds panel. Tiny icon left of the timer opens a sheet showing today's deck mix by feed, on/off switches, and an add box */
   .tile .fic{position:absolute;top:12px;right:46px;width:26px;height:26px;border-radius:50%;border:1px solid var(--key);background:rgba(255,255,255,.92);display:grid;place-items:center;cursor:pointer;z-index:2;padding:0;box-shadow:0 1px 4px rgba(0,0,0,.18)}
@@ -136,12 +136,12 @@
 
 <div class="wrap">
   <div class="kick">Cue card &middot; your daily AI workout</div>
-  <h1>AI Workout <span class="ver">v4.4</span></h1>
+  <h1>AI Workout <span class="ver">v4.5</span></h1>
   <div class="sub" id="sub">Loading today&rsquo;s drill</div>
   <div class="dots" id="dots"></div>
   <div id="deck"></div>
   <div class="note">Each day: one tip, one insight, one GenAI Works pick, four new platforms and two real workflows. Once a week, one AI Training guide (from Monday) and one Roundtable, two stories as two tiles (from Friday). Workflows, guides and roundtables come from The Rundown AI; platforms come from Hugging Face trending and There&rsquo;s An AI For That (three of the four). On weekends, two picks from GenAI Works&rsquo; Top 5 tools of the week. Tap the small feeds icon on any tile to see or switch the feeds.</div>
-  <div class="stamp" id="stamp">v4.4</div>
+  <div class="stamp" id="stamp">v4.5</div>
 </div>
 
 <script>
@@ -419,6 +419,25 @@ function aiBody(t){
     });
     return {host:th,title:r.platform_name||r.title,html:h,link:r.platform_url?'<a class="more" href="'+esc(r.platform_url)+'" target="_blank" rel="noopener noreferrer">Check it out</a>':''};
   }
+  if(r.feed_key==="agents"){
+    /* v4.5 (Nov 20, 2026): AI Agents tiles, workflow style. Body lines: lead / How it does it: then "\u2022" bullet lines / What you need: / What it can touch: / Time saved: / Price: / Watch out: */
+    var inList=false;
+    String(r.body||"").split(/\n+/).forEach(function(ln,i){
+      var t2=ln.trim(); if(!t2) return;
+      var m=t2.match(/^(How it does it|What you need|What it can touch|Time saved|Price|Watch out):\s*(.*)$/);
+      if(inList && t2.charAt(0)!=="\u2022"){ h+='</ul>'; inList=false; }
+      if(m){
+        h+='<span class="wfl">'+esc(m[1])+'</span>';
+        if(m[2]) h+='<p>'+esc(m[2])+'</p>';
+        if(m[1]==="How it does it"){ h+='<ul style="margin:2px 0 0 18px;padding:0;font-size:15px;line-height:1.45">'; inList=true; }
+      } else if(t2.charAt(0)==="\u2022"){
+        if(!inList){ h+='<ul style="margin:2px 0 0 18px;padding:0;font-size:15px;line-height:1.45">'; inList=true; }
+        h+='<li style="margin:0 0 4px">'+esc(t2.replace(/^\u2022\s*/,""))+'</li>';
+      } else h+='<p'+(i===0?' class="wflog" style="font-style:normal;color:inherit"':'')+'>'+esc(t2)+'</p>';
+    });
+    if(inList) h+='</ul>';
+    return {title:r.title,html:h,link:r.source_url?'<a class="more" href="'+esc(r.source_url)+'" target="_blank" rel="noopener noreferrer">See the tool</a>':''};
+  }
   if(r.card_type==="genai"||r.card_type==="feed"){
     /* v4.1 (Nov 6, 2026, version bump with tenth GenAI Works tile); v4.0 (Nov 5, 2026, version bump with ninth GenAI Works tile); v3.9 (Nov 4, 2026, version bump with eighth GenAI Works tile); v3.8 (Oct 28, 2026, version bump with seventh GenAI Works tile); v3.7 (Oct 27, 2026, version bump with sixth GenAI Works tile); v3.6 (Oct 26, 2026, version bump with fifth GenAI Works tile); v3.4 (Oct 23, 2026, version bump with fourth GenAI Works tile; v3.3 Oct 22; v3.2 Oct 21; first built v3.1 Oct 20): GenAI Works daily tile. Body lines: what happened / Why it matters: / Try this: */
     String(r.body||"").split(/\n+/).forEach(function(ln,i){
@@ -440,6 +459,7 @@ function tileHTML(t,i,n){
     var a=aiBody(t); title=a.title; body=a.html; link=a.link; hostTxt=a.host||"";
     if(t.type==="platform"||t.type==="tool") kick+=" · "+r.__n+" of "+r.__of;
     if(t.type==="tip" && (r.deck_position||0)>50) kick="Extra tip";
+    if(r.feed_key==="agents") kick="AI Agents";
   } else {
     if(r.section==="Roundtable" && r.ai_summary && r.ai_summary.part && r.ai_summary.of>1) kick+=" · "+r.ai_summary.part+" of "+r.ai_summary.of;
     title=(r.ai_summary&&r.ai_summary.v===2&&r.ai_summary.headline)||r.title; body=rundownBody(r);
@@ -755,7 +775,7 @@ Promise.all([loadHidden(),loadFeeds()]).then(function(){ return Promise.all([dea
       .concat(rdRows.map(function(r){ return asTile("rd",r); }));
     tiles.sort(function(a,b){ return a.sort-b.sort; });
     ALLT=tiles; applyFeeds(); subLine();
-    document.getElementById("stamp").textContent="v4.4 · "+nice(today());
+    document.getElementById("stamp").textContent="v4.5 · "+nice(today());
     render();
   });
 }).catch(function(e){
