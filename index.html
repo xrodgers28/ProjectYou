@@ -9530,20 +9530,18 @@ render = function(){
 <script>(function(){var e=document.querySelector('.secbar .date');if(!e)return;var t;try{var p=PY.today().split('-');t=new Date(Date.UTC(+p[0],+p[1]-1,+p[2],12,0,0)).toLocaleDateString('en-US',{timeZone:'UTC',month:'short',day:'numeric',year:'numeric'});}catch(x){t=new Date().toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'});}e.textContent=t;})();</script>
 <script>
 (function(){
-  function cur(){var wv=document.getElementById('wheelview');
-    if(wv&&wv.style.display!=='none'&&wv.style.display!=='')return 'wheel';
-    return (typeof MASTER_ON!=='undefined'&&MASTER_ON)?'master':'board';}
+  function shown(id){var e=document.getElementById(id);return !!e&&e.style.display==='block'||(!!e&&getComputedStyle(e).display==='block');}
+  function cur(){if(shown('wheelview'))return 'wheel';if(shown('masterview'))return 'master';return 'board';}
   function mark(){var c=cur();document.querySelectorAll('#pytabs [data-tab]').forEach(function(b){b.classList.toggle('on',b.dataset.tab===c);});}
-  var _m=window.setMasterView, _w=window.setWheelView;
-  if(_m) window.setMasterView=function(x){var r=_m.apply(this,arguments);mark();return r;};
-  if(_w) window.setWheelView=function(x){var r=_w.apply(this,arguments);mark();return r;};
+  function tap(id){var e=document.getElementById(id);if(e)e.click();}
   var bar=document.getElementById('pytabs');
   if(bar) bar.addEventListener('click',function(e){
     var b=e.target.closest('[data-tab]');if(!b)return;var t=b.dataset.tab;
-    if(t==='master'){setWheelView(false);setMasterView(true);}
-    else if(t==='board'){setMasterView(false);setWheelView(false);}
-    else if(t==='wheel'){setMasterView(false);setWheelView(true);}
-    mark();});
+    if(t==='master'){if(shown('wheelview'))tap('viewtoggle');if(!shown('masterview'))tap('mastertoggle');}
+    else if(t==='wheel'){if(shown('masterview'))tap('mastertoggle');if(!shown('wheelview'))tap('viewtoggle');}
+    else {if(shown('wheelview'))tap('viewtoggle');if(shown('masterview'))tap('mastertoggle');}
+    setTimeout(mark,150);});
+  ['masterview','wheelview'].forEach(function(id){var e=document.getElementById(id);if(e)new MutationObserver(mark).observe(e,{attributes:true,attributeFilter:['style']});});
   function badge(){var chip=document.getElementById('waitchip'),n=document.getElementById('pytab-inbox-n');if(!chip||!n)return;
     var m=(chip.textContent||'').match(/\d+/);if(chip.classList.contains('on')&&m){n.textContent=m[0];n.classList.add('on');}else{n.classList.remove('on');}}
   var chip=document.getElementById('waitchip');
