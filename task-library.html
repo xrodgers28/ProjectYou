@@ -39,9 +39,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .rsubs2.shut{max-height:0;opacity:0}
 .rsub2{margin-left:10px}
 .rsub .grow,.rsub2 .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.car{border:0;background:transparent;padding:0 2px;font-size:11px;line-height:1;color:var(--muted);cursor:pointer;flex:none}
-.car::before{content:'\25BE'}
-.isshut>.rrow .car::before,.isshut>.rsub .car::before{content:'\25B8'}
+.rail .rrow,.rsub,.rsub2{user-select:none}
 .grip,.dg{cursor:grab;color:#9aa1ab;font-size:12px;user-select:none;touch-action:none;flex:none}
 .dg{margin-top:1px}
 .kebab{border:0;background:transparent;font-size:15px;line-height:1;color:#9aa1ab;cursor:pointer;padding:0 3px;border-radius:6px;flex:none;opacity:.5;transition:opacity .15s}
@@ -110,19 +108,19 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .emoin{width:100%;margin-top:6px;border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-size:12px;font-family:inherit}
 [data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:#1f2a44;color:#fff;font-size:11px;font-weight:600;line-height:1.2;padding:5px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s;z-index:90}
 [data-tip]:hover::after,[data-tip]:focus-visible::after{opacity:1}
-.menu{position:fixed;z-index:72;background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 8px 24px rgba(31,42,68,.18);padding:5px;display:none;min-width:176px}
+.menu{position:fixed;z-index:72;background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 8px 24px rgba(31,42,68,.18);padding:4px;display:none;min-width:176px}
 .menu.show{display:block}
-.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;font:inherit;font-size:12.5px;padding:7px 9px;border-radius:7px;cursor:pointer;color:var(--ink)}
+.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;font:inherit;font-size:12.5px;padding:3px 9px;border-radius:6px;cursor:pointer;color:var(--ink);line-height:1.35}
 .menu button:hover{background:#f1f3f6}
 .menu button.danger{color:#a3362c}
-.menu .lab{font-size:10px;color:var(--muted);margin:6px 0 3px 9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.menu .lab{font-size:10px;color:#2f5a74;margin:5px 0 2px 9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1f2a44;color:#fff;font-size:12.5px;padding:9px 15px;border-radius:9px;box-shadow:0 6px 18px rgba(0,0,0,.2);z-index:95;display:none}
 .toast.show{display:block}
 .toast button{margin-left:11px;border:0;background:#3f6f8f;color:#fff;font:inherit;font-size:12px;font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer}
 </style></head><body>
 <div class="wrap">
-<h1>Task Library<span class="ver">v2.2</span></h1>
-<p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Tap the icon to change its colour or icon. Drag the handle to reorder.</p>
+<h1>Task Library<span class="ver">v2.3</span></h1>
+<p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
 <div class="railwrap">
@@ -163,7 +161,7 @@ var ICON_MAP={}; ICON_LIB.forEach(function(x){ ICON_MAP[x[0]]=x[2]; });
 function iconHtml(ic){
   if(ic && ICON_MAP[ic]) return ICON_MAP[ic];
   if(ic && ic.indexOf('e:')===0) return '<span class="emo">'+esc(ic.slice(2))+'</span>';
-  return ICONS.other;
+  return '';
 }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function tip(el,t){ el.setAttribute('data-tip',t); el.setAttribute('aria-label',t); }
@@ -186,37 +184,49 @@ function tint(hex,a){ var m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m) return '#
 /* ---------- sample content, shown so the design can be judged, never saved ---------- */
 var DEMO=true; try{ if(localStorage.getItem('py_tasklib_demo')==='off') DEMO=false; }catch(e){}
 var SAMPLE={
- 'Habits Dashboard':['Add the meet ups sync','Check the streak rolls over at 2am'],
- 'Life Logging':['Let me fix a food log entry when the numbers are wrong'],
- "Today's Tasks":['Bring back the star option','Decide the Master list design'],
- 'Habit Remote':['Sketch the remote layout'],
- 'Elevator Pitch':['Write the 30 second version'],
- 'Activities: Boston':['Shortlist Boston activities'],
- 'Activities: Antigua':['Confirm the restaurant list'],
- 'New Location Onboarding':['Write the onboarding steps'],
- 'Vacay Trip Planner':['Draft the planner screens'],
- 'P&G':['Build the P&G deck','Braun grooming brief'],
- 'Olympics':['Review the Olympics brief'],
- 'Admin':['Expenses','Amazon calendar dates'],
- 'DIY':['Blinds in the bedroom','Clean Scotts desk'],
- 'Garden':['Cut back the hedge'],
- 'Groceries':['Weekly shop'],
- 'Errands':['Life preservers'],
- 'Finances':['Whitlock inheritance','Fetch, call about no payment'],
- 'Asa and Scott Tasks':['Asa items','New ADHD doctor for Asa'],
- 'Asa':['Time spent together'],
- 'College visits':['Emory Michigan, Nov 7','February break, California'],
- 'Applications and essays':['GreenGuy, feedback on the CV'],
- 'Conrad Challenge':['Edgar, engineer input on product development'],
- 'Max':['Call about the fraternity'],
- 'Tracking I need to log':['Log my day','Week in review'],
- 'Meet ups to arrange':['Ruth topics from the week'],
- 'Appointments to book':['Call Dr Shajan for an earlier slot'],
- 'Antigua':['Rental car','Restaurants shortlist'],
- 'Boston':['Xmas lunch, Saturday','Brookhaven, Sunday'],
- 'Waiting On':['Amazon locker number','Point B change, check the dates'],
- 'Build ideas':['SER Amazon store','Bumper stickers'],
- 'Project YOU ideas':['Scott 3.0','Discover my ikigai']
+ 'Projects':['Decide which project gets January'],
+ 'Habits Dashboard':['Add the meet ups sync','Check the streak rolls over at 2am','Color the transport banner','Make the stacks drag on the phone'],
+ 'Life Logging':['Let me fix a food log entry when the numbers are wrong','Pull the walks in from the watch','Add a quick note field to the day'],
+ "Today's Tasks":['Bring back the star option','Decide the Master list design','Quieter celebration when a task is ticked','Time chips after the tick'],
+ 'Habit Remote':['Sketch the remote layout','Decide which six habits sit on it','Try it one handed on the phone'],
+ 'Project YOU':['Write the week in review prompt'],
+ 'TreadWell':['Decide what launch actually means'],
+ 'Elevator Pitch':['Write the 30 second version','Test it on someone who does not know the project','Cut it to 15 seconds'],
+ 'Activities: Boston':['Shortlist Boston activities','Check which ones are open in December','Price the family pass'],
+ 'Activities: Antigua':['Confirm the restaurant list','Pick the two hikes','Book the rental car'],
+ 'New Location Onboarding':['Write the onboarding steps','Decide what a new location must supply','Draft the welcome email'],
+ 'Vacay Trip Planner':['Draft the planner screens','Decide how many days it plans','Try it with the Antigua trip'],
+ 'Amazon, my work':['Clear the inbox before Monday'],
+ 'Amazon':['Clear the inbox before Monday'],
+ 'P&G':['Build the P&G deck','Braun grooming brief','Send the recap to the team','Book the review with Lauren'],
+ 'Olympics':['Review the Olympics brief','Pull the reference reel','Draft three territories'],
+ 'Admin':['Expenses','Amazon calendar dates','Book the room for the readout'],
+ '6 Irvine':['Walk the house and list what is broken'],
+ 'DIY':['Blinds in the bedroom','Clean Scotts desk','Fix the loose stair rail','Touch up the hall paint'],
+ 'Garden':['Cut back the hedge','Order bulbs for spring','Clear the gutters'],
+ 'Groceries':['Weekly shop','Order the Christmas turkey','Restock the coffee'],
+ 'Errands':['Life preservers','Return the parcel','Pick up the dry cleaning'],
+ 'Finances':['Whitlock inheritance','Fetch, call about no payment','Look at Monarch Money','File the quarter'],
+ 'Asa and Scott Tasks':['Asa items','New ADHD doctor for Asa','Agree the Christmas plan','Book a night out'],
+ 'Family':['Plan the Christmas eve run through'],
+ 'Asa':['Time spent together','Pick her birthday present'],
+ 'Carson':['Call him on Sunday'],
+ 'College visits':['Emory Michigan, Nov 7','February break, California','Book the CMU trip','Spring break shortlist'],
+ 'Applications and essays':['GreenGuy, feedback on the CV','Draft the common app essay','Line up two recommenders'],
+ 'Conrad Challenge':['Edgar, engineer input on product development','Write the one page summary','Find a second teammate'],
+ 'Max':['Call about the fraternity','Send the care package'],
+ 'Tracking I need to log':['Log my day','Week in review','Log the ride from Thursday','Tag last week as a flow week'],
+ 'Social':['Reply to the group thread'],
+ 'Meet ups to arrange':['Ruth topics from the week','Lunch with Aaron','Coffee with the Boston team'],
+ 'Health and appointments':['Refill the medicine bottle'],
+ 'Appointments to book':['Call Dr Shajan for an earlier slot','Book the dentist','Book the eye test'],
+ 'Travel':['Decide the February half term plan'],
+ 'Antigua':['Rental car','Restaurants shortlist','Pack list','Check the passports'],
+ 'Boston':['Xmas lunch, Saturday','Brookhaven, Sunday','Book the train','Buy the gifts'],
+ 'Waiting On':['Amazon locker number','Point B change, check the dates','Quote for the blinds','Reply from the Elevate team'],
+ 'Parking Lot':['Read the piece on spaced repetition'],
+ 'Build ideas':['SER Amazon store','Bumper stickers','Cannes winners database','A physical device for Project YOU'],
+ 'Project YOU ideas':['Scott 3.0','Discover my ikigai','Fold in the principles of storytelling','The Wall, make it weekly']
 };
 function sampleFor(n){
   if(!DEMO) return [];
@@ -253,9 +263,9 @@ async function persistDel(n){ saveLocal(); if(LOCAL||!sb) return;
   try{ await sb.from('task_library').delete().eq('id', n.dbid); }catch(e){ console.warn(e); } }
 
 /* ---------- rail ---------- */
-function mkIco(n){ var d=document.createElement('span'); d.className='ico'; d.innerHTML=iconHtml(n.icon); return d; }
+function mkIco(n){ if(!n.icon) return null; var d=document.createElement('span'); d.className='ico'; d.innerHTML=iconHtml(n.icon); return d; }
 function mkGrip(n){ var g=document.createElement('span'); g.className='grip'; g.textContent='⋮⋮'; tip(g,'Drag to reorder'); dragHandle(g,n); return g; }
-function mkKeb(n){ var b=document.createElement('button'); b.type='button'; b.className='kebab'; b.innerHTML='⋯'; tip(b,'Rename, recolour or delete');
+function mkKeb(n){ var b=document.createElement('button'); b.type='button'; b.className='kebab'; b.innerHTML='⋯'; tip(b,'Rename, recolor or delete');
   b.addEventListener('click',function(e){ e.stopPropagation(); openMenu(n,b); }); return b; }
 function render(){
   var rail=document.getElementById('rail'); rail.innerHTML='';
@@ -266,11 +276,10 @@ function render(){
     li.style.setProperty('--w',tint(L.color,.88));
     li.style.setProperty('--hl',tint(L.color,.9));
     var row=document.createElement('div'); row.className='rrow';
-    row.appendChild(mkGrip(L)); row.appendChild(mkIco(L));
+    row.appendChild(mkGrip(L)); var li1=mkIco(L); if(li1) row.appendChild(li1);
     var g=document.createElement('span'); g.className='grow'; g.textContent=L.name; g.title=L.name; row.appendChild(g);
     var ks=kids(L.id);
-    if(ks.length){ var car=document.createElement('button'); car.type='button'; car.className='car'; tip(car,'Show or hide what is inside');
-      car.addEventListener('click',function(e){ e.stopPropagation(); SHUT[L.id]=!SHUT[L.id]; render(); }); row.appendChild(car); }
+    if(ks.length){ tip(row,'Double click to open or close'); row.addEventListener('dblclick',function(e){ e.preventDefault(); SHUT[L.id]=!SHUT[L.id]; render(); }); }
     var sm=document.createElement('span'); sm.className='sm'; sm.textContent=countUnder(L)||''; row.appendChild(sm);
     row.appendChild(mkKeb(L));
     row.addEventListener('click',function(){ SEL=L.id; render(); });
@@ -283,11 +292,10 @@ function render(){
         wrap.style.setProperty('--h',hc||'#cfd3d9'); wrap.style.setProperty('--hl',tint(hc,.9));
         var sr=document.createElement('div'); sr.className='rsub'+(kids(P.id).length?' rgroup':' rleaf')+(SEL===P.id?' sel':'');
         sr.appendChild(mkGrip(P));
-        if(P.icon) sr.appendChild(mkIco(P));
+        var pi1=mkIco(P); if(pi1) sr.appendChild(pi1);
         var pg=document.createElement('span'); pg.className='grow'; pg.textContent=P.name; pg.title=P.name; sr.appendChild(pg);
         var cs=kids(P.id);
-        if(cs.length){ var c2=document.createElement('button'); c2.type='button'; c2.className='car'; tip(c2,'Show or hide what is inside');
-          c2.addEventListener('click',function(e){ e.stopPropagation(); SHUT['p'+P.id]=!SHUT['p'+P.id]; render(); }); sr.appendChild(c2); }
+        if(cs.length){ tip(sr,'Double click to open or close'); sr.addEventListener('dblclick',function(e){ e.preventDefault(); SHUT['p'+P.id]=!SHUT['p'+P.id]; render(); }); }
         var ps=document.createElement('span'); ps.className='sm'; ps.textContent=countUnder(P)||''; sr.appendChild(ps);
         sr.appendChild(mkKeb(P));
         sr.addEventListener('click',function(){ SEL=P.id; render(); });
@@ -494,7 +502,7 @@ function openMenu(n, anchor){
   function item(label, fn, cls){ var b=document.createElement('button'); b.type='button'; b.textContent=label; if(cls) b.className=cls;
     b.addEventListener('click',function(e){ e.stopPropagation(); hideMenu(); fn(); }); menuEl.appendChild(b); }
   item('Rename', function(){ SEL=n.id; render(); setTimeout(function(){ var h=document.querySelector('.hd .sn'); if(h){ h.focus(); document.getSelection().selectAllChildren(h); } },30); });
-  item('Colour and icon', function(){ showPicker(n, anchor); });
+  item('Color and icon', function(){ showPicker(n, anchor); });
   item(n.level==='list'?'Add a project inside':'Add a sub-category', function(){ addChild(n, n.level==='list'?'New project':'New sub-category'); });
   var lab=document.createElement('div'); lab.className='lab'; lab.textContent='Label'; menuEl.appendChild(lab);
   var opts = (n.level==='subcategory') ? KIND_LIST : STATUS_LIST;
@@ -502,7 +510,7 @@ function openMenu(n, anchor){
   var pl=kids(null).filter(function(x){ return x.name==='Parking Lot'; })[0];
   if(pl && n.id!==pl.id && n.parent_id!==pl.id){
     var mv=document.createElement('div'); mv.className='lab'; mv.textContent='Move'; menuEl.appendChild(mv);
-    item('Park it, move to Parking Lot', function(){ parkIt(n, pl); });
+    item('Parking Lot', function(){ parkIt(n, pl); });
   }
   item('Delete', function(){ removeNode(n); }, 'danger');
   menuEl.classList.add('show');
@@ -587,7 +595,7 @@ function persistOrder(parentId){
   sibs.forEach(function(s){ sb.from('task_library').update({position:s.position}).eq('id', s.dbid).then(function(){},function(){}); });
 }
 
-/* ---------- colour and icon picker ---------- */
+/* ---------- color and icon picker ---------- */
 var PALETTE=['#cf9088','#FF9900','#5f9e6a','#8e7cc3','#5b8fce','#6fb0b5','#c05f7a','#e0975a','#a9741a','#8a93a1'];
 var PALETTE_NAMES=['Clay','Amazon orange','Green','Violet','Blue','Teal','Rose','Peach','Amber','Grey'];
 var customColors=[]; try{ customColors=JSON.parse(localStorage.getItem('py_tasklib_colors')||'[]'); }catch(e){}
@@ -595,7 +603,7 @@ var swBar=null, swPicker=null, swNode=null;
 function hidePicker(){ if(swBar) swBar.classList.remove('show'); swNode=null; }
 function applyColor(n,c){ hidePicker(); persist(n,{color:c}); render(); }
 function mkSw(c,n){ var b=document.createElement('button'); b.type='button'; b.className='sw'; b.style.background=c;
-  var i=PALETTE.indexOf(c); tip(b, i>=0?PALETTE_NAMES[i]:'Your colour');
+  var i=PALETTE.indexOf(c); tip(b, i>=0?PALETTE_NAMES[i]:'Your color');
   if((n.color||'').toLowerCase()===c.toLowerCase()) b.classList.add('on');
   b.addEventListener('click',function(e){ e.stopPropagation(); applyColor(n,c); }); return b; }
 function showPicker(n, anchor){
@@ -607,24 +615,24 @@ function showPicker(n, anchor){
     document.addEventListener('keydown',function(e){ if(e.key==='Escape') hidePicker(); });
     window.addEventListener('scroll', hidePicker, true); window.addEventListener('resize', hidePicker); }
   var keep=swPicker; swBar.innerHTML=''; swBar.appendChild(keep);
-  var l=document.createElement('div'); l.className='lab'; l.textContent='Colour'; swBar.appendChild(l);
+  var l=document.createElement('div'); l.className='lab'; l.textContent='Color'; swBar.appendChild(l);
   var row=document.createElement('div'); row.className='sws'; swBar.appendChild(row);
   PALETTE.forEach(function(c){ row.appendChild(mkSw(c,n)); });
   if(customColors.length){
-    var l2=document.createElement('div'); l2.className='lab'; l2.textContent='Your colours'; swBar.appendChild(l2);
+    var l2=document.createElement('div'); l2.className='lab'; l2.textContent='Your colors'; swBar.appendChild(l2);
     var r2=document.createElement('div'); r2.className='sws'; swBar.appendChild(r2);
     customColors.forEach(function(c){ r2.appendChild(mkSw(c,n)); });
   }
   var l3=document.createElement('div'); l3.className='lab'; l3.textContent='More'; swBar.appendChild(l3);
   var r3=document.createElement('div'); r3.className='sws'; swBar.appendChild(r3);
-  var plus=document.createElement('button'); plus.type='button'; plus.className='sw plus'; tip(plus,'Pick any colour'); plus.innerHTML='<span>+</span>';
+  var plus=document.createElement('button'); plus.type='button'; plus.className='sw plus'; tip(plus,'Pick any color'); plus.innerHTML='<span>+</span>';
   plus.addEventListener('click',function(e){ e.stopPropagation(); swPicker.value=(n.color&&/^#[0-9a-f]{6}$/i.test(n.color))?n.color:'#3f6f8f'; swPicker.click(); });
   r3.appendChild(plus);
   swPicker.onchange=function(){ var c=swPicker.value, t=swNode; if(!t) return;
     customColors=[c].concat(customColors.filter(function(x){return x.toLowerCase()!==c.toLowerCase();})).slice(0,6);
     try{ localStorage.setItem('py_tasklib_colors', JSON.stringify(customColors)); }catch(e){}
     applyColor(t,c); };
-  var reset=document.createElement('button'); reset.type='button'; reset.className='sw tool'; tip(reset,'Back to no colour'); reset.textContent='↺';
+  var reset=document.createElement('button'); reset.type='button'; reset.className='sw tool'; tip(reset,'Back to no color'); reset.textContent='↺';
   reset.addEventListener('click',function(e){ e.stopPropagation(); applyColor(n,null); }); r3.appendChild(reset);
   var l4=document.createElement('div'); l4.className='lab'; l4.textContent='Icon in front'; swBar.appendChild(l4);
   var r4=document.createElement('div'); swBar.appendChild(r4);
