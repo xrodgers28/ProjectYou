@@ -88,6 +88,9 @@
   .pinw.spin{opacity:1;animation:pinwspin .5s ease-out}
   @keyframes pinwspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
   .read{font-size:12.5px;color:#4d5a67;margin-top:2px;line-height:1.4}
+  .goes{font-size:12px;font-weight:700;color:#1e8e5a;margin-top:2px}
+  .goes.nt{color:#6b7785}
+  .sec.grey .t{color:#6b7785}
   .metalinks{display:flex;align-items:center;gap:9px;margin-top:6px;flex-wrap:wrap}
   .mlink{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--faint);cursor:pointer;font-weight:500}
   .mlink:hover{color:var(--dim)}
@@ -243,7 +246,7 @@
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="staging-area.html" class="pn-link on">Staging<br>Area</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-ver">v1.0</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div></div>
 
   <div class="wrap">
-    <h1>Staging Area <span class="ver">v1.0</span> <span class="date" id="today"></span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table: where every note goes ›</a></h1>
+    <h1>Staging Area <span class="ver">v1.1</span> <span class="date" id="today"></span> <a href="input-routing.html" style="font-size:12px;font-weight:700;color:#3f6f8f;margin-left:10px;text-decoration:none;border:1px solid #cfd6df;border-radius:999px;padding:2px 10px;vertical-align:middle">🗺️ Routing table: where every note goes ›</a></h1>
     <p class="lede">Every idea (<b>Popcorn</b> 🍿) dictated to Drafts arrives here, and <b>waits</b>. Nothing reaches Todays Tasks until you say so. Claude proposes a destination for each; you <b>approve</b> it, reroute it, spin it to <b>Project You Ideas</b> with the pinwheel, or <b>dismiss</b> it. Every choice trains the next guess &mdash; shaky ones sit on top.</p>
 
     <div class="toprow"><button class="pullbtn" id="pullnow" title="Run the Drafts sweep right now instead of waiting for the next 2-hour run"><span class="sp">&#10227;</span> Pull from Drafts now</button><span class="saved" id="save"><span class="dt"></span> saved</span></div>
@@ -390,6 +393,14 @@ function guessOf(r){return r.stage_guess||'🧩 New projects to build';}
 function cleanHeadline(r){return r.task||'';}
 let RAW={};   // headline -> verbatim dictation, from the inbox table
 function rawOf(r){const h=(r.task||'').trim(); return RAW[h]||'';}
+// Labels only: a note that reads like a question, or is tagged, is held apart from the to-dos. Nothing is deleted or moved.
+function kindOf(r){
+  const t=(r.task||'').trim().toLowerCase(), n=(r.staging_note||'').trim().toLowerCase();
+  if(/^\[?quick fix\]?/.test(n)||/^\[?quick fix\]?/.test(t)) return 'Quick fix';
+  if(/^\[?question\]?/.test(n)||/^\[?question\]?/.test(t)) return 'Question';
+  if(t.endsWith('?')||/^(what|how|why|when|where|who|which|can you|could you|is it|are there|does|do i|should i)\b/.test(t)) return 'Question';
+  return '';
+}
 function readLine(r){ if(r.staging_note) return r.staging_note; return ''; }
 
 async function boot(){const {data:{session}}=await sb.auth.getSession();if(session)onLogin(session);}
@@ -508,7 +519,8 @@ function matchSearch(r){ if(!SEARCH)return true; return (cleanHeadline(r)+' '+(r
 
 function render(){
   const board=document.getElementById('board'); board.innerHTML='';
-  const rows=ROWS.filter(matchSearch);
+  const all=ROWS.filter(matchSearch);
+  const rows=all.filter(r=>!kindOf(r)), nots=all.filter(r=>kindOf(r));
   const review=rows.filter(r=>confOf(r)!=='hi').sort((a,b)=>CONF_RANK[confOf(a)]-CONF_RANK[confOf(b)]);
   const clear=rows.filter(r=>confOf(r)==='hi');
   // counts
@@ -524,6 +536,7 @@ function render(){
     board.appendChild(hr());
     if(!clear.length) board.appendChild(emptyLine('No high-confidence guesses yet.'));
     clear.forEach(r=>board.appendChild(rowNode(r)));
+    if(nots.length){ board.appendChild(secHead('grey','Not a to-do','quick fixes and questions, held apart')); board.appendChild(hr()); nots.forEach(r=>board.appendChild(rowNode(r))); }
   }
   updateScore();
 }
@@ -610,6 +623,8 @@ function rowNode(r){
   title.appendChild(hltext);
   title.appendChild(pinwheelNode(r));   // trails the headline, same as on Todays Tasks
   main.appendChild(title);
+  { const k=kindOf(r), g=document.createElement('div'); g.className='goes'+(k?' nt':'');
+    g.textContent=k?('Not a to-do: '+k+'. Held here, nothing is filed.'):('\u2192 Going to: '+disp(guessOf(r))); main.appendChild(g); }
   const rl=readLine(r); if(rl){const rd=document.createElement('div');rd.className='read';rd.textContent=rl;main.appendChild(rd);}
   // meta links
   const ml=document.createElement('div'); ml.className='metalinks';
