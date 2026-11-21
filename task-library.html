@@ -40,6 +40,12 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .rsub2{margin-left:10px}
 .rsub .grow,.rsub2 .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rail .rrow,.rsub,.rsub2{user-select:none}
+.car{border:0;background:transparent;padding:0 2px;font-size:11px;line-height:1;color:var(--muted);cursor:pointer;flex:none;opacity:.6}
+.car::before{content:'\25BE'}
+.isshut>.rrow .car::before,.isshut>.rsub .car::before{content:'\25B8'}
+.rrow:hover .car,.rsub:hover .car{opacity:1}
+.rsec.parked>.rrow{opacity:.55}
+.rsec.parked>.rrow .pk{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;background:#fdf6e6;color:var(--amber);border-radius:5px;padding:1px 5px;flex:none}
 .grip,.dg{cursor:grab;color:#9aa1ab;font-size:12px;user-select:none;touch-action:none;flex:none}
 .dg{margin-top:1px}
 .kebab{border:0;background:transparent;font-size:15px;line-height:1;color:#9aa1ab;cursor:pointer;padding:0 3px;border-radius:6px;flex:none;opacity:.5;transition:opacity .15s}
@@ -119,7 +125,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .toast button{margin-left:11px;border:0;background:#3f6f8f;color:#fff;font:inherit;font-size:12px;font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer}
 </style></head><body>
 <div class="wrap">
-<h1>Task Library<span class="ver">v2.3</span></h1>
+<h1>Task Library<span class="ver">v2.4</span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -173,7 +179,11 @@ var NODES=[], TASKS=[], SEL=null, SHUT={}, LOCAL=true, sb=null, SIGNED=false;
 var LKEY='py_tasklib_v2';
 function uid(){ return 'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 function saveLocal(){ try{ localStorage.setItem(LKEY, JSON.stringify(NODES)); }catch(e){} }
-function kids(id){ return NODES.filter(function(n){ return n.parent_id===id; }).sort(function(a,b){ return a.position-b.position; }); }
+function kids(id){
+  var ks=NODES.filter(function(n){ return n.parent_id===id; }).sort(function(a,b){ return a.position-b.position; });
+  if(id===null) ks.sort(function(a,b){ return (a.status==='Parked'?1:0)-(b.status==='Parked'?1:0); });
+  return ks;
+}
 function node(id){ for(var i=0;i<NODES.length;i++) if(NODES[i].id===id) return NODES[i]; return null; }
 function chain(id){ var c=[], n=node(id); while(n){ c.unshift(n); n=n.parent_id?node(n.parent_id):null; } return c; }
 function tint(hex,a){ var m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m) return '#f1f3f6';
@@ -182,7 +192,7 @@ function tint(hex,a){ var m=/^#?([0-9a-f]{6})$/i.exec(hex||''); if(!m) return '#
 
 
 /* ---------- sample content, shown so the design can be judged, never saved ---------- */
-var DEMO=true; try{ if(localStorage.getItem('py_tasklib_demo')==='off') DEMO=false; }catch(e){}
+var DEMO=false; try{ if(localStorage.getItem('py_tasklib_demo')==='on') DEMO=true; }catch(e){}
 var SAMPLE={
  'Projects':['Decide which project gets January'],
  'Habits Dashboard':['Add the meet ups sync','Check the streak rolls over at 2am','Color the transport banner','Make the stacks drag on the phone'],
@@ -279,7 +289,11 @@ function render(){
     row.appendChild(mkGrip(L)); var li1=mkIco(L); if(li1) row.appendChild(li1);
     var g=document.createElement('span'); g.className='grow'; g.textContent=L.name; g.title=L.name; row.appendChild(g);
     var ks=kids(L.id);
-    if(ks.length){ tip(row,'Double click to open or close'); row.addEventListener('dblclick',function(e){ e.preventDefault(); SHUT[L.id]=!SHUT[L.id]; render(); }); }
+    if(L.status==='Parked'){ li.classList.add('parked'); var pk=document.createElement('span'); pk.className='pk'; pk.textContent='Parked'; tip(pk,'Stays out of Today'); row.appendChild(pk); }
+    if(ks.length){ tip(row,'Double click to open or close');
+      row.addEventListener('dblclick',function(e){ e.preventDefault(); SHUT[L.id]=!SHUT[L.id]; render(); });
+      var car=document.createElement('button'); car.type='button'; car.className='car'; tip(car,'Open or close');
+      car.addEventListener('click',function(e){ e.stopPropagation(); SHUT[L.id]=!SHUT[L.id]; render(); }); row.appendChild(car); }
     var sm=document.createElement('span'); sm.className='sm'; sm.textContent=countUnder(L)||''; row.appendChild(sm);
     row.appendChild(mkKeb(L));
     row.addEventListener('click',function(){ SEL=L.id; render(); });
@@ -295,7 +309,10 @@ function render(){
         var pi1=mkIco(P); if(pi1) sr.appendChild(pi1);
         var pg=document.createElement('span'); pg.className='grow'; pg.textContent=P.name; pg.title=P.name; sr.appendChild(pg);
         var cs=kids(P.id);
-        if(cs.length){ tip(sr,'Double click to open or close'); sr.addEventListener('dblclick',function(e){ e.preventDefault(); SHUT['p'+P.id]=!SHUT['p'+P.id]; render(); }); }
+        if(cs.length){ tip(sr,'Double click to open or close');
+          sr.addEventListener('dblclick',function(e){ e.preventDefault(); SHUT['p'+P.id]=!SHUT['p'+P.id]; render(); });
+          var c2=document.createElement('button'); c2.type='button'; c2.className='car'; tip(c2,'Open or close');
+          c2.addEventListener('click',function(e){ e.stopPropagation(); SHUT['p'+P.id]=!SHUT['p'+P.id]; render(); }); sr.appendChild(c2); }
         var ps=document.createElement('span'); ps.className='sm'; ps.textContent=countUnder(P)||''; sr.appendChild(ps);
         sr.appendChild(mkKeb(P));
         sr.addEventListener('click',function(){ SEL=P.id; render(); });
@@ -426,6 +443,7 @@ function paintPane(){
   nt.textContent = n.level==='list'
     ? (ks.length? 'Everything filed under '+n.name+'. Each part has its own sub-categories.' : 'A flat list. Nothing inside it yet.')
     : (ks.length? 'Inside '+n.name+'.' : 'Nothing inside this one, tasks sit here directly.');
+  if(n.status==='Parked') nt.textContent += ' Parked, so it sits at the foot of the rail and will stay out of Today once the Library and your board join up.';
   p.appendChild(nt);
 
   if(ks.length){
