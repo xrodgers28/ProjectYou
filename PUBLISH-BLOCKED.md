@@ -2,6 +2,6 @@
 
 The version guard refused to overwrite newer published pages with older ones.
 
-- index.html: incoming v6.69 is OLDER than published v6.71
+- style-guide.html: incoming v2.15 is OLDER than published v3.0
 
 This usually means something published from a stale copy. Republish from the current version to clear this file.
