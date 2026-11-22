@@ -114,7 +114,7 @@ button{font:inherit}
 footer{display:flex;justify-content:space-between;color:var(--faint);font-family:var(--fn);font-weight:700;font-size:11.5px;margin-top:18px;flex-wrap:wrap;gap:8px}
 @media(max-width:900px){.rules{grid-template-columns:1fr}}
 </style></head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v1.3</span><span class="date" id="today"></span></div>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v1.4</span><span class="date" id="today"></span></div>
 <p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
@@ -141,7 +141,7 @@ footer{display:flex;justify-content:space-between;color:var(--faint);font-family
 <div><b>v0.20</b> Playable Staging Area, label, owner, star and link &middot; <a href="https://claude.ai/artifact/Vd3QU7DiTe7CnWwzrM23mj">open</a></div>
 <div><b>Build plan v0.17</b> The 375-minute plan this was built from &middot; <a href="https://claude.ai/artifact/9ocMs1oQ9wtnqNLxuifdHT">open</a></div>
 </div></div>
-<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v1.3 &middot; Nov 22, 2026</span></footer>
+<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v1.4 &middot; Nov 22, 2026</span></footer>
 </div><div id="tst"></div>
 <script src="pills-config.js"></script>
 <script>
@@ -302,7 +302,11 @@ window.addEventListener('resize',checkNarrow);
 /* SAMPLE FIRST, THEN LIVE (Scott's tick). Drafts and typed notes go live first. Gmail is
    the last switch and it always asks before anything reads his inbox. */
 var SUPA='https://arnjntspmrhigodlssbn.supabase.co';
-var ANON='ANONKEY';
+var ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+/* v1.4, Nov 22 2026: live mode uses your Todays Tasks sign-in (same site, same saved session).
+   Before this the key was a placeholder, so live mode could never read or save. */
+function HDR(extra){var tok=ANON;try{var s=JSON.parse(localStorage.getItem('sb-arnjntspmrhigodlssbn-auth-token')||'null');if(s&&s.access_token)tok=s.access_token}catch(e){}
+ var h={apikey:ANON,Authorization:'Bearer '+tok};if(extra)for(var k in extra)h[k]=extra[k];return h}
 function setData(m){
  if(m===2){if(!confirm('Reading your Gmail inbox for captures?\n\nThis is the only source that looks at your email. Drafts and typed notes do not.')){return}}
  DM=m;save('data',DM);
@@ -319,7 +323,7 @@ function mapRow(r){
 }
 function goLive(gmail){
  var u=SUPA+'/rest/v1/todos?select=*&staged=eq.true&archived=eq.false&order=created_at.desc&limit=200';
- fetch(u,{headers:{apikey:ANON,Authorization:'Bearer '+ANON}}).then(function(r){return r.ok?r.json():Promise.reject(r.status)})
+ fetch(u,{headers:HDR()}).then(function(r){return r.ok?r.json():Promise.reject(r.status)})
  .then(function(rows){
    if(!rows||!rows.length){toast('No notes waiting, or you are not signed in. Sign in on Todays Tasks and come back.');DM=0;save('data',0);ST=JSON.parse(JSON.stringify(SAMPLE));LIVE=null;render();return}
    if(!gmail)rows=rows.filter(function(r){return (r.origin||'')!=='Gmail'});
@@ -330,15 +334,40 @@ function goLive(gmail){
 }
 function writeLive(i,what){
  if(!LIVE)return;
+ /* v1.4 (Scott, Nov 22): "Items I tap to go to Today's Todos should land in the todays todos
+    section of the today panel." So a Today item goes to the BOTTOM of today, just above the
+    "Today ends here" line, and the line moves down one, the same as the add box on Today. */
+ if(what==='file'&&i.dest==='today')return fileToToday(i);
+ if(what==='unfile'&&i._today){i._today=false;lineBy(-1)}
  var body={};
  if(what==='file'){body.staged=false;body.section=i.label;body.bucket=(i.dest==='today'?'today':null);body.status='todo';if(i.est)body.est_min=i.est}
  else if(what==='park'){body.staged=false;body.section='Parking Lot';body.bucket=null}
  else if(what==='unfile'){body.staged=true}
  else if(what==='label'){body.section=i.label}
  else if(what==='star'){body.starred=!!i.star}
- fetch(SUPA+'/rest/v1/todos?id=eq.'+i.id,{method:'PATCH',headers:{apikey:ANON,Authorization:'Bearer '+ANON,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify(body)})
- .catch(function(){toast('That change did not save. Sign in on Todays Tasks and try again.')});
+ patchRow(i.id,body);
 }
+function bad(){toast('That change did not save. Sign in on Todays Tasks and try again.')}
+function patchRow(id,body){return fetch(SUPA+'/rest/v1/todos?id=eq.'+id,{method:'PATCH',headers:HDR({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(body)})
+ .then(function(r){if(!r.ok)return Promise.reject(r.status)}).catch(function(e){bad();return Promise.reject(e)})}
+var BLOCKS=['\u23F3 Waiting On','Need to Schedule','Coming Appointments','\u2713 Completed Tasks'];
+function getLine(){return fetch(SUPA+'/rest/v1/board_meta?select=val&key=eq.master_line',{headers:HDR()}).then(function(r){return r.ok?r.json():Promise.reject(r.status)})
+ .then(function(d){var n=d&&d[0]?Number(d[0].val):5;return isFinite(n)&&n>=0?n:5})}
+function setLine(n){return fetch(SUPA+'/rest/v1/board_meta?on_conflict=key',{method:'POST',headers:HDR({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:'master_line',val:n})})
+ .then(function(r){if(!r.ok)return Promise.reject(r.status)})}
+function lineBy(d){getLine().then(function(n){return setLine(Math.max(0,n+d))}).catch(bad)}
+function liveRows(){var q=SUPA+'/rest/v1/todos?select=id,position,section&done=not.is.true&skipped=not.is.true&archived=not.is.true&staged=not.is.true&is_habit=not.is.true&star_color=is.null'
+ +'&section=not.in.('+BLOCKS.map(function(s){return encodeURIComponent('"'+s+'"')}).join(',')+')&order=position.asc&limit=2000';
+ return fetch(q,{headers:HDR()}).then(function(r){return r.ok?r.json():Promise.reject(r.status)})}
+function fileToToday(i){
+ Promise.all([liveRows(),getLine()]).then(function(v){
+  var rest=v[0].filter(function(r){return r.id!==i.id}),cut=Math.max(0,Math.min(v[1],rest.length)),pos;
+  var before=rest[cut-1],after=rest[cut];
+  if(!rest.length)pos=1;else if(!before)pos=(after.position||1)-1;else if(!after)pos=(before.position||0)+1;
+  else pos=((before.position||0)+(after.position||0))/2;
+  var body={staged:false,section:i.label,bucket:'today',status:'todo',position:pos};if(i.est)body.est_min=i.est;
+  return patchRow(i.id,body).then(function(){i._today=true;return setLine(cut+1)});
+ }).catch(bad)}
 /* DUPLICATES CHECKED ACROSS SOURCES (safety rule 6): every staged note is compared with
    every other one in one pass, not source by source, so a draft that repeats an email is
    caught too. Anything flagged lands in Needs your tap and never auto-files. */
