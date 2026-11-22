@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f5f3ee; --panel:#ffffff; --ink:#23272c; --soft:#555c64; --line:#e4dfd4;
+  --hd:#2a2f35; --chip:#ece7db; --chipink:#5c636b;
+  --rowbg:#ffffff; --shadow:0 1px 2px rgba(0,0,0,.06);
+  --do:#3f6f8f; --more:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+  --green:#2f8f5b; --amber:#c07f10; --red:#c0392b;
+  --boxbg:#faf8f3; --boxline:#ddd6c8;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15181b; --panel:#1e2226; --ink:#e9e7e1; --soft:#a7acb3; --line:#30353b;
+    --hd:#f0ede6; --chip:#2a2f35; --chipink:#b3b9c0;
+    --rowbg:#1e2226; --shadow:0 1px 2px rgba(0,0,0,.4);
+    --green:#5bbd86; --amber:#e0a63a; --red:#e2705f;
+    --boxbg:#23282d; --boxline:#363b42;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181b; --panel:#1e2226; --ink:#e9e7e1; --soft:#a7acb3; --line:#30353b;
+  --hd:#f0ede6; --chip:#2a2f35; --chipink:#b3b9c0;
+  --rowbg:#1e2226; --shadow:0 1px 2px rgba(0,0,0,.4);
+  --green:#5bbd86; --amber:#e0a63a; --red:#e2705f;
+  --boxbg:#23282d; --boxline:#363b42;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:820px; margin:0 auto; padding:22px 16px 60px}
+header.top{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:4px}
+h1{font-size:26px; margin:0; letter-spacing:-.2px; color:var(--hd)}
+.vchip{font-size:12px; font-weight:700; background:var(--chip); color:var(--chipink);
+  padding:3px 8px; border-radius:6px}
+.date{color:var(--soft); font-size:14px; margin:2px 0 14px}
+.lede{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:14px 16px; margin-bottom:16px; box-shadow:var(--shadow)}
+.lede p{margin:0 0 8px} .lede p:last-child{margin:0}
+.lede b{color:var(--hd)}
+.tip{font-size:13.5px; color:var(--soft); border-left:3px solid var(--more);
+  padding:6px 0 6px 12px; margin-top:10px}
+
+/* answer box */
+.answers{position:sticky; top:0; z-index:20; background:var(--bg); padding:10px 0 12px;
+  border-bottom:1px solid var(--line); margin-bottom:18px}
+.answers h2{font-size:13px; text-transform:uppercase; letter-spacing:.6px;
+  margin:0 0 6px; color:var(--soft)}
+.answers .hint{font-size:12.5px; color:var(--soft); margin:0 0 8px}
+textarea#out{width:100%; min-height:96px; resize:vertical; background:var(--boxbg);
+  color:var(--ink); border:1px solid var(--boxline); border-radius:10px;
+  padding:10px 12px; font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:1.5}
+.copyrow{display:flex; align-items:center; gap:10px; margin-top:7px}
+button.copy{background:var(--do); color:#fff; border:0; border-radius:8px;
+  padding:7px 14px; font:600 13px Arial, Helvetica, sans-serif; cursor:pointer}
+.copyrow span{font-size:12px; color:var(--soft)}
+
+/* key */
+.key{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:12px 14px; margin-bottom:20px; box-shadow:var(--shadow)}
+.key h2{font-size:13px; text-transform:uppercase; letter-spacing:.6px; margin:0 0 9px; color:var(--soft)}
+.key ul{list-style:none; margin:0; padding:0; display:grid; gap:7px}
+.key li{font-size:13.5px; color:var(--ink)}
+.key .lbl{display:inline-block; min-width:118px; font-weight:700; padding:2px 8px;
+  border-radius:6px; color:#fff; margin-right:6px; font-size:12.5px}
+.k-do{background:var(--do)} .k-more{background:var(--more)} .k-did{background:var(--did)}
+.k-read{background:var(--read)} .k-kill{background:var(--kill)}
+
+/* rows */
+.row{background:var(--rowbg); border:1px solid var(--line); border-left:6px solid var(--line);
+  border-radius:12px; padding:15px 16px; margin-bottom:14px; box-shadow:var(--shadow)}
+.row.settled{opacity:.72}
+.rhead{display:flex; align-items:flex-start; gap:10px}
+.light{width:13px; height:13px; border-radius:50%; margin-top:5px; flex:0 0 auto;
+  box-shadow:0 0 0 3px rgba(0,0,0,.04)}
+.l-green{background:var(--green)} .l-amber{background:var(--amber)} .l-red{background:var(--red)}
+.rtitle{font-size:17px; font-weight:700; color:var(--hd); margin:0}
+.rbody{margin:8px 0 0; color:var(--soft); font-size:14px}
+.rnext{margin:10px 0 0; font-size:14px; color:var(--ink)}
+.rnext b{color:var(--hd)}
+.status{font-size:12px; font-weight:700; margin-top:9px; min-height:16px}
+.status.owed{color:var(--do)} .status.done{color:var(--did)} .status.killed{color:var(--kill)}
+.status.noted{color:var(--read)}
+.btns{display:flex; flex-wrap:wrap; gap:8px; margin-top:11px}
+.btns button{border:0; border-radius:8px; padding:9px 14px; color:#fff;
+  font:600 13px Arial, Helvetica, sans-serif; cursor:pointer; opacity:.92}
+.btns button:hover{opacity:1}
+.btns button[aria-pressed="true"]{outline:3px solid rgba(0,0,0,.18); opacity:1}
+.b-do{background:var(--do)} .b-more{background:var(--more)} .b-did{background:var(--did)}
+.b-read{background:var(--read)} .b-kill{background:var(--kill)}
+.cmt{margin-top:10px}
+.cmt input{width:100%; background:var(--boxbg); color:var(--ink); border:1px solid var(--boxline);
+  border-radius:8px; padding:8px 11px; font:13px Arial, Helvetica, sans-serif}
+.proof{font-size:12px; color:var(--soft); border-top:1px dashed var(--line);
+  margin-top:26px; padding-top:14px}
+.proof b{color:var(--ink)}
+@media (max-width:560px){ h1{font-size:22px} .rtitle{font-size:16px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>Morning Report</h1>
+    <span class="vchip">v1.0</span>
+  </header>
+  <div class="date">Saturday, November 22, 2026</div>
+
+  <div class="lede">
+    <p><b>Your day is wide open.</b> One reminder on the calendar at 3:00pm, and nothing else booked, so the day is yours to spend where you want it.</p>
+    <p><b>Your overnight helper ran fine.</b> It clocked in at 2:10am and finished clean at 2:18am Eastern, built nothing new only because your list was already clear, and passed every safety check. The old worry about it not showing up on an empty night did not happen this time.</p>
+    <p><b>Claude usage:</b> I cannot read your weekly limit from here, so no percentage this morning. You will find it in the Claude app under Settings.</p>
+    <p><b>Across your projects:</b> Project YOU carries a long build backlog and TreadWell has one old item still waiting, both readable through your database. CrushingIt, Clever Phrases, AI Intelligence and your 2026 Calendar live in your computer's folder, which this early run was not connected to, so those four are pending a session where your desktop is on.</p>
+    <p class="tip"><b>One from Atomic Habits:</b> you do not rise to the level of your goals, you fall to the level of your systems. Most of today's list is about the systems that carry everything else. Worth getting those solid before stacking anything new on top.</p>
+  </div>
+
+  <div class="answers">
+    <h2>Your answers (copy this back into the chat)</h2>
+    <p class="hint">Tap a button on any card and your choice lands here. This box is how your answers travel back to me, so select the text and paste it into our chat. The button below copies it too, when the panel lets it.</p>
+    <textarea id="out" readonly aria-label="Your compiled answers"></textarea>
+    <div class="copyrow">
+      <button class="copy" id="copyBtn" type="button">Copy my answers</button>
+      <span id="copyNote"></span>
+    </div>
+  </div>
+
+  <div class="key">
+    <h2>What each button means</h2>
+    <ul>
+      <li><span class="lbl k-do">Do this</span> Go build it, run it, ship it. An instruction, not an answer. The card stays open until the work is done.</li>
+      <li><span class="lbl k-more">Tell me more</span> You're leaning yes but want the cost, the risk, or the reasoning first. The card stays open and the next move is mine.</li>
+      <li><span class="lbl k-did">I did it</span> You handled it yourself. The card settles.</li>
+      <li><span class="lbl k-read">I read this</span> Just noting you saw it. Nothing is owed by anyone. The card settles.</li>
+      <li><span class="lbl k-kill">Kill this task</span> Drop it, and it does not come back as a question. The card settles.</li>
+    </ul>
+  </div>
+
+  <div id="rows"></div>
+
+  <div class="proof" id="proof">
+    <b>Technical line (for a builder session, not for now):</b>
+    <span id="prooftext"></span>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  // In-memory only. Nothing is stored in the browser and nothing is saved anywhere.
+  var ROWS = [
+    {
+      id:1, light:"green",
+      title:"Last night's overnight helper ran and finished clean",
+      body:"Good news first. Your overnight helper clocked in at 2:10am and finished at 2:18am Eastern. It built nothing new because your whole build list was already done, parked, or waiting on you from earlier nights, so there was simply nothing to pick up. Every safety check ran: your board data came back clean and the exercise-to-calendar watchdog found every recent activity in place.",
+      next:"Nothing. I checked its one factual claim against your live data this morning and it held up, so you can trust tonight's report."
+    },
+    {
+      id:2, light:"amber",
+      title:"Food logging has been quiet for a month",
+      body:"Your last logged meal was Oct 23, 2026, so about thirty days with nothing recorded. Until recently the camera path was still alive, but the newest photo upload is now Nov 6, so even that has gone quiet for over two weeks. Both ends of the food path are silent now, which was first flagged on Nov 1. I confirmed it against your live meals list this morning, and Oct 23 really is the newest.",
+      next:"Nothing needed unless you want to restart. A two-minute version counts: one tap on the meal you eat most."
+    },
+    {
+      id:3, light:"amber",
+      title:"Your fun-fact card has been serving short for six weeks",
+      body:"The weekly supply check has now found the same fault six weeks running. Your fun-fact tiles show at most one of their two screens and skip most days, so that pool barely drains. The supply itself is healthy, with seventeen unseen facts waiting, so nothing is lost. But the automatic top-up can never fire while the card serves this slowly, so it keeps reporting healthy while the tiles quietly fade.",
+      next:"Worth twenty minutes together to fix how that card picks and marks its fun facts."
+    },
+    {
+      id:4, light:"amber",
+      title:"Your system maps are nearly a month behind reality",
+      body:"The six pages that picture how your data flows are frozen on an early-September story, twenty-seven nights running now. Their printed counts are far behind: one claims 156 saved pages where there are 449, and 17,132 health readings where there are 18,238. Nine live parts of your system, the newest a task library built Nov 21, appear on no map at all. Nothing underneath is broken; only the pictures are stale, and the overnight run cannot edit live pages on its own.",
+      next:"I can rebuild those map pages straight from the live numbers in a working session."
+    },
+    {
+      id:5, light:"amber",
+      title:"Two feeds are still dead, each waiting on you",
+      body:"Your Workflowy sync has run every five minutes since Nov 8 and written nothing, because it is waiting on a Workflowy key only you can add. Separately, your dictated Drafts notes have captured nothing since Aug 15, about ninety-eight days, because that sweep is switched off. One page still describes the Drafts path as live, which is misleading. Neither is broken code; both are a switched-off or key-less feed.",
+      next:"Tell me whether to wire these back up or retire them, and I will make the pages tell the truth either way."
+    },
+    {
+      id:6, light:"amber",
+      title:"The overnight helper can't find its own schedule",
+      body:"Last night the run noted it could not confirm its own schedule: there is no task named Midnight Run among the first forty on your list. It still ran on time, so nothing was missed this time. But it cannot prove to itself that it is firing on the cadence you intended, which is a blind spot worth closing before a night where it does matter.",
+      next:"I can find or rebuild that schedule so the run can check itself each night."
+    },
+    {
+      id:7, light:"amber",
+      title:"Today: one reminder, plus a personal notice",
+      body:"Your calendar is otherwise clear today. The one item is your daily 3:00pm reminder to call Dr. Shajan and ask for an appointment sooner than Dec 29. A results-ready notice also landed in your inbox overnight. Both are personal and entirely yours to handle.",
+      next:"These are yours. Mark them off when done."
+    },
+    {
+      id:8, light:"amber",
+      title:"Three emails may want a reply",
+      body:"Three personal notes stand out from the overnight inbox. Asa forwarded a Friends Performing Arts Series invite for David Gerard. Todd sent notes on the John and Gardenview visit ahead of your Tuesday meeting, with you copied. And a Tier10 Advertising forward arrived from a Mercer contact. None are urgent, but all three are sitting with you.",
+      next:"Tell me which to open or reply to and I will draft something for you to send."
+    }
+  ];
+
+  var BTN = [
+    {k:"do",   label:"Do this",        cls:"b-do",   kind:"owed"},
+    {k:"more", label:"Tell me more",   cls:"b-more", kind:"owed"},
+    {k:"did",  label:"I did it",       cls:"b-did",  kind:"done"},
+    {k:"read", label:"I read this",    cls:"b-read", kind:"noted"},
+    {k:"kill", label:"Kill this task", cls:"b-kill", kind:"killed"}
+  ];
+  var COLORVAR = {do:"--do", more:"--more", did:"--did", read:"--read", kill:"--kill"};
+  var STATUSTXT = {
+    do:"Marked: Do this. This card stays open until the work is done.",
+    more:"Marked: Tell me more. This card stays open; the next move is mine.",
+    did:"Marked: I did it. Settled.",
+    read:"Marked: I read this. Noted, nothing owed.",
+    kill:"Marked: Kill this task. Settled and gone."
+  };
+
+  var state = {}; // id -> {choice, label, comment}
+
+  var rowsEl = document.getElementById("rows");
+  ROWS.forEach(function(r){
+    var card = document.createElement("div");
+    card.className = "row"; card.id = "row"+r.id;
+    var btnHtml = BTN.map(function(b){
+      return '<button type="button" class="'+b.cls+'" data-row="'+r.id+'" data-k="'+b.k+'" aria-pressed="false">'+b.label+'</button>';
+    }).join("");
+    card.innerHTML =
+      '<div class="rhead"><span class="light l-'+r.light+'"></span><p class="rtitle">'+r.title+'</p></div>'+
+      '<p class="rbody">'+r.body+'</p>'+
+      '<p class="rnext"><b>Next:</b> '+r.next+'</p>'+
+      '<div class="status" id="st'+r.id+'"></div>'+
+      '<div class="btns">'+btnHtml+'</div>'+
+      '<div class="cmt"><input type="text" data-row="'+r.id+'" placeholder="Add a note on this one (optional)"></div>';
+    rowsEl.appendChild(card);
+  });
+
+  function rebuild(){
+    var lines = ["MORNING REPORT  Sat Nov 22 2026  my answers:",""];
+    var any=false;
+    ROWS.forEach(function(r){
+      var s = state[r.id];
+      if(!s || !s.choice){
+        if(s && s.comment){ lines.push("- "+r.title); lines.push("    note: "+s.comment); any=true; }
+        return;
+      }
+      any=true;
+      var tag = (s.choice==="do"||s.choice==="more") ? "  (needs work)" : "";
+      lines.push("- "+r.title+" -> "+s.label+tag);
+      if(s.comment) lines.push("    note: "+s.comment);
+    });
+    if(!any) lines.push("(tap a button on a card to begin)");
+    document.getElementById("out").value = lines.join("\n");
+  }
+
+  rowsEl.addEventListener("click", function(e){
+    var b = e.target.closest("button[data-k]");
+    if(!b) return;
+    var id = +b.getAttribute("data-row"), k = b.getAttribute("data-k");
+    var meta = BTN.filter(function(x){return x.k===k;})[0];
+    state[id] = state[id] || {};
+    state[id].choice = k; state[id].label = meta.label;
+
+    var card = document.getElementById("row"+id);
+    card.querySelectorAll("button[data-k]").forEach(function(x){ x.setAttribute("aria-pressed", x===b ? "true":"false"); });
+
+    var cv = getComputedStyle(document.documentElement).getPropertyValue(COLORVAR[k]);
+    card.style.borderLeftColor = cv.trim();
+
+    if(k==="did"||k==="read"||k==="kill"){ card.classList.add("settled"); }
+    else { card.classList.remove("settled"); }
+
+    var st = document.getElementById("st"+id);
+    st.className = "status " + meta.kind;
+    st.textContent = STATUSTXT[k];
+
+    rebuild();
+  });
+
+  rowsEl.addEventListener("input", function(e){
+    var inp = e.target.closest("input[data-row]");
+    if(!inp) return;
+    var id = +inp.getAttribute("data-row");
+    state[id] = state[id] || {};
+    state[id].comment = inp.value.trim();
+    rebuild();
+  });
+
+  document.getElementById("copyBtn").addEventListener("click", function(){
+    var ta = document.getElementById("out");
+    var note = document.getElementById("copyNote");
+    ta.removeAttribute("readonly"); ta.select(); ta.setSelectionRange(0, ta.value.length);
+    var ok=false;
+    try{ ok = document.execCommand("copy"); }catch(e){ ok=false; }
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ta.value).then(function(){
+        note.textContent="Copied. If nothing pasted, select the text above by hand.";
+      }).catch(function(){
+        note.textContent = ok ? "Copied." : "Couldn't auto-copy here. Select the text above and copy it by hand.";
+      });
+    } else {
+      note.textContent = ok ? "Copied." : "Select the text above and copy it by hand.";
+    }
+    ta.setAttribute("readonly","readonly");
+  });
+
+  document.getElementById("prooftext").textContent =
+    "Overnight run reports to board_meta, not run_log: heartbeat 2026-11-22 07:10Z, wrap and last_result 07:11 to 07:12Z (2:10 to 2:18am EST), built/advanced 0, all checks clean. run_log newest row is atomic-20261120, a separate content-ingest job, which is why run_log alone looked empty. Verified claim: meals max(day)=2026-10-23, 1 meal in last 30 days, matches the food-log note. Live counts: health_readings 18238, saved pages 449 against the map's 156, strava_last_check 2026-11-22 02:10Z. news_queue 56 new pending (newest Nov 15) and the AI deck is stocked, so the community and AI scan is supplied, nothing stuck for a keep-or-discard call. system_map_last_verified status=drift, 27th night. Desktop folder SER FILES/CoWork was not connected to this run, so CrushingIt, Clever Phrases, AI Intelligence and 2026 Calendar are pending a connected session. Page built in the cloud and published through the pages table.";
+
+  rebuild();
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
