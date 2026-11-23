@@ -157,7 +157,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><span class="on">Task Library</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Task Library<span class="ver">v3.2</span><span class="strength" id="str" title="Color strength"></span></h1>
+<h1>Task Library<span class="ver">v3.3</span><span class="strength" id="str" title="Color strength"></span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -403,7 +403,7 @@ async function renameEverywhere(n, oldName, newName){
 }
 function taskRow(t){
   var li=document.createElement('li'); li.className='r'+(t.done?' isdone':'');
-  var dg=document.createElement('span'); dg.className='dg'; dg.textContent='⋮⋮'; tip(dg,'Drag'); li.appendChild(dg);
+  var dg=document.createElement('span'); dg.className='dg'; dg.textContent='⋮⋮'; tip(dg,'Drag onto a list, project or sub-category on the left to move this task there'); li.appendChild(dg); if(!t.demo) taskDrag(dg,t,li);
   var cb=document.createElement('button'); cb.type='button'; cb.className='cb'+(t.done?' done':''); cb.setAttribute('aria-label','Done');
   cb.addEventListener('click',function(e){ e.stopPropagation(); if(t.demo){ showToast('That is a sample, it is not on your board'); return; } toggleTask(t); }); li.appendChild(cb);
   var d=document.createElement('div'); d.className='grow t'; d.textContent=t.task; if(t.demo) d.style.color='#78818f'; li.appendChild(d);
@@ -640,6 +640,74 @@ function showToast(msg, btnLabel, fn){
   var t=document.getElementById('toast'); t.innerHTML=''; t.appendChild(document.createTextNode(msg));
   if(btnLabel){ var b=document.createElement('button'); b.textContent=btnLabel; b.addEventListener('click',function(){ t.classList.remove('show'); fn(); }); t.appendChild(b); }
   t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove('show'); },6000);
+}
+
+
+/* v3.3, Scott Nov 23: move a task between Library places by dragging its handle onto a list,
+   project or sub-category in the rail. The screen updates at once; the save runs in the
+   background and retries if the connection is weak (his rule: screen updates at once). */
+function placeName(n){ return chain(n.id).map(function(x){ return x.name; }).join(' › '); }
+function saveTodoBg(id, fields, tries){
+  tries = tries||0;
+  if(LOCAL||!sb) return;
+  Promise.resolve(sb.from('todos').update(fields).eq('id', id)).then(function(r){
+    if(r && r.error) throw r.error;
+  }).catch(function(){
+    if(tries>=8){ showToast('One move could not be saved. Check your connection and move it again.'); return; }
+    if(tries===0) showToast('Weak connection. The move is kept on this screen and still trying to save...');
+    setTimeout(function(){ saveTodoBg(id, fields, tries+1); }, Math.min(1500*Math.pow(1.6,tries),15000));
+  });
+}
+function moveTaskToNode(t, tn){
+  var top=chain(tn.id)[0], sec=top.name, subn = tn.level==='list' ? null : tn.name;
+  if(t.section===sec && (t.subsection||null)===subn) return;
+  var was={section:t.section, subsection:t.subsection||null};
+  t.section=sec; t.subsection=subn; render();
+  saveTodoBg(t.id,{section:sec, subsection:subn, updated_at:new Date().toISOString()});
+  var short=(t.task||'').length>40 ? t.task.slice(0,40)+'...' : t.task;
+  showToast('Moved "'+short+'" to '+placeName(tn)+'.','Undo',function(){
+    t.section=was.section; t.subsection=was.subsection; render();
+    saveTodoBg(t.id,{section:was.section, subsection:was.subsection, updated_at:new Date().toISOString()});
+  });
+}
+function taskDrag(grip, t, li){
+  grip.addEventListener('pointerdown', function(e){
+    if(e.button && e.button!==0) return;
+    e.preventDefault(); e.stopPropagation();
+    var touch = e.pointerType!=='mouse';
+    var sx=e.clientX, sy=e.clientY, started=false, holdT=null, ghost=null, hostEl=null, target=null;
+    function begin(){ started=true; li.classList.add('dragging'); document.body.style.userSelect='none';
+      ghost=document.createElement('div'); ghost.textContent=t.task;
+      ghost.style.cssText='position:fixed;z-index:9999;pointer-events:none;background:#fff;border:1px solid #dfe3ea;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:5px 10px;font-size:13px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2b3137';
+      document.body.appendChild(ghost); place(e); }
+    function place(ev){ if(ghost){ ghost.style.left=(ev.clientX+14)+'px'; ghost.style.top=(ev.clientY+10)+'px'; } }
+    if(touch){ holdT=setTimeout(begin, HOLD_MS); } else { begin(); }
+    function move(ev){
+      if(!started){ if(Math.abs(ev.clientX-sx)>HOLD_SLOP || Math.abs(ev.clientY-sy)>HOLD_SLOP){ clearTimeout(holdT); cleanup(false); } return; }
+      ev.preventDefault(); place(ev);
+      var over=document.elementFromPoint(ev.clientX, ev.clientY);
+      var host = over && over.closest ? (over.closest('.rsub2') || over.closest('.rsub') || over.closest('.rrow')) : null;
+      var nel = host ? (host.closest('.rsub2') || host.closest('[data-nid]')) : null;
+      var tn = nel ? node(nel.dataset.nid) : null;
+      if(hostEl && hostEl!==host) hostEl.classList.remove('dropline');
+      hostEl = host; target = tn;
+      if(host && tn) host.classList.add('dropline');
+    }
+    function up(){ clearTimeout(holdT); cleanup(true); }
+    function cleanup(drop){
+      document.removeEventListener('pointermove', move, {passive:false});
+      document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', cancel);
+      document.body.style.userSelect=''; li.classList.remove('dragging');
+      if(hostEl) hostEl.classList.remove('dropline');
+      if(ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+      var tn=target, was=started; started=false; hostEl=null; target=null;
+      if(drop && was && tn) moveTaskToNode(t, tn);
+    }
+    function cancel(){ clearTimeout(holdT); cleanup(false); }
+    document.addEventListener('pointermove', move, {passive:false});
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
+  });
 }
 
 /* ---------- drag to reorder, mouse and touch ---------- */
