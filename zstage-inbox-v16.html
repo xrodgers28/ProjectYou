@@ -287,7 +287,7 @@ function lnkB(i){return '<button class="lk" data-a="link" data-id="'+i.id+'" tit
 function tagB(i){var c=i.kind==='notask'?'list':i.dest;return '<button class="dst '+c+'" data-a="swap" data-id="'+i.id+'" title="'+(i.kind==='notask'?'Goes to its own list':'Tap to send it the other way')+'">'+esc(dtxt(i))+'</button>'+plcB(i)}
 /* v1.6: where in the Task Library. The Library is organised by its own lists (Family,
    Amazon, 6 Irvine...), not by the Today labels, so a Library item needs a real place. */
-function placeGuess(i){return window.PYMoves?PYMoves.placeForLabel(i.label):null}
+function placeGuess(i){return window.PYMoves?(placeFromText(txtOf(i))||PYMoves.placeForLabel(i.label)):null}
 function plcB(i){if(i.kind==='notask'||i.dest!=='lib'||!window.PYMoves||!PYMoves.places().length)return '';var open=PLOPEN===i.id;
  return '<span class="lpw"><button class="plc'+(i.place?'':' none')+'" data-a="plc" data-id="'+i.id+'" title="Where it goes in the Task Library">'+(i.place?'\u203a '+esc(PYMoves.placeText(i.place)):'pick a place')+' \u25BE</button>'+(open?'<div class="lpop ppop">'+PYMoves.places().map(function(p){return '<button class="lchip pch d'+p.depth+(i.place&&i.place.id===p.id?' on':'')+'" data-a="pset" data-id="'+i.id+'" data-p="'+p.id+'">'+esc(p.name)+'</button>'}).join('')+'</div>':'')+'</span>'}
 function dotN(i){return '<i class="dot" style="background:'+(COL[i.label]||'#9aa2ad')+'"></i>'}
@@ -544,11 +544,18 @@ function bigrams(t){var w=t.toLowerCase().replace(/[^a-z0-9' ]/g,' ').split(/\s+
 function freshRow(text,raw,base){var r={id:inid(),text:text,raw:raw||text,label:base?base.label:'Personal',own:'Mine',est:15,dest:'lib',star:false,help:false,mk:[],tagmk:false,place:null,u:{}};return r}
 /* re-check label, owner, minutes and place quietly - only the ones he has not set himself */
 function recheck(r,fallback){if(!r.u.label)r.label=guessLabel(r.text,fallback||r.label);if(!r.u.own)r.own=guessOwn(r.text);if(!r.u.est)r.est=guessEst(r.text,r.own);
- if(!r.u.place)r.place=window.PYMoves?PYMoves.placeForLabel(r.label):null}
+ if(!r.u.place)r.place=placeFromText(r.text)||(window.PYMoves?PYMoves.placeForLabel(r.label):null)}
+/* a Library place named in the words themselves wins (Antigua, College visits, P&G...),
+   the deepest one first; otherwise the place that goes with the label */
+function placeFromText(t){if(!window.PYMoves)return null;var low=' '+String(t).toLowerCase().replace(/[^a-z0-9&' ]/g,' ').replace(/\s+/g,' ')+' ',best=null;
+ PYMoves.places().forEach(function(p){var n=p.name.toLowerCase();if(n.length<4||/^(projects|social|family|travel|admin|amazon)$/.test(n))return;
+  if(low.indexOf(' '+n+' ')>-1&&(!best||p.depth>best.depth))best=p});return best}
 function review(txt){
  var lines=String(txt||'').replace(/\r/g,'').split('\n').map(function(s){return stripBullet(s).trim()}).filter(Boolean),groups=[];
  lines.forEach(function(l){var prev=groups[groups.length-1];
-  var carry=prev&&(/^[a-z]/.test(l)||/^(and|or|then|but|which|so|also|plus|number \w+ is|no\. ?\d+ is)\b/i.test(l)||/[,:;\-–]$/.test(prev.text)||/\b(and|or|the|to|of|with|is)$/i.test(prev.text));
+  /* a line carries on from the one above when IT starts like a continuation; a line that
+     merely ends mid-sentence stays its own task and gets the cut-off underline instead */
+  var carry=prev&&(/^[a-z]/.test(l)||/^(and|or|then|but|which|so|also|plus|number \w+ is|no\. ?\d+ is)\b/i.test(l));
   if(carry){prev.text+=' '+l;prev.raw+='\n'+l}else groups.push({text:l,raw:l})});
  /* the label most of the paste is about is the fallback for lines that name nothing */
  var tally={};groups.forEach(function(g){var L=guessLabel(g.text,'');if(L)tally[L]=(tally[L]||0)+1});
