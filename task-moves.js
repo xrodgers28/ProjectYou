@@ -1,4 +1,4 @@
-/* task-moves.js v1.2, Nov 23 2026. ONE PLACE THAT DECIDES WHERE A TASK LIVES.
+/* task-moves.js v1.3, Nov 23 2026. ONE PLACE THAT DECIDES WHERE A TASK LIVES.
 
    Scott, Nov 22 2026: "making sure today todos, staging area and task library all move
    tasks back and forth as they should."
@@ -112,11 +112,11 @@ function toStaging(id,label,guess,extra){
    hourly pickup (7am to midnight Eastern, up to 3 tasks) works it and writes back here.
    One chip + one panel, used by Today and the Task Library alike. */
 var CL={queued:['Queued','q'],working:['Working','w'],needs:['Needs you','n'],review:['Review','r']};
-var PICK_MIN=null;   /* the pickup's minute past the hour, set below */
-function nextPickup(){var d=new Date(),et=new Date(d.toLocaleString('en-US',{timeZone:'America/New_York'}));
- var h=et.getHours(),m=et.getMinutes(),pm=PICK_MIN==null?0:PICK_MIN;
- if(m>=pm)h++;if(h<7)h=7;if(h>24)h=7;
- var hh=h%24,ap=hh<12?'am':'pm',h12=hh%12||12;return h12+':'+String(pm).padStart(2,'0')+ap}
+/* Pickups run 3 times a day (Scott, Nov 23): 6:58am, 11:58am, 5:58pm ET */
+var PICKS=[[6,58],[11,58],[17,58]];
+function nextPickup(){var et=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})),now=et.getHours()*60+et.getMinutes();
+ var p=PICKS.filter(function(x){return x[0]*60+x[1]>now})[0],tom=!p;if(!p)p=PICKS[0];
+ var h=p[0],ap=h<12?'am':'pm',h12=h%12||12;return h12+':'+String(p[1]).padStart(2,'0')+ap+(tom?' tomorrow':'')}
 function fmtET(ts){try{return new Date(ts).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'}catch(e){return ''}}
 function css(){if(document.getElementById('pycl-css'))return;var s=document.createElement('style');s.id='pycl-css';s.textContent=
 '.pycl{border:1px solid #e3c9a0;background:#fff;color:#a9741a;border-radius:99px;font:700 10.5px Roboto,Arial,sans-serif;padding:1px 8px;line-height:16px;cursor:pointer;white-space:nowrap}'+
@@ -166,9 +166,7 @@ function claudePanel(t,anchor,changed){
 function claudeChip(t,changed){css();var L=claudeLabel(t),b=document.createElement('button');b.type='button';b.className='pycl '+L[1];b.textContent=L[0];
  b.title={q:'Queued for Claude, next pickup about '+nextPickup(),w:'Claude is working on this',n:'Claude needs you: tap to answer',r:'Ready for you to review'}[L[1]]||'Claude owns this one: tap for options';
  b.addEventListener('click',function(e){e.stopPropagation();claudePanel(t,b,changed)});return b}
-function loadPickMin(){return get('board_meta?select=val&key=eq.claude_pickup_minute').then(function(d){var n=d&&d[0]?Number(d[0].val):null;if(isFinite(n))PICK_MIN=n}).catch(function(){})}
-loadPickMin();
 
-window.PYMoves={version:'1.2',claudeChip:claudeChip,claudePanel:claudePanel,nextPickup:nextPickup,signedIn:signedIn,loadPlaces:loadPlaces,places:function(){return PLACES||[]},placeText:placeText,findPlace:findPlace,
+window.PYMoves={version:'1.3',claudeChip:claudeChip,claudePanel:claudePanel,nextPickup:nextPickup,signedIn:signedIn,loadPlaces:loadPlaces,places:function(){return PLACES||[]},placeText:placeText,findPlace:findPlace,
  placeForLabel:placeForLabel,labelForPlace:labelForPlace,toToday:toToday,toLibrary:toLibrary,toStaging:toStaging,insertStaged:insertStaged,patch:patch,get:get,lineBy:lineBy};
 })();
