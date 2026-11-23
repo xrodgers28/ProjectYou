@@ -1622,6 +1622,9 @@
 /* Blocks */
 #masterview .mblkrow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 14px}
 #masterview .mblkrow > .mcard{margin:0}
+#masterview .mblkrow > .mcard > .mblk{height:100%;min-height:90px}
+#masterview [data-mzone].mdropping{outline:2px dashed #c9d8e4;outline-offset:-2px;border-radius:12px}
+#masterview .mblk .mrow{display:flex;gap:8px}
 @media(max-width:760px){#masterview .mblkrow{grid-template-columns:1fr}}
 #masterview .mblk h4[contenteditable]{cursor:text;outline:none;min-width:40px;display:table}
 #masterview .mblk h4[contenteditable]:focus{box-shadow:0 0 0 2px #3f6f8f;background:#fff}
@@ -1695,7 +1698,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="mastertoggle" class="vtoggle" style="cursor:pointer" title="Switch between the old board and the Master list">★ Master</a><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.125</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.126</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -9541,40 +9544,79 @@ async function mAddTask(text, section, inToday){
    is how a task moves in or out of today. */
 let M_DRAG = null;
 
-function mDraggable(node, card){
+/* v6.126, Scott Nov 22: "make sure that tasks are drag and droppable anywhere across the
+   content panel of today tab". ONE drag engine for every task on the Today panel: Todays
+   Must Dos, the ranked list (either side of the Today ends here line) and all six boxes.
+   Each of those is a drop zone (data-mzone = urg | list | box). Dropping in the same zone
+   just reorders, the way it always has. Dropping in a different zone moves the task:
+     into Must Dos   it gets a yellow star (a red one keeps its red)
+     into the list   the star comes off
+     into a box      it is filed under that box; its label is kept, and comes back
+                     with it when it is dragged out again
+   The old per-table functions below are kept as thin names so every caller still works. */
+let M_DRAG_FROM = null;
+const M_ROWSEL = '.mrow,.mline,.mbrow:not(.mnewrow)';
+function mZoneOf(n){ return n && n.closest ? n.closest('[data-mzone]') : null; }
+function mPlaceAt(x, y){
+  if (!M_DRAG) return;
+  const under = document.elementFromPoint(x, y);
+  const zone = mZoneOf(under); if (!zone) return;
+  const over = under.closest ? under.closest(M_ROWSEL) : null;
+  if (over && over !== M_DRAG && zone.contains(over)){
+    const r = over.getBoundingClientRect();
+    const after = (y - r.top) > r.height / 2;
+    over.parentNode.insertBefore(M_DRAG, after ? over.nextSibling : over);
+    return;
+  }
+  if (!over && !zone.contains(M_DRAG)){
+    /* over an empty part of another zone: it goes to the end of that zone's rows */
+    const rows = Array.from(zone.querySelectorAll(M_ROWSEL)).filter(n => n !== M_DRAG && !n.classList.contains('mline'));
+    const last = rows[rows.length - 1];
+    if (last) last.parentNode.insertBefore(M_DRAG, last.nextSibling);
+    else { const add = zone.querySelector(':scope > .madd, :scope > .madd2, :scope > .mbadd'); if (add) zone.insertBefore(M_DRAG, add); else zone.appendChild(M_DRAG); }
+  }
+}
+let M_HOST_DND = false;
+function mHostDnd(){
+  if (M_HOST_DND) return; M_HOST_DND = true;
+  const host = document.getElementById('masterview'); if (!host) return;
+  host.addEventListener('dragover', e => {
+    if (!M_DRAG || !mZoneOf(e.target)) return;
+    e.preventDefault();
+    try { e.dataTransfer.dropEffect = 'move'; } catch (x) {}
+    mPlaceAt(e.clientX, e.clientY);
+  });
+  host.addEventListener('drop', e => { if (M_DRAG) e.preventDefault(); });
+}
+function mDragStartOn(node){
+  M_DRAG = node; M_DRAG_FROM = mZoneOf(node);
+  node.classList.add('mdragging');
+  document.querySelectorAll('#masterview [data-mzone]').forEach(z => z.classList.add('mdropping'));
+}
+function mDragEndOn(node){
+  node.classList.remove('mdragging','mheld');
+  document.querySelectorAll('#masterview [data-mzone]').forEach(z => z.classList.remove('mdropping','mholding'));
+  if (M_DRAG){ M_DRAG = null; mDropDone(node); }
+}
+function mXDraggable(node){
+  mHostDnd();
   node.draggable = true;
   node.addEventListener('dragstart', e => {
     const tg = e.target;
-    if (tg && tg.closest && tg.closest('input,select,button,a')) { e.preventDefault(); return; }
-    M_DRAG = node;
-    node.classList.add('mdragging');
-    card.classList.add('mdropping');
+    if (tg && tg.closest && tg.closest('input,select,button,a,textarea')) { e.preventDefault(); return; }
+    mDragStartOn(node);
     try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', node.dataset.id || ''); } catch (x) {}
   });
-  node.addEventListener('dragend', () => {
-    node.classList.remove('mdragging');
-    card.classList.remove('mdropping');
-    if (M_DRAG) { M_DRAG = null; mPersistOrder(card); }
-  });
+  node.addEventListener('dragend', () => mDragEndOn(node));
 }
-
-/* Press and hold, for the phone. A touch screen never fires a mouse drag, so this
-   is the whole reordering story on his iPhone. The hold has to be long enough that
-   an ordinary scroll does not trip it, and any real finger movement before the hold
-   fires cancels it and lets the page scroll as normal. */
+/* Press and hold, for the phone. A touch screen never fires a mouse drag. The hold has to be
+   long enough that an ordinary scroll does not trip it, and any real finger movement before
+   the hold fires cancels it and lets the page scroll as normal. */
 const M_HOLD_MS = 320, M_HOLD_SLOP = 10;
-function mTouchDrag(node, card){
+function mXTouch(node){
   let timer = null, held = false, sx = 0, sy = 0;
   const cancelHold = () => { if (timer) { clearTimeout(timer); timer = null; } };
-  const stop = () => {
-    cancelHold();
-    if (held){
-      held = false;
-      node.classList.remove('mheld');
-      card.classList.remove('mholding');
-      mPersistOrder(card);
-    }
-  };
+  const stop = () => { cancelHold(); if (held){ held = false; mDragEndOn(node); } };
   node.addEventListener('touchstart', e => {
     if (e.touches.length !== 1) return;
     const tg = e.target;
@@ -9583,45 +9625,72 @@ function mTouchDrag(node, card){
     cancelHold();
     timer = setTimeout(() => {
       held = true; timer = null;
-      node.classList.add('mheld');
-      card.classList.add('mholding');
+      mDragStartOn(node); node.classList.add('mheld');
+      document.querySelectorAll('#masterview [data-mzone]').forEach(z => z.classList.add('mholding'));
       try{ if (navigator.vibrate) navigator.vibrate(12); }catch(x){}
     }, M_HOLD_MS);
   }, { passive: true });
   node.addEventListener('touchmove', e => {
     const t = e.touches[0]; if (!t) return;
     if (!held){
-      /* Still deciding. A real move means he is scrolling, so let him. */
       if (Math.abs(t.clientX - sx) > M_HOLD_SLOP || Math.abs(t.clientY - sy) > M_HOLD_SLOP) cancelHold();
       return;
     }
     e.preventDefault();
-    const under = document.elementFromPoint(t.clientX, t.clientY);
-    const over = under && under.closest ? under.closest('.mrow,.mline') : null;
-    if (!over || over === node || !card.contains(over)) return;
-    const r = over.getBoundingClientRect();
-    const after = (t.clientY - r.top) > r.height / 2;
-    card.insertBefore(node, after ? over.nextSibling : over);
+    mPlaceAt(t.clientX, t.clientY);
   }, { passive: false });
   node.addEventListener('touchend', stop);
   node.addEventListener('touchcancel', stop);
 }
+function mDraggable(node, card){ mXDraggable(node); }
+function mTouchDrag(node, card){ mXTouch(node); }
+function mBlkDraggable(node, card){ mXDraggable(node); }
+function mBlkTouchDrag(node, card){ mXTouch(node); }
+function mDropZone(card){ mHostDnd(); }
+function mBlkDropZone(card){ mHostDnd(); }
 
-function mDropZone(card){
-  card.addEventListener('dragover', e => {
-    if (!M_DRAG) return;
-    e.preventDefault();
-    try { e.dataTransfer.dropEffect = 'move'; } catch (x) {}
-    const over = e.target && e.target.closest ? e.target.closest('.mrow,.mline') : null;
-    if (!over || over === M_DRAG) return;
-    const r = over.getBoundingClientRect();
-    const after = (e.clientY - r.top) > r.height / 2;
-    card.insertBefore(M_DRAG, after ? over.nextSibling : over);
-  });
-  card.addEventListener('drop', e => { if (M_DRAG) e.preventDefault(); });
+async function mDropDone(node){
+  const from = M_DRAG_FROM; M_DRAG_FROM = null;
+  const to = mZoneOf(node);
+  const t = todos.find(x => x.id === node.dataset.id);
+  if (!to || !t){ render(); return; }
+  const z = to.dataset.mzone, fz = from ? from.dataset.mzone : null;
+  if (from === to){   /* a plain reorder, same as before */
+    if (z === 'list') await mPersistOrder(to); else if (z === 'box') await mBlkPersistOrder(to); else await mUrgPersistOrder(to);
+    return;
+  }
+  {
+    const p = {};
+    const label = (fz === 'box') ? (t.origin_section || 'Core To-Dos') : t.section;
+    if (z === 'urg'){ p.star_color = t.star_color || 'yellow'; p.starred = true; if (fz === 'box'){ p.section = label; p.origin_section = null; } }
+    else if (z === 'list'){ p.star_color = null; p.starred = false; p.star_position = 0; if (fz === 'box'){ p.section = label; p.origin_section = null; } }
+    else { p.section = to.dataset.sec; p.star_color = null; p.starred = false; p.star_position = 0;
+           p.origin_section = (fz === 'box') ? (t.origin_section || null) : t.section; }
+    snapshot();
+    await patch(t.id, p);
+    /* leaving the ranked list: re-read where the Today line sits among what is left */
+    if (fz === 'list') await mPersistOrder(from, true);
+    if (fz === 'urg') await mUrgPersistOrder(from, true);
+  }
+  if (z === 'list') await mPersistOrder(to, true);
+  else if (z === 'box') await mBlkPersistOrder(to, true);
+  else await mUrgPersistOrder(to, true);
+  render();
+  if (from !== to){
+    const where = z === 'urg' ? 'Todays Must Dos' : z === 'list' ? 'your list' : ((M_BTITLES[to.dataset.sec]) || (M_BLOCKS.filter(b => b[0] === to.dataset.sec)[0] || [,'the box'])[1]);
+    toast('Moved to ' + where + '.');
+  }
+}
+/* Must Dos order: red always sits above yellow, so this only orders within each colour */
+async function mUrgPersistOrder(urg, quiet){
+  const rows = Array.from(urg.querySelectorAll('.mrow')).map(n => todos.find(t => t.id === n.dataset.id)).filter(t => t && t.star_color);
+  for (let i = 0; i < rows.length; i++){
+    if ((rows[i].star_position || 0) !== i + 1) await patch(rows[i].id, { star_position: i + 1 });
+  }
+  if (!quiet) render();
 }
 
-async function mPersistOrder(card){
+async function mPersistOrder(card, quiet){
   const nodes = Array.from(card.querySelectorAll('.mrow,.mline'));
   const ids = []; let line = null;
   nodes.forEach(n => {
@@ -9630,7 +9699,7 @@ async function mPersistOrder(card){
   });
   if (line == null) line = ids.length;
   const rows = ids.map(id => todos.find(t => t.id === id)).filter(Boolean);
-  if (!rows.length) return;
+  if (!rows.length){ if (line !== MLINE){ MLINE = line; await mSaveLine(); } return; }
   /* Deal the existing position numbers out in the new order. */
   const slots = rows.map(t => t.position || 0).sort((a, b) => a - b);
   const moved = rows.filter((t, i) => (t.position || 0) !== slots[i]);
@@ -9640,90 +9709,13 @@ async function mPersistOrder(card){
   }
   const lineMoved = (line !== MLINE);
   if (lineMoved) { MLINE = line; await mSaveLine(); }
+  if (quiet) return;
   render();
   if (moved.length || lineMoved) toast('Order saved. ' + Math.min(MLINE, rows.length) + ' of ' + rows.length + ' in today.');
 }
 
-/* v6.120, Scott's call: Waiting On (and Need to Schedule, same box type) get the
-   same drag-to-reorder the ranked list already has. These rows are a plain flexbox
-   list (.mbrow), not the grid table the functions above target, so they get their
-   own small copies rather than bending mDraggable/mTouchDrag/mDropZone/mPersistOrder
-   to fit two different row shapes. card here is the .mblk element the rows live in. */
-function mBlkDraggable(node, card){
-  node.draggable = true;
-  node.addEventListener('dragstart', e => {
-    const tg = e.target;
-    if (tg && tg.closest && tg.closest('input,select,button,a')) { e.preventDefault(); return; }
-    M_DRAG = node;
-    node.classList.add('mdragging');
-    card.classList.add('mdropping');
-    try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', node.dataset.id || ''); } catch (x) {}
-  });
-  node.addEventListener('dragend', () => {
-    node.classList.remove('mdragging');
-    card.classList.remove('mdropping');
-    if (M_DRAG) { M_DRAG = null; mBlkPersistOrder(card); }
-  });
-}
-
-function mBlkTouchDrag(node, card){
-  let timer = null, held = false, sx = 0, sy = 0;
-  const cancelHold = () => { if (timer) { clearTimeout(timer); timer = null; } };
-  const stop = () => {
-    cancelHold();
-    if (held){
-      held = false;
-      node.classList.remove('mheld');
-      card.classList.remove('mholding');
-      mBlkPersistOrder(card);
-    }
-  };
-  node.addEventListener('touchstart', e => {
-    if (e.touches.length !== 1) return;
-    const tg = e.target;
-    if (tg && tg.closest && tg.closest('input,select,button,a,textarea')) return;
-    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
-    cancelHold();
-    timer = setTimeout(() => {
-      held = true; timer = null;
-      node.classList.add('mheld');
-      card.classList.add('mholding');
-      try{ if (navigator.vibrate) navigator.vibrate(12); }catch(x){}
-    }, M_HOLD_MS);
-  }, { passive: true });
-  node.addEventListener('touchmove', e => {
-    const t = e.touches[0]; if (!t) return;
-    if (!held){
-      if (Math.abs(t.clientX - sx) > M_HOLD_SLOP || Math.abs(t.clientY - sy) > M_HOLD_SLOP) cancelHold();
-      return;
-    }
-    e.preventDefault();
-    const under = document.elementFromPoint(t.clientX, t.clientY);
-    const over = under && under.closest ? under.closest('.mbrow:not(.mnewrow)') : null;
-    if (!over || over === node || !card.contains(over)) return;
-    const r = over.getBoundingClientRect();
-    const after = (t.clientY - r.top) > r.height / 2;
-    card.insertBefore(node, after ? over.nextSibling : over);
-  }, { passive: false });
-  node.addEventListener('touchend', stop);
-  node.addEventListener('touchcancel', stop);
-}
-
-function mBlkDropZone(card){
-  card.addEventListener('dragover', e => {
-    if (!M_DRAG) return;
-    e.preventDefault();
-    try { e.dataTransfer.dropEffect = 'move'; } catch (x) {}
-    const over = e.target && e.target.closest ? e.target.closest('.mbrow:not(.mnewrow)') : null;
-    if (!over || over === M_DRAG) return;
-    const r = over.getBoundingClientRect();
-    const after = (e.clientY - r.top) > r.height / 2;
-    card.insertBefore(M_DRAG, after ? over.nextSibling : over);
-  });
-  card.addEventListener('drop', e => { if (M_DRAG) e.preventDefault(); });
-}
-
-async function mBlkPersistOrder(card){
+/* v6.120 box drag lives in the one engine above now (v6.126). */
+async function mBlkPersistOrder(card, quiet){
   const nodes = Array.from(card.querySelectorAll('.mbrow:not(.mnewrow)'));
   const ids = nodes.map(n => n.dataset.id).filter(Boolean);
   const rows = ids.map(id => todos.find(t => t.id === id)).filter(Boolean);
@@ -9731,10 +9723,11 @@ async function mBlkPersistOrder(card){
   const slots = rows.map(t => t.position || 0).sort((a, b) => a - b);
   const moved = rows.filter((t, i) => (t.position || 0) !== slots[i]);
   if (!moved.length) return;
-  snapshot();
+  if (!quiet) snapshot();
   for (let i = 0; i < rows.length; i++){
     if ((rows[i].position || 0) !== slots[i]) await patch(rows[i].id, { position: slots[i] });
   }
+  if (quiet) return;
   render();
   toast('Order saved.');
 }
@@ -10235,7 +10228,7 @@ function renderMaster(){
      its Task column against the SAME combined text list the ranked list uses below,
      keeping Labels and every column after it lined up between the two tables. */
   let rest = live.filter(t => !t.star_color).sort((a,b)=> (a.position||0) - (b.position||0));
-  const urg = el('div','murg');
+  const urg = el('div','murg'); urg.dataset.mzone = 'urg'; mHostDnd();
   urg.appendChild(el('div','murg-lab','Todays Must Dos'));
   if (!starred.length){
     urg.appendChild(el('div','murg-empty','Nothing starred. Tap a star on the list below and it lands here.'));
@@ -10243,7 +10236,7 @@ function renderMaster(){
     const uhead = el('div','mhead');
     ['', '', 'Task', 'Labels', 'Due', 'Claude', 'My Est', 'Mine', 'Link', '★', '', ''].forEach(h => uhead.appendChild(el('div', null, h)));
     urg.appendChild(uhead);
-    starred.forEach(t => urg.appendChild(mBuildRow(t, 0, { showNum:false, allowDrag:false, sendBack:true })));
+    starred.forEach(t => urg.appendChild(mBuildRow(t, 0, { showNum:false, allowDrag:true, card:urg, sendBack:true })));
     /* v6.117, Scott's call: Labels (and every column after it) must line up between
        Todays Must Dos and the ranked list below it, so both tables share ONE Task
        column width, sized to the longest task text across BOTH tables combined,
@@ -10263,7 +10256,7 @@ function renderMaster(){
       return M_SORT.dir === 'asc' ? c : -c;
     });
   }
-  const card = el('div','mcard');
+  const card = el('div','mcard'); card.dataset.mzone = 'list';
   mDropZone(card);
   const head = el('div','mhead');
   [
@@ -10314,7 +10307,7 @@ function renderMaster(){
   const bRows = {};
   M_BLOCKS.forEach(([sec, label, rowN]) => {
     if (!bRows[rowN]){ bRows[rowN] = el('div','mblkrow'); host.appendChild(bRows[rowN]); }
-    const c = el('div','mcard'); const b = el('div','mblk');
+    const c = el('div','mcard'); const b = el('div','mblk'); b.dataset.mzone = 'box'; b.dataset.sec = sec;
     mBlkDropZone(b);
     const hd = el('h4', null, M_BTITLES[sec] || label);
     hd.contentEditable = 'true'; hd.spellcheck = false; hd.title = 'Tap to rename this box';
