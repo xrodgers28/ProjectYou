@@ -1,5 +1,5 @@
 /* ============================================================================
-   Time Bandit Scoreboard: automatic weekly fill, v1.2, Oct 18, 2026. Train time is office days x 2 trips x 69 minutes; city bike and taxi lines added. v1.1, Oct 18, 2026. Friend box counts only Social entries of 60 minutes or more. The list page uses these same rules.
+   Time Bandit Scoreboard: automatic weekly fill, v1.3, Nov 22, 2026. Project YOU time now reads the calendar blocks directly (today included). v1.2, Oct 18, 2026. Train time is office days x 2 trips x 69 minutes; city bike and taxi lines added. v1.1, Oct 18, 2026. Friend box counts only Social entries of 60 minutes or more. The list page uses these same rules.
    Builds the week's list if it does not exist yet, then fills in every line from what
    Project YOU has already logged (day blocks, habit log, day tallies, tagged calendar events).
    Used by the Habit Dashboard so nobody has to open the list page and press Calculate.
@@ -50,7 +50,7 @@ async function tagged(sb,wk,tag){
 async function compute(sb,wk){
   var end=addDays(wk,6);
   var res=await Promise.all([
-    sb.from('day_blocks').select('day,title,mins,done').gte('day',wk).lte('day',end).limit(3000),
+    sb.from('day_blocks').select('day,title,mins,done,pill,start_min').gte('day',wk).lte('day',end).limit(3000),
     sb.from('qs_log').select('date,tracker,minutes').gte('date',wk).lte('date',end).limit(3000),
     sb.from('day_tally').select('day,py,treadwell,commute,eating').gte('day',wk).lte('day',end).limit(50),
     tagged(sb,wk,'meeting'),tagged(sb,wk,'asa')]);
@@ -67,7 +67,12 @@ async function compute(sb,wk){
 
   /* desk and meetings */
   var amz=bm(/^amazon$/i,true);put('d_amz',amz.m,'worked',amz.m?'Your own Amazon blocks, '+amz.m+' min.':'No Amazon blocks this week.');
-  var py=tsum('py');put('d_py',py,'measured',py?'Day tally, '+py+' min.':'No Project YOU time tallied this week.');
+  /* Nov 22, 2026, Scott: Project YOU time is read straight from the calendar blocks (pill py), today included, overlaps counted once.
+     It used to read the daily totals, which lag behind the calendar (today was missing, so the week showed 10 h instead of 23 h). */
+  var pyDays={};allBlocks.filter(function(b){return b.pill==='py'&&b.start_min!=null;}).forEach(function(b){(pyDays[b.day]=pyDays[b.day]||[]).push([+b.start_min,+b.start_min+b.mins]);});
+  var py=0;Object.keys(pyDays).forEach(function(d){var iv=pyDays[d].sort(function(x,y){return x[0]-y[0];}),cs=null,ce=null;
+    iv.forEach(function(x){if(cs===null){cs=x[0];ce=x[1];}else if(x[0]<=ce){ce=Math.max(ce,x[1]);}else{py+=ce-cs;cs=x[0];ce=x[1];}});if(cs!==null)py+=ce-cs;});
+  put('d_py',py,'measured',py?'Calendar blocks, '+py+' min.':'No Project YOU time on the calendar this week.');
   var tw=tsum('treadwell');put('tw',tw,'measured',tw?'Day tally, '+tw+' min.':'No TreadWell time tallied this week.');
   put('meet',tm.h*60,'worked',tm.n?tm.n+' event'+(tm.n>1?'s':'')+' you tagged "Meeting" on Today\'s Todos, overlaps removed.':'No events tagged "Meeting" this week.');
   /* commute */
