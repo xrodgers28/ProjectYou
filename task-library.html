@@ -91,6 +91,11 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .its .r:hover .dg{opacity:1}
 .its .t{font-size:11.5px;line-height:1.35;color:var(--ink)}
 .its .r.isdone .t{text-decoration:line-through;color:#7b828c}
+.its .mv{margin-left:auto;display:flex;gap:4px;flex:none;opacity:0;transition:opacity .15s}
+.its .r:hover .mv{opacity:1}
+@media(hover:none){.its .mv{opacity:.55}}
+.its .mv button{border:1px solid #dfe4ea;background:#fff;border-radius:5px;font:700 10px Roboto,Arial,sans-serif;color:#5b6472;padding:0 6px;line-height:15px;cursor:pointer;white-space:nowrap}
+.its .mv button:hover{border-color:#3f6f8f;color:#3f6f8f}
 .cb{flex:none;width:15px;height:15px;border:1px solid #aab0b8;border-radius:4px;margin-top:1px;cursor:pointer;background:#fff;position:relative;padding:0}
 .cb.done{background:var(--good);border-color:var(--good)}
 .cb.done::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
@@ -152,7 +157,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><span class="on">Task Library</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Task Library<span class="ver">v2.9</span><span class="strength" id="str" title="Color strength"></span></h1>
+<h1>Task Library<span class="ver">v3.0</span><span class="strength" id="str" title="Color strength"></span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -388,8 +393,8 @@ async function renameEverywhere(n, oldName, newName){
   await persist(n,{name:newName});
   if(sb && !LOCAL){
     try{
-      if(n.level==='list') await sb.from('todos').update({section:newName}).eq('section',oldName);
-      else await sb.from('todos').update({subsection:newName}).eq('section',top.name).eq('subsection',oldName);
+      if(n.level==='list') await sb.from('todos').update({section:newName}).eq('section',oldName).eq('bucket','library');
+      else await sb.from('todos').update({subsection:newName}).eq('section',top.name).eq('subsection',oldName).eq('bucket','library');
       TASKS.forEach(function(t){ if(n.level==='list'){ if(t.section===oldName) t.section=newName; }
         else if(t.section===top.name && t.subsection===oldName) t.subsection=newName; });
     }catch(e){ console.warn(e); }
@@ -402,7 +407,32 @@ function taskRow(t){
   var cb=document.createElement('button'); cb.type='button'; cb.className='cb'+(t.done?' done':''); cb.setAttribute('aria-label','Done');
   cb.addEventListener('click',function(e){ e.stopPropagation(); if(t.demo){ showToast('That is a sample, it is not on your board'); return; } toggleTask(t); }); li.appendChild(cb);
   var d=document.createElement('div'); d.className='grow t'; d.textContent=t.task; if(t.demo) d.style.color='#78818f'; li.appendChild(d);
+  /* v3.0, Scott Nov 22: tasks move back and forth between Today, the Staging Area and the
+     Library. Faint until the row is rolled over; on a phone they are always faintly there. */
+  if(!t.demo && !t.done){
+    var mv=document.createElement('span'); mv.className='mv';
+    var bt=document.createElement('button'); bt.type='button'; bt.textContent='\u2192 Today'; tip(bt,"Send to Today's Todos, just above the Today ends here line");
+    bt.addEventListener('click',function(e){ e.stopPropagation(); sendOut(t,'today'); });
+    var bs=document.createElement('button'); bs.type='button'; bs.textContent='\u21A9 Staging'; tip(bs,'Send back to the Staging Area');
+    bs.addEventListener('click',function(e){ e.stopPropagation(); sendOut(t,'stage'); });
+    mv.appendChild(bt); mv.appendChild(bs); li.appendChild(mv);
+  }
   return li;
+}
+async function sendOut(t, where){
+  if(LOCAL||!window.PYMoves){ showToast('Sign in on Todays Tasks first, then this can move it.'); return; }
+  var label=t.origin_section||PYMoves.labelForPlace(t.section,t.subsection);
+  var was={staged:false,bucket:'library',section:t.section,subsection:t.subsection||null,origin_section:t.origin_section||null,position:t.position||0};
+  try{
+    if(where==='today') await PYMoves.toToday(t.id,label);
+    else await PYMoves.toStaging(t.id,label,'lib');
+  }catch(e){ showToast('That did not move. '+(e&&e.message?e.message:'')); return; }
+  TASKS=TASKS.filter(function(x){return x.id!==t.id;}); render();
+  var short=t.task.length>40?t.task.slice(0,40)+'...':t.task;
+  showToast('Sent "'+short+'" to '+(where==='today'?"Today's Todos":'the Staging Area')+'.','Undo',async function(){
+    try{ await PYMoves.patch(t.id,was); if(where==='today') await PYMoves.lineBy(-1); TASKS.push(t); render(); }
+    catch(e){ showToast('Could not undo that one.'); }
+  });
 }
 function addRow(n){
   var b=document.createElement('button'); b.className='lnk'; b.textContent='+ add';
@@ -531,8 +561,10 @@ async function addTask(n, text){
   TASKS.push(t); render();
   if(LOCAL||!sb) return;
   try{
-    var r=await sb.from('todos').insert({section:top.name, subsection:sub, task:text, bucket:'today', status:'todo', done:false}).select().single();
-    if(r.data) t.id=r.data.id;
+    var r=await sb.from('todos').insert({section:top.name, subsection:sub, task:text, bucket:'library', status:'todo', done:false}).select().single();
+    if(r.data){ t.id=r.data.id;
+      /* the database holds back long multi-sentence inserts as staged; typed here, it belongs here */
+      if(r.data.staged) await sb.from('todos').update({staged:false}).eq('id', r.data.id); }
   }catch(e){ console.warn(e); showToast('Could not save that one'); }
 }
 async function toggleTask(t){
@@ -760,9 +792,11 @@ function demoLine(){
     NODES=q.data.map(function(r){ return {id:'db'+r.id,dbid:r.id,parent_id:r.parent_id?('db'+r.parent_id):null,level:r.level,name:r.name,color:r.color,icon:r.icon,status:r.status||null,position:r.position}; });
     saveLocal(); SEL=(kids(null)[0]||{}).id||null;
     var names=NODES.filter(function(n){ return !n.parent_id; }).map(function(n){ return n.name; });
-    var t=await sb.from('todos').select('id,section,subsection,task,done,position').in('section', names).order('position');
+    /* v3.0: only tasks whose home is the Library (task-moves.js). Before this, any Today task
+       whose label matched a list name (Amazon, Social) showed up here as well. */
+    var t=await sb.from('todos').select('id,section,subsection,task,done,position,origin_section,est_minutes,owner').in('section', names).eq('bucket','library').eq('staged',false).eq('archived',false).order('position');
     if(t.data) TASKS=t.data;
     render();
   }catch(e){ console.warn(e); render(); }
 })();
-</script><script src="nav-config.js"></script><script src="navpatch.js"></script></body></html>
+</script><script src="task-moves.js"></script><script>try{ window.PYMoves && PYMoves.loadPlaces().catch(function(){}); }catch(e){}</script><script src="nav-config.js"></script><script src="navpatch.js"></script></body></html>
