@@ -6086,7 +6086,7 @@ async function whWeekShow(){
   }
 
   function build(R){
-    var VER='Flow Time banner v2.5';
+    var VER='Flow Time banner v2.6';
     /* A different line each time the page loads. Written here rather than quoted from a
        book, so nothing is reproduced; say the word and I will swap in sourced quotations. */
     var LINES=[
@@ -6193,7 +6193,7 @@ async function whWeekShow(){
         var d=dayIdx(r.day); if(d<0)return;
         var st=+r.start_min, mn=+r.mins;
         if(!(st>=0)||!(mn>0))return;
-        out.push(b(d,st,mn,k,String(r.title||'').replace(/^[^\wÀ-ɏ(]*\s*/,'').trim()||LMAP[k].n));
+        var lb=b(d,st,mn,k,String(r.title||'').replace(/^[^\wÀ-ɏ(]*\s*/,'').trim()||LMAP[k].n); lb.dbid=r.id; out.push(lb);
       });
       return out;
     }
@@ -6203,11 +6203,11 @@ async function whWeekShow(){
       if(!window.sb){LOADERR='no database connection';LOADED=true;done();return;}
       var W=WEEKD, prevA=addISO(W[0],-7), prevB=addISO(W[0],-1);
       var qs=[
-        window.sb.from('day_blocks').select('day,start_min,mins,title,cat,pill,tag')
+        window.sb.from('day_blocks').select('id,day,start_min,mins,title,cat,pill,tag')
           .gte('day',W[0]).lte('day',W[6]).not('start_min','is',null).limit(2000),
         window.sb.from('flow_plan').select('id,day,start_min,mins,kind,label,auto')
           .eq('week_start',W[0]).limit(500),
-        window.sb.from('day_blocks').select('day,start_min,mins,title,cat,pill,tag')
+        window.sb.from('day_blocks').select('id,day,start_min,mins,title,cat,pill,tag')
           .gte('day',prevA).lte('day',prevB).not('start_min','is',null).limit(2000)
       ];
       Promise.all(qs.map(function(q){return Promise.resolve(q).then(function(r){return r;},function(e){return {error:e};});}))
@@ -6327,10 +6327,10 @@ async function whWeekShow(){
       var bx=colX(slot.day)+3, bw=COLW-8;
       var gone=WEEKD&&WEEKD[slot.day]<todayISO();
       mk('rect',{x:bx.toFixed(1),y:y0.toFixed(1),width:bw.toFixed(1),height:bh.toFixed(1),rx:4,
-        fill:gone?'var(--neutral)':l.col,'fill-opacity':gone?.12:.30,
-        stroke:gone?'var(--neutral)':l.col,'stroke-width':1.6,'stroke-dasharray':'4 3'},g);
+        fill:(gone&&DRAG&&DRAG.plan)?'var(--neutral)':l.col,'fill-opacity':(gone&&DRAG&&DRAG.plan)?.12:.30,
+        stroke:(gone&&DRAG&&DRAG.plan)?'var(--neutral)':l.col,'stroke-width':1.6,'stroke-dasharray':(gone&&!(DRAG&&DRAG.plan))?'0':'4 3'},g);
       if(bh>=13)mk('text',{x:(bx+5).toFixed(1),y:(y0+11).toFixed(1),class:'t-plan'},g,
-        gone?'that day has gone':(fmtT(slot.s)+(DRAG&&DRAG.label?' \u00b7 '+DRAG.label:'')));
+        gone?((DRAG&&DRAG.plan)?'that day has gone':'log '+fmtT(slot.s)):(fmtT(slot.s)+(DRAG&&DRAG.label?' \u00b7 '+DRAG.label:'')));
     }
     function makeFlyer(k,label){
       var l=LMAP[k]||{n:k,ic:null};
@@ -6421,7 +6421,13 @@ async function whWeekShow(){
       if(d.pass){ try{ window.PY_FLOW_TOOK=Date.now(); }catch(e){} }
       ev.stopPropagation(); if(ev.cancelable)ev.preventDefault();
       if(!d.slot){ if(d.plan)render(); return; }
-      if(WEEKD&&WEEKD[d.slot.day]<todayISO()){ render(); return; }   /* never into a day that has gone */
+      if(WEEKD&&WEEKD[d.slot.day]<todayISO()){
+        /* Nov 22, 2026, Scott: a day that has gone takes REAL logged time, not a promise. Only a new drop from a pill
+           (not moving an old plan) writes it, so planned blocks on past days stay frozen as before. */
+        if(d.plan||d.pass){ render(); return; }
+        pastLog(d.slot.day,d.slot.s,d.mins,d.k,d.label||null,function(){render();});
+        return;
+      }
       if(d.plan) planMove(d.plan,d.slot.day,d.slot.s,function(){render();});
       else planAdd(d.slot.day,d.slot.s,d.mins,d.k,d.label||null,false,function(ok){ if(ok&&!d.label&&state.plan.length)EDITING=state.plan[state.plan.length-1].pid; render(); });
     }
@@ -6456,6 +6462,30 @@ async function whWeekShow(){
           function(r){ if(r&&r.error)SAVEMSG='That name did not save. '+saveWhy(r.error); else SAVEMSG=''; if(then)then(); },
           function(e){ SAVEMSG='That name did not save. '+saveWhy(e); if(then)then(); });
       }catch(e){ if(then)then(); }
+    }
+    /* ---------- logging time on a day that has gone (v2.6, Nov 22, 2026) ----------
+       Writes a real day_blocks row, the same shape Todays Tasks writes, so it counts in the Flow totals and shows on that day.
+       It only ADDS one row. It never edits or removes anything Todays Tasks owns. Overlaps ask first. */
+    var PASTTITLE={flow:'Flow time',studio:'Remote Creative Studio',asa:'Asa Date',dad:'Good Dad time',safari:'Local Safari',
+                   nature:'Walk (Time in Nature)',culture:'Cultural moment',social:'Meet up'};
+    function pastLog(d,st,m,k,label,then){
+      var iso=WEEKD[d];
+      var title=(k==='social'&&label)?label:(PASTTITLE[k]||(LMAP[k]&&LMAP[k].n)||k);
+      var row={day:iso,title:title,start_min:st,mins:m,cat:(k==='social'?'hab':'own'),amz:false,done:true,pill:(k==='social'?'social':null)};
+      if(!window.sb){ SAVEMSG='No connection, so nothing was saved.'; if(then)then(false); return; }
+      if(dayBusyAt(d,st,m)){
+        var hit=state.log.filter(function(x){return x.day===d&&x.s<st+m&&st<x.s+x.m;})[0];
+        var nm=hit?((hit.t||hit.n||'a logged block')+' ('+fmtT(hit.s)+' to '+fmtT(hit.s+hit.m)+')'):'something logged';
+        var ok=false; try{ ok=window.confirm('That overlaps '+nm+' on '+FULL[d]+'. Add the '+title+' time anyway?'); }catch(e){ ok=false; }
+        if(!ok){ SAVEMSG='Cancelled, nothing was added.'; if(then)then(false); return; }
+      }
+      try{
+        window.sb.from('day_blocks').insert(row).select('id').then(function(r){
+          if(r&&r.error){ SAVEMSG='That did not save. '+saveWhy(r.error); if(then)then(false); return; }
+          SAVEMSG='Added '+fmtLong(m)+' of '+title+' to '+FULL[d]+'.';
+          loadWeek(function(){ if(then)then(true); });
+        },function(e){ SAVEMSG='That did not save. '+saveWhy(e); if(then)then(false); });
+      }catch(e){ SAVEMSG='That did not save.'; if(then)then(false); }
     }
     function planAdd(d,st,m,k,label,auto,then){
       var iso=WEEKD[d];
@@ -7037,7 +7067,26 @@ async function whWeekShow(){
         tr.appendChild(h('td',{text:DAYS[x.day]+(WEEKD?' '+shortDate(WEEKD[x.day]):'')}));
         tr.appendChild(h('td',{text:fmtT(x.s)+' to '+fmtT(x.s+x.m)}));
         tr.appendChild(h('td',{text:fmtLong(x.m)}));
-        tr.appendChild(h('td',{text:(x.t||'')+(x.note?'  ('+x.note+')':'')}));
+        var dtd=h('td',{text:(x.t||'')+(x.note?'  ('+x.note+')':'')});
+        /* v2.6, Nov 22, 2026: a logged block on a day that has gone can be removed here (asks first). */
+        if(list==='log'&&x.dbid!=null&&WEEKD&&WEEKD[x.day]<todayISO()){
+          var xb=h('button',{type:'button',text:'Delete'});
+          xb.setAttribute('style','margin-left:10px;font-size:11px;padding:2px 8px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:#b3261e;cursor:pointer');
+          xb.addEventListener('click',function(ev){
+            ev.stopPropagation();
+            var ok=false; try{ ok=window.confirm('Delete "'+(x.t||'this block')+'" on '+FULL[x.day]+' ('+fmtT(x.s)+' to '+fmtT(x.s+x.m)+')? It also comes off Todays Tasks for that day.'); }catch(e){}
+            if(!ok)return;
+            xb.disabled=true; xb.textContent='Deleting...';
+            try{
+              window.sb.from('day_blocks').delete().eq('id',x.dbid).then(function(r){
+                if(r&&r.error){ SAVEMSG='That would not delete. '+saveWhy(r.error); render(); return; }
+                SAVEMSG='Deleted.'; loadWeek(function(){render();});
+              },function(e){ SAVEMSG='That would not delete. '+saveWhy(e); render(); });
+            }catch(e){ render(); }
+          });
+          dtd.appendChild(xb);
+        }
+        tr.appendChild(dtd);
         tb.appendChild(tr);
       });
       wrap.appendChild(h('table',{},[th,tb]));
