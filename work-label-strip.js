@@ -1,14 +1,15 @@
-/* Where my Project YOU time went, habits dashboard strip v1.0 (Nov 23, 2026).
+/* Where my Project YOU time went, habits dashboard strip v1.1 (Nov 23, 2026).
    One stacked bar for the chosen week plus a 4-week trend, split by the work label on each
    dragged Project You block (day_blocks.work_label). Time with no label shows grey.
    Numbers come from the database function py_work_label_minutes: each block counts once,
    only time that has already happened. Shadow root, so no page styles leak in. */
 (function(){
-var L=[['new','New functionality','#3f6f8f','<path fill-rule="evenodd" d="M5.5 3h13A2.5 2.5 0 0 1 21 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-13A2.5 2.5 0 0 1 5.5 3zM11 7v4H7v2h4v4h2v-4h4v-2h-4V7z"/>'],
+var L0=[['new','New functionality','#3f6f8f','<path fill-rule="evenodd" d="M5.5 3h13A2.5 2.5 0 0 1 21 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 18.5v-13A2.5 2.5 0 0 1 5.5 3zM11 7v4H7v2h4v4h2v-4h4v-2h-4V7z"/>'],
 ['design','Finessing design','#c0577f','<path fill-rule="evenodd" d="M12 2l6.5 7.5L16 18H8L5.5 9.5zM12 9a1.6 1.6 0 1 0 0 3.2A1.6 1.6 0 0 0 12 9zm-.8-4.5v4h1.6v-4z"/><rect x="8" y="19.2" width="8" height="2.8" rx="1"/>'],
 ['insights','Crafting insights','#e8a23a','<path d="M12 2a7 7 0 0 0-4.2 12.6V17h8.4v-2.4A7 7 0 0 0 12 2z"/><rect x="8.8" y="18.2" width="6.4" height="1.8" rx=".9"/><rect x="10" y="20.8" width="4" height="1.6" rx=".8"/>'],
 ['debug','Debugging','#5f9e6a','<ellipse cx="12" cy="14.5" rx="5" ry="6"/><circle cx="12" cy="6.8" r="3"/>'],
 ['none','Not labelled yet','#d5dae1','']];
+var L=L0.map(function(l){var P=window.PY_WL;return [l[0],l[1],l[2],(P&&P.icons[l[0]])||l[3]]});
 var CSS=':host{display:block;margin:9px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.4;color:#1f2a44}*{box-sizing:border-box}'+
 '.bn{background:#fff;border:1px solid #e3e7ee;border-radius:14px;padding:14px 18px;display:flex;gap:28px;flex-wrap:wrap}'+
 '.a{flex:1 1 360px;min-width:0}.b{flex:1 1 300px;min-width:0}'+
