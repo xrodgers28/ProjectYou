@@ -157,7 +157,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><span class="on">Task Library</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Task Library<span class="ver">v3.3</span><span class="strength" id="str" title="Color strength"></span></h1>
+<h1>Task Library<span class="ver">v3.4</span><span class="strength" id="str" title="Color strength"></span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -433,15 +433,14 @@ async function sendOut(t, where){
   if(LOCAL||!window.PYMoves){ showToast('Sign in on Todays Tasks first, then this can move it.'); return; }
   var label=t.origin_section||PYMoves.labelForPlace(t.section,t.subsection);
   var was={staged:false,bucket:'library',section:t.section,subsection:t.subsection||null,origin_section:t.origin_section||null,position:t.position||0};
-  try{
-    if(where==='today') await PYMoves.toToday(t.id,label);
-    else await PYMoves.toStaging(t.id,label,'lib');
-  }catch(e){ showToast('That did not move. '+(e&&e.message?e.message:'')); return; }
+  /* v3.4: the screen moves first; the save runs in the background */
   TASKS=TASKS.filter(function(x){return x.id!==t.id;}); render();
+  var job; try{ job = where==='today' ? PYMoves.toToday(t.id,label) : PYMoves.toStaging(t.id,label,'lib'); }catch(e){ job=Promise.reject(e); }
+  job.catch(function(e){ TASKS.push(t); render(); showToast('That did not move. '+(e&&e.message&&e.message.length<120?e.message:'Check your connection and try again.')); });
   var short=t.task.length>40?t.task.slice(0,40)+'...':t.task;
-  showToast('Sent "'+short+'" to '+(where==='today'?"Today's Todos":'the Staging Area')+'.','Undo',async function(){
-    try{ await PYMoves.patch(t.id,was); if(where==='today') await PYMoves.lineBy(-1); TASKS.push(t); render(); }
-    catch(e){ showToast('Could not undo that one.'); }
+  showToast('Sent "'+short+'" to '+(where==='today'?"Today's Todos":'the Staging Area')+'.','Undo',function(){
+    TASKS.push(t); render();
+    PYMoves.patch(t.id,was).then(function(){ if(where==='today') return PYMoves.lineBy(-1); }).catch(function(){ showToast('Could not undo that one.'); });
   });
 }
 function addRow(n){
@@ -571,7 +570,7 @@ async function addTask(n, text){
   TASKS.push(t); render();
   if(LOCAL||!sb) return;
   try{
-    var r=await sb.from('todos').insert({section:top.name, subsection:sub, task:text, bucket:'library', status:'todo', done:false}).select().single();
+    var r=await (window.PYMoves&&PYMoves.run ? PYMoves.run(function(){ return sb.from('todos').insert({section:top.name, subsection:sub, task:text, bucket:'library', status:'todo', done:false}).select().single(); }) : sb.from('todos').insert({section:top.name, subsection:sub, task:text, bucket:'library', status:'todo', done:false}).select().single());
     if(r.data){ t.id=r.data.id;
       /* the database holds back long multi-sentence inserts as staged; typed here, it belongs here */
       if(r.data.staged) await sb.from('todos').update({staged:false}).eq('id', r.data.id); }
@@ -580,7 +579,7 @@ async function addTask(n, text){
 async function toggleTask(t){
   t.done=!t.done; render();
   if(LOCAL||!sb) return;
-  try{ await sb.from('todos').update({done:t.done, status:t.done?'done':'todo'}).eq('id', t.id); }catch(e){ console.warn(e); }
+  saveTodoBg(t.id,{done:t.done, status:t.done?'done':'todo'});
 }
 
 /* ---------- menu ---------- */
@@ -647,16 +646,11 @@ function showToast(msg, btnLabel, fn){
    project or sub-category in the rail. The screen updates at once; the save runs in the
    background and retries if the connection is weak (his rule: screen updates at once). */
 function placeName(n){ return chain(n.id).map(function(x){ return x.name; }).join(' › '); }
-function saveTodoBg(id, fields, tries){
-  tries = tries||0;
-  if(LOCAL||!sb) return;
-  Promise.resolve(sb.from('todos').update(fields).eq('id', id)).then(function(r){
-    if(r && r.error) throw r.error;
-  }).catch(function(){
-    if(tries>=8){ showToast('One move could not be saved. Check your connection and move it again.'); return; }
-    if(tries===0) showToast('Weak connection. The move is kept on this screen and still trying to save...');
-    setTimeout(function(){ saveTodoBg(id, fields, tries+1); }, Math.min(1500*Math.pow(1.6,tries),15000));
-  });
+function saveTodoBg(id, fields){
+  if(LOCAL||!sb||!window.PYMoves||!PYMoves.run) return;
+  PYMoves.run(function(){ return sb.from('todos').update(fields).eq('id', id); }).then(function(r){
+    if(r && r.error) showToast('One change could not be saved. Check your connection and try it again.');
+  }).catch(function(){ showToast('One change could not be saved. Check your connection and try it again.'); });
 }
 function moveTaskToNode(t, tn){
   var top=chain(tn.id)[0], sec=top.name, subn = tn.level==='list' ? null : tn.name;

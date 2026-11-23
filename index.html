@@ -1724,7 +1724,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="mastertoggle" class="vtoggle" style="cursor:pointer" title="Switch between the old board and the Master list">★ Master</a><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.134</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.135</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -2459,7 +2459,7 @@ async function refreshTodos() {
      him to finish instead of stealing focus. */
   if (isEditing()) { clearTimeout(liveTimer); liveTimer = setTimeout(refreshTodos, 600); return; }
   /* v6.131: never replace the screen with an older copy from the server while a save is still on its way */
-  if (SAVE_PENDING) { clearTimeout(liveTimer); liveTimer = setTimeout(refreshTodos, 1500); render(); return; }
+  if (SAVE_PENDING || (window.PYMoves && PYMoves.pending && PYMoves.pending())) { clearTimeout(liveTimer); liveTimer = setTimeout(refreshTodos, 1500); render(); return; }
   const { data, error } = await sb.from('todos').select('*').eq('archived', false).eq('staged', false).neq('bucket', 'library').order('position', { ascending: true });
   if (error) { console.error(error); return; }
   todos = data || [];
@@ -2485,16 +2485,20 @@ function subscribe() {
    task so edits land in order), retries on its own when the connection is weak, and a small
    "Saving" note shows until everything is safe. */
 const SAVE_CHAIN = {}; let SAVE_PENDING = 0, SAVE_WAITING = 0;
-function saveNote(){
+window.saveNote = function saveNote(){
+  const PM = window.PYMoves && PYMoves.pending ? PYMoves.pending() : 0, PW = window.PYMoves && PYMoves.waiting ? PYMoves.waiting() : 0;
+  const TOT = SAVE_PENDING + PM, WAITN = SAVE_WAITING + PW;
   let n = document.getElementById('savenote');
   if (!n){ n = document.createElement('div'); n.id = 'savenote';
     n.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:9990;background:#1f2a44;color:#fff;font:700 12.5px system-ui,sans-serif;padding:7px 12px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none';
     document.body.appendChild(n); }
-  if (!SAVE_PENDING){ n.style.display = 'none'; return; }
+  if (!TOT){ n.style.display = 'none'; return; }
   n.style.display = 'block';
-  n.textContent = SAVE_WAITING ? 'Weak connection. ' + SAVE_PENDING + ' change' + (SAVE_PENDING > 1 ? 's' : '') + ' kept safe on this screen, still trying...' : 'Saving...';
-}
+  n.textContent = WAITN ? 'Weak connection. ' + TOT + ' change' + (TOT > 1 ? 's' : '') + ' kept safe on this screen, still trying...' : 'Saving...';
+};
+const TMPROWS = {};
 async function sendPatch(id, fields){
+  if (TMPROWS[id]){ await TMPROWS[id].p; if (!TMPROWS[id].real) return false; id = TMPROWS[id].real; }
   for (let n = 0; n < 12; n++){
     try{
       const { error } = await sb.from('todos').update(fields).eq('id', id);
@@ -2749,7 +2753,7 @@ async function doUndo() {
   render();
   const now = new Date().toISOString();
   for (const t of changed) {
-    await sb.from('todos').update({ position: t.position, section: t.section, subsection: t.subsection, is_habit: t.is_habit, bucket: t.bucket, done: t.done, done_at: t.done_at, actual_minutes: t.actual_minutes, starred: t.starred, star_color: t.star_color, star_position: t.star_position, skipped: t.skipped, origin_section: t.origin_section, origin_subsection: t.origin_subsection, status: t.status, indent: t.indent || 0, updated_at: now }).eq('id', t.id);
+    patch(t.id, { position: t.position, section: t.section, subsection: t.subsection, is_habit: t.is_habit, bucket: t.bucket, done: t.done, done_at: t.done_at, actual_minutes: t.actual_minutes, starred: t.starred, star_color: t.star_color, star_position: t.star_position, skipped: t.skipped, origin_section: t.origin_section, origin_subsection: t.origin_subsection, status: t.status, indent: t.indent || 0, updated_at: now } );
   }
   if (secChanged) await sb.from('app_meta').upsert({ key: 'section_order', value: JSON.stringify(sectionOrder), updated_at: now });
 }
@@ -9587,11 +9591,18 @@ async function mAddTask(text, section, inToday){
   const ins = { section, subsection: null, task: parsed.task, position: pos,
                 bucket: section === "Tomorrow's Core To-Dos" ? 'tomorrow' : 'today',
                 status: 'todo', done: false, my_minutes: parsed.mins };
-  const { data, error } = await sb.from('todos').insert(ins).select().single();
-  if (error){ console.error(error); toast('Could not add that task. Nothing was saved.'); return; }
-  todos.push(data);
-  if (inToday) { MLINE = cut + 1; await mSaveLine(); }
+  /* v6.135: the new task shows at once; the save and the line position go in the background */
+  const tmpId = 'tmp-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
+  const row = Object.assign({ id: tmpId, archived: false, staged: false }, ins);
+  todos.push(row);
+  if (inToday) { MLINE = cut + 1; mSaveLine(); }
   render();
+  const rec = TMPROWS[tmpId] = { real: null };
+  rec.p = (window.PYMoves && PYMoves.run ? PYMoves.run(() => sb.from('todos').insert(ins).select().single()) : sb.from('todos').insert(ins).select().single())
+    .then(r => {
+      if (r && r.data){ rec.real = r.data.id; Object.assign(row, r.data); if (!isEditing()) render(); }
+      else { todos = todos.filter(x => x !== row); render(); toast('Could not add that task. Nothing was saved.'); }
+    }).catch(() => { todos = todos.filter(x => x !== row); render(); toast('Could not add that task. Nothing was saved.'); });
   toast('Added to ' + mSecLabel(section) + (inToday ? ', in today' : ', below the line') + (parsed.mins ? ' · ' + showDur(parsed.mins) : ''));
   const inp = document.querySelector('#masterview input.mnew');
   if (inp){ inp.value = ''; inp.focus(); }
@@ -9928,25 +9939,27 @@ function mMoveChip(t, chip){
 async function mSendOut(t, v){
   const was = { staged:false, bucket:'today', section:t.section, subsection:t.subsection || null, position:t.position || 0,
                 star_color:t.star_color || null, starred:!!t.starred, star_position:t.star_position || 0, origin_section:t.origin_section || null };
-  let where = '';
+  let where = '', job, p = null;
   /* a task leaving from above the Today line takes its slot with it, so the rest of
      today stays exactly as it was */
   const restNow = mLive().filter(x => !x.star_color).sort((a,b) => (a.position||0) - (b.position||0));
   const k = restNow.indexOf(t), wasAbove = k > -1 && k < MLINE;
-  try{
-    if (v === '__stage'){ await PYMoves.toStaging(t.id, t.section, 'today'); where = 'the Staging Area'; }
-    else {
-      const id = +v.slice(6), p = PYMoves.places().filter(x => x.id === id)[0];
-      await PYMoves.toLibrary(t.id, p, t.section); where = 'the Task Library \u203a ' + PYMoves.placeText(p);
-    }
-  }catch(e){ toast('That did not move. ' + (e && e.message ? e.message : '')); render(); return; }
+  if (v === '__stage'){ where = 'the Staging Area'; }
+  else { const id = +v.slice(6); p = PYMoves.places().filter(x => x.id === id)[0]; where = 'the Task Library \u203a ' + PYMoves.placeText(p); }
+  /* v6.135: the screen moves first; the save runs in the background */
+  const back = () => { if (!todos.includes(t)) todos.push(t); Object.assign(t, was); };
   todos = todos.filter(x => x.id !== t.id);
-  if (wasAbove){ MLINE = Math.max(0, MLINE - 1); await mSaveLine(); }
+  if (wasAbove){ MLINE = Math.max(0, MLINE - 1); mSaveLine(); }
   render();
+  try{ job = v === '__stage' ? PYMoves.toStaging(t.id, was.section, 'today') : PYMoves.toLibrary(t.id, p, was.section); }catch(e){ job = Promise.reject(e); }
+  job.catch(e => {
+    back(); if (wasAbove){ MLINE = MLINE + 1; mSaveLine(); } render();
+    toast('That did not move. ' + (e && e.message && e.message.length < 120 ? e.message : 'Check your connection and try again.'));
+  });
   const short = t.task.length > 42 ? t.task.slice(0, 42) + '...' : t.task;
-  toastUndo('Sent "' + short + '" to ' + where + '.', async () => {
-    try{ await PYMoves.patch(t.id, was); if (wasAbove){ MLINE = MLINE + 1; await mSaveLine(); } }catch(e){ toast('Could not undo that one.'); }
-    await refreshTodos();
+  toastUndo('Sent "' + short + '" to ' + where + '.', () => {
+    back(); if (wasAbove){ MLINE = MLINE + 1; mSaveLine(); } render();
+    PYMoves.patch(t.id, was).catch(() => toast('Could not undo that one.'));
   });
 }
 

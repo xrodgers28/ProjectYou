@@ -1,4 +1,4 @@
-/* task-moves.js v1.3, Nov 23 2026. ONE PLACE THAT DECIDES WHERE A TASK LIVES.
+/* task-moves.js v1.4, Nov 23 2026 (v1.4: every save retries on a weak connection). ONE PLACE THAT DECIDES WHERE A TASK LIVES.
 
    Scott, Nov 22 2026: "making sure today todos, staging area and task library all move
    tasks back and forth as they should."
@@ -24,9 +24,33 @@ function signedIn(){return tok()!==ANON}
 function H(x){var h={apikey:ANON,Authorization:'Bearer '+tok()};if(x)for(var k in x)h[k]=x[k];return h}
 function fail(r){return r.text().then(function(t){return Promise.reject(new Error(t||('HTTP '+r.status)))})}
 function get(path){return fetch(SUPA+'/rest/v1/'+path,{headers:H()}).then(function(r){return r.ok?r.json():fail(r)})}
+/* v1.4, Scott Nov 23: "screen updates at once". Every save goes through run(): it retries on its
+   own when the connection is weak, and a small note shows until everything is safe. */
+var SAVING=0,WAITING=0;
+function note(){
+ if(window.saveNote){window.saveNote();return}
+ var n=document.getElementById('pymnote');
+ if(!n){n=document.createElement('div');n.id='pymnote';n.style.cssText='position:fixed;left:14px;bottom:14px;z-index:9990;background:#1f2a44;color:#fff;font:700 12.5px system-ui,sans-serif;padding:7px 12px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none';document.body&&document.body.appendChild(n)}
+ if(!SAVING){n.style.display='none';return}
+ n.style.display='block';
+ n.textContent=WAITING?'Weak connection. '+SAVING+' change'+(SAVING>1?'s':'')+' kept safe on this screen, still trying...':'Saving...'}
+function isNet(e){return !!(e&&(e.net||e instanceof TypeError))}
+function run(factory){
+ SAVING++;note();
+ return new Promise(function(res,rej){
+  var n=0;
+  function done(f,v){SAVING--;note();f(v)}
+  function again(){n++;WAITING++;note();setTimeout(function(){WAITING=Math.max(0,WAITING-1);go()},Math.min(1500*Math.pow(1.6,n-1),15000))}
+  function go(){
+   var p;try{p=Promise.resolve(factory())}catch(e){p=Promise.reject(e)}
+   p.then(function(r){
+    if(r&&r.error&&(!r.error.code||/^(5|08|57)/.test(String(r.error.code)))&&n<8)return again();
+    done(res,r)},function(e){if(isNet(e)&&n<8)again();else done(rej,e)})}
+  go()})}
+window.addEventListener('beforeunload',function(e){if(SAVING){e.preventDefault();e.returnValue=''}});
 function patch(id,body){body.updated_at=new Date().toISOString();
- return fetch(SUPA+'/rest/v1/todos?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:H({'Content-Type':'application/json',Prefer:'return=representation'}),body:JSON.stringify(body)})
-  .then(function(r){return r.ok?r.json():fail(r)})
+ return run(function(){return fetch(SUPA+'/rest/v1/todos?id=eq.'+encodeURIComponent(id),{method:'PATCH',headers:H({'Content-Type':'application/json',Prefer:'return=representation'}),body:JSON.stringify(body)})
+  .then(function(r){return r.ok?r.json():((r.status>=500||r.status===408||r.status===429)?Promise.reject(Object.assign(new Error('HTTP '+r.status),{net:true})):fail(r))})})
   .then(function(rows){if(!rows||!rows.length)return Promise.reject(new Error('Not saved. Sign in on Todays Tasks and try again.'));return rows[0]})}
 /* New rows always go in as staged first and are then moved home with a PATCH. The
    database's sentence guard holds back long multi-sentence inserts on its own, so this
@@ -167,6 +191,6 @@ function claudeChip(t,changed){css();var L=claudeLabel(t),b=document.createEleme
  b.title={q:'Queued for Claude, next pickup about '+nextPickup(),w:'Claude is working on this',n:'Claude needs you: tap to answer',r:'Ready for you to review'}[L[1]]||'Claude owns this one: tap for options';
  b.addEventListener('click',function(e){e.stopPropagation();claudePanel(t,b,changed)});return b}
 
-window.PYMoves={version:'1.3',claudeChip:claudeChip,claudePanel:claudePanel,nextPickup:nextPickup,signedIn:signedIn,loadPlaces:loadPlaces,places:function(){return PLACES||[]},placeText:placeText,findPlace:findPlace,
+window.PYMoves={version:'1.4',run:run,pending:function(){return SAVING},waiting:function(){return WAITING},claudeChip:claudeChip,claudePanel:claudePanel,nextPickup:nextPickup,signedIn:signedIn,loadPlaces:loadPlaces,places:function(){return PLACES||[]},placeText:placeText,findPlace:findPlace,
  placeForLabel:placeForLabel,labelForPlace:labelForPlace,toToday:toToday,toLibrary:toLibrary,toStaging:toStaging,insertStaged:insertStaged,patch:patch,get:get,lineBy:lineBy};
 })();
