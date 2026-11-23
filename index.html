@@ -1720,7 +1720,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="mastertoggle" class="vtoggle" style="cursor:pointer" title="Switch between the old board and the Master list">★ Master</a><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.130</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.131</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -2454,6 +2454,8 @@ async function refreshTodos() {
      nowhere. That is exactly the "tab in on each line no longer working" report. Wait for
      him to finish instead of stealing focus. */
   if (isEditing()) { clearTimeout(liveTimer); liveTimer = setTimeout(refreshTodos, 600); return; }
+  /* v6.131: never replace the screen with an older copy from the server while a save is still on its way */
+  if (SAVE_PENDING) { clearTimeout(liveTimer); liveTimer = setTimeout(refreshTodos, 1500); render(); return; }
   const { data, error } = await sb.from('todos').select('*').eq('archived', false).eq('staged', false).neq('bucket', 'library').order('position', { ascending: true });
   if (error) { console.error(error); return; }
   todos = data || [];
@@ -2473,12 +2475,45 @@ function subscribe() {
     })
     .subscribe();
 }
-async function patch(id, fields) {
+/* v6.131, Scott Nov 23: "when my internet connection is slow the today page freezes up and
+   it's hard to type." Cause: every edit waited for the server to answer before the screen
+   moved on. Now the screen updates at once, the save goes in the background (one line per
+   task so edits land in order), retries on its own when the connection is weak, and a small
+   "Saving" note shows until everything is safe. */
+const SAVE_CHAIN = {}; let SAVE_PENDING = 0, SAVE_WAITING = 0;
+function saveNote(){
+  let n = document.getElementById('savenote');
+  if (!n){ n = document.createElement('div'); n.id = 'savenote';
+    n.style.cssText = 'position:fixed;left:14px;bottom:14px;z-index:9990;background:#1f2a44;color:#fff;font:700 12.5px system-ui,sans-serif;padding:7px 12px;border-radius:999px;box-shadow:0 4px 14px rgba(0,0,0,.25);display:none';
+    document.body.appendChild(n); }
+  if (!SAVE_PENDING){ n.style.display = 'none'; return; }
+  n.style.display = 'block';
+  n.textContent = SAVE_WAITING ? 'Weak connection. ' + SAVE_PENDING + ' change' + (SAVE_PENDING > 1 ? 's' : '') + ' kept safe on this screen, still trying...' : 'Saving...';
+}
+async function sendPatch(id, fields){
+  for (let n = 0; n < 12; n++){
+    try{
+      const { error } = await sb.from('todos').update(fields).eq('id', id);
+      if (!error) return true;
+      if (error.code && !/^(5|08|57)/.test(String(error.code))) { console.error(error); return false; }
+    }catch(e){}
+    SAVE_WAITING++; saveNote();
+    await new Promise(r => setTimeout(r, Math.min(1500 * Math.pow(1.6, n), 15000)));
+    SAVE_WAITING = Math.max(0, SAVE_WAITING - 1);
+  }
+  return false;
+}
+function patch(id, fields) {
   fields.updated_at = new Date().toISOString();
   const t = todos.find(x => x.id === id); if (t) Object.assign(t, fields);
-  const { error } = await sb.from('todos').update(fields).eq('id', id);
-  if (error) console.error(error);
+  SAVE_PENDING++; saveNote();
+  SAVE_CHAIN[id] = (SAVE_CHAIN[id] || Promise.resolve()).then(() => sendPatch(id, fields)).then(ok => {
+    SAVE_PENDING--; saveNote();
+    if (!ok) toast('One change could not be saved. Check your connection and try it again.');
+  });
+  return Promise.resolve();
 }
+window.addEventListener('beforeunload', e => { if (SAVE_PENDING){ e.preventDefault(); e.returnValue = ''; } });
 /* Star cycle, REVISED Sep 5 2026: no star -> yellow -> red -> yellow -> red -> ...
    forever. It used to go red -> no star, which Scott found himself hitting by
    accident on a third tap - the task would silently vanish back into its home
