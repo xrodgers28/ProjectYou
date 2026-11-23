@@ -1,4 +1,4 @@
-/* task-moves.js v1.0, Nov 23 2026. ONE PLACE THAT DECIDES WHERE A TASK LIVES.
+/* task-moves.js v1.1, Nov 23 2026. ONE PLACE THAT DECIDES WHERE A TASK LIVES.
 
    Scott, Nov 22 2026: "making sure today todos, staging area and task library all move
    tasks back and forth as they should."
@@ -70,7 +70,7 @@ function labelForPlace(section,subsection){
  return 'Core To-Dos'}
 
 /* ---------- Today's line ---------- */
-var BLOCKS=['⏳ Waiting On','Waiting On','Need to Schedule','Coming Appointments','✓ Completed Tasks'];
+var BLOCKS=['⏳ Waiting On','Waiting On','Need to Schedule','Coming Appointments','✓ Completed Tasks','Today Box 2','Today Box 3','Today Box 5','Today Box 6'];
 function getLine(){return get('board_meta?select=val&key=eq.master_line').then(function(d){var n=d&&d[0]?Number(d[0].val):5;return isFinite(n)&&n>=0?n:5})}
 function setLine(n){return fetch(SUPA+'/rest/v1/board_meta?on_conflict=key',{method:'POST',headers:H({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:'master_line',val:n})}).then(function(r){if(!r.ok)return fail(r)})}
 function lineBy(d){return getLine().then(function(n){return setLine(Math.max(0,n+d))})}
@@ -105,6 +105,6 @@ function toStaging(id,label,guess,extra){
  if(extra)for(var k in extra)body[k]=extra[k];
  return patch(id,body)}
 
-window.PYMoves={version:'1.0',signedIn:signedIn,loadPlaces:loadPlaces,places:function(){return PLACES||[]},placeText:placeText,findPlace:findPlace,
+window.PYMoves={version:'1.1',signedIn:signedIn,loadPlaces:loadPlaces,places:function(){return PLACES||[]},placeText:placeText,findPlace:findPlace,
  placeForLabel:placeForLabel,labelForPlace:labelForPlace,toToday:toToday,toLibrary:toLibrary,toStaging:toStaging,insertStaged:insertStaged,patch:patch,get:get,lineBy:lineBy};
 })();
