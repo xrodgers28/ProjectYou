@@ -1,4 +1,4 @@
-/* task-moves.js v1.1, Nov 23 2026. ONE PLACE THAT DECIDES WHERE A TASK LIVES.
+/* task-moves.js v1.2, Nov 23 2026. ONE PLACE THAT DECIDES WHERE A TASK LIVES.
 
    Scott, Nov 22 2026: "making sure today todos, staging area and task library all move
    tasks back and forth as they should."
@@ -105,6 +105,70 @@ function toStaging(id,label,guess,extra){
  if(extra)for(var k in extra)body[k]=extra[k];
  return patch(id,body)}
 
-window.PYMoves={version:'1.1',signedIn:signedIn,loadPlaces:loadPlaces,places:function(){return PLACES||[]},placeText:placeText,findPlace:findPlace,
+/*CLAUDE*/
+/* ---------- Claude's work on a task (v1.2, Nov 23 2026) ----------
+   Scott: "every task that Claude's working on show up as a task within the to-do list ...
+   just a status on each task". Tag a filed task Claude and the database queues it; an
+   hourly pickup (7am to midnight Eastern, up to 3 tasks) works it and writes back here.
+   One chip + one panel, used by Today and the Task Library alike. */
+var CL={queued:['Queued','q'],working:['Working','w'],needs:['Needs you','n'],review:['Review','r']};
+var PICK_MIN=null;   /* the pickup's minute past the hour, set below */
+function nextPickup(){var d=new Date(),et=new Date(d.toLocaleString('en-US',{timeZone:'America/New_York'}));
+ var h=et.getHours(),m=et.getMinutes(),pm=PICK_MIN==null?0:PICK_MIN;
+ if(m>=pm)h++;if(h<7)h=7;if(h>24)h=7;
+ var hh=h%24,ap=hh<12?'am':'pm',h12=hh%12||12;return h12+':'+String(pm).padStart(2,'0')+ap}
+function fmtET(ts){try{return new Date(ts).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})+' ET'}catch(e){return ''}}
+function css(){if(document.getElementById('pycl-css'))return;var s=document.createElement('style');s.id='pycl-css';s.textContent=
+'.pycl{border:1px solid #e3c9a0;background:#fff;color:#a9741a;border-radius:99px;font:700 10.5px Roboto,Arial,sans-serif;padding:1px 8px;line-height:16px;cursor:pointer;white-space:nowrap}'+
+'.pycl.q{border-color:#d5dbe3;color:#5b6472;background:#f5f7fa}.pycl.w{border-color:#cfe0ee;color:#2f5a74;background:#eaf1f7}'+
+'.pycl.n{border-color:#e8c48a;color:#8a5a12;background:#fdf1dc}.pycl.r{border-color:#bfe0cc;color:#1e8e5a;background:#eef8f2}'+
+'.pycl-pop{position:absolute;z-index:200;width:320px;background:#fff;border:1px solid #d5dae0;border-radius:10px;box-shadow:0 10px 28px rgba(31,42,68,.18);padding:12px 13px;font:13px/1.45 Arial,Helvetica,sans-serif;color:#1f2a44}'+
+'.pycl-pop h5{margin:0 0 4px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#5b6472}'+
+'.pycl-pop .q{font-weight:700;margin:6px 0}.pycl-pop .row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}'+
+'.pycl-pop button{border:1px solid #d5dae0;background:#fff;border-radius:7px;font:700 12px Arial,sans-serif;padding:3px 10px;cursor:pointer;color:#3c4761}'+
+'.pycl-pop button.pri{background:#3f6f8f;border-color:#3f6f8f;color:#fff}.pycl-pop textarea{width:100%;min-height:48px;border:1px solid #cfd6df;border-radius:7px;padding:5px 7px;font:13px Arial,sans-serif}'+
+'.pycl-pop a{color:#3f6f8f;font-weight:700}.pycl-pop .sm{font-size:11.5px;color:#7d8b9a}';
+ document.head.appendChild(s)}
+function claudeLabel(t){var s=CL[t.claude_status];return s?s:['Claude','']}
+function closePop(){var p=document.getElementById('pycl-pop');if(p)p.remove();document.removeEventListener('mousedown',outside,true)}
+function outside(e){var p=document.getElementById('pycl-pop');if(p&&!p.contains(e.target)&&!e.target.closest('.pycl'))closePop()}
+function claudePanel(t,anchor,changed){
+ css();closePop();
+ var p=document.createElement('div');p.className='pycl-pop';p.id='pycl-pop';
+ var st=t.claude_status,h='';
+ function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+ h+='<h5>Claude on this task</h5>';
+ if(!st)h+='<div>Tagged Claude but not in the queue yet.</div><div class="row"><button class="pri" data-x="queue">Queue it</button></div>';
+ if(st==='queued')h+='<div>Waiting for the next pickup, about <b>'+nextPickup()+'</b>.</div>';
+ if(st==='working')h+='<div>Claude is on it now'+(t.claude_updated?' (started '+esc(fmtET(t.claude_updated))+')':'')+'.</div>';
+ if(st==='needs'){h+='<div class="q">'+esc(t.claude_question||'Claude needs a word from you.')+'</div>';
+  var o=Array.isArray(t.claude_options)?t.claude_options:[];
+  if(o.length)h+='<div class="row">'+o.map(function(x,i){return '<button class="pri" data-o="'+i+'">'+esc(x)+'</button>'}).join('')+'</div>';
+  h+='<textarea placeholder="Or type your answer"></textarea><div class="row"><button class="pri" data-x="send">Send to Claude</button></div>'}
+ if(st==='review'){h+='<div>Done and ready for you to look at. Tick the task off when you are happy.</div>';
+  h+='<textarea placeholder="Not quite? Say what to change and send it back"></textarea><div class="row"><button data-x="send">Send back to Claude</button></div>'}
+ if(t.claude_note)h+='<div class="sm" style="margin-top:6px">'+esc(t.claude_note)+'</div>';
+ var links=[];if(t.claude_result)links.push('<a href="'+esc(t.claude_result)+'" target="_blank" rel="noopener">Open what Claude made</a>');
+ if(t.claude_session)links.push('<a href="'+esc(t.claude_session)+'" target="_blank" rel="noopener">Claude run</a>');
+ if(links.length)h+='<div class="row">'+links.join(' &middot; ')+'</div>';
+ h+='<div class="row" style="margin-top:8px;border-top:1px solid #eef1f5;padding-top:8px"><button data-x="back">Take it back (make it Mine)</button></div>';
+ p.innerHTML=h;document.body.appendChild(p);
+ var r=anchor.getBoundingClientRect();p.style.top=(window.scrollY+r.bottom+6)+'px';p.style.left=Math.max(8,Math.min(window.scrollX+r.right-320,window.scrollX+document.documentElement.clientWidth-330))+'px';
+ setTimeout(function(){document.addEventListener('mousedown',outside,true)},0);
+ function go(body,msg){patch(t.id,body).then(function(row){for(var k in body)t[k]=body[k];closePop();if(changed)changed(row,msg)},function(e){alert('That did not save. '+(e&&e.message||''))})}
+ p.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var ta=p.querySelector('textarea');
+  if(b.dataset.o!=null){var o=t.claude_options[+b.dataset.o];go({claude_answer:o,claude_status:'queued',claude_question:null,claude_options:null,claude_updated:new Date().toISOString()},'Sent to Claude: '+o);return}
+  var x=b.dataset.x;
+  if(x==='queue')go({claude_status:'queued',claude_updated:new Date().toISOString()},'Queued for Claude.');
+  else if(x==='send'){var v=(ta&&ta.value||'').trim();if(!v){ta&&ta.focus();return}go({claude_answer:v,claude_status:'queued',claude_question:null,claude_options:null,claude_updated:new Date().toISOString()},'Sent to Claude.')}
+  else if(x==='back')go({owner:null},'Yours again.')});
+}
+function claudeChip(t,changed){css();var L=claudeLabel(t),b=document.createElement('button');b.type='button';b.className='pycl '+L[1];b.textContent=L[0];
+ b.title={q:'Queued for Claude, next pickup about '+nextPickup(),w:'Claude is working on this',n:'Claude needs you: tap to answer',r:'Ready for you to review'}[L[1]]||'Claude owns this one: tap for options';
+ b.addEventListener('click',function(e){e.stopPropagation();claudePanel(t,b,changed)});return b}
+function loadPickMin(){return get('board_meta?select=val&key=eq.claude_pickup_minute').then(function(d){var n=d&&d[0]?Number(d[0].val):null;if(isFinite(n))PICK_MIN=n}).catch(function(){})}
+loadPickMin();
+
+window.PYMoves={version:'1.2',claudeChip:claudeChip,claudePanel:claudePanel,nextPickup:nextPickup,signedIn:signedIn,loadPlaces:loadPlaces,places:function(){return PLACES||[]},placeText:placeText,findPlace:findPlace,
  placeForLabel:placeForLabel,labelForPlace:labelForPlace,toToday:toToday,toLibrary:toLibrary,toStaging:toStaging,insertStaged:insertStaged,patch:patch,get:get,lineBy:lineBy};
 })();

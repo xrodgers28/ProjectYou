@@ -157,7 +157,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><span class="on">Task Library</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Task Library<span class="ver">v3.0</span><span class="strength" id="str" title="Color strength"></span></h1>
+<h1>Task Library<span class="ver">v3.1</span><span class="strength" id="str" title="Color strength"></span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -409,8 +409,18 @@ function taskRow(t){
   var d=document.createElement('div'); d.className='grow t'; d.textContent=t.task; if(t.demo) d.style.color='#78818f'; li.appendChild(d);
   /* v3.0, Scott Nov 22: tasks move back and forth between Today, the Staging Area and the
      Library. Faint until the row is rolled over; on a phone they are always faintly there. */
+  /* v3.1, Scott Nov 23: Claude's status sits on its tasks here too; Mine tasks can be sent to Claude */
+  if(!t.demo && !t.done && window.PYMoves && PYMoves.claudeChip){
+    if(t.owner==='claude'){ var cc=PYMoves.claudeChip(t,function(row,msg){ if(row) Object.assign(t,row); render(); if(msg) showToast(msg); }); cc.style.marginLeft='auto'; li.appendChild(cc); }
+  }
   if(!t.demo && !t.done){
     var mv=document.createElement('span'); mv.className='mv';
+    if(t.owner==='claude') mv.style.marginLeft='6px';
+    if(t.owner!=='claude' && !LOCAL){ var bc=document.createElement('button'); bc.type='button'; bc.textContent='Claude'; tip(bc,'Send to Claude: it joins the queue for the next pickup');
+      bc.addEventListener('click',async function(e){ e.stopPropagation();
+        try{ var r=await sb.from('todos').update({owner:'claude'}).eq('id',t.id).select('owner,claude_status,claude_updated').single(); if(r.data) Object.assign(t,r.data); render(); showToast('Sent to Claude. Next pickup about '+PYMoves.nextPickup()+'.'); }
+        catch(x){ showToast('That did not save'); } });
+      mv.appendChild(bc); }
     var bt=document.createElement('button'); bt.type='button'; bt.textContent='\u2192 Today'; tip(bt,"Send to Today's Todos, just above the Today ends here line");
     bt.addEventListener('click',function(e){ e.stopPropagation(); sendOut(t,'today'); });
     var bs=document.createElement('button'); bs.type='button'; bs.textContent='\u21A9 Staging'; tip(bs,'Send back to the Staging Area');
@@ -794,7 +804,7 @@ function demoLine(){
     var names=NODES.filter(function(n){ return !n.parent_id; }).map(function(n){ return n.name; });
     /* v3.0: only tasks whose home is the Library (task-moves.js). Before this, any Today task
        whose label matched a list name (Amazon, Social) showed up here as well. */
-    var t=await sb.from('todos').select('id,section,subsection,task,done,position,origin_section,est_minutes,owner').in('section', names).eq('bucket','library').eq('staged',false).eq('archived',false).order('position');
+    var t=await sb.from('todos').select('id,section,subsection,task,done,position,origin_section,est_minutes,owner,claude_status,claude_question,claude_options,claude_answer,claude_result,claude_session,claude_note,claude_updated').in('section', names).eq('bucket','library').eq('staged',false).eq('archived',false).order('position');
     if(t.data) TASKS=t.data;
     render();
   }catch(e){ console.warn(e); render(); }
