@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report</title>
+<style>
+:root{
+  --bg:#f3f1ec; --panel:#ffffff; --ink:#23272c; --soft:#5c636c; --faint:#8a929c;
+  --line:#e2ddd3; --chip:#eceae3; --shadow:0 1px 2px rgba(20,24,28,.06),0 6px 20px rgba(20,24,28,.05);
+  --do:#3f6f8f; --more:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+  --green:#2f8f5b; --amber:#c07f10; --red:#c0433a;
+  --transport-bg:#fbf7ee; --transport-line:#e7dcc2;
+}
+:root:not([data-theme="light"]){
+  @media (prefers-color-scheme: dark){
+    --bg:#15181c; --panel:#1e2228; --ink:#eceef1; --soft:#b3bac3; --faint:#828b95;
+    --line:#2c323a; --chip:#262b32; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+    --do:#5e93b4; --more:#d99a2f; --did:#46ac74; --read:#8e9aa8; --kill:#c58c62;
+    --green:#46ac74; --amber:#d99a2f; --red:#e06258;
+    --transport-bg:#23241d; --transport-line:#3c3d2e;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15181c; --panel:#1e2228; --ink:#eceef1; --soft:#b3bac3; --faint:#828b95;
+  --line:#2c323a; --chip:#262b32; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35);
+  --do:#5e93b4; --more:#d99a2f; --did:#46ac74; --read:#8e9aa8; --kill:#c58c62;
+  --green:#46ac74; --amber:#d99a2f; --red:#e06258;
+  --transport-bg:#23241d; --transport-line:#3c3d2e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:Arial, Helvetica, sans-serif;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:22px 16px 60px}
+header.top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+header.top h1{font-size:26px;margin:0;letter-spacing:-.3px}
+.chip{font-size:12px;font-weight:bold;color:var(--soft);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+.datel{color:var(--soft);font-size:14px;margin:2px 0 16px}
+
+/* key */
+.key{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow);margin-bottom:16px}
+.key h2{font-size:13px;margin:0 0 9px;color:var(--soft);text-transform:uppercase;letter-spacing:.6px}
+.key ul{margin:0;padding:0;list-style:none;display:grid;gap:7px}
+.key li{font-size:13.5px;color:var(--ink);display:flex;gap:9px;align-items:flex-start}
+.kdot{flex:0 0 auto;width:11px;height:11px;border-radius:3px;margin-top:4px}
+.key b{font-weight:bold}
+
+/* transport */
+.transport{position:sticky;top:8px;z-index:5;background:var(--transport-bg);border:1px solid var(--transport-line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow);margin-bottom:20px}
+.transport .tlabel{font-size:12px;font-weight:bold;color:var(--soft);text-transform:uppercase;letter-spacing:.6px;margin-bottom:7px}
+.transport textarea{width:100%;min-height:78px;resize:vertical;border:1px solid var(--transport-line);border-radius:8px;background:var(--panel);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.45;padding:9px 10px}
+.transport .trow{display:flex;gap:9px;align-items:center;margin-top:9px;flex-wrap:wrap}
+.copybtn{border:1px solid var(--transport-line);background:var(--panel);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:13px;border-radius:8px;padding:8px 14px;cursor:pointer}
+.copybtn:hover{background:var(--chip)}
+.thint{font-size:12px;color:var(--faint)}
+
+/* rows */
+.rows{display:grid;gap:14px}
+.row{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:12px;padding:15px 16px 14px;box-shadow:var(--shadow);transition:border-color .15s,opacity .15s}
+.row.settled{opacity:.72}
+.rhead{display:flex;gap:10px;align-items:flex-start}
+.light{flex:0 0 auto;width:13px;height:13px;border-radius:50%;margin-top:4px}
+.light.green{background:var(--green)}
+.light.amber{background:var(--amber)}
+.light.red{background:var(--red)}
+.rtitle{font-size:16.5px;font-weight:bold;margin:0;letter-spacing:-.2px}
+.rbody{font-size:14px;color:var(--soft);margin:9px 0 0}
+.rnext{font-size:14px;margin:10px 0 0;color:var(--ink)}
+.rnext b{color:var(--soft);font-weight:bold}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.btns button{font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:13px;color:#fff;border:none;border-radius:8px;padding:8px 13px;cursor:pointer;opacity:.92}
+.btns button:hover{opacity:1}
+.btns button.sel{outline:2px solid var(--ink);outline-offset:1px;opacity:1}
+.b-do{background:var(--do)} .b-more{background:var(--more)} .b-did{background:var(--did)} .b-read{background:var(--read)} .b-kill{background:var(--kill)}
+.tag{font-size:11.5px;font-weight:bold;border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:middle}
+.tag.open{background:rgba(192,127,16,.14);color:var(--amber);border:1px solid var(--amber)}
+.tag.done{background:rgba(47,143,91,.13);color:var(--did);border:1px solid var(--did)}
+.cbox{margin-top:11px}
+.cbox textarea{width:100%;min-height:38px;resize:vertical;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:13px;padding:8px 9px}
+.cbox label{display:block;font-size:12px;color:var(--faint);margin-bottom:5px}
+
+/* atomic + footer */
+.atomic{margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.atomic .a-lab{font-size:12px;font-weight:bold;color:var(--amber);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.atomic p{margin:0;font-size:14px;color:var(--soft)}
+.tech{margin-top:18px;font-size:11.5px;color:var(--faint);line-height:1.6;border-top:1px dashed var(--line);padding-top:12px}
+.theme-toggle{position:fixed;right:12px;bottom:12px;z-index:9;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 13px;font-size:12px;font-weight:bold;cursor:pointer;font-family:Arial,Helvetica,sans-serif;box-shadow:var(--shadow)}
+@media (max-width:520px){
+  header.top h1{font-size:22px}
+  .wrap{padding:16px 13px 56px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>Morning Report</h1>
+    <span class="chip">v1.0</span>
+  </header>
+  <div class="datel">Tuesday, Nov 24, 2026 &middot; 5:00am ET &middot; Project YOU</div>
+
+  <section class="key" aria-label="What the buttons mean">
+    <h2>What your five buttons do</h2>
+    <ul>
+      <li><span class="kdot" style="background:var(--do)"></span><span><b>Do this.</b> Go and build it, run it, ship it. This is an instruction, not an answer. The row stays open until it is finished.</span></li>
+      <li><span class="kdot" style="background:var(--more)"></span><span><b>Tell me more.</b> You want to say yes but need the cost, the risk or the reasoning first. The row stays open and the next move is mine.</span></li>
+      <li><span class="kdot" style="background:var(--did)"></span><span><b>I did it.</b> You handled it yourself. The row settles.</span></li>
+      <li><span class="kdot" style="background:var(--read)"></span><span><b>I read this.</b> Not a task, just noted. The row settles.</span></li>
+      <li><span class="kdot" style="background:var(--kill)"></span><span><b>Kill this task.</b> Dead, and it will not come back as a question. The row settles.</span></li>
+    </ul>
+  </section>
+
+  <section class="transport" aria-label="Your answers to copy back">
+    <div class="tlabel">Your answers &middot; select all and copy this back into the chat</div>
+    <textarea id="transport" readonly aria-live="polite">Tap a button on any card below and your answers build up here.</textarea>
+    <div class="trow">
+      <button class="copybtn" id="copyBtn" type="button">Copy my answers</button>
+      <button class="copybtn" id="selectBtn" type="button">Select all</button>
+      <span class="thint">If Copy does nothing, tap Select all, then copy by hand. This box is the real way back, not the button.</span>
+    </div>
+  </section>
+
+  <main class="rows" id="rows"></main>
+
+  <section class="atomic">
+    <div class="a-lab">One small idea, from Atomic Habits</div>
+    <p>The Two-Minute Rule. When a habit stalls, like the food log has, shrink it until it takes two minutes, so "log a meal" becomes "snap one plate". You are not trying to do it well yet, only to show up. A habit has to exist before it can improve.</p>
+  </section>
+
+  <div class="tech">
+    <strong>Where this came from:</strong> Calendar and Gmail read live this morning. Project and overnight details read from your Project YOU database at 5:00am ET on Nov 24, 2026. One claim was spot-checked: the food log's "last meal Oct 23" was confirmed straight against the meals table (39 meals, newest eaten Oct 23). This page was saved to your pages store as morning-report-2026-11-24.html; because the live-site publish step is failing (see the red card), it is also delivered to you as a file. Live-site confirmation is pending: this early run was not given access to your code repository.
+  </div>
+
+</div>
+
+<button class="theme-toggle" id="themeToggle" type="button">Light / Dark</button>
+
+<script>
+(function(){
+  "use strict";
+  // ----- data (plain strings only; no third-party raw markup) -----
+  var ROWS = [
+    {id:"today", light:"green",
+      title:"A wide-open Tuesday, and you land around 6am",
+      body:"Your calendar holds nothing but one reminder you set yourself, so the day is yours to aim wherever you want. Your overnight flight from Los Angeles is due into New York at 5:57am ET, so you are likely reading this on the ground or close to it. No meetings bookend the day.",
+      next:"Nothing. Mark it read and move on."},
+    {id:"publish", light:"red",
+      title:"Your site's publish step is stuck",
+      body:"The job that moves your Project YOU pages from the database onto the live website has failed its last three tries. While it is stuck, new or changed pages, including this report, can sit ready in the database but never show up on the live site. A note from Nov 7 shows a morning report got held back the same way once before. Clearing it needs a normal chat that has your code repository switched on, which this early run did not have.",
+      next:"Open a normal chat with your repository turned on and ask me to find why “Publish pages from Supabase” keeps failing."},
+    {id:"foodlog", light:"amber",
+      title:"Your food log has gone quiet for a month",
+      body:"The last meal saved was Oct 23, 2026, so 31 days with nothing new. The photo feed that usually fills it also went silent on Nov 6, so both ends of that path are quiet at once. From here I cannot tell whether you simply paused logging or whether the feature quietly broke. The nightly check keeps flagging it without being able to settle which it is.",
+      next:"Tell me whether you have paused logging for now, or want me to dig into why photos stopped turning into entries."},
+    {id:"scan", light:"amber",
+      title:"Eleven new sources are waiting for your yes or no",
+      body:"The design and community scan has eleven sites lined up for you to keep or pass on, among them The Dieline, 99% Invisible, Transit Maps, Hackaday and the Library of Congress picture blog. The newest was offered Nov 6 and nothing has come in since, so the scan itself may have paused. None of them join your feed until you decide.",
+      next:"Open The Wall and tap keep or pass on the eleven, or tell me how you want the backlog cleared."},
+    {id:"email", light:"amber",
+      title:"A couple of personal emails are still unopened",
+      body:"Big Green College Prep sent a note titled “Next steps with Carson R” with Åsa copied in. Åsa also wrote to you and Max with one titled “Finance contacts, NYC”. Both are unread and may be waiting on you. I did not open either, so this is a heads-up, not a summary.",
+      next:"Open the two threads in Gmail when you get a minute."},
+    {id:"drcall", light:"amber",
+      title:"Your 3pm reminder to call Dr. Shajan",
+      body:"You set a reminder that pops at 3:00pm ET to call Dr. Shajan and ask for an appointment sooner than Dec 29, 2026. It repeats every day until an earlier one is booked, then it is meant to be deleted. It is the only timed item on your calendar today.",
+      next:"Make the call at 3pm, then tell me it is booked so I can help clear the daily reminder."},
+    {id:"overnight", light:"green",
+      title:"Last night's robot check, in plain words",
+      body:"The food-log housekeeping job ran cleanly at 4:15am ET after going fifteen days without running at all, so it is back on its feet. The midnight to-do run left no record of clocking in, but its queue was empty, so nothing was actually missed. Your Antigua trip pull, the AI Agents tile restock and the Treadwell sync all ran and finished fine overnight.",
+      next:"Nothing. Mark it read."},
+    {id:"projects", light:"green",
+      title:"Where your projects stand this morning",
+      body:"From your live to-do list I can see Project YOU with about 460 open items, its Operating System list with 36 open, and TreadWell with one. The single most useful next step across all of them is unsticking the publish step above, because a lot of finished work is waiting on it. Your other projects, CrushingIt, Clever Phrases, AI Intelligence and the 2026 Calendar, live in files on your Mac, which is not connected to this early run, so I could not read their status.",
+      next:"Connect your Mac in a later chat if you want the full project-by-project picture."},
+    {id:"usage", light:"green",
+      title:"I cannot read your Claude usage meter from here",
+      body:"This early run has no window into how much of your weekly Claude allowance is left. The reliable place to see it is the usage indicator inside the Claude app itself. If you want, I can talk through ways to stretch it, like keeping everyday tasks on the lighter models.",
+      next:"Check the usage indicator in the app when you are curious."}
+  ];
+
+  var BTNS = [
+    {k:"do",   label:"Do this",        cls:"b-do",   open:true,  word:"DO THIS (build it)"},
+    {k:"more", label:"Tell me more",   cls:"b-more", open:true,  word:"TELL ME MORE (I need the reasoning first)"},
+    {k:"did",  label:"I did it",       cls:"b-did",  open:false, word:"I DID IT"},
+    {k:"read", label:"I read this",    cls:"b-read", open:false, word:"I READ THIS"},
+    {k:"kill", label:"Kill this task", cls:"b-kill", open:false, word:"KILL THIS TASK"}
+  ];
+  var COLOR = {do:"var(--do)",more:"var(--more)",did:"var(--did)",read:"var(--read)",kill:"var(--kill)"};
+
+  // state in memory only (no storage)
+  var state = {}; // id -> {choice, comment}
+
+  var rowsEl = document.getElementById("rows");
+  var transEl = document.getElementById("transport");
+
+  function esc(s){var d=document.createElement("div");d.textContent=s;return d.innerHTML;}
+
+  ROWS.forEach(function(r){
+    state[r.id]={choice:null,comment:""};
+    var row=document.createElement("section");
+    row.className="row";
+    row.id="row-"+r.id;
+
+    var head=document.createElement("div");
+    head.className="rhead";
+    head.innerHTML='<span class="light '+r.light+'"></span><div><h3 class="rtitle">'+esc(r.title)+'<span class="tag" id="tag-'+r.id+'" style="display:none"></span></h3></div>';
+    row.appendChild(head);
+
+    var body=document.createElement("p");body.className="rbody";body.textContent=r.body;row.appendChild(body);
+    var nxt=document.createElement("p");nxt.className="rnext";nxt.innerHTML='<b>What you do next:</b> '+esc(r.next);row.appendChild(nxt);
+
+    var btns=document.createElement("div");btns.className="btns";
+    BTNS.forEach(function(b){
+      var el=document.createElement("button");
+      el.type="button";el.className=b.cls;el.textContent=b.label;
+      el.setAttribute("data-k",b.k);
+      el.addEventListener("click",function(){choose(r,b,row,el);});
+      btns.appendChild(el);
+    });
+    row.appendChild(btns);
+
+    var cbox=document.createElement("div");cbox.className="cbox";
+    cbox.innerHTML='<label for="c-'+r.id+'">Add a note (optional)</label>';
+    var ta=document.createElement("textarea");ta.id="c-"+r.id;ta.rows=1;
+    ta.addEventListener("input",function(){state[r.id].comment=ta.value;rebuild();});
+    cbox.appendChild(ta);row.appendChild(cbox);
+
+    rowsEl.appendChild(row);
+  });
+
+  function choose(r,b,row,el){
+    state[r.id].choice=b;
+    // visual: highlight selected button, set left border, settle styling
+    var all=row.querySelectorAll(".btns button");
+    for(var i=0;i<all.length;i++){all[i].classList.remove("sel");}
+    el.classList.add("sel");
+    row.style.borderLeftColor=COLOR[b.k];
+    if(b.open){row.classList.remove("settled");}else{row.classList.add("settled");}
+    var tag=document.getElementById("tag-"+r.id);
+    if(b.open){tag.style.display="";tag.className="tag open";tag.textContent="still open";}
+    else{tag.style.display="";tag.className="tag done";tag.textContent="settled";}
+    rebuild();
+  }
+
+  function rebuild(){
+    var lines=["MY MORNING REPORT ANSWERS — Nov 24, 2026",""];
+    var n=0;
+    ROWS.forEach(function(r){
+      var s=state[r.id];
+      if(!s.choice && !s.comment) return;
+      n++;
+      var choice=s.choice?s.choice.word:"(note only)";
+      lines.push(n+". "+r.title);
+      lines.push("   "+choice);
+      if(s.comment && s.comment.trim()){lines.push("   note: "+s.comment.trim());}
+      lines.push("");
+    });
+    if(n===0){transEl.value="Tap a button on any card below and your answers build up here.";return;}
+    transEl.value=lines.join("\n");
+  }
+
+  // copy + select
+  document.getElementById("selectBtn").addEventListener("click",function(){
+    transEl.removeAttribute("readonly");transEl.focus();transEl.select();
+    try{transEl.setSelectionRange(0,transEl.value.length);}catch(e){}
+    transEl.setAttribute("readonly","readonly");
+  });
+  document.getElementById("copyBtn").addEventListener("click",function(){
+    var btn=this;
+    function ok(){var t=btn.textContent;btn.textContent="Copied";setTimeout(function(){btn.textContent=t;},1400);}
+    function manual(){var t=btn.textContent;btn.textContent="Select it by hand";setTimeout(function(){btn.textContent=t;},1800);
+      transEl.removeAttribute("readonly");transEl.focus();transEl.select();transEl.setAttribute("readonly","readonly");}
+    try{
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(transEl.value).then(ok,manual);
+      }else{manual();}
+    }catch(e){manual();}
+  });
+
+  // theme toggle (in memory only)
+  var root=document.documentElement;
+  document.getElementById("themeToggle").addEventListener("click",function(){
+    var cur=root.getAttribute("data-theme");
+    var isDark=window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if(!cur){root.setAttribute("data-theme",isDark?"light":"dark");}
+    else if(cur==="dark"){root.setAttribute("data-theme","light");}
+    else{root.setAttribute("data-theme","dark");}
+  });
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
