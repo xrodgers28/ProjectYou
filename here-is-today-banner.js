@@ -1,4 +1,5 @@
-/* Here is Today, habits dashboard banner. v1.3 (Nov 23, 2026).
+/* Here is Today, habits dashboard banner. v1.4 (Nov 23, 2026).
+   v1.4, Scott: on the chapter steps the date arrow now points at the start of the yellow, so the yellow stretch matches the date shown (it used to point at the middle). The arrow over the box is the original one, pulsing from fully clear to fully solid. After the first tap the date and day count sit on the left, centred top to bottom. A tiny grey dot in the upper left opens the original wvnl.xyz/hereistoday.
    v1.3, Scott: the date and day count text sit on the left again, like before v1.2. The This Week bar now ends flush at the right with today's yellow sliver. Edit dates reads in the same plain grey, non-bold font as - back. The HERE IS TODAY headline is centred in the space above the yellow box, not pinned to the top. A small arrow pulses slowly over the box before the first tap, and disappears once tapped.
    v1.2, Scott: starts white with HERE IS TODAY centred over the yellow square. First tap inverts it to black and shows the date and day count; each tap after that steps on (no Okay + text); a tap on the last step returns to the start. Edit dates is plain dark grey text, lower right. Dates drag to reorder, and the list order is the step order.
    v1.1, Scott: the banner no longer opens. Tapping it fills the same strip with black and the steps play inside it, like the original. Folded strip is the Today square. Chapter headlines read HERE IS ... Only the Edit dates list drops down.
@@ -43,7 +44,7 @@ function build(cfg){
   {h:'HERE IS MY LIFE',a:(ys-B)/life,c:(T-ys+1)/life,tag:String(t.y),cap:nice(cfg.birth)+' to today',ticks:1,end:1,
    note:num(life)+' days lived. Today is '+pct(1/life)+' of them.'}];
  cfg.chapters.filter(function(c){return c.t&&c.d&&NS(c.d)>=B&&NS(c.d)<=T}).forEach(function(c){var D=NS(c.d),n=T-D+1;
-  steps.push({h:'HERE IS '+c.t.toUpperCase(),a:(D-B)/life,c:n/life,tag:nice(c.d),cap:'Since '+nice(c.d),ticks:1,end:1,
+  steps.push({h:'HERE IS '+c.t.toUpperCase(),a:(D-B)/life,c:n/life,tag:nice(c.d),cap:'Since '+nice(c.d),ticks:1,end:1,st:1,
    note:ago(c.d,ts)+'. '+num(n)+' days, '+pct(n/life)+' of your life so far.'})});
  return {life:life,T:T,B:B,ticks:ticks,steps:steps,date:DOW[jsd]+', '+MO3[t.m-1]+' '+t.d+', '+t.y,
   lad:[{l:'Week',e:(wd+1)/7,c:1/7},{l:'Month',e:t.d/dim,c:1/dim},{l:'Year',e:doy/diy,c:1/diy},{l:'My life',e:1,c:(T-ys+1)/life}]}}
@@ -60,7 +61,7 @@ var CSS=":host{display:block;margin:9px 0;font-family:Roboto,Arial,Helvetica,san
 +".fc{flex:1;min-width:0;display:flex;gap:14px;align-items:flex-end;height:64px}.fc>div{flex:1;min-width:0}.fc>div:last-child{flex:2.2}.lb{height:40px;display:flex;border-radius:4px;overflow:hidden;background:#eef1f6}.lb .y{min-width:3px}.fc em{display:block;font-style:normal;font-size:11.5px;color:#5b6472;margin-top:5px;white-space:nowrap}"
 +".rt{width:190px;flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px}.rt b{font-size:42px;font-weight:800;line-height:1;color:#9aa6b4;font-variant-numeric:tabular-nums}.rt span{font-size:11.5px;color:#5b6472}"
 +".top{position:relative;height:120px}"
-+".stage{position:absolute;inset:0;background:#fff;color:#1f2a44;cursor:pointer;display:flex;flex-direction:column;align-items:center;padding:0 28px;transition:background .6s ease,color .6s ease;outline:none;-webkit-user-select:none;user-select:none}"
++".stage{position:absolute;inset:0;background:#fff;color:#1f2a44;cursor:pointer;display:flex;flex-direction:column;align-items:center;padding:0 28px 26px;transition:background .6s ease,color .6s ease;outline:none;-webkit-user-select:none;user-select:none}"
 +".bn.on .stage{background:#0e1216;color:#fff}.stage:focus-visible{outline:2px solid #3f6f8f;outline-offset:-3px}"
 +".htop{flex:1 1 auto;width:100%;min-height:0;display:flex;align-items:center;justify-content:center}.h{font-size:19px;font-weight:800;letter-spacing:.02em;margin:0;line-height:20px;white-space:nowrap}"
 +".sm{width:100%;flex:none}"
@@ -68,10 +69,10 @@ var CSS=":host{display:block;margin:9px 0;font-family:Roboto,Arial,Helvetica,san
 +".bar i{display:block;height:100%;transition:width .9s cubic-bezier(.6,0,.2,1)}.bar .o{background:#ff6a00}.bar .y{background:#e2d000;min-width:3px}.bar .g{background:#23272e;flex:1}.bar.rev .g{order:-1}"
 +".mk{position:absolute;bottom:100%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:1px;padding-bottom:2px;font-size:10.5px;line-height:11px;white-space:nowrap;transition:left .9s cubic-bezier(.6,0,.2,1)}"
 +".mk:after{content:'';border:6px solid transparent;border-top:7px solid currentColor;border-bottom:0}"
-+".tk{position:absolute;top:0;bottom:0;width:1px;background:rgba(14,18,22,.3);opacity:0;transition:opacity .6s .5s}.tk span{position:absolute;bottom:2px;left:3px;font-size:9px;line-height:1;color:rgba(14,18,22,.62)}.tk.on{opacity:1}.mk.pulse:after{animation:arwpulse 2.2s ease-in-out infinite}@keyframes arwpulse{0%,100%{opacity:.3}50%{opacity:1}}"
-+".cl{align-self:flex-start;margin:5px 0 0;font-size:12px;line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;opacity:0;transition:opacity .6s ease}.bn.on .cl{opacity:1}.cl i{font-style:normal;color:#aeb6c0;margin-left:6px}"
++".tk{position:absolute;top:0;bottom:0;width:1px;background:rgba(14,18,22,.3);opacity:0;transition:opacity .6s .5s}.tk span{position:absolute;bottom:2px;left:3px;font-size:9px;line-height:1;color:rgba(14,18,22,.62)}.tk.on{opacity:1}.mk.pulse:after{animation:arwpulse 2.2s ease-in-out infinite}@keyframes arwpulse{0%,100%{opacity:0}50%{opacity:1}}"
++".cl{position:absolute;left:70px;bottom:7px;margin:0;font-size:12px;line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 180px);opacity:0;transition:opacity .6s ease}.s0 .cl{left:28px;bottom:auto;top:50%;transform:translateY(-50%);max-width:calc(50% - 56px);white-space:normal;font-size:14px;line-height:19px;font-weight:700}.s0 .cl i{display:block;margin:0;font-weight:400;font-size:12px}.bn.on .cl{opacity:1}.cl i{font-style:normal;color:#aeb6c0;margin-left:6px}"
 +".eb,.bk{all:unset;cursor:pointer;position:absolute;bottom:6px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:400;font-size:14px;color:#5b6472}.eb{right:14px}.bk{left:14px}.bn.on .eb,.bn.on .bk{color:#7c8794}.eb:hover,.bk:hover{text-decoration:underline}.bk[hidden]{display:none}"
-+".eb:focus-visible,.bk:focus-visible,.pn button:focus-visible{outline:2px solid #e2d000;outline-offset:3px}"
++".src{position:absolute;top:0;left:0;width:24px;height:24px;display:block}.src:after{content:'';position:absolute;top:9px;left:10px;width:5px;height:5px;border-radius:50%;background:#5b6472}.src:hover:after{background:#e2d000}.src:focus-visible{outline:2px solid #3f6f8f;outline-offset:-3px}.eb:focus-visible,.bk:focus-visible,.pn button:focus-visible{outline:2px solid #e2d000;outline-offset:3px}"
 +".drop{display:grid;grid-template-rows:0fr;transition:grid-template-rows .4s ease}.bn.ed .drop{grid-template-rows:1fr}.drop>.in{overflow:hidden;min-height:0}"
 +".pn{background:#0e1216;color:#fff;border-top:1px solid #23272e;padding:20px 22px;text-align:left}"
 +".gr{flex:none;width:22px;text-align:center;color:#7c8794;cursor:grab;font-size:16px;line-height:30px;-webkit-user-select:none;user-select:none}.gr:hover{color:#fff}.gr.no{visibility:hidden}.row.over{box-shadow:0 -2px 0 #e2d000}.row.drag{opacity:.4}"
@@ -81,7 +82,7 @@ var CSS=":host{display:block;margin:9px 0;font-family:Roboto,Arial,Helvetica,san
 +".row small{flex:none;width:92px;font-size:11px;color:#e0ab52}"
 +".pb{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}.pb button{all:unset;cursor:pointer;font-size:13.5px;font-weight:700;border-radius:8px;padding:8px 16px;border:1px solid #4a525c;color:#fff}.pb .done{background:#e2d000;border-color:#e2d000;color:#0e1216}.pb .st{font-size:12px;color:#aeb6c0}.pb .un{border:0;padding:0;color:#e2d000;text-decoration:underline;font-weight:500}"
 +"@media(prefers-reduced-motion:reduce){.bar,.bar i,.mk,.drop,.tk,.stage,.cl{transition:none}.mk.pulse:after{animation:none}}"
-+"@media(max-width:760px){.stage{padding:7px 12px 0}.h{font-size:16px}.cl{max-width:100%;font-size:11px}.cl i{display:none}.row{flex-wrap:wrap}.row .t{flex:1 1 60%}.row small{display:none}}";
++"@media(max-width:760px){.stage{padding:0 12px 26px}.h{font-size:16px}.cl{left:62px;max-width:calc(100% - 150px);font-size:11px}.cl i{display:none}.s0 .cl{left:12px;max-width:calc(50% - 34px);font-size:12px;line-height:16px}.s0 .cl i{display:block;font-size:11px}.row{flex-wrap:wrap}.row .t{flex:1 1 60%}.row small{display:none}}";
 function faceHTML(D,f){
  var L=D.steps[4],mid;
  if(f==='b')mid='<div class="fb"><i class="sqr y"></i><div><b>'+esc(D.date)+'</b><span>Day '+num(D.life)+' of your life</span></div></div>';
@@ -106,7 +107,7 @@ function mount(host){
  function render(){D=build(cfg);if(step>=D.steps.length)step=D.steps.length-1;
   root.innerHTML='<style>'+CSS+'</style><div class="bn'+(open?' on':'')+(editing?' ed':'')+'"><div class="top"><div class="stage" role="button" tabindex="0" aria-label="Here is Today. Tap to step back through time.">'
   +'<div class="htop"><h2 class="h"></h2></div><div class="sm"><div class="bar"><span class="mk"></span><i class="o"></i><i class="y"></i><i class="g"></i>'+D.ticks.map(function(k){return '<span class="tk" style="left:'+(k.x*100)+'%"><span>'+k.l+'</span></span>'}).join('')+'</div></div><p class="cl"></p>'
-  +'<button class="bk" type="button" data-a="back">- back</button><button class="eb" type="button" data-a="edit">Edit dates</button></div></div>'
+  +'<button class="bk" type="button" data-a="back">- back</button><button class="eb" type="button" data-a="edit">Edit dates</button></div><a class="src" href="https://wvnl.xyz/hereistoday/" target="_blank" rel="noopener" title="The original Here is Today" aria-label="Open the original Here is Today site in a new tab"></a></div>'
   +'<div class="drop"><div class="in"><div class="pn"><h3>My dates</h3><p>Change a name or a date, delete one, or add a new one. Drag the dots to change the order. Each becomes a step after My Life, in this order, and its headline reads HERE IS plus the name. Dates that have not happened yet stay hidden until they do.</p>'
   +'<div class="rows">'+rows()+'</div><div class="pb"><button type="button" data-a="add">+ Add a date</button><button type="button" class="done" data-a="done">Done</button><span class="st">'+esc(stat)+'</span>'+(undo?'<button type="button" class="un" data-a="undo">Undo delete</button>':'')+'</div></div>'
   +'</div></div></div>';paint()}
@@ -114,7 +115,7 @@ function mount(host){
   $('.h').textContent=s.h;$('.cl').innerHTML=esc(s.cap)+'<i>'+esc(s.note)+'</i>';
   bar.classList.toggle('sq',!!s.sq);bar.classList.toggle('rev',!!s.rev);var a=s.sq?0:s.a*100,c=s.sq?100:s.c*100;
   $('.bar .o').style.width=a+'%';$('.bar .y').style.width=c+'%';$('.bar .g').style.display=(s.sq||s.end)?'none':'';
-  $('.mk').style.left=(s.rev?(100-c/2):(a+c/2))+'%';$('.mk').textContent=s.tag||'';$('.mk').classList.toggle('pulse',!open);
+  $('.mk').style.left=(s.rev?(100-c/2):s.st?a:(a+c/2))+'%';$('.stage').classList.toggle('s0',!!s.sq);$('.mk').textContent=s.tag||'';$('.mk').classList.toggle('pulse',!open);
   [].forEach.call(root.querySelectorAll('.tk'),function(e){e.classList.toggle('on',!!s.ticks)});
   $('.bk').hidden=!open||step===0}
  function advance(){if(!open){open=true;step=0}else if(step<D.steps.length-1)step++;else{open=false;step=0}
