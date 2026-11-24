@@ -68,7 +68,10 @@ button{font:inherit}
 .lk{border:0;background:none;font-size:11px;color:#8aa1b3;cursor:pointer;padding:0}
 .park{border:0;background:none;font-family:var(--fn);font-size:11px;font-weight:700;color:#aab0b9;cursor:pointer;padding:0}
 .park:hover{color:var(--ink2);text-decoration:underline}
-.go{width:24px;height:19px;border-radius:6px;border:0;background:var(--green);color:#fff;cursor:pointer;font-size:14px;line-height:1}
+.go{min-width:24px;height:24px;padding:0 11px;border-radius:7px;border:0;background:var(--green);color:#fff;cursor:pointer;font-family:var(--fn);font-size:12px;font-weight:700;line-height:1;white-space:nowrap}
+.go:hover{filter:brightness(.92)}
+.gow{display:inline-flex;flex-direction:column;align-items:flex-end;gap:2px}
+.nf{font-family:var(--fn);font-size:10px;font-weight:600;color:var(--amber);letter-spacing:.02em;white-space:nowrap}
 .shade{display:grid;grid-template-rows:0fr;transition:grid-template-rows .28s ease}
 .shade>div{overflow:hidden;min-height:0}.shade.open{grid-template-rows:1fr}
 .pp{margin-top:5px;border:1px solid #e2e5ea;border-left:3px solid #c5cad1;background:#f7f8fa;border-radius:6px;padding:5px 10px}
@@ -198,8 +201,8 @@ try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
 window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
 <style>html.embed.calshut .wrap{max-width:none}</style>
 </head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v1.9</span><span class="date" id="today"></span></div>
-<p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Nothing files itself while the switch says Ask first.</p>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.0</span><span class="date" id="today"></span></div>
+<p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green File button to file it. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
   <span class="mg"><b>Layout</b><button data-ly="0">Design 2</button><button data-ly="1">Design 3</button></span>
@@ -225,7 +228,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 <div><b>v0.20</b> Playable Staging Area, label, owner, star and link &middot; <a href="https://claude.ai/artifact/Vd3QU7DiTe7CnWwzrM23mj">open</a></div>
 <div><b>Build plan v0.17</b> The 375-minute plan this was built from &middot; <a href="https://claude.ai/artifact/9ocMs1oQ9wtnqNLxuifdHT">open</a></div>
 </div></div>
-<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v1.9 &middot; Nov 23, 2026</span></footer>
+<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.0 &middot; Nov 24, 2026</span></footer>
 </div><div id="tst"></div>
 <script src="pills-config.js"></script>
 <script src="task-moves.js"></script>
@@ -290,7 +293,7 @@ function istask(i){return i.kind==='task'||i.kind==='garbled'||i.kind==='dup'}
 
 function starB(i){return '<button class="star'+(i.star?' on':'')+'" data-a="star" data-id="'+i.id+'" title="Star it: starred items land in Urgent">'+(i.star?'★':'☆')+'</button>'}
 function lnkB(i){return '<button class="lk" data-a="link" data-id="'+i.id+'" title="Open the original '+(LK[i.src]||'note')+'">↗</button>'}
-function tagB(i){var c=i.kind==='notask'?'list':i.dest;return '<button class="dst '+c+'" data-a="swap" data-id="'+i.id+'" title="'+(i.kind==='notask'?'Goes to its own list':'Tap to send it the other way')+'">'+esc(dtxt(i))+'</button>'+plcB(i)}
+function tagB(i){var c=i.kind==='notask'?'list':i.dest;return '<button class="dst '+c+'" data-a="swap" data-id="'+i.id+'" title="'+(i.kind==='notask'?'Goes to its own list':'Tap to change where it will go. It is not filed until you press File')+'">'+esc(dtxt(i))+'</button>'+plcB(i)}
 /* v1.6: where in the Task Library. The Library is organised by its own lists (Family,
    Amazon, 6 Irvine...), not by the Today labels, so a Library item needs a real place. */
 function placeGuess(i){return window.PYMoves?(placeFromText(txtOf(i))||PYMoves.placeForLabel(i.label)):null}
@@ -305,7 +308,7 @@ function timeB(i){return istask(i)?'<input class="tm" value="'+(i.est||'')+'" in
 function popB(i){var o=!!POP[i.id];return '<button class="pop'+(o?' on':'')+'" data-a="pop" data-id="'+i.id+'" title="Popcorn: show my original words">🍿</button>'}
 function popP(i){return '<div class="shade'+(POP[i.id]?' open':'')+'" data-shade="'+i.id+'"><div><div class="pp"><div class="ppl">🍿 Popcorn · as it came in</div><div class="ppt">'+(i.raw==null?esc(NORAW):'“'+esc(i.raw)+'”')+'</div></div></div></div>'}
 function carB(i){return istask(i)?'<button class="car" data-a="park" data-id="'+i.id+'" title="Park it: goes to the Parking lot at the bottom of the Task Library"><svg viewBox="0 0 20 20" width="15" height="15"><path d="M4.2 8.2L5.3 5.4A1.5 1.5 0 016.7 4.5h6.6a1.5 1.5 0 011.4.9l1.1 2.8" fill="none" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><rect x="2.5" y="8" width="15" height="6" rx="1.6" fill="#fff"/><circle cx="6" cy="14.5" r="1.4" fill="#fff"/><circle cx="14" cy="14.5" r="1.4" fill="#fff"/></svg></button>':''}
-function goB(i){return '<button class="go" data-a="file" data-id="'+i.id+'" title="File it">→</button>'}
+function goB(i){var w=i.kind==='notask'?'File to '+(i.list||'its list'):(i.dest==='today'?'File to Today':'File to Library');return '<span class="gow"><span class="nf">Not filed yet</span><button class="go" data-a="file" data-id="'+i.id+'" title="Press to file it. Tapping the tag only changes where it will go.">'+esc(w)+' \u2192</button></span>'}
 function subH(i){if(i.kind==='garbled')return '<div class="sub">You said “'+esc(i.text)+'” · best guess shown · <select class="tm" style="width:15em;max-width:60%;height:auto" data-pick="'+i.id+'" aria-label="Other guesses">'+i.alts.map(function(a,k){return '<option value="'+k+'"'+(k===i.pick?' selected':'')+'>'+esc(a)+'</option>'}).join('')+'</select></div>';return '<div class="sub">'+esc(i.why||'')+'</div>'}
 function subRow(i){return '<div class="subrow">'+popB(i)+subH(i)+'</div>'}
 
