@@ -68,7 +68,7 @@ var CSS=":host{display:block;margin:9px 0;font-family:Roboto,Arial,Helvetica,san
 +".bar i{display:block;height:100%;transition:width .9s cubic-bezier(.6,0,.2,1)}.bar .o{background:#ff6a00}.bar .y{background:#e2d000;min-width:3px}.bar .g{background:#23272e;flex:1}.bar.rev .g{order:-1}"
 +".mk{position:absolute;bottom:100%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:1px;padding-bottom:2px;font-size:10.5px;line-height:11px;white-space:nowrap;transition:left .9s cubic-bezier(.6,0,.2,1)}"
 +".mk:after{content:'';border:6px solid transparent;border-top:7px solid currentColor;border-bottom:0}"
-+".tk{position:absolute;top:0;bottom:0;width:1px;background:rgba(14,18,22,.3);opacity:0;transition:opacity .6s .5s}.tk span{position:absolute;bottom:2px;left:3px;font-size:9px;line-height:1;color:rgba(14,18,22,.62)}.tk.on{opacity:1}.arw{position:absolute;left:50%;top:-20px;transform:translateX(-50%);font-size:15px;line-height:1;color:#9aa6b4;pointer-events:none;animation:arwpulse 2.4s ease-in-out infinite}.bn.on .arw{display:none}@keyframes arwpulse{0%,100%{opacity:.3}50%{opacity:1}}"
++".tk{position:absolute;top:0;bottom:0;width:1px;background:rgba(14,18,22,.3);opacity:0;transition:opacity .6s .5s}.tk span{position:absolute;bottom:2px;left:3px;font-size:9px;line-height:1;color:rgba(14,18,22,.62)}.tk.on{opacity:1}.mk.pulse:after{animation:arwpulse 2.2s ease-in-out infinite}@keyframes arwpulse{0%,100%{opacity:.3}50%{opacity:1}}"
 +".cl{align-self:flex-start;margin:5px 0 0;font-size:12px;line-height:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;opacity:0;transition:opacity .6s ease}.bn.on .cl{opacity:1}.cl i{font-style:normal;color:#aeb6c0;margin-left:6px}"
 +".eb,.bk{all:unset;cursor:pointer;position:absolute;bottom:6px;font-family:Georgia,'Times New Roman',serif;font-style:italic;font-weight:400;font-size:14px;color:#5b6472}.eb{right:14px}.bk{left:14px}.bn.on .eb,.bn.on .bk{color:#7c8794}.eb:hover,.bk:hover{text-decoration:underline}.bk[hidden]{display:none}"
 +".eb:focus-visible,.bk:focus-visible,.pn button:focus-visible{outline:2px solid #e2d000;outline-offset:3px}"
@@ -80,7 +80,7 @@ var CSS=":host{display:block;margin:9px 0;font-family:Roboto,Arial,Helvetica,san
 +".row .x{all:unset;cursor:pointer;width:30px;height:30px;flex:none;text-align:center;border-radius:99px;color:#aeb6c0;font-size:18px}.row .x:hover{background:#2a1c1c;color:#ff8a7a}.row .x[disabled]{visibility:hidden}"
 +".row small{flex:none;width:92px;font-size:11px;color:#e0ab52}"
 +".pb{display:flex;gap:12px;align-items:center;margin-top:14px;flex-wrap:wrap}.pb button{all:unset;cursor:pointer;font-size:13.5px;font-weight:700;border-radius:8px;padding:8px 16px;border:1px solid #4a525c;color:#fff}.pb .done{background:#e2d000;border-color:#e2d000;color:#0e1216}.pb .st{font-size:12px;color:#aeb6c0}.pb .un{border:0;padding:0;color:#e2d000;text-decoration:underline;font-weight:500}"
-+"@media(prefers-reduced-motion:reduce){.bar,.bar i,.mk,.drop,.tk,.stage,.cl{transition:none}.arw{animation:none}}"
++"@media(prefers-reduced-motion:reduce){.bar,.bar i,.mk,.drop,.tk,.stage,.cl{transition:none}.mk.pulse:after{animation:none}}"
 +"@media(max-width:760px){.stage{padding:7px 12px 0}.h{font-size:16px}.cl{max-width:100%;font-size:11px}.cl i{display:none}.row{flex-wrap:wrap}.row .t{flex:1 1 60%}.row small{display:none}}";
 function faceHTML(D,f){
  var L=D.steps[4],mid;
@@ -105,7 +105,7 @@ function mount(host){
    return '<div class="row" data-r="'+i+'"><span class="gr" draggable="true" data-g="'+i+'" title="Drag to change the order">⠇⠇</span><input class="t" data-i="'+i+'" value="'+esc(c.t)+'" placeholder="Reads after HERE IS" aria-label="Name"><input class="d" type="date" data-i="'+i+'" value="'+c.d+'" aria-label="Date"><small>'+w+'</small><button class="x" type="button" data-del="'+i+'" title="Delete this date" aria-label="Delete '+esc(c.t)+'">&times;</button></div>'}).join('')}
  function render(){D=build(cfg);if(step>=D.steps.length)step=D.steps.length-1;
   root.innerHTML='<style>'+CSS+'</style><div class="bn'+(open?' on':'')+(editing?' ed':'')+'"><div class="top"><div class="stage" role="button" tabindex="0" aria-label="Here is Today. Tap to step back through time.">'
-  +'<div class="htop"><h2 class="h"></h2></div><div class="sm"><div class="bar"><span class="mk"></span><i class="o"></i><i class="y"></i><i class="g"></i><div class="arw" aria-hidden="true">\u25be</div>'+D.ticks.map(function(k){return '<span class="tk" style="left:'+(k.x*100)+'%"><span>'+k.l+'</span></span>'}).join('')+'</div></div><p class="cl"></p>'
+  +'<div class="htop"><h2 class="h"></h2></div><div class="sm"><div class="bar"><span class="mk"></span><i class="o"></i><i class="y"></i><i class="g"></i>'+D.ticks.map(function(k){return '<span class="tk" style="left:'+(k.x*100)+'%"><span>'+k.l+'</span></span>'}).join('')+'</div></div><p class="cl"></p>'
   +'<button class="bk" type="button" data-a="back">- back</button><button class="eb" type="button" data-a="edit">Edit dates</button></div></div>'
   +'<div class="drop"><div class="in"><div class="pn"><h3>My dates</h3><p>Change a name or a date, delete one, or add a new one. Drag the dots to change the order. Each becomes a step after My Life, in this order, and its headline reads HERE IS plus the name. Dates that have not happened yet stay hidden until they do.</p>'
   +'<div class="rows">'+rows()+'</div><div class="pb"><button type="button" data-a="add">+ Add a date</button><button type="button" class="done" data-a="done">Done</button><span class="st">'+esc(stat)+'</span>'+(undo?'<button type="button" class="un" data-a="undo">Undo delete</button>':'')+'</div></div>'
@@ -114,7 +114,7 @@ function mount(host){
   $('.h').textContent=s.h;$('.cl').innerHTML=esc(s.cap)+'<i>'+esc(s.note)+'</i>';
   bar.classList.toggle('sq',!!s.sq);bar.classList.toggle('rev',!!s.rev);var a=s.sq?0:s.a*100,c=s.sq?100:s.c*100;
   $('.bar .o').style.width=a+'%';$('.bar .y').style.width=c+'%';$('.bar .g').style.display=(s.sq||s.end)?'none':'';
-  $('.mk').style.left=(s.rev?(100-c/2):(a+c/2))+'%';$('.mk').textContent=s.tag||'';
+  $('.mk').style.left=(s.rev?(100-c/2):(a+c/2))+'%';$('.mk').textContent=s.tag||'';$('.mk').classList.toggle('pulse',!open);
   [].forEach.call(root.querySelectorAll('.tk'),function(e){e.classList.toggle('on',!!s.ticks)});
   $('.bk').hidden=!open||step===0}
  function advance(){if(!open){open=true;step=0}else if(step<D.steps.length-1)step++;else{open=false;step=0}
