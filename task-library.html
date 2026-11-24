@@ -158,7 +158,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><span class="on">Task Library</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Task Library<span class="ver">v3.5</span><span class="strength" id="str" title="Color strength"></span></h1>
+<h1>Task Library<span class="ver">v3.6</span><span class="strength" id="str" title="Color strength"></span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -404,7 +404,7 @@ async function renameEverywhere(n, oldName, newName){
 }
 function taskRow(t){
   var li=document.createElement('li'); li.className='r'+(t.done?' isdone':'');
-  var dg=document.createElement('span'); dg.className='dg'; dg.textContent='⋮⋮'; tip(dg,'Drag onto a list, project or sub-category on the left to move this task there'); li.appendChild(dg); if(!t.demo) taskDrag(dg,t,li);
+  var dg=document.createElement('span'); dg.className='dg'; dg.textContent='⋮⋮'; tip(dg,'Drag onto any list, project or sub-category, on the left or in this pane, to move this task there'); li.appendChild(dg); if(!t.demo) taskDrag(dg,t,li);
   var cb=document.createElement('button'); cb.type='button'; cb.className='cb'+(t.done?' done':''); cb.setAttribute('aria-label','Done');
   cb.addEventListener('click',function(e){ e.stopPropagation(); if(t.demo){ showToast('That is a sample, it is not on your board'); return; } toggleTask(t); }); li.appendChild(cb);
   var d=document.createElement('div'); d.className='grow t'; d.textContent=t.task; if(t.demo) d.style.color='#78818f'; li.appendChild(d);
@@ -458,7 +458,7 @@ function addRow(n){
   return b;
 }
 function sublFor(P, topColor){
-  var wrap=document.createElement('div'); wrap.className='subl'; wrap.dataset.p=P.name;
+  var wrap=document.createElement('div'); wrap.className='subl'; wrap.dataset.p=P.name; wrap.dataset.nid=P.id;
   var hc=P.color||topColor;
   wrap.style.setProperty('--h',hc||'#cfd3d9'); wrap.style.setProperty('--hl',tone(hc));
   if(!LV().flatPane) wrap.style.background=tone(hc);
@@ -471,7 +471,7 @@ function sublFor(P, topColor){
   if(cs.length){
     var grid=document.createElement('div'); grid.className='p2grid';
     cs.forEach(function(C){
-      var p2=document.createElement('div'); p2.className='p2'; if(C.status) p2.dataset.k=C.status;
+      var p2=document.createElement('div'); p2.className='p2'; if(C.status) p2.dataset.k=C.status; p2.dataset.nid=C.id;
       var s2=document.createElement('div'); s2.className='shd';
       var b2=document.createElement('b'); b2.textContent=C.name; editable(b2,C,'name'); s2.appendChild(b2);
       if(C.status && KL[C.status]){ var k=document.createElement('span'); k.className='kind'; k.textContent=KL[C.status]; s2.appendChild(k); }
@@ -665,6 +665,35 @@ function moveTaskToNode(t, tn){
     saveTodoBg(t.id,{section:was.section, subsection:was.subsection, updated_at:new Date().toISOString()});
   });
 }
+/* v3.6: while dragging, scroll the rail or pane when the pointer nears its edge, and open a
+   closed list or project if the pointer rests on it, so every place can be reached. */
+var EDGE_T=null, EDGE_DY=0, EDGE_EL=null;
+function edgeScroll(ev, nel){
+  var box=null, rail=document.getElementById('rail'), pane=document.getElementById('pane');
+  [rail && rail.parentElement, pane].forEach(function(b){ if(!b) return; var r=b.getBoundingClientRect();
+    if(ev.clientX>=r.left && ev.clientX<=r.right) box=b; });
+  var dy=0;
+  if(box){ var r=box.getBoundingClientRect();
+    if(ev.clientY<r.top+50) dy=-14; else if(ev.clientY>r.bottom-50) dy=14; }
+  EDGE_DY=dy;
+  if(dy && !EDGE_T){ EDGE_T=setInterval(function(){ var sc=EDGE_EL||window; if(EDGE_EL) EDGE_EL.scrollTop+=EDGE_DY; else window.scrollBy(0,EDGE_DY); if(!EDGE_DY) stopEdge(); },30); }
+  if(!dy) stopEdge();
+  /* the scrolling box is whichever ancestor really scrolls */
+  var el=box; while(el && el!==document.body && el.scrollHeight<=el.clientHeight+1) el=el.parentElement;
+  EDGE_EL = (el && el!==document.body && el!==document.documentElement) ? el : null;
+}
+function stopEdge(){ if(EDGE_T){ clearInterval(EDGE_T); EDGE_T=null; } EDGE_DY=0; }
+var OPEN_T=null, OPEN_ID=null;
+function openShut(nel, tn){
+  var id = tn ? tn.id : null;
+  if(id===OPEN_ID) return;
+  clearTimeout(OPEN_T); OPEN_ID=id;
+  if(!tn || !nel || !nel.closest('#rail')) return;
+  OPEN_T=setTimeout(function(){
+    if(tn.level==='list' && SHUT[tn.id]){ SHUT[tn.id]=false; nel.classList.remove('isshut'); var b=nel.querySelector(':scope > .rsubs'); if(b) b.classList.remove('shut'); }
+    else if(SHUT['p'+tn.id]){ SHUT['p'+tn.id]=false; nel.classList.remove('isshut'); var b2=nel.querySelector(':scope > .rsubs2'); if(b2) b2.classList.remove('shut'); }
+  },600);
+}
 function taskDrag(grip, t, li){
   grip.addEventListener('pointerdown', function(e){
     if(e.button && e.button!==0) return;
@@ -681,18 +710,24 @@ function taskDrag(grip, t, li){
       if(!started){ if(Math.abs(ev.clientX-sx)>HOLD_SLOP || Math.abs(ev.clientY-sy)>HOLD_SLOP){ clearTimeout(holdT); cleanup(false); } return; }
       ev.preventDefault(); place(ev);
       var over=document.elementFromPoint(ev.clientX, ev.clientY);
-      var host = over && over.closest ? (over.closest('.rsub2') || over.closest('.rsub') || over.closest('.rrow')) : null;
-      var nel = host ? (host.closest('.rsub2') || host.closest('[data-nid]')) : null;
+      /* v3.6, Scott Nov 23: any place that is a Library section can take the task, in the rail
+         OR in the right-hand pane, so a task can go from one section straight to the next. */
+      var nel = over && over.closest ? over.closest('[data-nid]') : null;
       var tn = nel ? node(nel.dataset.nid) : null;
-      if(hostEl && hostEl!==host) hostEl.classList.remove('dropline');
+      var host = nel;
+      if(nel && nel.closest('#rail')) host = nel.querySelector(':scope > .rrow, :scope > .rsub') || nel;
+            if(hostEl && hostEl!==host) hostEl.classList.remove('dropline');
       hostEl = host; target = tn;
       if(host && tn) host.classList.add('dropline');
+      edgeScroll(ev, nel);
+      openShut(nel, tn);
     }
     function up(){ clearTimeout(holdT); cleanup(true); }
     function cleanup(drop){
       document.removeEventListener('pointermove', move, {passive:false});
       document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', cancel);
       document.body.style.userSelect=''; li.classList.remove('dragging');
+      stopEdge(); clearTimeout(OPEN_T); OPEN_ID=null;
       if(hostEl) hostEl.classList.remove('dropline');
       if(ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
       var tn=target, was=started; started=false; hostEl=null; target=null;
