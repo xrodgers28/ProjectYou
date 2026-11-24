@@ -49,6 +49,10 @@ button{font:inherit}
 .hed:hover{border-bottom-color:#b9bfc7}.hed:focus{border-bottom:1px solid var(--navy);background:#fffdf3}
 .cnt{font-family:var(--fn);color:#c9ced5;font-weight:700;letter-spacing:0;font-variant-numeric:tabular-nums}
 .sec .all{margin-left:auto}
+.secft{display:flex;align-items:center;gap:10px;margin:8px 0 4px;padding-left:10px}
+.allb{background:var(--green);color:#fff;border:0;border-radius:8px;height:30px;padding:0 16px;font-family:var(--fn);font-size:12.5px;font-weight:700;cursor:pointer}
+.allb:hover{filter:brightness(.92)}
+.secfn{font-family:var(--fn);font-size:11px;color:var(--muted)}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#9aa2ad;flex:none}
 .star{border:0;background:none;color:#c9ced5;cursor:pointer;font-size:13px;padding:0;line-height:1}.star.on{color:#d9a21b}
 .txt{font-size:13px;color:var(--ink);overflow-wrap:anywhere}
@@ -201,8 +205,8 @@ try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
 window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
 <style>html.embed.calshut .wrap{max-width:none}</style>
 </head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.0</span><span class="date" id="today"></span></div>
-<p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green File button to file it. Nothing files itself while the switch says Ask first.</p>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.1</span><span class="date" id="today"></span></div>
+<p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green button at the bottom of a section to file everything in it. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
   <span class="mg"><b>Layout</b><button data-ly="0">Design 2</button><button data-ly="1">Design 3</button></span>
@@ -228,7 +232,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 <div><b>v0.20</b> Playable Staging Area, label, owner, star and link &middot; <a href="https://claude.ai/artifact/Vd3QU7DiTe7CnWwzrM23mj">open</a></div>
 <div><b>Build plan v0.17</b> The 375-minute plan this was built from &middot; <a href="https://claude.ai/artifact/9ocMs1oQ9wtnqNLxuifdHT">open</a></div>
 </div></div>
-<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.0 &middot; Nov 24, 2026</span></footer>
+<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.1 &middot; Nov 24, 2026</span></footer>
 </div><div id="tst"></div>
 <script src="pills-config.js"></script>
 <script src="task-moves.js"></script>
@@ -308,7 +312,7 @@ function timeB(i){return istask(i)?'<input class="tm" value="'+(i.est||'')+'" in
 function popB(i){var o=!!POP[i.id];return '<button class="pop'+(o?' on':'')+'" data-a="pop" data-id="'+i.id+'" title="Popcorn: show my original words">🍿</button>'}
 function popP(i){return '<div class="shade'+(POP[i.id]?' open':'')+'" data-shade="'+i.id+'"><div><div class="pp"><div class="ppl">🍿 Popcorn · as it came in</div><div class="ppt">'+(i.raw==null?esc(NORAW):'“'+esc(i.raw)+'”')+'</div></div></div></div>'}
 function carB(i){return istask(i)?'<button class="car" data-a="park" data-id="'+i.id+'" title="Park it: goes to the Parking lot at the bottom of the Task Library"><svg viewBox="0 0 20 20" width="15" height="15"><path d="M4.2 8.2L5.3 5.4A1.5 1.5 0 016.7 4.5h6.6a1.5 1.5 0 011.4.9l1.1 2.8" fill="none" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><rect x="2.5" y="8" width="15" height="6" rx="1.6" fill="#fff"/><circle cx="6" cy="14.5" r="1.4" fill="#fff"/><circle cx="14" cy="14.5" r="1.4" fill="#fff"/></svg></button>':''}
-function goB(i){var w=i.kind==='notask'?'File to '+(i.list||'its list'):(i.dest==='today'?'File to Today':'File to Library');return '<span class="gow"><span class="nf">Not filed yet</span><button class="go" data-a="file" data-id="'+i.id+'" title="Press to file it. Tapping the tag only changes where it will go.">'+esc(w)+' \u2192</button></span>'}
+function goB(i){return ''} /* v2.1: no per-row file button; each section has one bulk button at its bottom */
 function subH(i){if(i.kind==='garbled')return '<div class="sub">You said “'+esc(i.text)+'” · best guess shown · <select class="tm" style="width:15em;max-width:60%;height:auto" data-pick="'+i.id+'" aria-label="Other guesses">'+i.alts.map(function(a,k){return '<option value="'+k+'"'+(k===i.pick?' selected':'')+'>'+esc(a)+'</option>'}).join('')+'</select></div>';return '<div class="sub">'+esc(i.why||'')+'</div>'}
 function subRow(i){return '<div class="subrow">'+popB(i)+subH(i)+'</div>'}
 
@@ -322,11 +326,15 @@ function recLines(){var r=recs();if(!r.length)return '<div class="empty">Nothing
 /* UNDO LASTS 7 DAYS (safety rule 1) */
 function filedStrip(){var f=ST.filter(function(x){return x.status==='filed'||x.status==='dropped'});if(!f.length)return '';return '<div class="filed"><b>Filed this session ('+f.length+')</b> · Undo works for 7 days'+f.map(function(i){return '<div class="fl"><span>'+esc(txtOf(i))+' → '+(i.status==='dropped'?'Dropped':esc(dtxt(i))+' · '+esc(i.label)+' · '+i.own+(i.star?' · ★ Urgent':''))+'</span><button class="btn sm" data-a="undo" data-id="'+i.id+'">Undo</button></div>'}).join('')+'</div>'}
 function parkSec(){var p=ST.filter(function(x){return x.status==='parked'});return sec('park','r',p.length)+(p.length?p.map(function(i){return '<div class="pk"><span class="t">'+esc(i.text)+' <small>'+esc(i.label)+'</small></span><button class="park" data-a="unpark" data-id="'+i.id+'">Unpark</button></div>'}).join(''):'<div class="empty">Nothing parked.</div>')+'<div class="hint">Parked items wait at the bottom of the <a href="task-library.html" style="color:var(--navy)">Task Library</a>. They never come back on their own.</div>'}
+function secBtn(k,a){if(!a.length)return '';var td=a.filter(function(x){return x.kind!=='notask'&&x.dest==='today'}).length,lb=a.filter(function(x){return x.kind!=='notask'&&x.dest!=='today'}).length,ls=a.length-td-lb,p=[];
+ if(td)p.push(td+' to Today');if(lb)p.push(lb+' to the Library');if(ls)p.push(ls+' to their own '+(ls===1?'list':'lists'));
+ var lead=k==='need'?'I checked these, file all ':'File all ';
+ return '<div class="secft"><button class="btn allb" data-a="allsec" data-sec="'+k+'">'+lead+a.length+'</button><span class="secfn">'+esc(p.join(' · '))+'. Nothing is filed until you press this.</span></div>'}
 function view(){var n=pend().filter(needs),r=pend().filter(ready),o=pend().filter(nots),h='';
  function blk(a,msg){return a.length?a.map(rowH).join(''):'<div class="empty">'+msg+'</div>'}
- h+=sec('need','',n.length)+blk(n,'Nothing waiting on you.');
- h+=sec('ready','g',r.length,r.length?'<button class="btn sm all" data-a="all">File all '+r.length+'</button>':'')+blk(r,'Nothing ready.');
- h+=sec('not','b',o.length)+blk(o,'Nothing for your other lists.');
+ h+=sec('need','',n.length)+blk(n,'Nothing waiting on you.')+secBtn('need',n);
+ h+=sec('ready','g',r.length)+blk(r,'Nothing ready.')+secBtn('ready',r);
+ h+=sec('not','b',o.length)+blk(o,'Nothing for your other lists.')+secBtn('not',o);
  h+=sec('rec','r',recs().length)+recLines()+filedStrip()+parkSec();
  return h}
 
@@ -383,6 +391,10 @@ document.addEventListener('click',function(e){
  if(a==='file'){fileIt(i);render();return}
  if(a==='got'){i.status='filed';toast('Got it.');render();return}
  if(a==='undo'){i.status=null;if(LIVE)writeLive(i,'unfile');render();return}
+ if(a==='allsec'){var fn=b.dataset.sec==='need'?needs:(b.dataset.sec==='ready'?ready:nots),all=pend().filter(fn),r=all.filter(function(x){return !(LIVE&&x.kind!=='notask'&&x.dest==='lib'&&!x.place)}),sk=all.filter(function(x){return r.indexOf(x)<0});
+  r.forEach(function(x){fileIt(x,true)});
+  if(sk.length)PLOPEN=sk[0].id;
+  toast('Filed '+r.length+(sk.length?'. '+sk.length+' still need a Library place first.':'. Undo works for 7 days.'),function(){r.forEach(function(x){x.status=null;if(LIVE)writeLive(x,'unfile')});render()});render();return}
  if(a==='all'){var r=pend().filter(ready).filter(function(x){return !(LIVE&&x.dest==='lib'&&!x.place)}),n=r.length;r.forEach(function(x){fileIt(x,true)});toast('Filed '+n+'. Undo works for 7 days.',function(){r.forEach(function(x){x.status=null});render()});render();return}
 });
 document.addEventListener('change',function(e){
