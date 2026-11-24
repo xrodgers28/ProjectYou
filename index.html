@@ -1760,7 +1760,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="mastertoggle" class="vtoggle" style="cursor:pointer" title="Switch between the old board and the Master list">★ Master</a><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.146</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.147</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -2495,7 +2495,7 @@ async function refreshTodos() {
      him to finish instead of stealing focus. */
   if (isEditing() || (typeof M_DRAG !== 'undefined' && M_DRAG)) { clearTimeout(liveTimer); liveTimer = setTimeout(refreshTodos, 600); return; }
   /* v6.131: never replace the screen with an older copy from the server while a save is still on its way */
-  if (SAVE_PENDING || (window.PYMoves && PYMoves.pending && PYMoves.pending())) { clearTimeout(liveTimer); liveTimer = setTimeout(refreshTodos, 1500); render(); return; }
+  if (SAVE_PENDING || (window.PYMoves && PYMoves.pending && PYMoves.pending())) { clearTimeout(liveTimer); liveTimer = setTimeout(refreshTodos, 1500); return; }  /* v6.147: no repaint here. It used to redraw the whole page every 1.5s while any save was still on its way. */
   const { data, error } = await sb.from('todos').select('*').eq('archived', false).eq('staged', false).neq('bucket', 'library').order('position', { ascending: true });
   if (error) { console.error(error); return; }
   /* v6.144, Scott Nov 24: "the today tab page keeps jumping." Background jobs (the Workflowy
@@ -2503,12 +2503,15 @@ async function refreshTodos() {
      touch repainted the whole page and snapped it back to the top. Now: (1) if nothing Scott
      can SEE changed, skip the repaint; (2) if something did, put the scroll back where it was. */
   const noisy = /^(updated_at|claude_updated|synced_at|last_synced.*|.*_synced_at|wf_.*)$/;
-  const sig = JSON.stringify(data || [], (k, v) => noisy.test(k) ? undefined : v);
+  /* v6.147: compare with what is on screen RIGHT NOW (which already shows his drag, delete or tick), so
+     the server echoing his own change back does not repaint the page a second time */
+  const sigOf = a => JSON.stringify((a || []).slice().sort((x, y) => String(x.id) < String(y.id) ? -1 : 1), (k, v) => noisy.test(k) ? undefined : v);
+  const sig = sigOf(data), localSig = sigOf(todos);
   const lineBefore = MLINE, titlesBefore = JSON.stringify(typeof M_BTITLES !== 'undefined' ? M_BTITLES : null);
   /* v6.123: the Staging Area and Task Library tabs move the Today line when they send a
      task to Today, so re-read it here instead of keeping the copy from page load. */
   M_LINE_LOADED = false; await mLoadLine();
-  const same = sig === window.__todosSig && lineBefore === MLINE && titlesBefore === JSON.stringify(typeof M_BTITLES !== 'undefined' ? M_BTITLES : null);
+  const same = sig === localSig && lineBefore === MLINE && titlesBefore === JSON.stringify(typeof M_BTITLES !== 'undefined' ? M_BTITLES : null);
   window.__todosSig = sig;
   todos = data || [];
   if (!same){
@@ -2566,7 +2569,7 @@ function patch(id, fields) {
   fields.updated_at = new Date().toISOString();
   const t = todos.find(x => x.id === id); if (t) Object.assign(t, fields);
   SAVE_PENDING++; saveNote();
-  SAVE_CHAIN[id] = (SAVE_CHAIN[id] || Promise.resolve()).then(() => sendPatch(id, fields)).then(ok => {
+  SAVE_CHAIN[id] = (SAVE_CHAIN[id] || Promise.resolve()).then(() => sendPatch(id, fields)).catch(() => false).then(ok => {
     SAVE_PENDING--; saveNote();
     if (!ok) toast('One change could not be saved. Check your connection and try it again.');
   });
