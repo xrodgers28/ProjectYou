@@ -10,7 +10,7 @@
    Shadow root, so no page styles leak in or out. The day ends at 2am Eastern (PY.today when present). */
 (function(){
 var KEY='here_is_today_cfg';
-var DEF={birth:'1970-09-28',face:'b',chapters:[{t:'Life with Åsa',d:'2006-08-10'},{t:'Max',d:'2008-05-25'},{t:'Carson',d:'2010-03-05'},{t:'Max getting into USC',d:'2025-12-12'}]};
+var DEF={birth:'1970-09-28',face:'b',chapters:[{t:'Life with Åsa',d:'2009-08-10'},{t:'Max',d:'2008-05-25'},{t:'Carson',d:'2010-03-05'},{t:'Max getting into USC',d:'2025-12-12'}]};
 var MON=['January','February','March','April','May','June','July','August','September','October','November','December'];
 var MO3=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var DOW=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
