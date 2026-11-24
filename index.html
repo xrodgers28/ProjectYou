@@ -1760,7 +1760,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="mastertoggle" class="vtoggle" style="cursor:pointer" title="Switch between the old board and the Master list">★ Master</a><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.147</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.148</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -2521,7 +2521,7 @@ async function refreshTodos() {
     requestAnimationFrame(() => window.scrollTo(sx, sy));
   }
   loadWaitingCount();          // a capture may have arrived while the tab was open
-  await maybeClearHabits(); checkHabitConfetti();
+  await maybeClearHabits(true); checkHabitConfetti();
 }
 function subscribe() {
   sb.channel('todos-live')
@@ -3096,17 +3096,19 @@ function checkHabitConfetti(){
 // does the section fold away and the habits clear into Completed. This runs on every
 // load as well as on every tick, so it still fires when the last habit was ticked on
 // another device, by Midnight Run, or before the page was opened.
-async function maybeClearHabits(){
+async function maybeClearHabits(quiet){
+  /* v6.148: quiet=true is the background refresh. It used to repaint the WHOLE page every time, even with nothing changed, which is the jumping Scott kept seeing. */
+  let changed = false;
   const habits = todos.filter(t => t.is_habit && !t.skipped && !isHiddenTap(t));
   const allDone = habitsAllDone();
-  if (allDone && !collapsed[HB_SUB_KEY]) { collapsed[HB_SUB_KEY] = true; habitFoldAuto = true; }
-  else if (!allDone && habitFoldAuto) { collapsed[HB_SUB_KEY] = false; habitFoldAuto = false; }
+  if (allDone && !collapsed[HB_SUB_KEY]) { collapsed[HB_SUB_KEY] = true; habitFoldAuto = true; changed = true; }
+  else if (!allDone && habitFoldAuto) { collapsed[HB_SUB_KEY] = false; habitFoldAuto = false; changed = true; }
   if (allDone) {
     for (const h of habits) {
-      if (h.section !== COMPLETED) patch(h.id, { origin_section: 'Core To-Dos', origin_subsection: 'HABIT BANDIT', section: COMPLETED, subsection: null });
+      if (h.section !== COMPLETED) { changed = true; patch(h.id, { origin_section: 'Core To-Dos', origin_subsection: 'HABIT BANDIT', section: COMPLETED, subsection: null }); }
     }
   }
-  render();
+  if (!quiet || changed) render();
 }
 
 /* ---------- the pinwheel ---------- */
@@ -10186,6 +10188,11 @@ async function mSendOut(t, v){
    tap answers right there, and finished work with one "All good" button that ticks it all off.
    Claude picks up 3 times a day, so this fills in batches, not all day. Hidden when empty. */
 async function mClaudeStrip(box){
+  /* v6.148: the panel used to be thrown away and rebuilt from the network on EVERY repaint, so it
+     blinked empty for a moment and everything below slid up and down. Now it paints at once from
+     the last copy, then checks quietly and only redraws if something in it really changed. */
+  const cached = window.__mclRows;
+  if (cached) mClaudeStripPaint(box, cached);
   let rows = [];
   try{
     const { data } = await sb.from('todos')
@@ -10195,6 +10202,13 @@ async function mClaudeStrip(box){
     rows = data || [];
   }catch(e){ return; }
   if (!box.isConnected) return;
+  const sig = JSON.stringify(rows);
+  if (cached && sig === window.__mclSig) return;
+  window.__mclRows = rows; window.__mclSig = sig;
+  while (box.firstChild) box.removeChild(box.firstChild);
+  mClaudeStripPaint(box, rows);
+}
+function mClaudeStripPaint(box, rows){
   const needs = rows.filter(r => r.claude_status === 'needs'), rev = rows.filter(r => r.claude_status === 'review');
   const waiting = rows.filter(r => r.claude_status === 'queued' || r.claude_status === 'working');
   const next = () => (window.PYMoves ? PYMoves.nextPickup() : 'later');
@@ -10498,7 +10512,7 @@ function renderMaster(){
     window.scrollTo(sx, sy);
     requestAnimationFrame(() => window.scrollTo(sx, sy));
     clearTimeout(window.__mhT);
-    window.__mhT = setTimeout(() => { const h = document.getElementById('masterview'); if (h){ const y = window.scrollY, x = window.scrollX; h.style.minHeight = ''; window.scrollTo(x, y); } }, 900);
+    window.__mhT = setTimeout(() => { const h = document.getElementById('masterview'); if (h){ const y = window.scrollY, x = window.scrollX; h.style.minHeight = ''; window.scrollTo(x, y); } }, 150);
   }
 }
 function _renderMasterInner(){
