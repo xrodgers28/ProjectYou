@@ -1797,7 +1797,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="mastertoggle" class="vtoggle" style="cursor:pointer" title="Switch between the old board and the Master list">★ Master</a><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.166</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.167</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -10120,9 +10120,49 @@ let M_DRAG = null;
      into a box      it is filed under that box; its label is kept, and comes back
                      with it when it is dragged out again
    The old per-table functions below are kept as thin names so every caller still works. */
-let M_DRAG_FROM = null;
+let M_DRAG_FROM = null, M_KIDP = null;
 const M_ROWSEL = '.mrow,.mline,.mbrow:not(.mnewrow)';
 function mZoneOf(n){ return n && n.closest ? n.closest('[data-mzone]') : null; }
+/* v6.167, Scott Nov 25: "carry children along". Dragging a line now takes everything
+   nested under it. The nested lines are worked out from the FULL list as it was last
+   drawn, not from what is on screen, so a line that is rolled up still brings its
+   hidden ones with it. They land straight under their line, keep their shape relative
+   to it, and follow it into a different box if it moves. */
+let M_LISTS = {}, M_DRAG_KIDS = [];
+function mZoneKey(zone){
+  if (!zone || !zone.dataset) return '';
+  const z = zone.dataset.mzone;
+  return z === 'box' ? ('box:' + zone.dataset.sec) : z;
+}
+function mKidsOfTask(id, zoneKey){
+  const ids = M_LISTS[zoneKey] || [];
+  const list = ids.map(x => todos.find(t => t.id === x)).filter(Boolean);
+  const i = list.findIndex(t => t.id === id);
+  if (i < 0) return [];
+  const base = mIndentOf(list[i]);
+  const out = [];
+  for (let j = i + 1; j < list.length; j++){
+    if (mIndentOf(list[j]) > base) out.push(list[j].id); else break;
+  }
+  return out;
+}
+/* Run after the zone has renumbered itself, so the line's new place is settled.
+   Each nested line is slotted just behind it and keeps its depth relative to it. */
+async function mCarryKids(parent, kidIds, delta, alsoSet){
+  if (!kidIds || !kidIds.length || !parent) return;
+  const base = parent.position || 0;
+  let step = 0.0001;
+  for (const id of kidIds){
+    const k = todos.find(x => x.id === id);
+    if (!k) continue;
+    const p = { position: base + step, indent: Math.max(0, Math.min(M_IND_MAX, mIndentOf(k) + delta)) };
+    step += 0.0001;
+    if (alsoSet) Object.assign(p, alsoSet);
+    await patch(id, p);
+  }
+}
+
+
 function mPlaceAt(x, y){
   if (!M_DRAG) return;
   const under = document.elementFromPoint(x, y);
@@ -10158,6 +10198,7 @@ function mHostDnd(){
 }
 function mDragStartOn(node){
   M_DRAG = node; M_DRAG_FROM = mZoneOf(node);
+  M_DRAG_KIDS = mKidsOfTask(node.dataset.id, mZoneKey(M_DRAG_FROM));
   node.classList.add('mdragging');
   document.querySelectorAll('#masterview [data-mzone]').forEach(z => z.classList.add('mdropping'));
 }
@@ -10241,9 +10282,13 @@ async function mDropDone(node){
   if (!to || !t){ render(); return; }
   const z = to.dataset.mzone, fz = from ? from.dataset.mzone : null;
   const dropLvl = mIndentForDrop(node);
-  if (from === to){   /* a plain reorder, same as before, plus the level where it landed */
-    if (dropLvl !== mIndentOf(t)){ snapshot(); t.indent = dropLvl; await patch(t.id, { indent: dropLvl }); }
-    if (z === 'list') await mPersistOrder(to); else if (z === 'box') await mBlkPersistOrder(to); else await mUrgPersistOrder(to);
+  const kids = M_DRAG_KIDS; M_DRAG_KIDS = [];
+  const delta = dropLvl - mIndentOf(t);
+  if (from === to){   /* a plain reorder, plus the level where it landed, plus anything nested under it */
+    if (delta){ snapshot(); t.indent = dropLvl; await patch(t.id, { indent: dropLvl }); }
+    if (z === 'list') await mPersistOrder(to, true); else if (z === 'box') await mBlkPersistOrder(to, true); else await mUrgPersistOrder(to, true);
+    await mCarryKids(t, kids, delta, null);
+    render();
     return;
   }
   {
@@ -10253,6 +10298,8 @@ async function mDropDone(node){
     else if (z === 'list'){ p.star_color = null; p.starred = false; p.star_position = 0; if (fz === 'box'){ p.section = label; p.origin_section = null; } }
     else { p.section = to.dataset.sec; p.star_color = null; p.starred = false; p.star_position = 0;
            p.origin_section = (fz === 'box') ? (t.origin_section || null) : t.section; }
+    M_KIDP = {};
+    ['section','origin_section','star_color','starred','star_position'].forEach(k => { if (p[k] !== undefined) M_KIDP[k] = p[k]; });
     snapshot();
     await patch(t.id, p);
     /* leaving the ranked list: re-read where the Today line sits among what is left */
@@ -10262,10 +10309,12 @@ async function mDropDone(node){
   if (z === 'list') await mPersistOrder(to, true);
   else if (z === 'box') await mBlkPersistOrder(to, true);
   else await mUrgPersistOrder(to, true);
+  await mCarryKids(t, kids, delta, M_KIDP);
+  M_KIDP = null;
   render();
   if (from !== to){
     const where = z === 'urg' ? 'Todays Must Dos' : z === 'list' ? 'your list' : ((M_BTITLES[to.dataset.sec]) || (M_BLOCKS.filter(b => b[0] === to.dataset.sec)[0] || [,'the box'])[1]);
-    toast('Moved to ' + where + '.');
+    toast('Moved to ' + where + (kids.length ? ', with the ' + kids.length + ' nested under it' : '') + '.');
   }
 }
 /* Must Dos order: red always sits above yellow, so this only orders within each colour */
@@ -11021,6 +11070,8 @@ function _renderMasterInner(){
      its Task column against the SAME combined text list the ranked list uses below,
      keeping Labels and every column after it lined up between the two tables. */
   let rest = live.filter(t => !t.star_color).sort((a,b)=> (a.position||0) - (b.position||0));
+  /* v6.167: the full order, folded lines included, so a dragged line can find what is nested under it */
+  M_LISTS = {}; M_LISTS['urg'] = starred.map(t => t.id); M_LISTS['list'] = rest.map(t => t.id);
   /* v6.129: the Claude strip sits above everything else on Today */
   const cstrip = el('div','mclaude'); host.appendChild(cstrip);
   /* v6.144: keep the strip's last height while it reloads so everything below it does not slide down */
@@ -11128,6 +11179,7 @@ function _renderMasterInner(){
     hdw.appendChild(hd); b.appendChild(hdw);
     const rows = todos.filter(t => t.section === sec && !t.done && !t.skipped && !t.archived && !t.staged)
       .sort((a,b2)=> (a.position||0) - (b2.position||0));
+    M_LISTS['box:' + sec] = rows.map(x => x.id);
     const bHid = mFoldHidden(rows);
     rows.forEach((t, bi) => {
       if (bHid[bi]) return;
