@@ -75,6 +75,22 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .chipa[data-st="Parked"]{background:#fdf6e6;color:var(--amber)}
 .chipa[data-st="Brand new"]{background:#e9f5ef;color:var(--good)}
 .subl{border:0;background:#f4f6f9;border-radius:12px;padding:6px 11px 5px;margin:0 0 7px}
+/* ---- v3.7, Scott Nov 25: the right panel runs in two columns, with a bar you drag to set the widths ---- */
+.pcols{display:grid;grid-template-columns:var(--sa,1fr) 7px var(--sb,1fr);gap:0 10px;align-items:start;margin:0 0 4px}
+.pcol{min-width:0}
+.pcol.empty{min-height:56px;border:1px dashed #dfe3ea;border-radius:12px;background:#fbfcfd;position:relative}
+.pcol.empty::after{content:'Drag a section here';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11.5px;color:#aeb5bf}
+.pcol.colover{outline:2px dashed var(--c,#8a93a1);outline-offset:3px;border-radius:12px}
+.psplit{position:relative;cursor:col-resize;align-self:stretch;min-height:64px;touch-action:none}
+.psplit::before{content:'';position:absolute;left:50%;top:2px;bottom:2px;width:3px;transform:translateX(-50%);background:#e3e7ee;border-radius:3px;transition:background .12s}
+.psplit:hover::before,.psplit.on::before{background:var(--c,#8a93a1)}
+.psplit::after{content:'';position:absolute;left:-8px;right:-8px;top:0;bottom:0}
+.subl>.shd>.sg{cursor:grab;color:#b4bac3;font-size:12px;letter-spacing:-3px;margin:0 1px 0 -4px;user-select:none;flex:none;touch-action:none}
+.subl>.shd>.sg:hover{color:#6f7681}
+.subl>.shd>.sg:active{cursor:grabbing}
+.subl.sdrag{opacity:.4}
+.subl.dropline{box-shadow:0 0 0 2px var(--c,#8a93a1)}
+@media(max-width:900px){.pcols{grid-template-columns:1fr}.psplit{display:none}.pcol.empty{display:none}}
 .shd{display:flex;align-items:center;gap:6px;margin:0 0 2px;min-height:22px}
 .shd b{font-size:13px;color:var(--ink)}
 .p2grid{display:grid;grid-template-columns:1fr;gap:4px;margin:3px 0}
@@ -163,7 +179,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><span class="on">Task Library</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Task Library<span class="ver">v3.6</span><span class="strength" id="str" title="Color strength"></span></h1>
+<h1>Task Library<span class="ver">v3.7</span><span class="strength" id="str" title="Color strength"></span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -283,7 +299,7 @@ var SAMPLE={
  'Waiting On':['Amazon locker number','Point B change, check the dates','Quote for the blinds','Reply from the Elevate team'],
  'Parking Lot':['Read the piece on spaced repetition'],
  'Build ideas':['SER Amazon store','Bumper stickers','Cannes winners database','A physical device for Project YOU'],
- 'Project YOU ideas':['Scott 3.0','Discover my ikigai','Fold in the principles of storytelling','The Wall, make it weekly']
+ 'Project YOU ideas':['Scott 3.0','Discover my ikigai','Fold in the principles of storytelling','SparkBoard, make it weekly']
 };
 function sampleFor(n){
   if(!DEMO) return [];
@@ -468,6 +484,10 @@ function sublFor(P, topColor){
   wrap.style.setProperty('--h',hc||'#cfd3d9'); wrap.style.setProperty('--hl',tone(hc));
   if(!LV().flatPane) wrap.style.background=tone(hc);
   var shd=document.createElement('div'); shd.className='shd';
+  /* v3.7: grip to drag the whole section between the two columns, or up and down inside one */
+  var sg=document.createElement('span'); sg.className='sg'; sg.textContent='\u22EE\u22EE';
+  tip(sg,'Drag this section into the other column, or up and down to reorder it');
+  shd.appendChild(sg); sectionDrag(sg, P);
   var b=document.createElement('b'); b.textContent=P.name; editable(b,P,'name'); shd.appendChild(b);
   if(P.status){ var c=document.createElement('span'); c.className='chip chipa'; c.dataset.st=P.status; c.textContent=P.status; shd.appendChild(c); }
   shd.appendChild(mkKeb(P));
@@ -499,6 +519,123 @@ function sublFor(P, topColor){
   wrap.appendChild(addRow(P));
   return wrap;
 }
+/* ---- v3.7, Scott Nov 25: two columns in the right panel ----------------------------------
+   Each section remembers which column it sits in, and each list remembers how wide its two
+   columns are. Both are saved to your system, so a laptop and a phone agree. A section with
+   no column saved yet is placed by size, so the two sides start roughly even. */
+function secWeight(P){
+  var w=2; kids(P.id).forEach(function(C){ w += 1 + tasksFor(C).length; });
+  return w + tasksFor(P).length;
+}
+function assignCols(ks){
+  var map={}, w1=0, w2=0;
+  ks.forEach(function(P){ if(P.col===1||P.col===2){ map[P.id]=P.col; if(P.col===1) w1+=secWeight(P); else w2+=secWeight(P); } });
+  ks.forEach(function(P){ if(map[P.id]) return; var w=secWeight(P);
+    if(w1<=w2){ map[P.id]=1; w1+=w; } else { map[P.id]=2; w2+=w; } });
+  return map;
+}
+function paneCols(n, ks, col){
+  var box=document.createElement('div'); box.className='pcols'; box.dataset.pid=n.id;
+  var sp = (typeof n.pane_split==='number' && n.pane_split>=25 && n.pane_split<=75) ? n.pane_split : 50;
+  box.style.setProperty('--sa', sp+'fr'); box.style.setProperty('--sb', (100-sp)+'fr');
+  var cA=document.createElement('div'); cA.className='pcol'; cA.dataset.col='1';
+  var bar=document.createElement('div'); bar.className='psplit';
+  tip(bar,'Drag to set how wide each column is. It snaps at a third, a half and two thirds. Double click to even them up.');
+  var cB=document.createElement('div'); cB.className='pcol'; cB.dataset.col='2';
+  var map=assignCols(ks);
+  ks.forEach(function(P){ (map[P.id]===2?cB:cA).appendChild(sublFor(P, col)); });
+  if(!cA.children.length) cA.classList.add('empty');
+  if(!cB.children.length) cB.classList.add('empty');
+  box.appendChild(cA); box.appendChild(bar); box.appendChild(cB);
+  splitDrag(bar, box, n);
+  return box;
+}
+function splitDrag(bar, box, n){
+  bar.addEventListener('pointerdown', function(e){
+    if(e.button && e.button!==0) return;
+    e.preventDefault(); bar.classList.add('on'); document.body.style.userSelect='none';
+    var cur=null;
+    function move(ev){
+      var r=box.getBoundingClientRect(); if(r.width<80) return;
+      var pc=((ev.clientX-r.left)/r.width)*100;
+      [33.3,50,66.7].forEach(function(sn){ if(Math.abs(pc-sn)<3) pc=sn; });
+      pc=Math.max(25,Math.min(75,pc)); cur=Math.round(pc*10)/10;
+      box.style.setProperty('--sa', cur+'fr'); box.style.setProperty('--sb', (100-cur)+'fr');
+    }
+    function up(){
+      document.removeEventListener('pointermove',move); document.removeEventListener('pointerup',up);
+      bar.classList.remove('on'); document.body.style.userSelect='';
+      if(cur!=null) persist(n,{pane_split:cur});
+    }
+    document.addEventListener('pointermove',move); document.addEventListener('pointerup',up);
+  });
+  bar.addEventListener('dblclick', function(){
+    box.style.setProperty('--sa','50fr'); box.style.setProperty('--sb','50fr'); persist(n,{pane_split:50});
+  });
+}
+function moveSection(P, d){
+  var sibs=kids(P.parent_id), map=assignCols(sibs), target=d.col;
+  var mine=sibs.filter(function(x){ return x.id!==P.id && (map[x.id]||1)===target; });
+  var idx=mine.length;
+  if(d.id){ for(var i=0;i<mine.length;i++){ if(mine[i].id===d.id){ idx = d.after ? i+1 : i; break; } } }
+  mine.splice(idx,0,P);
+  var other=sibs.filter(function(x){ return x.id!==P.id && (map[x.id]||1)!==target; });
+  var upd=[];
+  function stamp(list,c,base){ list.forEach(function(x,i){ var pos=base+i;
+    if(x.col!==c || x.position!==pos){ x.col=c; x.position=pos; upd.push(x); } }); }
+  if(target===1){ stamp(mine,1,1); stamp(other,2,1001); } else { stamp(other,1,1); stamp(mine,2,1001); }
+  saveLocal(); render();
+  if(!LOCAL && sb){ upd.forEach(function(x){
+    try{ sb.from('task_library').update({col:x.col, position:x.position}).eq('id', x.dbid).then(function(){},function(){}); }catch(e){} }); }
+  showToast('Moved "'+P.name+'" to column '+target+'.');
+}
+function sectionDrag(grip, P){
+  grip.addEventListener('pointerdown', function(e){
+    if(e.button && e.button!==0) return;
+    e.preventDefault(); e.stopPropagation();
+    var touch = e.pointerType!=='mouse';
+    var wrap = grip.closest('.subl');
+    var sx=e.clientX, sy=e.clientY, started=false, holdT=null, ghost=null, markEl=null, drop=null;
+    function begin(){ started=true; if(wrap) wrap.classList.add('sdrag'); document.body.style.userSelect='none';
+      ghost=document.createElement('div'); ghost.textContent=P.name;
+      ghost.style.cssText='position:fixed;z-index:9999;pointer-events:none;background:#fff;border:1px solid #dfe3ea;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:5px 10px;font-size:13px;font-weight:600;color:#2b3137';
+      document.body.appendChild(ghost); place(e); }
+    function place(ev){ if(ghost){ ghost.style.left=(ev.clientX+14)+'px'; ghost.style.top=(ev.clientY+10)+'px'; } }
+    if(touch){ holdT=setTimeout(begin, HOLD_MS); } else { begin(); }
+    function clearMark(){ if(markEl){ markEl.classList.remove('dropline'); markEl.classList.remove('colover'); markEl=null; } }
+    function move(ev){
+      if(!started){ if(Math.abs(ev.clientX-sx)>HOLD_SLOP || Math.abs(ev.clientY-sy)>HOLD_SLOP){ clearTimeout(holdT); cleanup(false); } return; }
+      ev.preventDefault(); place(ev);
+      var over=document.elementFromPoint(ev.clientX, ev.clientY);
+      clearMark(); drop=null;
+      if(over && over.closest){
+        var sub=over.closest('.subl');
+        if(sub && sub!==wrap && sub.parentElement && sub.parentElement.classList.contains('pcol')){
+          var r=sub.getBoundingClientRect();
+          markEl=sub; sub.classList.add('dropline');
+          drop={col:parseInt(sub.parentElement.dataset.col,10), id:sub.dataset.nid, after:(ev.clientY > r.top + r.height/2)};
+        } else {
+          var pc=over.closest('.pcol');
+          if(pc){ markEl=pc; pc.classList.add('colover'); drop={col:parseInt(pc.dataset.col,10), id:null, after:true}; }
+        }
+      }
+      edgeScroll(ev, null);
+    }
+    function up(){ clearTimeout(holdT); cleanup(true); }
+    function cancel(){ clearTimeout(holdT); cleanup(false); }
+    function cleanup(ok){
+      document.removeEventListener('pointermove', move, {passive:false});
+      document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', cancel);
+      document.body.style.userSelect=''; if(wrap) wrap.classList.remove('sdrag'); stopEdge();
+      clearMark(); if(ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+      var d=drop, was=started; started=false; drop=null;
+      if(ok && was && d) moveSection(P, d);
+    }
+    document.addEventListener('pointermove', move, {passive:false});
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
+  });
+}
 var NOTES={list:'Everything filed under this list. Each part has its own sub-categories.'};
 function paintPane(){
   var p=document.getElementById('pane'); p.innerHTML='';
@@ -526,7 +663,7 @@ function paintPane(){
   p.appendChild(nt);
 
   if(ks.length){
-    ks.forEach(function(P){ p.appendChild(sublFor(P, col)); });
+    p.appendChild(paneCols(n, ks, col));
     var nb=document.createElement('button'); nb.className='lnk';
     nb.textContent = n.level==='list' ? '+ New project' : '+ New sub-category';
     nb.addEventListener('click',function(){
@@ -902,7 +1039,7 @@ function demoLine(){
     var q=await sb.from('task_library').select('*').order('position');
     if(q.error){ banner('<b>Cannot reach the Task Library in your system</b>Working on this device only for now.'); return; }
     LOCAL=false;
-    NODES=q.data.map(function(r){ return {id:'db'+r.id,dbid:r.id,parent_id:r.parent_id?('db'+r.parent_id):null,level:r.level,name:r.name,color:r.color,icon:r.icon,status:r.status||null,position:r.position}; });
+    NODES=q.data.map(function(r){ return {id:'db'+r.id,dbid:r.id,parent_id:r.parent_id?('db'+r.parent_id):null,level:r.level,name:r.name,color:r.color,icon:r.icon,status:r.status||null,position:r.position,col:r.col||null,pane_split:(typeof r.pane_split==='number'?r.pane_split:null)}; });
     saveLocal(); SEL=(kids(null)[0]||{}).id||null;
     var names=NODES.filter(function(n){ return !n.parent_id; }).map(function(n){ return n.name; });
     /* v3.0: only tasks whose home is the Library (task-moves.js). Before this, any Today task
