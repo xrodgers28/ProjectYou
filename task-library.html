@@ -90,6 +90,9 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .subl>.shd>.sg:active{cursor:grabbing}
 .subl.sdrag{opacity:.4}
 .subl.dropline{box-shadow:0 0 0 2px var(--c,#8a93a1)}
+/* v3.8: the line that shows where a dragged task will land inside a section */
+.its .r.dropup{box-shadow:inset 0 2px 0 0 var(--c,#8a93a1)}
+.its .r.dropdn{box-shadow:inset 0 -2px 0 0 var(--c,#8a93a1)}
 @media(max-width:900px){.pcols{grid-template-columns:1fr}.psplit{display:none}.pcol.empty{display:none}}
 .shd{display:flex;align-items:center;gap:6px;margin:0 0 2px;min-height:22px}
 .shd b{font-size:13px;color:var(--ink)}
@@ -179,7 +182,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><span class="on">Task Library</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Task Library<span class="ver">v3.7</span><span class="strength" id="str" title="Color strength"></span></h1>
+<h1>Task Library<span class="ver">v3.8</span><span class="strength" id="str" title="Color strength"></span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -311,6 +314,8 @@ function sampleFor(n){
 function tasksFor(n){
   var top=chain(n.id)[0], sub = n.level==='list' ? '' : n.name;
   var real=TASKS.filter(function(t){ return t.section===top.name && ((t.subsection||'')===sub); });
+  /* v3.8: sort by saved order so a task dragged up or down stays where it was put */
+  real.sort(function(a,b){ return (a.position||0)-(b.position||0); });
   return real.concat(sampleFor(n));
 }
 function cz(n){ var v=countUnder(n); return v? String(v) : ''; }
@@ -425,7 +430,8 @@ async function renameEverywhere(n, oldName, newName){
 }
 function taskRow(t){
   var li=document.createElement('li'); li.className='r'+(t.done?' isdone':'');
-  var dg=document.createElement('span'); dg.className='dg'; dg.textContent='⋮⋮'; tip(dg,'Drag onto any list, project or sub-category, on the left or in this pane, to move this task there'); li.appendChild(dg); if(!t.demo) taskDrag(dg,t,li);
+  if(!t.demo) li.dataset.tid=t.id;   /* v3.8: so a task can be dropped above or below this one */
+  var dg=document.createElement('span'); dg.className='dg'; dg.textContent='⋮⋮'; tip(dg,'Drag onto another task to drop it just above or below, or onto any section to move it there'); li.appendChild(dg); if(!t.demo) taskDrag(dg,t,li);
   var cb=document.createElement('button'); cb.type='button'; cb.className='cb'+(t.done?' done':''); cb.setAttribute('aria-label','Done');
   cb.addEventListener('click',function(e){ e.stopPropagation(); if(t.demo){ showToast('That is a sample, it is not on your board'); return; } toggleTask(t); }); li.appendChild(cb);
   var d=document.createElement('div'); d.className='grow t'; d.textContent=t.task; if(t.demo) d.style.color='#78818f'; li.appendChild(d);
@@ -795,6 +801,43 @@ function saveTodoBg(id, fields){
     if(r && r.error) showToast('One change could not be saved. Check your connection and try it again.');
   }).catch(function(){ showToast('One change could not be saved. Check your connection and try it again.'); });
 }
+/* v3.8, Scott Nov 25: a task can be dropped straight onto another task, so it lands
+   exactly where he wants it, inside its own section or in any other one. */
+function placeOf(tsk){
+  for(var i=0;i<NODES.length;i++){
+    var n=NODES[i], top=chain(n.id)[0];
+    if(top && top.name===tsk.section){
+      var sub = n.level==='list' ? '' : n.name;
+      if(sub===(tsk.subsection||'')) return n;
+    }
+  }
+  return null;
+}
+function moveTaskNextTo(t, other, after){
+  if(t.id===other.id) return;
+  var dest=placeOf(other); if(!dest) return;
+  var sec=other.section, subn=other.subsection||null;
+  var was={section:t.section, subsection:t.subsection||null, position:t.position||0};
+  t.section=sec; t.subsection=subn;
+  var list=tasksFor(dest).filter(function(x){ return !x.demo && x.id!==t.id; });
+  var idx=list.length;
+  for(var i=0;i<list.length;i++){ if(list[i].id===other.id){ idx = after ? i+1 : i; break; } }
+  list.splice(idx,0,t);
+  var upd=[];
+  list.forEach(function(x,i){ var pos=i+1; if(x.position!==pos){ x.position=pos; upd.push(x); } });
+  render();
+  upd.forEach(function(x){
+    var f={position:x.position, updated_at:new Date().toISOString()};
+    if(x.id===t.id){ f.section=sec; f.subsection=subn; }
+    saveTodoBg(x.id, f);
+  });
+  var short=(t.task||'').length>40 ? t.task.slice(0,40)+'...' : t.task;
+  var moved = (was.section!==sec || was.subsection!==subn);
+  showToast(moved ? ('Moved "'+short+'" to '+placeName(dest)+'.') : ('Moved "'+short+'" up the list.'),'Undo',function(){
+    t.section=was.section; t.subsection=was.subsection; t.position=was.position; render();
+    saveTodoBg(t.id,{section:was.section, subsection:was.subsection, position:was.position, updated_at:new Date().toISOString()});
+  });
+}
 function moveTaskToNode(t, tn){
   var top=chain(tn.id)[0], sec=top.name, subn = tn.level==='list' ? null : tn.name;
   if(t.section===sec && (t.subsection||null)===subn) return;
@@ -841,7 +884,7 @@ function taskDrag(grip, t, li){
     if(e.button && e.button!==0) return;
     e.preventDefault(); e.stopPropagation();
     var touch = e.pointerType!=='mouse';
-    var sx=e.clientX, sy=e.clientY, started=false, holdT=null, ghost=null, hostEl=null, target=null;
+    var sx=e.clientX, sy=e.clientY, started=false, holdT=null, ghost=null, hostEl=null, target=null, rowTarget=null;
     function begin(){ started=true; li.classList.add('dragging'); document.body.style.userSelect='none';
       ghost=document.createElement('div'); ghost.textContent=t.task;
       ghost.style.cssText='position:fixed;z-index:9999;pointer-events:none;background:#fff;border:1px solid #dfe3ea;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:5px 10px;font-size:13px;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#2b3137';
@@ -854,11 +897,22 @@ function taskDrag(grip, t, li){
       var over=document.elementFromPoint(ev.clientX, ev.clientY);
       /* v3.6, Scott Nov 23: any place that is a Library section can take the task, in the rail
          OR in the right-hand pane, so a task can go from one section straight to the next. */
+      /* v3.8: a row under the pointer wins, so the task lands in an exact spot */
+      var row = over && over.closest ? over.closest('.its .r[data-tid]') : null;
+      if(row && row!==li){
+        if(hostEl){ hostEl.classList.remove('dropline'); hostEl.classList.remove('dropup'); hostEl.classList.remove('dropdn'); }
+        var rr=row.getBoundingClientRect(), aft = ev.clientY > rr.top + rr.height/2;
+        row.classList.add(aft?'dropdn':'dropup');
+        hostEl=row; target=null; rowTarget={id:row.dataset.tid, after:aft};
+        edgeScroll(ev, row); openShut(null, null);
+        return;
+      }
+      rowTarget=null;
       var nel = over && over.closest ? over.closest('[data-nid]') : null;
       var tn = nel ? node(nel.dataset.nid) : null;
       var host = nel;
       if(nel && nel.closest('#rail')) host = nel.querySelector(':scope > .rrow, :scope > .rsub') || nel;
-            if(hostEl && hostEl!==host) hostEl.classList.remove('dropline');
+      if(hostEl && hostEl!==host){ hostEl.classList.remove('dropline'); hostEl.classList.remove('dropup'); hostEl.classList.remove('dropdn'); }
       hostEl = host; target = tn;
       if(host && tn) host.classList.add('dropline');
       edgeScroll(ev, nel);
@@ -870,10 +924,14 @@ function taskDrag(grip, t, li){
       document.removeEventListener('pointerup', up); document.removeEventListener('pointercancel', cancel);
       document.body.style.userSelect=''; li.classList.remove('dragging');
       stopEdge(); clearTimeout(OPEN_T); OPEN_ID=null;
-      if(hostEl) hostEl.classList.remove('dropline');
+      if(hostEl){ hostEl.classList.remove('dropline'); hostEl.classList.remove('dropup'); hostEl.classList.remove('dropdn'); }
       if(ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
-      var tn=target, was=started; started=false; hostEl=null; target=null;
-      if(drop && was && tn) moveTaskToNode(t, tn);
+      var tn=target, rt=rowTarget, was=started; started=false; hostEl=null; target=null; rowTarget=null;
+      if(drop && was && rt){
+        var other=null; for(var i=0;i<TASKS.length;i++) if(TASKS[i].id===rt.id){ other=TASKS[i]; break; }
+        if(other) moveTaskNextTo(t, other, rt.after);
+      }
+      else if(drop && was && tn) moveTaskToNode(t, tn);
     }
     function cancel(){ clearTimeout(holdT); cleanup(false); }
     document.addEventListener('pointermove', move, {passive:false});
