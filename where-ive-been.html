@@ -87,6 +87,10 @@
   .cv-country.visited{fill:var(--trav)}
   .cv-country.visited:hover{fill:var(--travdk)}
   .cv-back{position:absolute;left:16px;top:16px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 11px;font-size:12px;font-weight:700;color:var(--accent);cursor:pointer;box-shadow:0 2px 8px rgba(31,42,68,.12)}
+  .cv-zoom{position:absolute;right:16px;top:16px;display:flex;flex-direction:column;gap:6px;z-index:5}
+  .cv-zoom button{width:30px;height:30px;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:16px;font-weight:800;color:var(--accent);cursor:pointer;box-shadow:0 2px 8px rgba(31,42,68,.12);line-height:1}
+  .cv-zoom button:hover{background:#f1f3f6}
+  #cvMap{touch-action:none}
   #tip{position:fixed;z-index:60;background:var(--ink);color:#fff;border-radius:7px;padding:5px 9px;font-size:12px;pointer-events:none;opacity:0;transition:opacity .12s}
   .loading{padding:40px;text-align:center;color:#9aa6b4;font-size:13px}
 
@@ -193,7 +197,7 @@
 <div id="app" class="hidden">
 <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v2.0</span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="who" style="display:none"></span></div>
 
-<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Where I've Been</h1><span class="ver">v2.1</span><span class="date"></span></div></div>
+<div class="secbar-wrap"><div class="secbar"><h1>Project YOU OS &middot; Where I've Been</h1><span class="ver">v2.2</span><span class="date"></span></div></div>
 
 <div class="wrap">
   <p class="sub">Every country, place and trip you have actually been to. Countries, Places and Trips all read from your Swarm check-ins, which have been live since Aug 16, 2026. Trips are worked out from the check-ins themselves rather than waiting on TripIt. Your Future Travel list lives here too, kept deliberately separate so a place you dream about is never counted as a place you have been.</p>
@@ -224,6 +228,10 @@
       <div class="loading" id="mapLoading">Loading the world&hellip;</div>
       <svg id="cvMap" viewBox="0 14 1000 404" preserveAspectRatio="xMidYMid meet" style="display:none"><g id="cvCountries"></g><g id="cvMicro"></g></svg>
       <button id="cvBack" class="cv-back" style="display:none">&larr; Back to world</button>
+      <div class="cv-zoom">
+        <button id="cvZoomIn" title="Zoom in" aria-label="Zoom in">+</button>
+        <button id="cvZoomOut" title="Zoom out" aria-label="Zoom out">&minus;</button>
+      </div>
     </div>
     <div class="srcbar">
       <div class="t"><b>Where this map gets its data</b><span id="srcNote">&nbsp;</span></div>
@@ -528,12 +536,97 @@ const MICRO_XY={
 };
 
 const cvSvg=document.getElementById('cvMap'), cvBack=document.getElementById('cvBack');
+
+/* ---- Zoom and pan on the world map (added Nov 24, 2026): buttons, scroll wheel, pinch, drag ---- */
+const CV_DEFAULT_VB=[0,14,1000,404];
+let cvVB=CV_DEFAULT_VB.slice();
+function cvApplyVB(){
+  cvSvg.setAttribute('viewBox',cvVB.join(' '));
+  cvBack.style.display = (cvVB[2] < CV_DEFAULT_VB[2]-0.5) ? 'block' : 'none';
+}
+function cvClampVB(x,y,w){
+  w=Math.max(18,Math.min(CV_DEFAULT_VB[2],w));
+  const h=w*(CV_DEFAULT_VB[3]/CV_DEFAULT_VB[2]);
+  const pad=w*0.5;
+  x=Math.max(CV_DEFAULT_VB[0]-pad,Math.min(CV_DEFAULT_VB[0]+CV_DEFAULT_VB[2]-w+pad,x));
+  y=Math.max(CV_DEFAULT_VB[1]-pad*(h/w),Math.min(CV_DEFAULT_VB[1]+CV_DEFAULT_VB[3]-h+pad*(h/w),y));
+  return [x,y,w,h];
+}
+function cvPointToUser(clientX,clientY){
+  const ctm=cvSvg.getScreenCTM();
+  if(!ctm) return {x:cvVB[0]+cvVB[2]/2,y:cvVB[1]+cvVB[3]/2};
+  const pt=cvSvg.createSVGPoint(); pt.x=clientX; pt.y=clientY;
+  const p=pt.matrixTransform(ctm.inverse());
+  return {x:p.x,y:p.y};
+}
+function cvZoomAt(factor,cx,cy){
+  const [x,y,w,h]=cvVB;
+  if(cx===undefined){cx=x+w/2;cy=y+h/2;}
+  const nw=w*factor;
+  const nx=cx-(cx-x)*(nw/w), ny=cy-(cy-y)*(nw/w);
+  cvVB=cvClampVB(nx,ny,nw);
+  cvApplyVB();
+}
+function cvPanBy(dx,dy){
+  const [x,y,w]=cvVB;
+  cvVB=cvClampVB(x+dx,y+dy,w);
+  cvApplyVB();
+}
 function zoomTo(co){
   const bb=co.bb,px=Math.max(6,(bb[2]-bb[0])*0.18),py=Math.max(6,(bb[3]-bb[1])*0.18);
-  cvSvg.setAttribute('viewBox',(bb[0]-px)+' '+(bb[1]-py)+' '+((bb[2]-bb[0])+px*2)+' '+((bb[3]-bb[1])+py*2));
-  cvBack.style.display='block';
+  cvVB=[bb[0]-px,bb[1]-py,(bb[2]-bb[0])+px*2,(bb[3]-bb[1])+py*2];
+  cvApplyVB();
 }
-cvBack.addEventListener('click',()=>{cvSvg.setAttribute('viewBox','0 14 1000 404');cvBack.style.display='none';document.getElementById('tip').style.opacity=0;});
+cvBack.addEventListener('click',()=>{cvVB=CV_DEFAULT_VB.slice();cvApplyVB();document.getElementById('tip').style.opacity=0;});
+
+document.getElementById('cvZoomIn').addEventListener('click',()=>cvZoomAt(0.7));
+document.getElementById('cvZoomOut').addEventListener('click',()=>cvZoomAt(1/0.7));
+
+cvSvg.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const p=cvPointToUser(e.clientX,e.clientY);
+  cvZoomAt(e.deltaY>0?1.15:1/1.15,p.x,p.y);
+},{passive:false});
+
+let cvDrag=null, cvMoved=false;
+cvSvg.addEventListener('mousedown',e=>{ if(e.button===0){ cvDrag={x:e.clientX,y:e.clientY}; cvMoved=false; } });
+window.addEventListener('mousemove',e=>{
+  if(!cvDrag) return;
+  const ddx=e.clientX-cvDrag.x, ddy=e.clientY-cvDrag.y;
+  if(Math.abs(ddx)>3||Math.abs(ddy)>3) cvMoved=true;
+  if(!cvMoved) return;
+  const scale=cvVB[2]/cvSvg.getBoundingClientRect().width;
+  cvPanBy(-ddx*scale,-ddy*scale);
+  cvDrag={x:e.clientX,y:e.clientY};
+});
+window.addEventListener('mouseup',()=>{cvDrag=null;});
+cvSvg.addEventListener('click',e=>{ if(cvMoved){ e.stopPropagation(); cvMoved=false; } },true);
+
+let cvTouch=null;
+cvSvg.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){ cvTouch={mode:'pan',x:e.touches[0].clientX,y:e.touches[0].clientY}; }
+  else if(e.touches.length===2){
+    const [a,b]=e.touches;
+    cvTouch={mode:'pinch',dist:Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY),
+      mid:cvPointToUser((a.clientX+b.clientX)/2,(a.clientY+b.clientY)/2)};
+  }
+},{passive:true});
+cvSvg.addEventListener('touchmove',e=>{
+  if(!cvTouch) return;
+  e.preventDefault();
+  if(cvTouch.mode==='pan' && e.touches.length===1){
+    const t=e.touches[0];
+    const scale=cvVB[2]/cvSvg.getBoundingClientRect().width;
+    cvPanBy(-(t.clientX-cvTouch.x)*scale,-(t.clientY-cvTouch.y)*scale);
+    cvTouch.x=t.clientX; cvTouch.y=t.clientY;
+  } else if(cvTouch.mode==='pinch' && e.touches.length===2){
+    const [a,b]=e.touches;
+    const dist=Math.hypot(b.clientX-a.clientX,b.clientY-a.clientY);
+    cvZoomAt(cvTouch.dist/dist,cvTouch.mid.x,cvTouch.mid.y);
+    cvTouch.dist=dist;
+  }
+},{passive:false});
+cvSvg.addEventListener('touchend',e=>{ if(e.touches.length===0) cvTouch=null; },{passive:true});
 
 /* ---- Someday: the Future Travel page, embedded ---- */
 let PLACES=[], ftMap=null, ftMarkers=null, ftView='destinations', FTPTS=[];
