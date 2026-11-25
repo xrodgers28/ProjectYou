@@ -1,10 +1,12 @@
-/* What I made this week, habits dashboard banner. v1.1 (Nov 24, 2026).
+/* What I made this week, habits dashboard banner. v1.2 (Nov 24, 2026).
    Scott's weekly highlight reel. The window shade suggests what he made that week, he taps the
    ones worth showing off (or types his own and tags it with a label), presses "Take screenshots
    and build banner", and the closed strip becomes a contact sheet of real screenshots of those
    pages. Once built, only a tiny grey Edit at the bottom right opens it again.
    Picks live in made_items, labels in made_labels, pictures in made_shots. A picked page with no
    picture yet asks for one (a made_shots row with no image) and the overnight job takes it.
+   v1.2, Scott: opening the shade fetches every picture it already has, so "picture ready" and the
+   live preview above are right before the button is pressed, not only after.
    v1.1, Scott: suggestion titles wrap instead of truncating, the repeated colour key at the bottom
    is gone (the label chips are the key), and the tiny grey button reads Close while the shade is open.
    Shadow root, so no page styles leak in or out. The week runs Monday to Sunday and the day ends
@@ -122,7 +124,7 @@ function mount(host){
   var el=e.target.closest?e.target.closest('[data-a]'):null;if(!el)return;
   var a=el.getAttribute('data-a');
   if(a!=='open'||!el.classList.contains('tile'))e.preventDefault();
-  if(a==='open'){open=!open;err='';render()}
+  if(a==='open'){open=!open;err='';render();if(open)loadShots(items).then(render,function(){})}
   else if(a==='pick'){toggle(+el.getAttribute('data-i'))}
   else if(a==='lab'){cur=+el.getAttribute('data-i');render()}
   else if(a==='newlab'){newlab=true;render();var n=$('#nl');if(n)n.focus()}
