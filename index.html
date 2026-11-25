@@ -1598,6 +1598,13 @@
 #masterview input.mnewin{font:inherit;font-size:14px;border:0;border-radius:0;padding:3px 0;width:100%;background:transparent;outline:0}
   /* v6.162: the line is the editor, so no box around a task. */
   #masterview .mwf{outline:0;cursor:text;min-height:1.3em}
+  /* v6.163: the roll-up arrow. Invisible, but still taking its space, on a line with
+     nothing nested under it, so every line's text starts in the same place. */
+  #masterview .mcar{flex:none;width:13px;text-align:center;color:#9aa1ab;font-size:10px;cursor:pointer;user-select:none;line-height:1}
+  #masterview .mcar:hover{color:#3f6f8f}
+  #masterview .mcar.none{cursor:default;visibility:hidden}
+  #masterview .mbcount{flex:none;color:#b0b4bb;font-size:11px;font-weight:600}
+  #masterview .mrow .mnum{display:flex;align-items:center;gap:2px}
   #masterview .mwf:focus{white-space:normal;overflow:visible;text-overflow:clip}
 #masterview .madd2{display:block;font:inherit;font-size:12.5px;color:#8a93a1;background:none;border:0;
   cursor:pointer;padding:5px 12px;text-align:left;width:100%}
@@ -1783,7 +1790,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="mastertoggle" class="vtoggle" style="cursor:pointer" title="Switch between the old board and the Master list">★ Master</a><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.162</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.163</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -9763,14 +9770,46 @@ function mCaretAtStart(node){
     return pre.toString().length === 0;
   }catch(e){ return false; }
 }
-async function mSetIndent(t, node, base, delta){
+async function mSetIndent(t, rowEl, delta){
   const was = mIndentOf(t);
   const lvl = Math.max(0, Math.min(M_IND_MAX, was + delta));
   if (lvl === was) return;
-  snapshot(); t.indent = lvl; mApplyIndent(node, t, base);
-  try{ await patch(t.id, { indent: lvl }); }
-  catch(e){ t.indent = was; mApplyIndent(node, t, base); toast('That nesting did not save.'); }
+  snapshot(); t.indent = lvl; if (rowEl) mApplyIndent(rowEl, t, 0);
+  try{ await patch(t.id, { indent: lvl }); M_FOCUS_ID = t.id; render(); }
+  catch(e){ t.indent = was; if (rowEl) mApplyIndent(rowEl, t, 0); toast('That nesting did not save.'); }
 }
+/* v6.163, Scott Nov 25: the whole line indents, tick box and all, and a line with
+   anything nested under it gets an arrow to roll those up. Both the "what is nested
+   under this line" rule (kidsBelow) and the memory of what is rolled up
+   (collapsed['ind:'+id]) are the OLD BOARD's, shared, so the two boards never
+   disagree about the same task. Folding is remembered until the page is reloaded. */
+function mFoldHidden(list){
+  const hide = new Array(list.length).fill(false);
+  let cut = -1;
+  for (let i = 0; i < list.length; i++){
+    const lvl = list[i].indent || 0;
+    if (cut >= 0){
+      if (lvl > cut){ hide[i] = true; continue; }
+      cut = -1;
+    }
+    if (collapsed['ind:' + list[i].id] && kidsBelow(list, i) > 0) cut = lvl;
+  }
+  return hide;
+}
+function mCaretNode(t, kids){
+  const key = 'ind:' + t.id;
+  const shut = !!collapsed[key];
+  const c = el('span', 'mcar' + (kids ? '' : ' none'), kids ? (shut ? '\u25B8' : '\u25BE') : '\u25BE');
+  if (!kids) return c;
+  c.title = shut ? ('Open the ' + kids + ' nested under this') : ('Roll up the ' + kids + ' nested under this');
+  c.onmousedown = e => e.preventDefault();
+  c.onclick = e => { e.stopPropagation(); collapsed[key] = !collapsed[key]; render(); };
+  return c;
+}
+function mCountNode(t, kids){
+  return (kids && collapsed['ind:' + t.id]) ? el('span', 'mbcount', String(kids)) : null;
+}
+
 function mOrderedSibs(t){
   return todos.filter(x => x.section === t.section && !x.done && !x.skipped && !x.archived && !x.staged)
               .sort((a, b) => (a.position || 0) - (b.position || 0));
@@ -9802,12 +9841,11 @@ async function mDropLine(t, goUp){
    Shift+Tab brings it back, Backspace on an empty line takes the line away. The one
    place this is deliberately not Workflowy: clearing all the text out of a real task
    puts the text back rather than leaving a blank, so a task is never silently lost. */
-function mTaskLine(node, t, base){
+function mTaskLine(node, t, rowEl){
   node.dataset.mline = t.id;
   node.contentEditable = 'true';
   node.spellcheck = false;
   node.classList.add('mwf');
-  mApplyIndent(node, t, base);
   let last = (t.task || '').trim();
   let gone = false;
   const save = async () => {
@@ -9825,7 +9863,7 @@ function mTaskLine(node, t, base){
   node.onblur = () => { save(); };
   node.onkeydown = async e => {
     if (e.key === 'Enter'){ e.preventDefault(); await save(); if (!gone) await mNewLineAfter(t); return; }
-    if (e.key === 'Tab'){ e.preventDefault(); await mSetIndent(t, node, base, e.shiftKey ? -1 : 1); return; }
+    if (e.key === 'Tab'){ e.preventDefault(); await mSetIndent(t, rowEl, e.shiftKey ? -1 : 1); return; }
     if (e.key === 'Escape'){ e.preventDefault(); node.blur(); return; }
     if (e.key === 'Backspace' && !node.textContent.trim() && mCaretAtStart(node)){
       e.preventDefault(); gone = true; await mDropLine(t, true); return;
@@ -10816,9 +10854,11 @@ function _renderMasterInner(){
     const r = el('div','mrow' + (t.star_color === 'red' ? ' star-red' : '')); r.dataset.id = t.id;
     if (opts.allowDrag){ mDraggable(r, opts.card); mTouchDrag(r, opts.card); }
     if (opts.past) r.classList.add('past');
+    mApplyIndent(r, t, 0);
     /* v6.116, Scott's call: drop the row number from Todays TODOs (Must Dos + the
        ranked list below it) — the drag grip alone still shows and still reorders. */
     const numc = el('div','mnum');
+    numc.appendChild(mCaretNode(t, opts.kids || 0));
     if (opts.showNum){
       const grip = el('span','mgrip','\u2237'); grip.title = 'Drag to reorder';
       numc.appendChild(grip);
@@ -10827,7 +10867,8 @@ function _renderMasterInner(){
     r.appendChild(numc);
     r.appendChild(mCheckbox(t));
     const task = el('div','mtask', t.task); task.title = t.task;
-    mTaskLine(task, t, 0); r.appendChild(task);
+    mTaskLine(task, t, r); r.appendChild(task);
+    const rc = mCountNode(t, opts.kids || 0); if (rc) r.appendChild(rc);
     const cw = el('div','mchipwrap');
     if (t.section){ const c = el('span','mchip', mSecLabel(t.section));
       c.style.background = (COLOR[t.section] ? COLOR[t.section] + '55' : '#eef1f5');
@@ -10901,7 +10942,9 @@ function _renderMasterInner(){
     const uhead = el('div','mhead');
     ['', '', 'Task', 'Labels', 'Due', 'Claude', 'My Est', 'Mine', 'Link', '★', '', ''].forEach(h => uhead.appendChild(el('div', null, h)));
     urg.appendChild(uhead);
-    starred.forEach(t => urg.appendChild(mBuildRow(t, 0, { showNum:false, allowDrag:true, card:urg, sendBack:true })));
+    const sHid = mFoldHidden(starred);
+    starred.forEach((t, si) => { if (sHid[si]) return;
+      urg.appendChild(mBuildRow(t, si, { showNum:false, allowDrag:true, card:urg, sendBack:true, kids: kidsBelow(starred, si) })); });
     /* v6.117, Scott's call: Labels (and every column after it) must line up between
        Todays Must Dos and the ranked list below it, so both tables share ONE Task
        column width, sized to the longest task text across BOTH tables combined,
@@ -10956,9 +10999,11 @@ function _renderMasterInner(){
     const cut = Math.max(0, Math.min(MLINE, rest.length));
     const addToday = el('button','madd2','+ add');
     addToday.onclick = () => mInlineAddRow(card, card.querySelector('.mline') || null, v => mAddTask(v, mDefaultAddSection(), true));
+    const rHid = mFoldHidden(rest);
     rest.forEach((t, i) => {
       if (i === cut){ card.appendChild(addToday); card.appendChild(mLineNode(rest.length)); }
-      card.appendChild(mBuildRow(t, i, { showNum:true, allowDrag:true, card, past: i >= cut }));
+      if (rHid[i]) return;
+      card.appendChild(mBuildRow(t, i, { showNum:true, allowDrag:true, card, past: i >= cut, kids: kidsBelow(rest, i) }));
     });
     if (cut >= rest.length){ card.appendChild(addToday); card.appendChild(mLineNode(rest.length)); }
     const addLater = el('button','madd2','+ add');
@@ -10988,15 +11033,21 @@ function _renderMasterInner(){
     b.appendChild(hd);
     const rows = todos.filter(t => t.section === sec && !t.done && !t.skipped && !t.archived && !t.staged)
       .sort((a,b2)=> (a.position||0) - (b2.position||0));
-    rows.forEach(t => {
+    const bHid = mFoldHidden(rows);
+    rows.forEach((t, bi) => {
+      if (bHid[bi]) return;
+      const bKids = kidsBelow(rows, bi);
       const r = el('div','mbrow');
       r.dataset.id = t.id;
+      mApplyIndent(r, t, 0);
+      r.appendChild(mCaretNode(t, bKids));
       /* v6.155, Scott Nov 24: handle first, then the tick box, matching the ranked list above */
       const grip = el('span','mgrip','\u2237'); grip.title = 'Drag to reorder';
       r.appendChild(grip);
       r.appendChild(mCheckbox(t));
       const n = el('div','mbtext', t.task); n.style.flex = '1';
-      mTaskLine(n, t, 17); r.appendChild(n);
+      mTaskLine(n, t, r); r.appendChild(n);
+      const bc = mCountNode(t, bKids); if (bc) r.appendChild(bc);
       r.appendChild(mKillBtn(t));
       b.appendChild(r);
       mBlkDraggable(r, b); mBlkTouchDrag(r, b);
