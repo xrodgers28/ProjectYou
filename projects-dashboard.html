@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard</title>
+<title>Projects Dashboard v2.0</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -180,6 +180,32 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .its .t[contenteditable],.its .ds[contenteditable]{cursor:text;outline:0}
 .its .t[contenteditable]:focus,.its .ds[contenteditable]:focus{outline:0!important;background:transparent!important;box-shadow:none}
 .svn{font-size:11.5px;color:var(--muted);margin-left:10px;font-weight:400}
+
+/* v2.0 (Scott, Nov 25): Project YOU and TreadWell tabs, status dots, linked tasks and chats */
+.ptabs{display:flex;gap:6px;margin:0 0 12px}
+.ptab{font:inherit;font-size:13px;font-weight:600;border:1px solid #d5dae0;background:#f7f9fc;color:#6b7686;border-radius:8px;padding:5px 14px;cursor:pointer}
+.ptab.on{background:#fff;color:#2b4a63;border-color:#2b4a63}
+.pcols{--sa:1.5fr;--sb:1fr}
+.sdw{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.sd{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.sd.q{border:1.5px solid #9aa6b4;background:transparent;width:7px;height:7px}
+.sd.w{background:#9aa6b4;animation:pdpulse 1.2s ease-in-out infinite}
+.sd.n{background:#c0392b}
+.sd.r{background:#e08a1e}
+.sd.m{background:#dfe3ea}
+@keyframes pdpulse{0%,100%{opacity:1}50%{opacity:.2}}
+@media (prefers-reduced-motion: reduce){.sd.w{animation:none}}
+.sw{font-size:11.5px;font-weight:400;color:#7b828c}
+.stb{border:0;background:transparent;padding:0;cursor:pointer;font:inherit}
+.lk{margin:4px 0 1px;display:grid;gap:2px}
+.lt{display:flex;align-items:center;gap:7px;font-size:12px;color:#5b6472;flex-wrap:wrap}
+.lt .ltt{color:#46505e}
+.lt a{font-size:11.5px;color:var(--accent);text-decoration:none}
+.lt a:hover{text-decoration:underline}
+.lt.mute{color:#9aa1ab;font-size:11.5px}
+.brief dd[contenteditable]{cursor:text;outline:0;min-height:1.2em}
+.brief dd[contenteditable]:empty::before{content:attr(data-ph);color:#c3cbd5}
+.btn.go{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
 </style><style id="tlnav-css">
 /* v2.8, Nov 22 2026 (Scott): the same panel tabs as Today and the Staging Area, Today first. */
 .tlnav{display:flex;align-items:stretch;background:#f7f9fc;border:1px solid #e3e7ee;border-radius:10px 10px 0 0;flex-wrap:wrap;margin:0 0 14px}
@@ -207,115 +233,160 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v1.1</span><span class="svn" id="svn"></span></h1>
-<p class="sub">Everything you have in motion, ranked. The top three in Project YOU and in TreadWell are active. Drag the handle to reorder or move a row to another box. Tap any name or description to edit it.</p>
+<h1>Projects Dashboard<span class="ver">v2.0</span><span class="svn" id="svn"></span></h1>
+<p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
-<div class="railwrap">
-  <div class="sec" id="pane">
-    <div class="hd"><b class="sn">Projects</b><span class="cnt" id="pcnt"></span></div>
-    <p class="nt">Ranked top to bottom. Whatever sits above the green line is active: three for Project YOU, three for TreadWell. Drag a row above the line and the third one drops below it. One fun task unlocks each time you finish an active one. <span id="crossn"></span></p>
-    <div class="pcols" id="pcols" style="--sa:1fr;--sb:1fr">
-      <div class="pcol" id="col1"></div><div class="psplit"></div><div class="pcol" id="col2"></div>
-    </div>
-  </div>
-</div>
+<div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button></div>
+<div class="railwrap"><div class="sec" id="pane">
+ <div class="hd"><b class="sn" id="pname">Project YOU</b><span class="cnt" id="pcnt"></span></div>
+ <p class="nt">The top three above the green line are active. Open a row's Brief, check it, and tap Approve and run to hand it to Claude at the next pickup. One fun row unlocks each time you finish an active one. <span id="crossn"></span></p>
+ <div class="pcols" id="pcols"><div class="pcol" id="col1"></div><div class="psplit"></div><div class="pcol" id="col2"></div></div>
+</div></div>
 </div>
 <div class="toast" id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script>
 (function(){
-var SUPA='https://arnjntspmrhigodlssbn.supabase.co',ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM",KEY='projects_dashboard',LKEY='py_projects_dashboard_v1';
-var SEED=[{"z": "py", "t": "Proof it works", "w": "Before and after numbers on two or three habits since September. Nothing else can be judged without it", "sz": "Small", "brief": {"what": "Pull before and after numbers on two or three habits since September.", "why": "Nothing else can be judged without knowing if Project YOU is changing you.", "done": "One page: three habits, weekly counts, a plain verdict on each.", "dont": "Only things that already happened. No forecasts.", "model": "Sonnet"}}, {"z": "py", "t": "Task Library as the one source of truth", "w": "Status on every task, a link to its chat, the now-or-rank-it prompt, retire the Chat Dashboard", "sz": "Major"}, {"z": "py", "t": "Fix broken cue cards", "w": "The cards are how you do your habits every day", "sz": "Small", "brief": {"what": "Find every cue card that does not open, save or count, and fix it.", "why": "The cards are how you do your habits each day.", "done": "Every card on the board opens, saves and shows a source link. A list of what was broken.", "dont": "Do not change any card design.", "model": "Sonnet"}}, {"z": "py", "t": "Habits Dashboard you can trust", "w": "The unlogged time bug, the sources and status page, the section 5 check", "sz": "Medium"}, {"z": "py", "t": "Clear what Claude already finished", "w": "Five finished tasks waiting for your look, four more queued. This one is yours", "sz": "Tiny"}, {"z": "py", "t": "Phone screens", "w": "Phone habit screen, phone Todays Tasks and Workflowy sync, as one build", "sz": "Major"}, {"z": "py", "t": "Time and energy insights", "w": "The Insights Dashboard you approved Nov 21, walking minutes for the week", "sz": "Major"}, {"z": "py", "t": "Intro talk and explainer fixes", "w": "Your three answers from Nov 25: closing line, money slide, source links", "sz": "Small"}, {"z": "py", "t": "Make slow pages save instantly", "w": "Upkeep. Removes friction, shows you nothing new", "sz": "Medium"}, {"z": "py", "t": "Local Safaris section on Todays Tasks", "w": "Helps you do one habit", "sz": "Small"}, {"z": "py", "t": "New cue card content", "w": "Claude Cowork card, Japanese mindset cards, card themes review", "sz": "Medium"}, {"z": "py", "t": "Task map and project map mocks", "w": "Pictures of your to-dos. Overlaps with the Task Library project", "sz": "Small"}, {"z": "tw", "t": "Location builder", "w": "From your Nov 24 launch plan: the tool that makes each new place", "sz": "Major", "brief": {"what": "Finish the tool that makes each new TreadWell place.", "why": "Four places must be live for the Jan 31, 2027 soft launch.", "done": "A new place can be made from one settings file with no hand edits.", "dont": "Do not touch the Antigua page.", "model": "Opus"}}, {"z": "tw", "t": "Launch story kit", "w": "Telling the TreadWell story until it is clear", "sz": "Medium", "brief": {"what": "Draft the TreadWell story in three lengths.", "why": "Telling the story clearly is your weekly stretch skill.", "done": "One line, one paragraph, one page.", "dont": "Your words first, Claude edits.", "model": "Sonnet"}}, {"z": "tw", "t": "Four places live", "w": "Antigua, Martha's Vineyard, Mumbai and Delhi ready for the Jan 31, 2027 soft launch", "sz": "Major"}, {"z": "tw", "t": "TreadWell deck", "w": "Finished by Claude, waiting for your look", "sz": "Tiny"}, {"z": "tw", "t": "Kamil vacation website", "w": "TreadWell task from Nov 24", "sz": "Small"}, {"z": "fun", "t": "Banners and boards", "w": "Here is Today, What I made this week, Sparkboard Airbnb ideas, style guide maps", "sz": "Medium"}, {"z": "fun", "t": "Layout polish", "w": "Nav items, two-column panels, calendar collapse, box dragging, styling", "sz": "Ongoing"}, {"z": "new", "t": "Did it move the needle? weekly tap", "w": "In the Week in Review, one tap per habit: helped, neutral, or drop it. Tells you which habits earn their place. You asked for this Sep 19", "sz": "Small", "tag": "new"}, {"z": "new", "t": "Build versus live meter", "w": "One line on the dashboard: hours spent building Project YOU against hours spent on your habits this week, from your calendar", "sz": "Small", "tag": "new"}, {"z": "new", "t": "Two-week pilots", "w": "Your own Sense of Purpose words: run pilots. One habit at a time gets a two-week experiment with a number before and after", "sz": "Medium", "tag": "new"}, {"z": "new", "t": "Energy map", "w": "Join your What gave me energy answers to your calendar, to show what gives and drains energy, and when", "sz": "Medium", "tag": "new"}, {"z": "new", "t": "Retire one a month", "w": "A monthly ritual that removes one page, tracker or habit that is not earning its place. Growth by subtraction", "sz": "Tiny", "tag": "new"}, {"z": "new", "t": "Starter kit for a second person", "w": "One compass, three habits, one weekly picture. The real test of whether anyone else can use Project YOU", "sz": "Major", "tag": "new"}];
-var BOX=[
- {z:'py',name:'Project YOU',col:1,color:'#7d81c2',ranked:1,note:'Must help you see or do your habits, or show where time and energy go.'},
- {z:'new',name:'New ideas, not yet ranked',col:1,color:'#3f6f8f',note:'Each one serves the goals of the program rather than adding a page for its own sake. Drag any you want into a ranked list. Leave the rest here.'},
- {z:'tw',name:'TreadWell',col:2,color:'#4fa08a',ranked:1,note:'Toward the Jan 31, 2027 soft launch.'},
- {z:'fun',name:'Fun shelf',col:2,color:'#e0975a',note:'Polish and play. One unlocks each time you finish an active task.'},
- {z:'no',name:'Not doing',col:2,color:'#8a93a1',note:'Drag here to drop something. Nothing is deleted, it is just off the list.'}];
-var Z=BOX.map(function(b){return b.z});
-var D=null,dirty=false,saving=false,again=false;
+var SUPA='https://arnjntspmrhigodlssbn.supabase.co',ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM',KEY='projects_dashboard',LKEY='py_projects_dashboard_v1',TKEY='py_dash_tab';
+var PROJ={
+ py:{name:'Project YOU',sub:'Project YOU',boxes:[
+  {z:'py',name:'Project YOU, ranked',col:1,ranked:1,note:'Must help you see or do your habits, or show where time and energy go.'},
+  {z:'new',name:'New ideas, not yet ranked',col:2,note:'Each one serves the goals of the program rather than adding a page for its own sake. Drag any you want into the ranked list.'},
+  {z:'fun',name:'Fun shelf',col:2,note:'Polish and play. One unlocks each time you finish an active row.'},
+  {z:'no',name:'Not doing',col:2,note:'Drag here to drop something. Nothing is deleted, it is just off the list.'}]},
+ tw:{name:'TreadWell',sub:'TreadWell',boxes:[
+  {z:'tw',name:'TreadWell, ranked',col:1,ranked:1,note:'Toward the Jan 31, 2027 soft launch.'},
+  {z:'twnew',name:'New ideas, not yet ranked',col:2,note:'Drag any you want into the ranked list.'},
+  {z:'twfun',name:'Fun shelf',col:2,note:'Polish and play. One unlocks each time you finish an active row.'},
+  {z:'twno',name:'Not doing',col:2,note:'Drag here to drop something. Nothing is deleted, it is just off the list.'}]}};
+var Z=['py','new','fun','no','tw','twnew','twfun','twno'];
+var ST={queued:['q','Queued'],working:['w','Working'],needs:['n','Needs you'],review:['r','Ready to review']};
+var RANK={needs:4,review:3,working:2,queued:1};
+var SIZE={Tiny:15,Small:30,Medium:60,Major:120,Ongoing:60};
+var D=null,TASKS=[],CHATS=[],sb=null,SIGNED=false,dirty=false,saving=false,again=false,OPEN={};
+var TAB='py';try{var tt=localStorage.getItem(TKEY);if(PROJ[tt])TAB=tt}catch(e){}
+function $(s){return document.querySelector(s)}
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
-function tint(h){var n=parseInt(h.slice(1),16);return 'rgba('+(n>>16)+','+(n>>8&255)+','+(n&255)+',.14)'}
 function uid(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
-function blank(){var d={v:1,items:{},done:[],crossings:[],funUnlocked:0};Z.forEach(function(z){d.items[z]=[]});return d}
-function seeded(){var d=blank();SEED.forEach(function(s){d.items[s.z].push({id:uid(),t:s.t,w:s.w||'',sz:s.sz||'',tag:s.tag||'',brief:s.brief||null})});return d}
+function projOf(z){return ['tw','twnew','twfun','twno'].indexOf(z)>-1?'tw':'py'}
 function fix(d){if(!d||!d.items)return null;Z.forEach(function(z){if(!Array.isArray(d.items[z]))d.items[z]=[]});d.done=d.done||[];d.crossings=d.crossings||[];d.funUnlocked=d.funUnlocked||0;return d}
+function etDate(){return new Date().toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'})}
+function showToast(msg,btn,fn){var t=$('#toast');t.textContent=msg;if(btn){var b=document.createElement('button');b.textContent=btn;b.onclick=function(){t.classList.remove('show');fn()};t.appendChild(b)}t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show')},btn?7000:3600)}
+function banner(h){var b=$('#bn');b.innerHTML=h||'';b.classList.toggle('show',!!h)}
+function stamp(){var s=$('#svn');if(!s)return;s.textContent=dirty?'Saving...':(D&&D.saved?'Saved '+new Date(D.saved).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).replace(' AM','am').replace(' PM','pm')+' ET':'')}
 function hdrs(x){var h={apikey:ANON,Authorization:'Bearer '+ANON,'Content-Type':'application/json'};if(x)for(var k in x)h[k]=x[k];return h}
-function showToast(msg,btn,fn){var t=document.getElementById('toast');t.textContent=msg;if(btn){var b=document.createElement('button');b.textContent=btn;b.onclick=function(){t.classList.remove('show');fn()};t.appendChild(b)}t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show')},btn?7000:3200)}
-function banner(h){var b=document.getElementById('bn');b.innerHTML=h||'';b.classList.toggle('show',!!h)}
-function stamp(){var s=document.getElementById('svn');if(!s)return;s.textContent=dirty?'Saving...':(D&&D.saved?'Saved '+new Date(D.saved).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).replace(' AM','am').replace(' PM','pm')+' ET':'')}
-/* the screen updates at once, the save runs in the background (Scott, Nov 23) */
+/* The screen updates at once; the save runs behind it (Scott, Nov 23). */
 function save(){dirty=true;D.saved=new Date().toISOString();try{localStorage.setItem(LKEY,JSON.stringify(D))}catch(e){}stamp();push()}
 function push(){if(saving){again=true;return}saving=true;again=false;
  fetch(SUPA+'/rest/v1/board_meta?on_conflict=key',{method:'POST',headers:hdrs({Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:KEY,val:D,updated_at:new Date().toISOString()})})
  .then(function(r){saving=false;if(!r.ok)throw new Error(r.status);if(again)push();else{dirty=false;banner('');stamp()}})
- .catch(function(){saving=false;banner('<b>Not saved to your system yet</b>Your changes are safe on this screen. They will save when the connection is back.');setTimeout(function(){if(dirty)push()},8000)})}
-function weekStart(){var n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));n.setHours(2,0,0,0);var d=(n.getDay()+6)%7;n.setDate(n.getDate()-d);return n.getTime()}
+ .catch(function(){saving=false;banner('<b>Not saved to your system yet</b>Your changes are safe on this screen and will save when the connection is back.');setTimeout(function(){if(dirty)push()},8000)})}
 function find(id){for(var k=0;k<Z.length;k++){var a=D.items[Z[k]];for(var i=0;i<a.length;i++)if(a[i].id===id)return {z:Z[k],i:i,it:a[i]}}return null}
-function briefHTML(it){var b=it.brief;if(!b)return '<dl><dt>Brief</dt><dd>Not drafted yet. Claude drafts it once this is active, and you approve it before any work starts.</dd></dl>';
- return '<dl><dt>What</dt><dd>'+esc(b.what)+'</dd><dt>Why it matters</dt><dd>'+esc(b.why)+'</dd><dt>Done looks like</dt><dd>'+esc(b.done)+'</dd><dt>Do not touch</dt><dd>'+esc(b.dont)+'</dd><dt>Run on</dt><dd>'+esc(b.model)+'</dd></dl><div class="bft">'+(b.approved?'<span class="chip act">Approved '+esc(b.approved)+'</span>':'<span>Draft by Claude, not approved yet.</span><button class="btn" data-approve="'+it.id+'">Approve brief</button>')+'</div>'}
-var OPEN={};
+function tasksFor(id){return TASKS.filter(function(t){return t.dash_row_id===id})}
+function chatsFor(id){return CHATS.filter(function(c){return c.dash_row_id===id&&c.session_url})}
+function openClaude(id){return tasksFor(id).filter(function(t){return !t.done&&t.owner==='claude'&&ST[t.claude_status]})}
+function rowStatus(id){var best=null;openClaude(id).forEach(function(t){if(!best||RANK[t.claude_status]>RANK[best])best=t.claude_status});return best}
+function dot(st){var s=ST[st];return s?'<span class="sdw"><span class="sd '+s[0]+'"></span><span class="sw">'+s[1]+'</span></span>':''}
+function briefText(b){return 'Brief approved by Scott on '+etDate()+' (Projects Dashboard). What: '+(b.what||'')+' Why it matters: '+(b.why||'')+' Done looks like: '+(b.done||'')+' Do not touch: '+(b.dont||'')+' Run on: '+(b.model||'Sonnet')+'.'}
+var BF=[['what','What'],['why','Why it matters'],['done','Done looks like'],['dont','Do not touch'],['model','Run on']];
+function briefHTML(it){var b=it.brief||{},busy=openClaude(it.id).length,h='<dl>';
+ BF.forEach(function(f){h+='<dt>'+f[1]+'</dt><dd contenteditable="plaintext-only" spellcheck="false" data-bk="'+f[0]+'" data-row="'+it.id+'" data-ph="'+(f[0]==='model'?'Sonnet':'Tap to write')+'">'+esc(b[f[0]]||'')+'</dd>'});
+ h+='</dl><div class="bft">';
+ if(busy)h+='<span>With Claude now. Its status shows on the row.</span>';
+ else if(b.what)h+=(b.approved?'<span>Approved '+esc(b.approved)+'.</span>':'')+'<button class="btn go" data-run="'+it.id+'">Approve and run</button><span>Next pickup about '+(window.PYMoves?PYMoves.nextPickup():'the next pickup')+'.</span>';
+ else h+='<button class="btn" data-askbrief="'+it.id+'">Ask Claude for a brief</button><span>Or write one above.</span>';
+ return h+'</div>'}
+function linksHTML(it){var ts=tasksFor(it.id),cs=chatsFor(it.id),h='',open=ts.filter(function(t){return !t.done}),dn=ts.length-open.length;
+ if(!ts.length&&!cs.length)return '';
+ h+='<div class="lk">';
+ open.forEach(function(t){h+='<div class="lt" data-tid="'+t.id+'">'+(t.owner==='claude'&&ST[t.claude_status]?'<button type="button" class="stb" data-panel="'+t.id+'">'+dot(t.claude_status)+'</button>':'<span class="sdw"><span class="sd m"></span><span class="sw">Yours</span></span>')+'<span class="ltt">'+esc(t.task)+'</span>'+(t.claude_result?'<a href="'+esc(t.claude_result)+'" target="_blank" rel="noopener">What Claude made</a>':'')+(t.claude_session?'<a href="'+esc(t.claude_session)+'" target="_blank" rel="noopener">Claude run</a>':'')+'</div>'});
+ if(dn)h+='<div class="lt mute">'+dn+' task'+(dn>1?'s':'')+' done</div>';
+ if(cs.length)h+='<div class="lt">'+'<span class="sw">Chats</span>'+cs.slice(0,4).map(function(c){return '<a href="'+esc(c.session_url)+'" target="_blank" rel="noopener" title="'+esc(c.topic)+'">'+esc((c.topic||'Chat').slice(0,48))+'</a>'}).join('')+(cs.length>4?'<span class="sw">+'+(cs.length-4)+' more</span>':'')+'</div>';
+ return h+'</div>'}
 function render(){
- var tot=0;
- var c1=document.getElementById('col1'),c2=document.getElementById('col2');c1.innerHTML='';c2.innerHTML='';
- BOX.forEach(function(B){
+ document.querySelectorAll('.ptab').forEach(function(b){b.classList.toggle('on',b.dataset.tab===TAB)});
+ var P=PROJ[TAB],c1=$('#col1'),c2=$('#col2');c1.innerHTML='';c2.innerHTML='';var tot=0;
+ P.boxes.forEach(function(B){
   var a=D.items[B.z],n=a.length;tot+=n;
-  var w=document.createElement('div');w.className='subl';w.id='box-'+B.z;w.style.cssText='--c:'+B.color;
-  var extra=B.ranked?Math.min(3,n)+' active, '+Math.max(0,n-3)+' waiting':(B.z==='fun'&&D.funUnlocked?n+' \u00b7 '+D.funUnlocked+' unlocked':String(n));
+  var w=document.createElement('div');w.className='subl';w.id='box-'+B.z;
+  var extra=B.ranked?Math.min(3,n)+' active, '+Math.max(0,n-3)+' waiting':(/fun$/.test(B.z)&&D.funUnlocked?n+' · '+D.funUnlocked+' unlocked':String(n));
   w.innerHTML='<div class="shd"><b>'+esc(B.name)+'</b><span class="sm">'+extra+'</span></div><p class="shn">'+esc(B.note)+'</p>';
   var ul=document.createElement('ul');ul.className='its';ul.dataset.z=B.z;
   a.forEach(function(it,i){
    if(B.ranked&&i===3){var c=document.createElement('li');c.className='cut';c.textContent='active above this line';ul.appendChild(c)}
-   var act=B.ranked&&i<3;var r=document.createElement('li');r.className='r'+(act?' act':'');r.dataset.id=it.id;
-   var chips=(act?'<span class="chip act">Active</span>':'')+(it.tag==='new'?'<span class="chip nw">new idea</span>':'')+(B.z==='fun'?'<span class="chip lk">'+(D.funUnlocked?'fun':'locked')+'</span>':'')+(it.sz?'<span class="chip">'+esc(it.sz)+'</span>':'');
-   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">\u22ee\u22ee</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div></div><span class="meta">'+chips+(act?'<span class="mv" style="opacity:1"><button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'</span>';
+   var act=B.ranked&&i<3,st=rowStatus(it.id);var r=document.createElement('li');r.className='r'+(act?' act':'');r.dataset.id=it.id;
+   var chips=dot(st)+(act&&!st?'<span class="chip act">Active</span>':'')+(it.tag==='new'?'<span class="chip nw">new idea</span>':'')+(/fun$/.test(B.z)?'<span class="chip lk">'+(D.funUnlocked?'fun':'locked')+'</span>':'')+(it.sz?'<span class="chip">'+esc(it.sz)+'</span>':'');
+   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta">'+chips+(act?'<span class="mv" style="opacity:1"><button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'</span>';
    ul.appendChild(r);
    if(act){var b=document.createElement('li');b.className='brief'+(OPEN[it.id]?' show':'');b.dataset.bf=it.id;b.innerHTML=briefHTML(it);ul.appendChild(b)}
   });
   w.appendChild(ul);
-  if(B.ranked||B.z==='new'){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="Add to '+esc(B.name)+'" maxlength="160" data-add="'+B.z+'"><button class="btn" data-addb="'+B.z+'">Add</button>';w.appendChild(ar)}
+  if(B.ranked||/new$/.test(B.z)){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="Add to '+esc(B.name.replace(', ranked','').replace(', not yet ranked',''))+'" maxlength="160" data-add="'+B.z+'"><button class="btn" data-addb="'+B.z+'">Add</button>';w.appendChild(ar)}
   (B.col===1?c1:c2).appendChild(w);
  });
- document.getElementById('pcnt').textContent=tot;
- var ws=weekStart(),cw=D.crossings.filter(function(c){return new Date(c.at).getTime()>=ws}).length;
- document.getElementById('crossn').textContent=cw?'Moved into active this week: '+cw+'.':'';
- if(window.Sortable)document.querySelectorAll('.its').forEach(function(l){new Sortable(l,{group:'rank',draggable:'.r',handle:'.dg',animation:140,ghostClass:'ghost',onEnd:readDom})});
+ $('#pcnt').textContent=tot;$('#pname').textContent=P.name;
+ var ws=(function(){var n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));n.setHours(2,0,0,0);n.setDate(n.getDate()-((n.getDay()+6)%7));return n.getTime()})();
+ var cw=D.crossings.filter(function(c){return new Date(c.at).getTime()>=ws}).length;
+ $('#crossn').textContent=cw?'Moved into active this week: '+cw+'.':'';
+ if(window.Sortable)document.querySelectorAll('.its').forEach(function(l){new Sortable(l,{group:'rank-'+TAB,draggable:'.r',handle:'.dg',animation:140,ghostClass:'ghost',onEnd:readDom})});
  stamp();
 }
 function readDom(){
- var before={};['py','tw'].forEach(function(z){before[z]=D.items[z].slice(0,3).map(function(x){return x.id})});
- var ns={};Z.forEach(function(z){ns[z]=[];document.querySelectorAll('.its[data-z="'+z+'"] .r').forEach(function(d){var f=find(d.dataset.id);if(f)ns[z].push(f.it)})});
- D.items=ns;
- ['py','tw'].forEach(function(z){D.items[z].slice(0,3).forEach(function(x){if(before[z].indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}})});
+ var rz=PROJ[TAB].boxes[0].z,before=D.items[rz].slice(0,3).map(function(x){return x.id});
+ PROJ[TAB].boxes.forEach(function(B){var ns=[];document.querySelectorAll('.its[data-z="'+B.z+'"] .r').forEach(function(d){var f=find(d.dataset.id);if(f)ns.push(f.it)});D.items[B.z]=ns});
+ D.items[rz].slice(0,3).forEach(function(x){if(before.indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}});
  if(D.crossings.length>200)D.crossings=D.crossings.slice(-200);
  save();render();
 }
-document.addEventListener('click',function(e){var t=e.target;
+async function insertTask(row,z,owner,answer,taskText){
+ if(!SIGNED||!sb){showToast('Sign in on Todays Tasks first, then come back.');return null}
+ var q=await sb.from('todos').insert({section:'Projects',subsection:PROJ[projOf(z)].sub,task:taskText||row.t,bucket:'library',status:'todo',done:false,owner:owner,dash_row_id:row.id,claude_answer:answer,est_minutes:SIZE[row.sz]||null}).select().single();
+ if(q.error){showToast('That did not save. '+q.error.message);return null}
+ TASKS.push(q.data);return q.data}
+document.addEventListener('click',async function(e){var t=e.target.closest('button,[data-jump],.ptab')||e.target;
+ if(t.classList&&t.classList.contains('ptab')){TAB=t.dataset.tab;try{localStorage.setItem(TKEY,TAB)}catch(x){}render();return}
  if(t.dataset.brief){OPEN[t.dataset.brief]=!OPEN[t.dataset.brief];var b=document.querySelector('.brief[data-bf="'+t.dataset.brief+'"]');if(b)b.classList.toggle('show',!!OPEN[t.dataset.brief]);return}
- if(t.dataset.approve){var f=find(t.dataset.approve);if(f&&f.it.brief){f.it.brief.approved=new Date().toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'});save();render()}return}
- if(t.dataset.done){var g=find(t.dataset.done);if(!g)return;var B=BOX.filter(function(b){return b.z===g.z})[0];var was=B.ranked&&g.i<3;var snap=JSON.stringify(D);
-  D.items[g.z].splice(g.i,1);D.done.push({t:g.it.t,z:g.z,at:new Date().toISOString(),active:!!was});if(was)D.funUnlocked++;save();render();
-  showToast(was?'Done. The next one moved up, and one fun task is unlocked.':'Done.','Undo',function(){D=JSON.parse(snap);save();render()});return}
- if(t.dataset.addb){var inp=document.querySelector('input[data-add="'+t.dataset.addb+'"]');add(t.dataset.addb,inp);return}
- var j=t.closest&&t.closest('[data-jump]');if(j){var el=document.getElementById('box-'+j.dataset.jump);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})}
+ if(t.dataset.panel){var tk=TASKS.filter(function(x){return x.id===t.dataset.panel})[0];if(tk&&window.PYMoves)PYMoves.claudePanel(tk,t,function(row,msg){if(row)Object.assign(tk,row);render();if(msg)showToast(msg)});return}
+ if(t.dataset.run){var f=find(t.dataset.run);if(!f)return;t.disabled=true;var b=f.it.brief||{};
+  var done=await insertTask(f.it,f.z,'claude',briefText(b));if(!done){t.disabled=false;return}
+  b.approved=etDate();f.it.brief=b;save();render();showToast('Queued for Claude. Next pickup about '+(window.PYMoves?PYMoves.nextPickup():'soon')+'.');return}
+ if(t.dataset.askbrief){var g=find(t.dataset.askbrief);if(!g)return;t.disabled=true;
+  var ok=await insertTask(g.it,g.z,'claude','Draft a brief for the Projects Dashboard row "'+g.it.t+'" (row id '+g.it.id+'). Write what, why, done, dont and model in plain words, and save it with: select dash_set_brief(\''+g.it.id+'\', jsonb). Scott approves it on the dashboard. Then set this task to Review.','Write a brief: '+g.it.t);
+  if(ok){render();showToast('Claude will draft the brief at the next pickup.')}else t.disabled=false;return}
+ if(t.dataset.done){var h=find(t.dataset.done);if(!h)return;var B=PROJ[projOf(h.z)].boxes[0];var was=h.z===B.z&&h.i<3;var snap=JSON.stringify(D);
+  D.items[h.z].splice(h.i,1);D.done.push({id:h.it.id,t:h.it.t,z:h.z,at:new Date().toISOString(),active:!!was});if(was)D.funUnlocked++;save();render();
+  showToast(was?'Done. The next one moved up, and one fun row is unlocked.':'Done.','Undo',function(){D=JSON.parse(snap);save();render()});return}
+ if(t.dataset.addb){add(t.dataset.addb,document.querySelector('input[data-add="'+t.dataset.addb+'"]'));return}
 });
 function add(z,inp){var v=(inp.value||'').trim();if(!v)return;D.items[z].push({id:uid(),t:v,w:'',sz:'',tag:''});inp.value='';save();render();var n=document.querySelector('input[data-add="'+z+'"]');if(n)n.focus()}
 document.addEventListener('keydown',function(e){var t=e.target;
  if(t.dataset&&t.dataset.add&&e.key==='Enter'){e.preventDefault();add(t.dataset.add,t)}
  if(t.isContentEditable&&e.key==='Enter'){e.preventDefault();t.blur()}});
-document.addEventListener('focusout',function(e){var t=e.target;if(!t.isContentEditable||!t.dataset.f)return;var r=t.closest('.r');if(!r)return;var f=find(r.dataset.id);if(!f)return;var v=t.textContent.trim();
- if(t.dataset.f==='t'&&!v){t.textContent=f.it.t;return}
- if(f.it[t.dataset.f]!==v){f.it[t.dataset.f]=v;save()}});
-/* boot: this device's copy first so the screen is never blank, then the copy in your system */
+document.addEventListener('focusout',function(e){var t=e.target;if(!t.isContentEditable)return;
+ if(t.dataset.bk){var g=find(t.dataset.row);if(!g)return;var v=t.textContent.trim();g.it.brief=g.it.brief||{};if((g.it.brief[t.dataset.bk]||'')!==v){g.it.brief[t.dataset.bk]=v;delete g.it.brief.approved;save();var bx=document.querySelector('.brief[data-bf="'+g.it.id+'"]');if(bx){bx.innerHTML=briefHTML(g.it)}}return}
+ if(!t.dataset.f)return;var r=t.closest('.r');if(!r)return;var f=find(r.dataset.id);if(!f)return;var v2=t.textContent.trim();
+ if(t.dataset.f==='t'&&!v2){t.textContent=f.it.t;return}
+ if(f.it[t.dataset.f]!==v2){f.it[t.dataset.f]=v2;save()}});
+async function loadLinks(){if(!sb)return;
+ try{var c=await sb.from('chat_register').select('id,topic,session_url,started_at,dash_row_id').not('dash_row_id','is',null).order('started_at',{ascending:false});if(c.data)CHATS=c.data}catch(e){}
+ if(!SIGNED)return;
+ try{var q=await sb.from('todos').select('id,task,done,owner,section,subsection,claude_status,claude_question,claude_options,claude_answer,claude_result,claude_session,claude_note,claude_updated,dash_row_id').not('dash_row_id','is',null).eq('archived',false);if(q.data)TASKS=q.data}catch(e){}}
+async function loadBoard(){try{var r=await fetch(SUPA+'/rest/v1/board_meta?key=eq.'+KEY+'&select=val',{headers:hdrs()});if(!r.ok)throw 0;var rows=await r.json();
+ if(rows&&rows[0]&&fix(rows[0].val)){var remote=rows[0].val;if(!dirty&&(!D.saved||!remote.saved||remote.saved>=D.saved)){D=remote;try{localStorage.setItem(LKEY,JSON.stringify(D))}catch(e){}}else if(dirty)push()}else save()}
+ catch(e){banner('<b>Cannot reach your system right now</b>Working on this device only. Changes will save when the connection is back.')}}
+async function refresh(){await loadBoard();await loadLinks();render()}
+/* boot: this device's copy first so the screen is never blank, then your system */
 try{var raw=localStorage.getItem(LKEY);if(raw)D=fix(JSON.parse(raw))}catch(e){}
-if(!D)D=seeded();
+if(!D)D={v:1,items:{},done:[],crossings:[],funUnlocked:0},fix(D);
 render();
-fetch(SUPA+'/rest/v1/board_meta?key=eq.'+KEY+'&select=val',{headers:hdrs()}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(rows){
- if(rows&&rows[0]&&rows[0].val&&fix(rows[0].val)){var remote=rows[0].val;
-  if(!dirty&&(!D.saved||!remote.saved||remote.saved>=D.saved)){D=remote;try{localStorage.setItem(LKEY,JSON.stringify(D))}catch(e){}render()}else{push()}}
- else{save()}
-}).catch(function(){banner('<b>Cannot reach your system right now</b>Working on this device only for the moment. Changes will save when the connection is back.')});
+(async function(){
+ try{var m=await import('https://esm.sh/@supabase/supabase-js@2');sb=m.createClient(SUPA,ANON);var s=await sb.auth.getSession();SIGNED=!!(s.data&&s.data.session)}catch(e){}
+ if(!SIGNED)banner('<b>Not signed in on this page</b>Ranking works. To see task status and run Claude, open Todays Tasks, sign in, then come back.');
+ await refresh();
+})();
+/* pick up changes made elsewhere (another device, or a chat filing an idea) when you come back to the page */
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&!dirty&&!document.activeElement.isContentEditable)refresh()});
 window.addEventListener('beforeunload',function(e){if(dirty){e.preventDefault();e.returnValue=''}});
 })();
 </script>
-<script src="nav-config.js"></script><script src="navpatch.js"></script></body></html>
+<script src="task-moves.js"></script><script src="nav-config.js"></script><script src="navpatch.js"></script></body></html>
