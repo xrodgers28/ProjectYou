@@ -18,7 +18,11 @@ window.NAV_CONFIG = {
        (three idle background jobs were paused separately). They now sit on Mission Control, Launch tab, Tools & pages, next to All ToDos. */
     { "label": "Calendar", "href": "calendar.html" },
     /* Nov 25 2026, Scott: Projects is its own item in the bar, right after Todays Tasks and Calendar. The board moved here from the Cue Cards page. */
-    { "label": "Projects", "href": "projects.html" }
+    { "label": "Projects", "href": "projects.html", "children": [
+      { "label": "Project YOU", "href": "projects.html#pj-project-you" },
+      { "label": "TreadWell", "href": "projects.html#pj-treadwell" },
+      { "label": "Elevator Pitch", "href": "projects.html#pj-elevator-pitch" }
+    ] }
   ],
   /* Calendar (Aug 29 2026, Scott). ONE slot in the top bar, in line with the
      sub-nav principle: the bar holds sections, and the two ways of looking at

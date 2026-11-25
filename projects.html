@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Projects · ProjectYou</title>
+<!-- v1.1 (Nov 25, 2026): each project card has an address (#pj-project-you and so on) so the Projects drop-down can jump straight to it. -->
 <!-- v1.0 (Nov 25, 2026): the Projects board moved here from the Cue Cards page and has its own place in the top bar. It still reads projects-data.json, so the nightly update is unchanged. -->
 <style>
   :root{--ink:#1f2a44;--muted:#5b6472;--line:#e3e7ee;--bg:#eef1f6;--card:#fff;--key:#c2c8d1;--accent:#3f6f8f}
@@ -64,7 +65,7 @@
   .pjfoot{margin:16px auto 0;text-align:center;font-size:12px;color:#4d5769;max-width:640px;line-height:1.5}
   .pjnote{background:#fff;border:1px solid var(--key);border-left:4px solid #b04a4a;border-radius:12px;padding:14px 16px;font-size:14px;color:#37404f;line-height:1.5}
   @media(max-width:640px){.pjgrid{grid-template-columns:1fr}}
-  /* ===== PROJECTS BOARD, ROW 2 - Scott's own tiles (v1.0, Sep 27 2026) =====
+  /* ===== PROJECTS BOARD, ROW 2 - Scott's own tiles (v1.1, Sep 27 2026) =====
      6 fixed slots he names and captions himself. Same card grammar as the
      .pj cards above (border-top accent, radius, shadow) but nothing here is
      generated: no hero pulled automatically, no figures, no status line. */
@@ -95,7 +96,7 @@
   .pjtico.on{opacity:1;border-color:#3f6f8f}
   .pjtico input[type=file]{display:none}
 
-  /* ===== PROJECTS BOARD, 3 lists (v1.0, Sep 27 2026) =====
+  /* ===== PROJECTS BOARD, 3 lists (v1.1, Sep 27 2026) =====
      Same grammar as "Your week, in your words" on the weekly review page:
      type a line, tap x to remove it. New here: the title and subtitle are
      his to set, the 3 columns drag left/right by their own header bar, and
@@ -165,13 +166,13 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.0</span>
+    <span class="pn-ver">v1.1</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
   <div class="wrap">
     <div class="pagehead">
-      <h1><span class="em">Projects</span> <span class="ver">v1.0</span></h1>
+      <h1><span class="em">Projects</span> <span class="ver">v1.1</span></h1>
     </div>
     <div class="pjwrap" id="projects"></div>
     <div class="pjwrap" id="pjtiles"></div>
@@ -289,11 +290,14 @@ try{ if(window.supabase&&window.supabase.createClient) sb=window.supabase.create
     var list = (d && d.projects || []).filter(function(p){ return p && p.name; });
     if(!list.length){ box.innerHTML = '<div class="pjnote">The projects file is there but has no projects in it. Nothing is being shown rather than something made up.</div>'; return; }
     box.innerHTML =
-      '<div class="pjgrid">' + list.map(function(p){ return '<div class="pjcol">' + card(p) + projList(p) + '</div>'; }).join('') + '</div>' +
+      '<div class="pjgrid">' + list.map(function(p){ return '<div class="pjcol" id="pj-' + pslug(p) + '">' + card(p) + projList(p) + '</div>'; }).join('') + '</div>' +
       '<p class="pjfoot">Nothing on this board is typed by you. It was last checked ' +
       esc(d.checked_label || 'at an unknown time') +
       ', reading your project folders, the live site, the to do list and the session records. The lists under each card are yours.</p>';
     loadProjLists();
+    /* Nov 25 2026: the Projects drop-down in the top bar links to #pj-<project>; scroll to that card once it is drawn. */
+    var hm = /^#pj-([a-z0-9-]+)$/.exec(location.hash || '');
+    if(hm){ var tgt = document.getElementById('pj-' + hm[1]); if(tgt){ setTimeout(function(){ tgt.scrollIntoView({behavior:'smooth', block:'start'}); }, 60); } }
   }
 
   function load(){
