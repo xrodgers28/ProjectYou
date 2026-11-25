@@ -1595,7 +1595,10 @@
 #masterview .mcb{width:15px;height:15px;cursor:pointer;accent-color:#1e8e5a}
 #masterview .send-back{cursor:pointer;color:#9aa1ab;font-size:13px;text-align:center}
 #masterview .send-back:hover{color:#3f6f8f}
-#masterview input.mnewin{font:inherit;font-size:14px;border:1px solid #c7d2de;border-radius:6px;padding:3px 8px;width:100%}
+#masterview input.mnewin{font:inherit;font-size:14px;border:0;border-radius:0;padding:3px 0;width:100%;background:transparent;outline:0}
+  /* v6.162: the line is the editor, so no box around a task. */
+  #masterview .mwf{outline:0;cursor:text;min-height:1.3em}
+  #masterview .mwf:focus{white-space:normal;overflow:visible;text-overflow:clip}
 #masterview .madd2{display:block;font:inherit;font-size:12.5px;color:#8a93a1;background:none;border:0;
   cursor:pointer;padding:5px 12px;text-align:left;width:100%}
 #masterview .madd2:hover{color:#3f6f8f}
@@ -1780,7 +1783,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="mastertoggle" class="vtoggle" style="cursor:pointer" title="Switch between the old board and the Master list">★ Master</a><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.161</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.162</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -9745,20 +9748,91 @@ function mEditable(node, current, save, placeholder, noEmpty, onKeys){
 const M_IND_MAX = 6, M_IND_PX = 18;
 function mIndentOf(t){ return Math.max(0, Math.min(M_IND_MAX, (t && t.indent) || 0)); }
 function mApplyIndent(node, t, base){ node.style.marginLeft = ((base || 0) + mIndentOf(t) * M_IND_PX) + 'px'; }
-function mIndentKeys(inp, t, node, base){
-  inp.addEventListener('keydown', async e => {
-    if (e.key !== 'Tab') return;
-    e.preventDefault();
-    const was = mIndentOf(t);
-    const lvl = Math.max(0, Math.min(M_IND_MAX, was + (e.shiftKey ? -1 : 1)));
-    if (lvl === was) return;
-    snapshot();
-    t.indent = lvl;
-    mApplyIndent(node, t, base);
-    try{ await patch(t.id, { indent: lvl }); }
-    catch(err){ t.indent = was; mApplyIndent(node, t, base); toast('That nesting did not save.'); }
-  });
+function mIndentKeys_retired(){}
+let M_FOCUS_ID = null;
+function mFocusAfterRender(){
+  const id = M_FOCUS_ID; if (!id) return; M_FOCUS_ID = null;
+  const n = document.querySelector('[data-mline="' + id + '"]');
+  if (n){ n.focus(); placeCaretEnd(n); }
 }
+function mCaretAtStart(node){
+  try{
+    const s = getSelection(); if (!s.rangeCount) return false;
+    const r = s.getRangeAt(0); if (!r.collapsed) return false;
+    const pre = r.cloneRange(); pre.selectNodeContents(node); pre.setEnd(r.startContainer, r.startOffset);
+    return pre.toString().length === 0;
+  }catch(e){ return false; }
+}
+async function mSetIndent(t, node, base, delta){
+  const was = mIndentOf(t);
+  const lvl = Math.max(0, Math.min(M_IND_MAX, was + delta));
+  if (lvl === was) return;
+  snapshot(); t.indent = lvl; mApplyIndent(node, t, base);
+  try{ await patch(t.id, { indent: lvl }); }
+  catch(e){ t.indent = was; mApplyIndent(node, t, base); toast('That nesting did not save.'); }
+}
+function mOrderedSibs(t){
+  return todos.filter(x => x.section === t.section && !x.done && !x.skipped && !x.archived && !x.staged)
+              .sort((a, b) => (a.position || 0) - (b.position || 0));
+}
+async function mNewLineAfter(t){
+  const sibs = mOrderedSibs(t);
+  const i = sibs.findIndex(x => x.id === t.id);
+  const cur = (t.position || 0);
+  const nx = (i >= 0 && sibs[i + 1]) ? ((sibs[i + 1].position == null) ? cur + 2 : sibs[i + 1].position) : null;
+  const pos = (nx === null) ? cur + 1 : (cur + nx) / 2;
+  snapshot();
+  const { data, error } = await sb.from('todos').insert({ section: t.section, task: '', position: pos,
+    bucket: t.bucket || 'today', status: 'todo', done: false, indent: mIndentOf(t) }).select().single();
+  if (error){ console.error(error); toast('Could not start a new line.'); return; }
+  M_FOCUS_ID = data && data.id;
+  await load();
+}
+async function mDropLine(t, goUp){
+  const sibs = mOrderedSibs(t);
+  const i = sibs.findIndex(x => x.id === t.id);
+  const prev = (i > 0) ? sibs[i - 1] : null;
+  snapshot();
+  try{ await sb.from('todos').delete().eq('id', t.id); }catch(e){}
+  if (goUp && prev) M_FOCUS_ID = prev.id;
+  await load();
+}
+/* v6.162, Scott Nov 25: "match exactly how workflowy functions ... keep it simple".
+   The LINE is the editor. No box around it. Enter starts the next line, Tab nests it,
+   Shift+Tab brings it back, Backspace on an empty line takes the line away. The one
+   place this is deliberately not Workflowy: clearing all the text out of a real task
+   puts the text back rather than leaving a blank, so a task is never silently lost. */
+function mTaskLine(node, t, base){
+  node.dataset.mline = t.id;
+  node.contentEditable = 'true';
+  node.spellcheck = false;
+  node.classList.add('mwf');
+  mApplyIndent(node, t, base);
+  let last = (t.task || '').trim();
+  let gone = false;
+  const save = async () => {
+    if (gone) return;
+    const v = node.textContent.replace(/\s+/g, ' ').trim();
+    if (!v){
+      if (!last){ gone = true; await mDropLine(t, false); }
+      else { node.textContent = last; }
+      return;
+    }
+    if (v === last) return;
+    last = v; t.task = v;
+    try{ await patch(t.id, { task: v }); }catch(e){ toast('That did not save.'); }
+  };
+  node.onblur = () => { save(); };
+  node.onkeydown = async e => {
+    if (e.key === 'Enter'){ e.preventDefault(); await save(); if (!gone) await mNewLineAfter(t); return; }
+    if (e.key === 'Tab'){ e.preventDefault(); await mSetIndent(t, node, base, e.shiftKey ? -1 : 1); return; }
+    if (e.key === 'Escape'){ e.preventDefault(); node.blur(); return; }
+    if (e.key === 'Backspace' && !node.textContent.trim() && mCaretAtStart(node)){
+      e.preventDefault(); gone = true; await mDropLine(t, true); return;
+    }
+  };
+}
+
 
 /* ROWS OF BOXES: the six boxes used to be fixed in the page, so a new row meant
    editing the page. The list now lives with his data, so the button below and a
@@ -9986,7 +10060,7 @@ function mXDraggable(node){
   node.draggable = true;
   node.addEventListener('dragstart', e => {
     const tg = e.target;
-    if (tg && tg.closest && tg.closest('input,select,button,a,textarea')) { e.preventDefault(); return; }
+    if (tg && tg.closest && tg.closest('input,select,button,a,textarea,[contenteditable="true"]')) { e.preventDefault(); return; }
     mDragStartOn(node);
     try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', node.dataset.id || ''); } catch (x) {}
   });
@@ -10604,7 +10678,7 @@ function renderMaster(){
   try{ return _renderMasterInner(); }
   finally{
     window.scrollTo(sx, sy);
-    requestAnimationFrame(() => window.scrollTo(sx, sy));
+    requestAnimationFrame(() => { window.scrollTo(sx, sy); mFocusAfterRender(); });
     clearTimeout(window.__mhT);
     window.__mhT = setTimeout(() => { const h = document.getElementById('masterview'); if (h){ const y = window.scrollY, x = window.scrollX; h.style.minHeight = ''; window.scrollTo(x, y); } }, 150);
   }
@@ -10753,8 +10827,7 @@ function _renderMasterInner(){
     r.appendChild(numc);
     r.appendChild(mCheckbox(t));
     const task = el('div','mtask', t.task); task.title = t.task;
-    mEditable(task, t.task, v => patch(t.id, { task:v }), null, true, inp => mIndentKeys(inp, t, task, 0));
-    mApplyIndent(task, t, 0); r.appendChild(task);
+    mTaskLine(task, t, 0); r.appendChild(task);
     const cw = el('div','mchipwrap');
     if (t.section){ const c = el('span','mchip', mSecLabel(t.section));
       c.style.background = (COLOR[t.section] ? COLOR[t.section] + '55' : '#eef1f5');
@@ -10923,8 +10996,7 @@ function _renderMasterInner(){
       r.appendChild(grip);
       r.appendChild(mCheckbox(t));
       const n = el('div','mbtext', t.task); n.style.flex = '1';
-      mEditable(n, t.task, v => patch(t.id, { task:v }), null, true, inp => mIndentKeys(inp, t, n, 17));
-      mApplyIndent(n, t, 17); r.appendChild(n);
+      mTaskLine(n, t, 17); r.appendChild(n);
       r.appendChild(mKillBtn(t));
       b.appendChild(r);
       mBlkDraggable(r, b); mBlkTouchDrag(r, b);
