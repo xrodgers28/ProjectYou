@@ -212,7 +212,7 @@ try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
 window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
 <style>html.embed.calshut .wrap{max-width:none}</style>
 </head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.6</span><span class="date" id="today"></span></div>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.7</span><span class="date" id="today"></span></div>
 <p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green button at the bottom of a section to file everything in it. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
@@ -239,7 +239,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 <div><b>v0.20</b> Playable Staging Area, label, owner, star and link &middot; <a href="https://claude.ai/artifact/Vd3QU7DiTe7CnWwzrM23mj">open</a></div>
 <div><b>Build plan v0.17</b> The 375-minute plan this was built from &middot; <a href="https://claude.ai/artifact/9ocMs1oQ9wtnqNLxuifdHT">open</a></div>
 </div></div></div></div>
-<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.6 &middot; Nov 25, 2026</span></footer>
+<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.7 &middot; Nov 25, 2026</span></footer>
 </div><div id="tst"></div>
 <script src="pills-config.js"></script>
 <script src="task-moves.js"></script>
@@ -723,7 +723,13 @@ function imSeed(list){
  if(!imLive()||!list.length)return Promise.resolve();
  return PYMoves.insertStaged(list.map(imBody)).then(function(rows){
   (rows||[]).forEach(function(row,k){if(list[k]&&row&&row.id){list[k].rid=row.id;list[k].sErr=false}});
-  irender()},function(){list.forEach(function(t){t.sErr=true});irender()})}
+  irender()},function(){
+  /* one task the database refuses must not take the rest down with it, so on a
+     failed batch each one is tried on its own and only the bad one is marked */
+  if(list.length===1){list[0].sErr=true;irender();return}
+  var p=Promise.resolve();
+  list.forEach(function(t){p=p.then(function(){return imSeed([t])})});
+  return p})}
 function imSave(t){
  if(!imLive()||!t)return Promise.resolve();
  if(!t.rid)return imSeed([t]);
