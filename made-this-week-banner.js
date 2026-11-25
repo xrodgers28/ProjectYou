@@ -1,10 +1,14 @@
-/* What I made this week, habits dashboard banner. v1.5 (Nov 24, 2026).
+/* What I made this week, habits dashboard banner. v1.6 (Nov 24, 2026).
    Scott's weekly highlight reel. The window shade suggests what he made that week, he taps the
    ones worth showing off (or types his own and tags it with a label), presses "Take screenshots
    and build banner", and the closed strip becomes a contact sheet of real screenshots of those
    pages. Once built, only a tiny grey Edit at the bottom right opens it again.
    Picks live in made_items, labels in made_labels, pictures in made_shots. A picked page with no
    picture yet asks for one (a made_shots row with no image) and the overnight job takes it.
+   v1.6, Scott: he can drop in his own picture. The Add your own row has an "Add a picture" button,
+   and any suggestion with no page of its own (his typed ones, and everything in TreadWell) shows a
+   small "add a picture" where the picture note would be. The picture is shrunk on his screen before
+   it is saved, so it is the same small size as the ones taken automatically.
    v1.5, Scott: a tile with no picture says what it is waiting for, "Not on the site yet" or
    "Picture on the way", instead of repeating its label, which read badly with several TreadWell ones.
    v1.4, Scott: the strip holds up to eight now instead of five. Five or more lay out in two even
@@ -59,7 +63,7 @@ var CSS=".wrap{font-family:Roboto,Arial,sans-serif;color:#1f2a44;position:relati
 +".opt[aria-pressed=true]{border-color:#3f6f8f;box-shadow:inset 0 0 0 1px #3f6f8f}"
 +".box{width:15px;height:15px;border-radius:4px;border:1.5px solid #c4ccd6;flex:none;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;line-height:1}"
 +".opt[aria-pressed=true] .box{background:#3f6f8f;border-color:#3f6f8f}"
-+".opt .t{flex:1;min-width:0;line-height:1.3}"+".cam{font-size:9.5px;color:#b3bcc7;letter-spacing:.2px;white-space:nowrap;padding-top:2px}"+".opt .t em{display:block;font-style:normal;font-size:9.5px;color:#b3bcc7;letter-spacing:.2px;margin-top:2px}"+".box{margin-top:1px}"
++".pickbtn{flex:1;min-width:0;display:flex;align-items:flex-start;gap:8px;background:none;border:0;padding:0;font:inherit;font-size:12.5px;color:inherit;text-align:left;cursor:pointer}"+".opt .t{flex:1;min-width:0;line-height:1.3}"+".cam{font-size:9.5px;color:#b3bcc7;letter-spacing:.2px;white-space:nowrap;padding-top:2px}"+".camb{font:inherit;font-size:9.5px;color:#8d96a3;letter-spacing:.2px;white-space:nowrap;background:none;border:0;border-bottom:1px dotted #c6d0dc;padding:0 0 1px;margin-top:2px;cursor:pointer}"+".camb:hover{color:#3f6f8f;border-bottom-color:#3f6f8f}"+".b.on{border-color:#3f6f8f;color:#3f6f8f}"+".opt .t em{display:block;font-style:normal;font-size:9.5px;color:#b3bcc7;letter-spacing:.2px;margin-top:2px}"+".box{margin-top:1px}"
 
 +".dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}"
 +".own{margin-top:10px;border:1px solid #e3e7ee;border-radius:8px;padding:9px 10px;background:#fbfcfd}"
@@ -85,7 +89,7 @@ function mount(host){
  if(!host||host.getAttribute('data-mounted'))return;host.setAttribute('data-mounted','1');
  var root=host.attachShadow({mode:'open'});
  var week=monday(today()),wkEnd=plus(week,6);
- var labels=[],items=[],shots={},open=false,cur=0,newlab=false,draft='',err='',stat='',busy=false,ready=false;
+ var labels=[],items=[],shots={},open=false,cur=0,newlab=false,draft='',err='',stat='',busy=false,ready=false,pend=null,picFor=null;
  var $=function(q){return root.querySelector(q)};
  function sbc(){return (window.sb&&window.sb.from)?window.sb:null}
  function colorOf(n){for(var i=0;i<labels.length;i++)if(labels[i].name===n)return labels[i].color;return '#9aa6b4'}
@@ -96,7 +100,7 @@ function mount(host){
   var inner=img?'<img src="'+img+'" alt="'+esc(it.title)+'">'
    :'<div class="note" style="background:'+tint(c)+'"><span>'+(it.path?'Picture on the way':'Not on the site yet')+'</span></div>';
   var body=inner+'<div class="cap">'+esc(it.title)+'</div><i class="pip" style="background:'+c+'"></i>';
-  var href=it.path?String(it.path).split('#')[0]:'';
+  var href=(it.path&&it.path.indexOf('own:')!==0)?String(it.path).split('#')[0]:'';
   return href?'<a class="tile" href="'+esc(href)+'">'+body+'</a>':'<div class="tile">'+body+'</div>'}
 
  function stripHTML(){
@@ -109,13 +113,16 @@ function mount(host){
  function shadeHTML(){
   var h='<div class="shade"><p class="lead">Made '+esc(pretty(week))+' to '+esc(pretty(wkEnd))+'. Tap the ones worth showing off, up to '+MAX+'.</p>';
   h+='<div class="grid">'+items.map(function(it,i){
-   var cam=it.path?(shots[it.path]?'picture ready':'picture to come'):'';
-   return '<button class="opt" type="button" data-a="pick" data-i="'+i+'" aria-pressed="'+(it.picked?'true':'false')+'"><span class="box">'+(it.picked?'&#10003;':'')+'</span><span class="t">'+esc(it.title)+'</span><span class="cam">'+cam+'</span><i class="dot" style="background:'+colorOf(it.label)+'"></i></button>'}).join('')+'</div>';
-  h+='<div class="own"><h4>Add your own</h4><div class="r"><input id="own" type="text" value="'+esc(draft)+'" placeholder="Rewrote the TreadWell story" aria-label="Your own highlight"><button class="b" type="button" data-a="add">Add mine</button></div>';
+   var has=it.path&&shots[it.path];
+   var note=has?'<span class="cam">picture ready</span>'
+    :(it.path&&it.path.indexOf('own:')!==0?'<span class="cam">picture to come</span>'
+    :'<button class="camb" type="button" data-a="picfor" data-i="'+i+'">add a picture</button>');
+   return '<div class="opt" aria-pressed="'+(it.picked?'true':'false')+'"><button class="pickbtn" type="button" data-a="pick" data-i="'+i+'" aria-label="Show this off"><span class="box">'+(it.picked?'&#10003;':'')+'</span><span class="t">'+esc(it.title)+'</span></button>'+note+'<i class="dot" style="background:'+colorOf(it.label)+'"></i></div>'}).join('')+'</div>';
+  h+='<div class="own"><h4>Add your own</h4><div class="r"><input id="own" type="text" value="'+esc(draft)+'" placeholder="Rewrote the TreadWell story" aria-label="Your own highlight"><button class="b'+(pend?' on':'')+'" type="button" data-a="pic">'+(pend?'Picture ready':'Add a picture')+'</button><button class="b" type="button" data-a="add">Add mine</button></div>';
   h+='<div class="chips">'+labels.map(function(l,i){return '<button class="chip" type="button" data-a="lab" data-i="'+i+'" aria-pressed="'+(i===cur?'true':'false')+'"><i class="dot" style="background:'+l.color+'"></i>'+esc(l.name)+'</button>'}).join('')
    +'<button class="chip" type="button" data-a="newlab">+ New label</button></div>';
   if(newlab)h+='<div class="r" style="margin-top:8px"><input id="nl" type="text" placeholder="Family Planning" aria-label="New label name"><button class="b" type="button" data-a="savelab">Save label</button></div>';
-  h+='</div><p class="err">'+esc(err)+'</p>';
+  h+='</div><input id="pf" type="file" accept="image/*" style="position:absolute;left:-9999px;width:1px;height:1px" aria-label="Choose a picture"><p class="err">'+esc(err)+'</p>';
   h+='<div class="foot"><span class="st">'+esc(stat)+'</span>'
    +'<button class="go" type="button" data-a="build"'+(busy?' disabled':'')+'>'+(busy?'Taking screenshots...':'Take screenshots and build banner')+'</button></div></div>';
   return h}
@@ -125,6 +132,31 @@ function mount(host){
   if(open){var o=$('#own');if(o&&draft)o.setSelectionRange(draft.length,draft.length)}}
 
  root.addEventListener('input',function(e){if(e.target&&e.target.id==='own')draft=e.target.value});
+ root.addEventListener('change',function(e){if(!e.target||e.target.id!=='pf')return;
+  var fl=e.target.files&&e.target.files[0];if(!fl)return;shrink(fl,function(img,w,hh){
+   if(picFor==null){pend={img:img,w:w,h:hh};err='';render()}else{attach(picFor,img,w,hh);picFor=null}})});
+ function newKey(){return 'own:'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+ function shrink(file,cb){
+  if(file.size>12*1024*1024){err='That picture is too big. Try one under 12 MB.';render();return}
+  var fr=new FileReader();
+  fr.onload=function(){var im=new Image();
+   im.onload=function(){var W=460,full=Math.max(1,Math.round(im.height*W/im.width)),hh=Math.min(full,900);
+    var c=document.createElement('canvas');c.width=W;c.height=hh;
+    var x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,hh);x.drawImage(im,0,0,W,full);
+    try{cb(c.toDataURL('image/jpeg',0.72),W,hh)}catch(e2){err='Could not use that picture.';render()}};
+   im.onerror=function(){err='That file is not a picture I can read.';render()};
+   im.src=fr.result};
+  fr.onerror=function(){err='Could not read that file.';render()};
+  fr.readAsDataURL(file)}
+ function attach(i,img,w,hh){
+  var it=items[i];if(!it)return;var sb=sbc();
+  var key=(it.path&&it.path.indexOf('own:')===0)?it.path:(it.path||newKey());
+  shots[key]=img;var setPath=it.path!==key;if(setPath)it.path=key;
+  err='';render();
+  if(!sb){err='The picture is on this screen only. It did not save.';render();return}
+  var jobs=[sb.from('made_shots').upsert({path:key,img:img,w:w,h:hh,captured_at:new Date().toISOString()},{onConflict:'path'})];
+  if(setPath&&it.id)jobs.push(sb.from('made_items').update({path:key}).eq('id',it.id));
+  Promise.all(jobs).then(function(){},function(){err='The picture is on this screen but did not save.';render()})}
  root.addEventListener('keydown',function(e){if(e.key!=='Enter')return;
   if(e.target.id==='own'){e.preventDefault();addOwn()}
   else if(e.target.id==='nl'){e.preventDefault();saveLabel(e.target.value)}});
@@ -137,6 +169,8 @@ function mount(host){
   else if(a==='lab'){cur=+el.getAttribute('data-i');render()}
   else if(a==='newlab'){newlab=true;render();var n=$('#nl');if(n)n.focus()}
   else if(a==='savelab'){saveLabel(($('#nl')||{}).value)}
+  else if(a==='pic'){picFor=null;err='';var p=$('#pf');if(p){p.value='';p.click()}}
+  else if(a==='picfor'){picFor=+el.getAttribute('data-i');err='';var p2=$('#pf');if(p2){p2.value='';p2.click()}}
   else if(a==='add'){addOwn()}
   else if(a==='build'){build()}});
 
@@ -151,7 +185,9 @@ function mount(host){
   if(picks().length>=MAX){err='The strip is full. Untap one first.';render();return}
   var sb=sbc();if(!sb){err='Not connected yet. Try again in a moment.';render();return}
   var mx=0;items.forEach(function(x){if(x.picked&&(x.pos||0)>mx)mx=x.pos||0});
-  var row={week:week,title:v.slice(0,80),label:(labels[cur]||{}).name||null,path:null,picked:true,pos:mx+1,source:'scott'};
+  var key=pend?newKey():null;
+  var row={week:week,title:v.slice(0,80),label:(labels[cur]||{}).name||null,path:key,picked:true,pos:mx+1,source:'scott'};
+  if(pend){shots[key]=pend.img;sb.from('made_shots').upsert({path:key,img:pend.img,w:pend.w,h:pend.h,captured_at:new Date().toISOString()},{onConflict:'path'}).then(function(){},function(){});pend=null}
   draft='';render();
   sb.from('made_items').insert(row).select('id,title,label,path,picked,pos,source').single().then(function(r){
    if(r&&r.error)throw r.error;items.push(r.data||row);render()},
