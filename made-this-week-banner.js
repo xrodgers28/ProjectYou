@@ -1,10 +1,13 @@
-/* What I made this week, habits dashboard banner. v1.3 (Nov 24, 2026).
+/* What I made this week, habits dashboard banner. v1.4 (Nov 24, 2026).
    Scott's weekly highlight reel. The window shade suggests what he made that week, he taps the
    ones worth showing off (or types his own and tags it with a label), presses "Take screenshots
    and build banner", and the closed strip becomes a contact sheet of real screenshots of those
    pages. Once built, only a tiny grey Edit at the bottom right opens it again.
    Picks live in made_items, labels in made_labels, pictures in made_shots. A picked page with no
    picture yet asks for one (a made_shots row with no image) and the overnight job takes it.
+   v1.4, Scott: the strip holds up to eight now instead of five. Five or more lay out in two even
+   rows (five as 3 and 2, six as 3 and 3, seven as 4 and 3, eight as 4 and 4) and the pictures sit a
+   little shorter so the banner does not get tall.
    v1.3, Scott: the small "picture ready" note beside each suggestion is tiny and grey again (an
    earlier edit dropped its styling by mistake).
    v1.2, Scott: opening the shade fetches every picture it already has, so "picture ready" and the
@@ -14,7 +17,7 @@
    Shadow root, so no page styles leak in or out. The week runs Monday to Sunday and the day ends
    at 2am Eastern (PY.today when present). */
 (function(){
-var MAX=5;
+var MAX=8;
 var MO=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 var SPARE=['#7a6bb5','#c9742f','#5f8f4a','#b05070','#3f6f8f','#8a7355'];
 var RE=/^\d{4}-\d{2}-\d{2}$/;
@@ -36,9 +39,9 @@ var CSS=".wrap{font-family:Roboto,Arial,sans-serif;color:#1f2a44;position:relati
 +".ttl{width:134px;flex:none}"
 +".ttl b{display:block;font-size:19px;line-height:1.16;font-weight:700;letter-spacing:-.25px}"
 +".ttl span{display:block;margin-top:6px;font-size:10.5px;color:#9aa6b4;letter-spacing:.5px;text-transform:uppercase}"
-+".reel{flex:1;display:flex;gap:9px;min-width:0}"
-+".tile{flex:1;min-width:0;height:98px;border:1px solid #e3e7ee;border-radius:7px;overflow:hidden;position:relative;background:#f7f9fb;display:block;text-decoration:none;color:inherit}"
-+".tile:hover{border-color:#c6d0dc}"
++".reel{flex:1;display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:9px;min-width:0}"
++".tile{min-width:0;height:98px;border:1px solid #e3e7ee;border-radius:7px;overflow:hidden;position:relative;background:#f7f9fb;display:block;text-decoration:none;color:inherit}"
++".tile:hover{border-color:#c6d0dc}"+".reel.two .tile{height:86px}"
 +".tile img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}"
 +".note{width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 8px 26px;font-size:10.5px;color:#5b6472;line-height:1.35}"
 +".cap{position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,.94);border-top:1px solid rgba(31,42,68,.07);font-size:10.5px;line-height:1.3;padding:4px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
@@ -74,7 +77,7 @@ var CSS=".wrap{font-family:Roboto,Arial,sans-serif;color:#1f2a44;position:relati
 +".st{font-size:11.5px;color:#9aa6b4}"
 +".go{margin-left:auto;font:inherit;font-size:12.5px;padding:8px 14px;border-radius:7px;border:1px solid #3f6f8f;background:#3f6f8f;color:#fff;cursor:pointer}"
 +".go:hover{background:#35607c}.go[disabled]{opacity:.6;cursor:default}"
-+"@media(max-width:760px){.strip{flex-direction:column;align-items:stretch;gap:9px}.ttl{width:auto}.reel{flex-wrap:wrap}.tile{flex:1 1 44%;height:88px}.go{margin-left:0;width:100%}}";
++"@media(max-width:760px){.strip{flex-direction:column;align-items:stretch;gap:9px}.ttl{width:auto}.reel{grid-template-columns:repeat(2,minmax(0,1fr))!important}.tile{height:86px}.go{margin-left:0;width:100%}}";
 
 function mount(host){
  if(!host||host.getAttribute('data-mounted'))return;host.setAttribute('data-mounted','1');
@@ -96,7 +99,8 @@ function mount(host){
 
  function stripHTML(){
   var ps=picks(),h='<div class="strip"><div class="ttl"><b>What I made<br>this week</b><span>'+esc(pretty(week))+' to '+esc(pretty(wkEnd))+'</span></div>';
-  h+=ps.length?'<div class="reel">'+ps.map(tileHTML).join('')+'</div>'
+  var n=ps.length,cols=n<5?Math.max(n,1):Math.ceil(n/2);
+  h+=n?'<div class="reel'+(n>4?' two':'')+'" style="--cols:'+cols+'">'+ps.map(tileHTML).join('')+'</div>'
    :'<div class="empty"><span>'+(ready?'Nothing picked yet. Open it and choose what to show off.':'Looking up what you made...')+'</span>'+(ready?'<button class="b" type="button" data-a="open">Open</button>':'')+'</div>';
   return h+'</div>'}
 
