@@ -1,10 +1,14 @@
-/* What I made this week, habits dashboard banner. v1.7 (Nov 24, 2026).
+/* What I made this week, habits dashboard banner. v1.8 (Nov 24, 2026).
    Scott's weekly highlight reel. The window shade suggests what he made that week, he taps the
    ones worth showing off (or types his own and tags it with a label), presses "Take screenshots
    and build banner", and the closed strip becomes a contact sheet of real screenshots of those
    pages. Once built, only a tiny grey Edit at the bottom right opens it again.
    Picks live in made_items, labels in made_labels, pictures in made_shots. A picked page with no
    picture yet asks for one (a made_shots row with no image) and the overnight job takes it.
+   v1.8, Scott: the banner is always the same height, the one it had with four across. Everything
+   stays on one row and the pictures get narrower as more are added, rather than wrapping onto a
+   second row and making the banner taller. At six or more the titles are short, so the full title
+   shows on rollover.
    v1.7, Scott: a tile only becomes a link when its picture belongs to a real page on the site. The
    TreadWell pictures and his own dropped-in ones are shown but not clickable, so there are no dead links.
    v1.6, Scott: he can drop in his own picture. The Add your own row has an "Add a picture" button,
@@ -49,7 +53,7 @@ var CSS=".wrap{font-family:Roboto,Arial,sans-serif;color:#1f2a44;position:relati
 +".ttl span{display:block;margin-top:6px;font-size:10.5px;color:#9aa6b4;letter-spacing:.5px;text-transform:uppercase}"
 +".reel{flex:1;display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:9px;min-width:0}"
 +".tile{min-width:0;height:98px;border:1px solid #e3e7ee;border-radius:7px;overflow:hidden;position:relative;background:#f7f9fb;display:block;text-decoration:none;color:inherit}"
-+".tile:hover{border-color:#c6d0dc}"+".reel.two .tile{height:86px}"
++".tile:hover{border-color:#c6d0dc}"+".reel.many{gap:6px}"+".reel.many .cap{font-size:9.5px;padding:3px 5px;line-height:1.25}"
 +".tile img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}"
 +".note{width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:10px 8px 26px;font-size:10.5px;color:#5b6472;line-height:1.35}"
 +".cap{position:absolute;left:0;right:0;bottom:0;background:rgba(255,255,255,.94);border-top:1px solid rgba(31,42,68,.07);font-size:10.5px;line-height:1.3;padding:4px 7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}"
@@ -102,13 +106,14 @@ function mount(host){
   var inner=img?'<img src="'+img+'" alt="'+esc(it.title)+'">'
    :'<div class="note" style="background:'+tint(c)+'"><span>'+(it.path?'Picture on the way':'Not on the site yet')+'</span></div>';
   var body=inner+'<div class="cap">'+esc(it.title)+'</div><i class="pip" style="background:'+c+'"></i>';
+  var tip=' title="'+esc(it.title)+'"';
   var href=(it.path&&it.path.indexOf(':')<0)?String(it.path).split('#')[0]:'';
-  return href?'<a class="tile" href="'+esc(href)+'">'+body+'</a>':'<div class="tile">'+body+'</div>'}
+  return href?'<a class="tile"'+tip+' href="'+esc(href)+'">'+body+'</a>':'<div class="tile"'+tip+'>'+body+'</div>'}
 
  function stripHTML(){
   var ps=picks(),h='<div class="strip"><div class="ttl"><b>What I made<br>this week</b><span>'+esc(pretty(week))+' to '+esc(pretty(wkEnd))+'</span></div>';
-  var n=ps.length,cols=n<5?Math.max(n,1):Math.ceil(n/2);
-  h+=n?'<div class="reel'+(n>4?' two':'')+'" style="--cols:'+cols+'">'+ps.map(tileHTML).join('')+'</div>'
+  var n=ps.length;
+  h+=n?'<div class="reel'+(n>5?' many':'')+'" style="--cols:'+Math.max(n,1)+'">'+ps.map(tileHTML).join('')+'</div>'
    :'<div class="empty"><span>'+(ready?'Nothing picked yet. Open it and choose what to show off.':'Looking up what you made...')+'</span>'+(ready?'<button class="b" type="button" data-a="open">Open</button>':'')+'</div>';
   return h+'</div>'}
 
