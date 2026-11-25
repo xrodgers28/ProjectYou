@@ -1,10 +1,12 @@
-/* What I made this week, habits dashboard banner. v1.6 (Nov 24, 2026).
+/* What I made this week, habits dashboard banner. v1.7 (Nov 24, 2026).
    Scott's weekly highlight reel. The window shade suggests what he made that week, he taps the
    ones worth showing off (or types his own and tags it with a label), presses "Take screenshots
    and build banner", and the closed strip becomes a contact sheet of real screenshots of those
    pages. Once built, only a tiny grey Edit at the bottom right opens it again.
    Picks live in made_items, labels in made_labels, pictures in made_shots. A picked page with no
    picture yet asks for one (a made_shots row with no image) and the overnight job takes it.
+   v1.7, Scott: a tile only becomes a link when its picture belongs to a real page on the site. The
+   TreadWell pictures and his own dropped-in ones are shown but not clickable, so there are no dead links.
    v1.6, Scott: he can drop in his own picture. The Add your own row has an "Add a picture" button,
    and any suggestion with no page of its own (his typed ones, and everything in TreadWell) shows a
    small "add a picture" where the picture note would be. The picture is shrunk on his screen before
@@ -100,7 +102,7 @@ function mount(host){
   var inner=img?'<img src="'+img+'" alt="'+esc(it.title)+'">'
    :'<div class="note" style="background:'+tint(c)+'"><span>'+(it.path?'Picture on the way':'Not on the site yet')+'</span></div>';
   var body=inner+'<div class="cap">'+esc(it.title)+'</div><i class="pip" style="background:'+c+'"></i>';
-  var href=(it.path&&it.path.indexOf('own:')!==0)?String(it.path).split('#')[0]:'';
+  var href=(it.path&&it.path.indexOf(':')<0)?String(it.path).split('#')[0]:'';
   return href?'<a class="tile" href="'+esc(href)+'">'+body+'</a>':'<div class="tile">'+body+'</div>'}
 
  function stripHTML(){
@@ -115,7 +117,7 @@ function mount(host){
   h+='<div class="grid">'+items.map(function(it,i){
    var has=it.path&&shots[it.path];
    var note=has?'<span class="cam">picture ready</span>'
-    :(it.path&&it.path.indexOf('own:')!==0?'<span class="cam">picture to come</span>'
+    :(it.path&&it.path.indexOf(':')<0?'<span class="cam">picture to come</span>'
     :'<button class="camb" type="button" data-a="picfor" data-i="'+i+'">add a picture</button>');
    return '<div class="opt" aria-pressed="'+(it.picked?'true':'false')+'"><button class="pickbtn" type="button" data-a="pick" data-i="'+i+'" aria-label="Show this off"><span class="box">'+(it.picked?'&#10003;':'')+'</span><span class="t">'+esc(it.title)+'</span></button>'+note+'<i class="dot" style="background:'+colorOf(it.label)+'"></i></div>'}).join('')+'</div>';
   h+='<div class="own"><h4>Add your own</h4><div class="r"><input id="own" type="text" value="'+esc(draft)+'" placeholder="Rewrote the TreadWell story" aria-label="Your own highlight"><button class="b'+(pend?' on':'')+'" type="button" data-a="pic">'+(pend?'Picture ready':'Add a picture')+'</button><button class="b" type="button" data-a="add">Add mine</button></div>';
