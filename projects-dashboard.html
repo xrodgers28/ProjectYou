@@ -1,0 +1,320 @@
+<!doctype html><html lang="en"><head>
+<script src="weak-connection.js"></script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Projects Dashboard</title>
+<style>
+:root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+.wrap{max-width:1060px;margin:0 auto;padding:16px 16px 80px}
+h1{font-size:22px;margin:0}
+h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
+.sub{color:var(--muted);font-size:12.5px;margin:2px 0 14px}
+.strength{display:inline-flex;gap:3px;vertical-align:middle;margin-left:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px}
+.strength button{width:15px;height:15px;border-radius:50%;border:1px solid rgba(31,42,68,.18);padding:0;cursor:pointer;flex:none}
+.strength button.on{outline:2px solid var(--accent);outline-offset:1px}
+.demo{font-size:12px;color:#7b828c;background:#eef2f8;border-radius:9px;padding:7px 11px;margin:0 0 10px;display:none}
+.demo.show{display:block}
+.demo button{margin-left:8px;font:inherit;font-size:11.5px;font-weight:700;border:0;background:#3f6f8f;color:#fff;border-radius:6px;padding:3px 9px;cursor:pointer}
+.banner{background:#fff6e5;border:1px solid #f0d9a8;border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:12.5px;display:none}
+.banner.show{display:block}
+.banner b{display:block;margin-bottom:3px}
+/* ---- Rail Final: railwrap med mash cB rW ---- */
+.railwrap{display:grid;grid-template-columns:238px 1fr;gap:14px;align-items:start;color:var(--ink)}
+@media(max-width:760px){.railwrap{grid-template-columns:1fr}}
+.rail{list-style:none;margin:0;padding:0}
+.rail .rsec{display:block;padding:0;margin:0 0 2px;background:transparent}
+.rail .rrow{position:relative;display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;cursor:pointer;background:var(--w,#eff0f2);border:1px solid transparent}
+.rail .rsel>.rrow{background:var(--w);box-shadow:inset 3px 0 0 var(--c);border-color:transparent}
+.rail .rsel>.rrow,.rail .rsel>.rrow *{color:var(--ink);font-weight:600}
+.rail .rsel>.rrow .sm{color:#b2b8c1;font-weight:400}
+.rail .grip{opacity:.5;color:#9aa6b4}
+.rail .sm{color:#b2b8c1;font-size:11px;flex:none;font-weight:400}
+.rsub .sm,.rsub2 .sm{color:#b2b8c1;font-size:11px;flex:none;font-weight:400}
+.rsub.sel .sm,.rsub2.sel .sm{color:#b2b8c1;font-weight:400}
+.rail .ico{width:15px;height:15px;flex:none;display:flex;align-items:center;justify-content:center;color:var(--c,#8a93a1)}
+.rail .ico svg{width:15px;height:15px}.rail .ico .emo{font-size:13px;line-height:1}
+.rail .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rsubs{overflow:hidden;max-height:1600px;transition:max-height .26s ease,opacity .18s ease;margin:2px 0 5px 14px;padding-left:0}
+.rsubs.shut{max-height:0;opacity:0;margin-top:0;margin-bottom:0}
+.rsub,.rsub2{position:relative;display:flex;gap:6px;align-items:center;margin:2px 0;padding:4px 8px;font-size:12.5px;border-radius:8px;cursor:pointer;color:#46505e;background:#fff}
+.rsub.rgroup,.rsub2.rgroup{background:var(--hl,#eef1f5);font-weight:600;color:var(--ink)}
+.rsub.sel,.rsub2.sel{background:var(--hl,#dbe7f1);color:var(--ink);font-weight:700}
+.rsubs2{overflow:hidden;max-height:1200px;transition:max-height .26s ease,opacity .18s ease;margin:1px 0 4px 12px}
+.rsubs2.shut{max-height:0;opacity:0}
+.rsub2{margin-left:10px}
+.rsub .grow,.rsub2 .grow{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail .rrow,.rsub,.rsub2{user-select:none}
+.car{border:0;background:transparent;padding:0 2px;font-size:11px;line-height:1;color:var(--muted);cursor:pointer;flex:none;opacity:.6}
+.car::before{content:'\25BE'}
+.isshut>.rrow .car::before,.isshut>.rsub .car::before{content:'\25B8'}
+.rrow:hover .car,.rsub:hover .car{opacity:1}
+.rsec.parked>.rrow{opacity:.55}
+.rsec.parked>.rrow .pk{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;background:#fdf6e6;color:var(--amber);border-radius:5px;padding:1px 5px;flex:none}
+.grip,.dg{cursor:grab;color:#9aa1ab;font-size:12px;user-select:none;touch-action:none;flex:none}
+.dg{margin-top:1px}
+.kebab{border:0;background:transparent;font-size:15px;line-height:1;color:#9aa1ab;cursor:pointer;padding:0 3px;border-radius:6px;flex:none;opacity:.5;transition:opacity .15s}
+.rrow:hover .kebab,.rsub:hover .kebab,.rsub2:hover .kebab,.rsel>.rrow .kebab,.sel>.kebab,.shd:hover .kebab{opacity:1}
+.kebab:hover{background:#e7eaef;color:var(--ink)}
+@media(hover:none){.kebab{opacity:.6}}
+.newtile{border:0;background:transparent;color:#9aa1ab;text-align:left;padding:4px 8px;font:inherit;font-size:12.5px;cursor:pointer;display:block;width:100%;border-radius:8px}
+.newtile:hover{background:#e9edf1;color:var(--ink)}
+/* right pane */
+.sec{background:#fff;border:0;border-radius:12px;padding:12px 14px;box-shadow:none}
+.hd{display:flex;align-items:center;gap:7px;min-height:26px}
+.hd .sn{font-size:18px;color:var(--ink);cursor:text;border-radius:5px;padding:0 3px;margin-left:-3px}
+.hd .sn:hover{background:#f4f6f9}.hd .sn:focus{outline:2px solid var(--accent);outline-offset:1px;background:#fff}
+.hd .cnt{margin-left:2px;font-size:13px;color:var(--muted)}
+.sm{font-size:11px;color:var(--muted)}
+.nt{margin:4px 0 8px;color:#9aa1ab;font-size:12px;max-width:72ch}
+.crumb{font-size:12px;margin:0 0 8px;color:var(--ink)}
+.lnk{font:inherit;font-size:11.5px;border:0;background:transparent;color:var(--accent);cursor:pointer;padding:2px 0}
+.lnk:hover{text-decoration:underline}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;background:var(--chip);color:var(--muted);border-radius:6px;padding:0 6px;height:18px;white-space:nowrap;margin-right:3px}
+.chipa[data-st="Parked"]{background:#fdf6e6;color:var(--amber)}
+.chipa[data-st="Brand new"]{background:#e9f5ef;color:var(--good)}
+.subl{border:0;background:#f4f6f9;border-radius:12px;padding:6px 11px 5px;margin:0 0 7px}
+/* ---- v3.7, Scott Nov 25: the right panel runs in two columns, with a bar you drag to set the widths ---- */
+.pcols{display:grid;grid-template-columns:var(--sa,1fr) 7px var(--sb,1fr);gap:0 10px;align-items:start;margin:0 0 4px}
+.pcol{min-width:0}
+.pcol.empty{min-height:56px;border:1px dashed #dfe3ea;border-radius:12px;background:#fbfcfd;position:relative}
+.pcol.empty::after{content:'Drag a section here';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11.5px;color:#aeb5bf}
+.pcol.colover{outline:2px dashed var(--c,#8a93a1);outline-offset:3px;border-radius:12px}
+.psplit{position:relative;cursor:col-resize;align-self:stretch;min-height:64px;touch-action:none}
+.psplit::before{content:'';position:absolute;left:50%;top:2px;bottom:2px;width:3px;transform:translateX(-50%);background:#e3e7ee;border-radius:3px;transition:background .12s}
+.psplit:hover::before,.psplit.on::before{background:var(--c,#8a93a1)}
+.psplit::after{content:'';position:absolute;left:-8px;right:-8px;top:0;bottom:0}
+.subl>.shd>.sg{cursor:grab;color:#b4bac3;font-size:12px;letter-spacing:-3px;margin:0 1px 0 -4px;user-select:none;flex:none;touch-action:none}
+.subl>.shd>.sg:hover{color:#6f7681}
+.subl>.shd>.sg:active{cursor:grabbing}
+.subl.sdrag{opacity:.4}
+.subl.dropline{box-shadow:0 0 0 2px var(--c,#8a93a1)}
+/* v3.8: the line that shows where a dragged task will land inside a section */
+.its .r.dropup{box-shadow:inset 0 2px 0 0 var(--c,#8a93a1)}
+.its .r.dropdn{box-shadow:inset 0 -2px 0 0 var(--c,#8a93a1)}
+@media(max-width:900px){.pcols{grid-template-columns:1fr}.psplit{display:none}.pcol.empty{display:none}}
+.shd{display:flex;align-items:center;gap:6px;margin:0 0 2px;min-height:22px}
+.shd b{font-size:13px;color:var(--ink)}
+.p2grid{display:grid;grid-template-columns:1fr;gap:4px;margin:3px 0}
+.p2{border:0;background:#fff;border-radius:8px;padding:4px 10px 3px}
+.p2 .shd{margin:0}
+.p2 .shd b{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#7b828c}
+.kind{display:inline-block;margin-left:8px;font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:8px;font-weight:700}
+.p2[data-k="doing"] .kind{background:#eef4f8;color:#2f5a75}
+.p2[data-k="wait"] .kind{background:#fbf3e4;color:#8a5e14}
+.p2[data-k="later"] .kind{background:#edf0f4;color:#4d5663}
+.p2[data-k="doing"] .shd .sm,.p2[data-k="wait"] .shd .sm,.p2[data-k="later"] .shd .sm{display:none}
+.its{list-style:none;margin:0;padding:0;min-height:6px}
+.its .r{position:relative;display:flex;align-items:flex-start;gap:6px;padding:3px 0 3px 8px;border-top:0;background:transparent}
+.its .r .dg{position:absolute;left:-9px;top:0;bottom:0;width:17px;margin:0;display:flex;align-items:center;justify-content:center;opacity:.35}
+.its .r:hover .dg{opacity:1}
+.its .t{font-size:13px;font-weight:400;line-height:1.3;color:#2b3137}
+.its .r.isdone .t{text-decoration:line-through;color:#7b828c}
+.its .mv{margin-left:auto;display:flex;gap:4px;flex:none;opacity:0;transition:opacity .15s}
+.its .r:hover .mv{opacity:1}
+@media(hover:none){.its .mv{opacity:.55}}
+.its .mv button{border:1px solid #dfe4ea;background:#fff;border-radius:5px;font:700 10px Roboto,Arial,sans-serif;color:#5b6472;padding:0 6px;line-height:15px;cursor:pointer;white-space:nowrap}
+.its .mv button:hover{border-color:#3f6f8f;color:#3f6f8f}
+.cb{flex:none;width:15px;height:15px;border:1px solid #aab0b8;border-radius:4px;margin-top:1px;cursor:pointer;background:#fff;position:relative;padding:0}
+.cb.done{background:var(--good);border-color:var(--good)}
+.cb.done::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
+.grow{flex:1;min-width:0}
+.addrow{display:flex;gap:6px;margin-top:4px}
+.addrow input{font:inherit;font-size:12px;border:1px solid #cfd3d9;border-radius:7px;padding:4px 8px;flex:1;min-width:80px;background:#fff;color:var(--ink)}
+.btn{font:inherit;font-size:12px;border:1px solid #cfd3d9;background:#fff;color:var(--ink);border-radius:8px;padding:4px 11px;cursor:pointer}
+.btn:hover{background:#f4f5f7}
+.dragging{opacity:.4}
+.dropline{outline:2px solid var(--accent);outline-offset:1px;border-radius:8px}
+/* picker + menu */
+.swbar{position:fixed;z-index:70;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(31,42,68,.18);padding:8px 10px;display:none;width:236px}
+.swbar.show{display:block}
+.swbar .sws{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.swbar .sw{width:22px;height:22px;border-radius:50%;border:1px solid rgba(31,42,68,.25);cursor:pointer;padding:0;flex:none;position:relative}
+.swbar .sw.on{outline:2px solid var(--accent);outline-offset:1px}
+.swbar .sw.plus{background:conic-gradient(#f66,#fd6,#6d6,#6df,#96f,#f66);display:flex;align-items:center;justify-content:center}
+.swbar .sw.plus span{width:12px;height:12px;border-radius:50%;background:#fff;color:#1f2a44;font-size:12px;line-height:12px;font-weight:700;text-align:center}
+.swbar .sw.tool{background:#f1f3f6;color:#1f2a44;font-size:12px;display:flex;align-items:center;justify-content:center}
+.swbar .lab{font-size:10px;color:var(--muted);margin:7px 0 4px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.swbar input[type=color]{position:absolute;opacity:0;pointer-events:none;width:0;height:0}
+.icrow{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px}
+.ic{position:relative;width:24px;height:24px;border-radius:7px;border:1px solid var(--line);background:#f7f9fc;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;font-size:13px;font-weight:700;font-family:inherit}
+.ic svg{width:14px;height:14px}.ic.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.ic .emo{font-size:12px;line-height:1}
+.emoin{width:100%;margin-top:6px;border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-size:12px;font-family:inherit}
+[data-tip]::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 7px);left:50%;transform:translateX(-50%);background:#1f2a44;color:#fff;font-size:11px;font-weight:600;line-height:1.2;padding:5px 8px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .12s;z-index:90}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{opacity:1}
+.menu{position:fixed;z-index:72;background:#fff;border:1px solid var(--line);border-radius:11px;box-shadow:0 8px 24px rgba(31,42,68,.18);padding:4px;display:none;min-width:176px}
+.menu.show{display:block}
+.menu button{display:block;width:100%;text-align:left;border:0;background:transparent;font:inherit;font-size:12.5px;padding:3px 9px;border-radius:6px;cursor:pointer;color:var(--ink);line-height:1.35}
+.menu button:hover{background:#f1f3f6}
+.menu button.danger{color:#a3362c}
+.menu .lab{font-size:10px;color:#2f5a74;margin:5px 0 2px 9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#1f2a44;color:#fff;font-size:12.5px;padding:9px 15px;border-radius:9px;box-shadow:0 6px 18px rgba(0,0,0,.2);z-index:95;display:none}
+.toast.show{display:block}
+.toast button{margin-left:11px;border:0;background:#3f6f8f;color:#fff;font:inherit;font-size:12px;font-weight:700;border-radius:6px;padding:3px 9px;cursor:pointer}
+
+/* Projects Dashboard v1.0, Nov 25 2026 (Scott): same look as the Task Library. Only what the Library has no word for is added below. */
+.its .r{padding-left:8px}
+.its .n{font:700 11px Roboto,Arial,sans-serif;color:var(--faint);width:15px;flex:none;margin-top:2px;text-align:right}
+.its .t[contenteditable]:focus,.its .ds[contenteditable]:focus{outline:2px solid var(--accent);outline-offset:1px;background:#fff;border-radius:4px}
+.its .r.act .t{font-weight:600;color:var(--ink)}
+.its .ds{font-size:11.5px;line-height:1.35;color:#7b828c;margin-top:1px}
+.its .meta{display:flex;gap:4px;flex:none;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:44%}
+.its .meta .chip{margin-right:0}
+.chip.act{background:#e9f5ef;color:var(--good);font-weight:700}
+.chip.nw{background:#e2ecf3;color:var(--accent);font-weight:700}
+.chip.lk{background:#fdf6e6;color:var(--amber)}
+.its .mv{margin-left:0}
+.cut{display:flex;align-items:center;gap:8px;font:700 9.5px Roboto,Arial,sans-serif;letter-spacing:.07em;text-transform:uppercase;color:var(--good);margin:5px 0;list-style:none}
+.cut::before,.cut::after{content:"";flex:1;height:2px;background:var(--good);border-radius:2px;opacity:.45}
+.brief{display:none;background:#fff;border-radius:8px;padding:7px 10px 8px 12px;margin:1px 0 5px 20px;font-size:12px;color:#2b3137;list-style:none}
+.brief.show{display:block}
+.brief dl{margin:0}.brief dt{font:700 9.5px Roboto,Arial,sans-serif;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-top:5px}.brief dd{margin:0}
+.brief .bft{margin-top:7px;display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--muted)}
+.ghost{opacity:.3}
+.shn{font-size:11.5px;color:#9aa1ab;margin:0 0 5px}
+.rail .rrow .sm{margin-left:auto}
+.its .ds:empty{display:none}.its .r:hover .ds:empty,.its .ds:empty:focus{display:block}.its .ds:empty::before{content:attr(data-ph);color:#c3cbd5}
+.svn{font-size:11.5px;color:var(--muted);margin-left:10px;font-weight:400}
+</style><style id="tlnav-css">
+/* v2.8, Nov 22 2026 (Scott): the same panel tabs as Today and the Staging Area, Today first. */
+.tlnav{display:flex;align-items:stretch;background:#f7f9fc;border:1px solid #e3e7ee;border-radius:10px 10px 0 0;flex-wrap:wrap;margin:0 0 14px}
+.tlnav a,.tlnav span{font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:#6b7686;text-decoration:none;padding:11px 14px;display:inline-flex;align-items:center;gap:6px;border-top:2px solid transparent;border-right:1px solid #e3e7ee;line-height:1.05}
+.tlnav a:hover{background:#fff;color:#2b4a63}
+.tlnav .on{background:#fff;color:#2b4a63;border-top-color:#2b4a63}
+.tlnav .soon{color:#c3cbd5}
+.tlnav .soon em{font-style:normal;font-size:11px;font-weight:700;color:#d2d8e0}
+</style><script>/* v-embed: opened inside the Todays Tasks panel. Hide this page's own tab row and send tab links back to the panel. */
+(function(){if(!/[?&]embed=1/.test(location.search)||window.top===window)return;
+ document.documentElement.classList.add('embed');
+ var MAP={'index.html':'today','inbox.html':'inbox','task-library.html':'library','projects-dashboard.html':'dashboard'};
+ document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a||e.metaKey||e.ctrlKey||e.shiftKey)return;
+  var u;try{u=new URL(a.getAttribute('href'),location.href)}catch(x){return}
+  if(u.origin!==location.origin||a.target)return;
+  var p=u.pathname.split('/').pop()||'index.html';
+  if(MAP[p]&&!u.hash){e.preventDefault();parent.postMessage({pyTab:MAP[p]},location.origin)}
+  else{a.target='_top'}},true);
+})();</script>
+<style>html.embed .pynav,html.embed .msub,html.embed #snav,html.embed .tlnav{display:none!important}</style>
+<script>(function(){if(window.top===window)return;var d=document.documentElement;function set(v){d.classList.toggle('calshut',!!v)}
+try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
+window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
+<style>html.embed.calshut .wrap{max-width:none}</style>
+</head><body>
+<div class="wrap">
+<nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
+<h1>Projects Dashboard<span class="ver">v1.0</span><span class="svn" id="svn"></span></h1>
+<p class="sub">Everything you have in motion, ranked. The top three in Project YOU and in TreadWell are active. Drag the handle to reorder or move a row to another box. Tap any name or description to edit it.</p>
+<div class="banner" id="bn"></div>
+<div class="railwrap">
+  <div><ul class="rail" id="rail"></ul></div>
+  <div class="sec" id="pane">
+    <div class="hd"><b class="sn">Projects</b><span class="cnt" id="pcnt"></span></div>
+    <p class="nt">Ranked top to bottom. Whatever sits above the green line is active: three for Project YOU, three for TreadWell. Drag a row above the line and the third one drops below it. One fun task unlocks each time you finish an active one. <span id="crossn"></span></p>
+    <div class="pcols" id="pcols" style="--sa:1fr;--sb:1fr">
+      <div class="pcol" id="col1"></div><div class="psplit"></div><div class="pcol" id="col2"></div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="toast" id="toast"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script>
+(function(){
+var SUPA='https://arnjntspmrhigodlssbn.supabase.co',ANON="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM",KEY='projects_dashboard',LKEY='py_projects_dashboard_v1';
+var SEED=[{"z": "py", "t": "Proof it works", "w": "Before and after numbers on two or three habits since September. Nothing else can be judged without it", "sz": "Small", "brief": {"what": "Pull before and after numbers on two or three habits since September.", "why": "Nothing else can be judged without knowing if Project YOU is changing you.", "done": "One page: three habits, weekly counts, a plain verdict on each.", "dont": "Only things that already happened. No forecasts.", "model": "Sonnet"}}, {"z": "py", "t": "Task Library as the one source of truth", "w": "Status on every task, a link to its chat, the now-or-rank-it prompt, retire the Chat Dashboard", "sz": "Major"}, {"z": "py", "t": "Fix broken cue cards", "w": "The cards are how you do your habits every day", "sz": "Small", "brief": {"what": "Find every cue card that does not open, save or count, and fix it.", "why": "The cards are how you do your habits each day.", "done": "Every card on the board opens, saves and shows a source link. A list of what was broken.", "dont": "Do not change any card design.", "model": "Sonnet"}}, {"z": "py", "t": "Habits Dashboard you can trust", "w": "The unlogged time bug, the sources and status page, the section 5 check", "sz": "Medium"}, {"z": "py", "t": "Clear what Claude already finished", "w": "Five finished tasks waiting for your look, four more queued. This one is yours", "sz": "Tiny"}, {"z": "py", "t": "Phone screens", "w": "Phone habit screen, phone Todays Tasks and Workflowy sync, as one build", "sz": "Major"}, {"z": "py", "t": "Time and energy insights", "w": "The Insights Dashboard you approved Nov 21, walking minutes for the week", "sz": "Major"}, {"z": "py", "t": "Intro talk and explainer fixes", "w": "Your three answers from Nov 25: closing line, money slide, source links", "sz": "Small"}, {"z": "py", "t": "Make slow pages save instantly", "w": "Upkeep. Removes friction, shows you nothing new", "sz": "Medium"}, {"z": "py", "t": "Local Safaris section on Todays Tasks", "w": "Helps you do one habit", "sz": "Small"}, {"z": "py", "t": "New cue card content", "w": "Claude Cowork card, Japanese mindset cards, card themes review", "sz": "Medium"}, {"z": "py", "t": "Task map and project map mocks", "w": "Pictures of your to-dos. Overlaps with the Task Library project", "sz": "Small"}, {"z": "tw", "t": "Location builder", "w": "From your Nov 24 launch plan: the tool that makes each new place", "sz": "Major", "brief": {"what": "Finish the tool that makes each new TreadWell place.", "why": "Four places must be live for the Jan 31, 2027 soft launch.", "done": "A new place can be made from one settings file with no hand edits.", "dont": "Do not touch the Antigua page.", "model": "Opus"}}, {"z": "tw", "t": "Launch story kit", "w": "Telling the TreadWell story until it is clear", "sz": "Medium", "brief": {"what": "Draft the TreadWell story in three lengths.", "why": "Telling the story clearly is your weekly stretch skill.", "done": "One line, one paragraph, one page.", "dont": "Your words first, Claude edits.", "model": "Sonnet"}}, {"z": "tw", "t": "Four places live", "w": "Antigua, Martha's Vineyard, Mumbai and Delhi ready for the Jan 31, 2027 soft launch", "sz": "Major"}, {"z": "tw", "t": "TreadWell deck", "w": "Finished by Claude, waiting for your look", "sz": "Tiny"}, {"z": "tw", "t": "Kamil vacation website", "w": "TreadWell task from Nov 24", "sz": "Small"}, {"z": "fun", "t": "Banners and boards", "w": "Here is Today, What I made this week, Sparkboard Airbnb ideas, style guide maps", "sz": "Medium"}, {"z": "fun", "t": "Layout polish", "w": "Nav items, two-column panels, calendar collapse, box dragging, styling", "sz": "Ongoing"}, {"z": "new", "t": "Did it move the needle? weekly tap", "w": "In the Week in Review, one tap per habit: helped, neutral, or drop it. Tells you which habits earn their place. You asked for this Sep 19", "sz": "Small", "tag": "new"}, {"z": "new", "t": "Build versus live meter", "w": "One line on the dashboard: hours spent building Project YOU against hours spent on your habits this week, from your calendar", "sz": "Small", "tag": "new"}, {"z": "new", "t": "Two-week pilots", "w": "Your own Sense of Purpose words: run pilots. One habit at a time gets a two-week experiment with a number before and after", "sz": "Medium", "tag": "new"}, {"z": "new", "t": "Energy map", "w": "Join your What gave me energy answers to your calendar, to show what gives and drains energy, and when", "sz": "Medium", "tag": "new"}, {"z": "new", "t": "Retire one a month", "w": "A monthly ritual that removes one page, tracker or habit that is not earning its place. Growth by subtraction", "sz": "Tiny", "tag": "new"}, {"z": "new", "t": "Starter kit for a second person", "w": "One compass, three habits, one weekly picture. The real test of whether anyone else can use Project YOU", "sz": "Major", "tag": "new"}];
+var BOX=[
+ {z:'py',name:'Project YOU',col:1,color:'#7d81c2',ranked:1,note:'Must help you see or do your habits, or show where time and energy go.'},
+ {z:'new',name:'New ideas, not yet ranked',col:1,color:'#3f6f8f',note:'Each one serves the goals of the program rather than adding a page for its own sake. Drag any you want into a ranked list. Leave the rest here.'},
+ {z:'tw',name:'TreadWell',col:2,color:'#4fa08a',ranked:1,note:'Toward the Jan 31, 2027 soft launch.'},
+ {z:'fun',name:'Fun shelf',col:2,color:'#e0975a',note:'Polish and play. One unlocks each time you finish an active task.'},
+ {z:'no',name:'Not doing',col:2,color:'#8a93a1',note:'Drag here to drop something. Nothing is deleted, it is just off the list.'}];
+var Z=BOX.map(function(b){return b.z});
+var D=null,dirty=false,saving=false,again=false;
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
+function tint(h){var n=parseInt(h.slice(1),16);return 'rgba('+(n>>16)+','+(n>>8&255)+','+(n&255)+',.14)'}
+function uid(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function blank(){var d={v:1,items:{},done:[],crossings:[],funUnlocked:0};Z.forEach(function(z){d.items[z]=[]});return d}
+function seeded(){var d=blank();SEED.forEach(function(s){d.items[s.z].push({id:uid(),t:s.t,w:s.w||'',sz:s.sz||'',tag:s.tag||'',brief:s.brief||null})});return d}
+function fix(d){if(!d||!d.items)return null;Z.forEach(function(z){if(!Array.isArray(d.items[z]))d.items[z]=[]});d.done=d.done||[];d.crossings=d.crossings||[];d.funUnlocked=d.funUnlocked||0;return d}
+function hdrs(x){var h={apikey:ANON,Authorization:'Bearer '+ANON,'Content-Type':'application/json'};if(x)for(var k in x)h[k]=x[k];return h}
+function showToast(msg,btn,fn){var t=document.getElementById('toast');t.textContent=msg;if(btn){var b=document.createElement('button');b.textContent=btn;b.onclick=function(){t.classList.remove('show');fn()};t.appendChild(b)}t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show')},btn?7000:3200)}
+function banner(h){var b=document.getElementById('bn');b.innerHTML=h||'';b.classList.toggle('show',!!h)}
+function stamp(){var s=document.getElementById('svn');if(!s)return;s.textContent=dirty?'Saving...':(D&&D.saved?'Saved '+new Date(D.saved).toLocaleString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}).replace(' AM','am').replace(' PM','pm')+' ET':'')}
+/* the screen updates at once, the save runs in the background (Scott, Nov 23) */
+function save(){dirty=true;D.saved=new Date().toISOString();try{localStorage.setItem(LKEY,JSON.stringify(D))}catch(e){}stamp();push()}
+function push(){if(saving){again=true;return}saving=true;again=false;
+ fetch(SUPA+'/rest/v1/board_meta?on_conflict=key',{method:'POST',headers:hdrs({Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:KEY,val:D,updated_at:new Date().toISOString()})})
+ .then(function(r){saving=false;if(!r.ok)throw new Error(r.status);if(again)push();else{dirty=false;banner('');stamp()}})
+ .catch(function(){saving=false;banner('<b>Not saved to your system yet</b>Your changes are safe on this screen. They will save when the connection is back.');setTimeout(function(){if(dirty)push()},8000)})}
+function weekStart(){var n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));n.setHours(2,0,0,0);var d=(n.getDay()+6)%7;n.setDate(n.getDate()-d);return n.getTime()}
+function find(id){for(var k=0;k<Z.length;k++){var a=D.items[Z[k]];for(var i=0;i<a.length;i++)if(a[i].id===id)return {z:Z[k],i:i,it:a[i]}}return null}
+function briefHTML(it){var b=it.brief;if(!b)return '<dl><dt>Brief</dt><dd>Not drafted yet. Claude drafts it once this is active, and you approve it before any work starts.</dd></dl>';
+ return '<dl><dt>What</dt><dd>'+esc(b.what)+'</dd><dt>Why it matters</dt><dd>'+esc(b.why)+'</dd><dt>Done looks like</dt><dd>'+esc(b.done)+'</dd><dt>Do not touch</dt><dd>'+esc(b.dont)+'</dd><dt>Run on</dt><dd>'+esc(b.model)+'</dd></dl><div class="bft">'+(b.approved?'<span class="chip act">Approved '+esc(b.approved)+'</span>':'<span>Draft by Claude, not approved yet.</span><button class="btn" data-approve="'+it.id+'">Approve brief</button>')+'</div>'}
+var OPEN={};
+function render(){
+ var rail=document.getElementById('rail');rail.innerHTML='';var tot=0;
+ var c1=document.getElementById('col1'),c2=document.getElementById('col2');c1.innerHTML='';c2.innerHTML='';
+ BOX.forEach(function(B){
+  var a=D.items[B.z],n=a.length;tot+=n;
+  var li=document.createElement('li');li.className='rsec';li.style.cssText='--c:'+B.color+';--w:'+tint(B.color);
+  li.innerHTML='<div class="rrow" data-jump="'+B.z+'"><span class="grow">'+esc(B.name)+'</span><span class="sm">'+(B.ranked?Math.min(3,n)+' active \u00b7 '+n:n)+'</span></div>';rail.appendChild(li);
+  var w=document.createElement('div');w.className='subl';w.id='box-'+B.z;w.style.cssText='--c:'+B.color;
+  var extra=B.ranked?Math.min(3,n)+' active, '+Math.max(0,n-3)+' waiting':(B.z==='fun'&&D.funUnlocked?n+' \u00b7 '+D.funUnlocked+' unlocked':String(n));
+  w.innerHTML='<div class="shd"><b>'+esc(B.name)+'</b><span class="sm">'+extra+'</span></div><p class="shn">'+esc(B.note)+'</p>';
+  var ul=document.createElement('ul');ul.className='its';ul.dataset.z=B.z;
+  a.forEach(function(it,i){
+   if(B.ranked&&i===3){var c=document.createElement('li');c.className='cut';c.textContent='active above this line';ul.appendChild(c)}
+   var act=B.ranked&&i<3;var r=document.createElement('li');r.className='r'+(act?' act':'');r.dataset.id=it.id;
+   var chips=(act?'<span class="chip act">Active</span>':'')+(it.tag==='new'?'<span class="chip nw">new idea</span>':'')+(B.z==='fun'?'<span class="chip lk">'+(D.funUnlocked?'fun':'locked')+'</span>':'')+(it.sz?'<span class="chip">'+esc(it.sz)+'</span>':'');
+   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">\u22ee\u22ee</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div></div><span class="meta">'+chips+(act?'<span class="mv" style="opacity:1"><button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'</span>';
+   ul.appendChild(r);
+   if(act){var b=document.createElement('li');b.className='brief'+(OPEN[it.id]?' show':'');b.dataset.bf=it.id;b.innerHTML=briefHTML(it);ul.appendChild(b)}
+  });
+  w.appendChild(ul);
+  if(B.ranked||B.z==='new'){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="Add to '+esc(B.name)+'" maxlength="160" data-add="'+B.z+'"><button class="btn" data-addb="'+B.z+'">Add</button>';w.appendChild(ar)}
+  (B.col===1?c1:c2).appendChild(w);
+ });
+ document.getElementById('pcnt').textContent=tot;
+ var ws=weekStart(),cw=D.crossings.filter(function(c){return new Date(c.at).getTime()>=ws}).length;
+ document.getElementById('crossn').textContent=cw?'Moved into active this week: '+cw+'.':'';
+ if(window.Sortable)document.querySelectorAll('.its').forEach(function(l){new Sortable(l,{group:'rank',draggable:'.r',handle:'.dg',animation:140,ghostClass:'ghost',onEnd:readDom})});
+ stamp();
+}
+function readDom(){
+ var before={};['py','tw'].forEach(function(z){before[z]=D.items[z].slice(0,3).map(function(x){return x.id})});
+ var ns={};Z.forEach(function(z){ns[z]=[];document.querySelectorAll('.its[data-z="'+z+'"] .r').forEach(function(d){var f=find(d.dataset.id);if(f)ns[z].push(f.it)})});
+ D.items=ns;
+ ['py','tw'].forEach(function(z){D.items[z].slice(0,3).forEach(function(x){if(before[z].indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}})});
+ if(D.crossings.length>200)D.crossings=D.crossings.slice(-200);
+ save();render();
+}
+document.addEventListener('click',function(e){var t=e.target;
+ if(t.dataset.brief){OPEN[t.dataset.brief]=!OPEN[t.dataset.brief];var b=document.querySelector('.brief[data-bf="'+t.dataset.brief+'"]');if(b)b.classList.toggle('show',!!OPEN[t.dataset.brief]);return}
+ if(t.dataset.approve){var f=find(t.dataset.approve);if(f&&f.it.brief){f.it.brief.approved=new Date().toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'});save();render()}return}
+ if(t.dataset.done){var g=find(t.dataset.done);if(!g)return;var B=BOX.filter(function(b){return b.z===g.z})[0];var was=B.ranked&&g.i<3;var snap=JSON.stringify(D);
+  D.items[g.z].splice(g.i,1);D.done.push({t:g.it.t,z:g.z,at:new Date().toISOString(),active:!!was});if(was)D.funUnlocked++;save();render();
+  showToast(was?'Done. The next one moved up, and one fun task is unlocked.':'Done.','Undo',function(){D=JSON.parse(snap);save();render()});return}
+ if(t.dataset.addb){var inp=document.querySelector('input[data-add="'+t.dataset.addb+'"]');add(t.dataset.addb,inp);return}
+ var j=t.closest&&t.closest('[data-jump]');if(j){var el=document.getElementById('box-'+j.dataset.jump);if(el)el.scrollIntoView({behavior:'smooth',block:'start'})}
+});
+function add(z,inp){var v=(inp.value||'').trim();if(!v)return;D.items[z].push({id:uid(),t:v,w:'',sz:'',tag:''});inp.value='';save();render();var n=document.querySelector('input[data-add="'+z+'"]');if(n)n.focus()}
+document.addEventListener('keydown',function(e){var t=e.target;
+ if(t.dataset&&t.dataset.add&&e.key==='Enter'){e.preventDefault();add(t.dataset.add,t)}
+ if(t.isContentEditable&&e.key==='Enter'){e.preventDefault();t.blur()}});
+document.addEventListener('focusout',function(e){var t=e.target;if(!t.isContentEditable||!t.dataset.f)return;var r=t.closest('.r');if(!r)return;var f=find(r.dataset.id);if(!f)return;var v=t.textContent.trim();
+ if(t.dataset.f==='t'&&!v){t.textContent=f.it.t;return}
+ if(f.it[t.dataset.f]!==v){f.it[t.dataset.f]=v;save()}});
+/* boot: this device's copy first so the screen is never blank, then the copy in your system */
+try{var raw=localStorage.getItem(LKEY);if(raw)D=fix(JSON.parse(raw))}catch(e){}
+if(!D)D=seeded();
+render();
+fetch(SUPA+'/rest/v1/board_meta?key=eq.'+KEY+'&select=val',{headers:hdrs()}).then(function(r){if(!r.ok)throw new Error(r.status);return r.json()}).then(function(rows){
+ if(rows&&rows[0]&&rows[0].val&&fix(rows[0].val)){var remote=rows[0].val;
+  if(!dirty&&(!D.saved||!remote.saved||remote.saved>=D.saved)){D=remote;try{localStorage.setItem(LKEY,JSON.stringify(D))}catch(e){}render()}else{push()}}
+ else{save()}
+}).catch(function(){banner('<b>Cannot reach your system right now</b>Working on this device only for the moment. Changes will save when the connection is back.')});
+window.addEventListener('beforeunload',function(e){if(dirty){e.preventDefault();e.returnValue=''}});
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body></html>
