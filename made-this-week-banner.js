@@ -1,10 +1,12 @@
-/* What I made this week, habits dashboard banner. v1.4 (Nov 24, 2026).
+/* What I made this week, habits dashboard banner. v1.5 (Nov 24, 2026).
    Scott's weekly highlight reel. The window shade suggests what he made that week, he taps the
    ones worth showing off (or types his own and tags it with a label), presses "Take screenshots
    and build banner", and the closed strip becomes a contact sheet of real screenshots of those
    pages. Once built, only a tiny grey Edit at the bottom right opens it again.
    Picks live in made_items, labels in made_labels, pictures in made_shots. A picked page with no
    picture yet asks for one (a made_shots row with no image) and the overnight job takes it.
+   v1.5, Scott: a tile with no picture says what it is waiting for, "Not on the site yet" or
+   "Picture on the way", instead of repeating its label, which read badly with several TreadWell ones.
    v1.4, Scott: the strip holds up to eight now instead of five. Five or more lay out in two even
    rows (five as 3 and 2, six as 3 and 3, seven as 4 and 3, eight as 4 and 4) and the pictures sit a
    little shorter so the banner does not get tall.
@@ -92,7 +94,7 @@ function mount(host){
  function tileHTML(it){
   var c=colorOf(it.label),img=it.path?shots[it.path]:null;
   var inner=img?'<img src="'+img+'" alt="'+esc(it.title)+'">'
-   :'<div class="note" style="background:'+tint(c)+'"><span>'+(it.path?'Picture on the way':esc(it.label||''))+'</span></div>';
+   :'<div class="note" style="background:'+tint(c)+'"><span>'+(it.path?'Picture on the way':'Not on the site yet')+'</span></div>';
   var body=inner+'<div class="cap">'+esc(it.title)+'</div><i class="pip" style="background:'+c+'"></i>';
   var href=it.path?String(it.path).split('#')[0]:'';
   return href?'<a class="tile" href="'+esc(href)+'">'+body+'</a>':'<div class="tile">'+body+'</div>'}
