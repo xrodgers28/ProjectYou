@@ -1,4 +1,5 @@
-/* cue-visits.js v1.1, Oct 9 2026 (Scott's answers 4, 5 and 6 to the Cue Card Timer Review)
+/* cue-visits.js v1.2, Nov 25 2026 (added Repeat After Me, Wait Really?! and TreadWell Watch; Takeaways renamed to Mindset Training to match the habit row; Social Fitness dare renamed to Social Fitness. Old names kept as aliases.)
+   v1.1, Oct 9 2026 (Scott's answers 4, 5 and 6 to the Cue Card Timer Review)
    One shared helper for every Cue Card page, the Cue Cards board, Today's Tasks and the Habit Tracker.
 
    1. SEPARATE VISITS. Every time you finish a card page, that visit is saved as its own line in
@@ -14,14 +15,16 @@
   if (window.CueVisits) return;
 
   var HABIT = {
-    takeaways:'Takeaways', rundown:'AI Workout', atomic:'Atomic Habits', twk:'Things Worth Knowing',
+    takeaways:'Mindset Training', rundown:'AI Workout', atomic:'Atomic Habits', twk:'Things Worth Knowing',
     compass:'Compass YIR', openmode:'Open Mode', env:'Environmental Health', feed:'The Feed',
-    rec:'Recreational Health', social:'Social Fitness dare', creativity:'Creativity Challenge',
-    bucket:'Bucket List', wall:'SparkBoard', tnt:"It's a wrap", masterclass:'MasterClass'
+    rec:'Recreational Health', social:'Social Fitness', creativity:'Creativity Challenge',
+    bucket:'Bucket List', wall:'SparkBoard', tnt:"It's a wrap", masterclass:'MasterClass',
+    repeat:'Repeat After Me', 'wait-really':'Wait, Really?!', treadwell:'TreadWell Watch'
   };
   /* other names the same card has gone by in the database */
   var ALIAS = { 'the wall':'SparkBoard', 'inspiration wall':'SparkBoard', 'the sparkboard':'SparkBoard',
-                'ai insights':'AI Workout', 'compass':'Compass YIR' };
+                'ai insights':'AI Workout', 'compass':'Compass YIR',
+                'takeaways':'Mindset Training', 'social fitness dare':'Social Fitness' };
   var CARD_OF = {};
   Object.keys(HABIT).forEach(function(k){ CARD_OF[norm(HABIT[k])] = k; });
   Object.keys(ALIAS).forEach(function(a){ CARD_OF[a] = CARD_OF[norm(ALIAS[a])]; });
@@ -230,7 +233,7 @@
   }
 
   window.CueVisits = {
-    version:'1.1', habitFor:habitFor, cardForHabit:cardForHabit, isCueHabit:isCueHabit, canonHabit:canonHabit,
+    version:'1.2', habitFor:habitFor, cardForHabit:cardForHabit, isCueHabit:isCueHabit, canonHabit:canonHabit,
     today:today, askMinutes:askMinutes, finish:finish, log:log, handTick:handTick, clearHand:clearHand, setTotal:setTotal
   };
 })();
