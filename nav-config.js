@@ -18,10 +18,14 @@ window.NAV_CONFIG = {
        (three idle background jobs were paused separately). They now sit on Mission Control, Launch tab, Tools & pages, next to All ToDos. */
     { "label": "Calendar", "href": "calendar.html" },
     /* Nov 25 2026, Scott: Projects is its own item in the bar, right after Todays Tasks and Calendar. The board moved here from the Cue Cards page. */
+    /* Nov 25 2026, Scott: the Projects drop-down is his full project list, in his order. */
     { "label": "Projects", "href": "projects.html", "children": [
-      { "label": "Project YOU", "href": "projects.html#pj-project-you" },
-      { "label": "TreadWell", "href": "projects.html#pj-treadwell" },
-      { "label": "Elevator Pitch", "href": "projects.html#pj-elevator-pitch" }
+      { "label": "TreadWell", "href": "treadwell.html" },
+      { "label": "TreadWell Templates", "href": "https://claude.ai/artifact/EhPkzn9RfYKRnNE4fzaCFx" },
+      { "label": "TreadWell: Antigua Back Room", "href": "https://claude.ai/artifact/L9MU3CbtSgBkFRPmCRgqrS" },
+      { "label": "TreadWell: Boston Back Room", "href": "https://claude.ai/artifact/SFHX4Pedqa6u1jnX1CSA1L" },
+      { "label": "TreadWell: MV Back Room", "href": "https://claude.ai/artifact/A23yRyxMFDofStBkVMRr1N" },
+      { "label": "Destination: Antigua", "href": "https://claude.ai/artifact/VvLHvzV5q7brFDDhVdEtTc" }
     ] }
   ],
   /* Calendar (Aug 29 2026, Scott). ONE slot in the top bar, in line with the
