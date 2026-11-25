@@ -156,7 +156,6 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 /* Projects Dashboard v1.0, Nov 25 2026 (Scott): same look as the Task Library. Only what the Library has no word for is added below. */
 .its .r{padding-left:8px}
 .its .n{font:700 11px Roboto,Arial,sans-serif;color:var(--faint);width:15px;flex:none;margin-top:2px;text-align:right}
-.its .t[contenteditable]:focus,.its .ds[contenteditable]:focus{outline:2px solid var(--accent);outline-offset:1px;background:#fff;border-radius:4px}
 .its .r.act .t{font-weight:600;color:var(--ink)}
 .its .ds{font-size:11.5px;line-height:1.35;color:#7b828c;margin-top:1px}
 .its .meta{display:flex;gap:4px;flex:none;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:44%}
@@ -175,6 +174,11 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .shn{font-size:11.5px;color:#9aa1ab;margin:0 0 5px}
 .rail .rrow .sm{margin-left:auto}
 .its .ds:empty{display:none}.its .r:hover .ds:empty,.its .ds:empty:focus{display:block}.its .ds:empty::before{content:attr(data-ph);color:#c3cbd5}
+.wrap{max-width:none}
+.railwrap{display:block}
+/* v1.1 (Scott, Nov 25): tap text to edit with no box around it, the same as the Todays Tasks lines */
+.its .t[contenteditable],.its .ds[contenteditable]{cursor:text;outline:0}
+.its .t[contenteditable]:focus,.its .ds[contenteditable]:focus{outline:0!important;background:transparent!important;box-shadow:none}
 .svn{font-size:11.5px;color:var(--muted);margin-left:10px;font-weight:400}
 </style><style id="tlnav-css">
 /* v2.8, Nov 22 2026 (Scott): the same panel tabs as Today and the Staging Area, Today first. */
@@ -203,11 +207,10 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v1.0</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v1.1</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. The top three in Project YOU and in TreadWell are active. Drag the handle to reorder or move a row to another box. Tap any name or description to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="railwrap">
-  <div><ul class="rail" id="rail"></ul></div>
   <div class="sec" id="pane">
     <div class="hd"><b class="sn">Projects</b><span class="cnt" id="pcnt"></span></div>
     <p class="nt">Ranked top to bottom. Whatever sits above the green line is active: three for Project YOU, three for TreadWell. Drag a row above the line and the third one drops below it. One fun task unlocks each time you finish an active one. <span id="crossn"></span></p>
@@ -253,12 +256,10 @@ function briefHTML(it){var b=it.brief;if(!b)return '<dl><dt>Brief</dt><dd>Not dr
  return '<dl><dt>What</dt><dd>'+esc(b.what)+'</dd><dt>Why it matters</dt><dd>'+esc(b.why)+'</dd><dt>Done looks like</dt><dd>'+esc(b.done)+'</dd><dt>Do not touch</dt><dd>'+esc(b.dont)+'</dd><dt>Run on</dt><dd>'+esc(b.model)+'</dd></dl><div class="bft">'+(b.approved?'<span class="chip act">Approved '+esc(b.approved)+'</span>':'<span>Draft by Claude, not approved yet.</span><button class="btn" data-approve="'+it.id+'">Approve brief</button>')+'</div>'}
 var OPEN={};
 function render(){
- var rail=document.getElementById('rail');rail.innerHTML='';var tot=0;
+ var tot=0;
  var c1=document.getElementById('col1'),c2=document.getElementById('col2');c1.innerHTML='';c2.innerHTML='';
  BOX.forEach(function(B){
   var a=D.items[B.z],n=a.length;tot+=n;
-  var li=document.createElement('li');li.className='rsec';li.style.cssText='--c:'+B.color+';--w:'+tint(B.color);
-  li.innerHTML='<div class="rrow" data-jump="'+B.z+'"><span class="grow">'+esc(B.name)+'</span><span class="sm">'+(B.ranked?Math.min(3,n)+' active \u00b7 '+n:n)+'</span></div>';rail.appendChild(li);
   var w=document.createElement('div');w.className='subl';w.id='box-'+B.z;w.style.cssText='--c:'+B.color;
   var extra=B.ranked?Math.min(3,n)+' active, '+Math.max(0,n-3)+' waiting':(B.z==='fun'&&D.funUnlocked?n+' \u00b7 '+D.funUnlocked+' unlocked':String(n));
   w.innerHTML='<div class="shd"><b>'+esc(B.name)+'</b><span class="sm">'+extra+'</span></div><p class="shn">'+esc(B.note)+'</p>';
