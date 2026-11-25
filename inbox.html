@@ -179,6 +179,7 @@ footer{display:flex;justify-content:space-between;color:var(--faint);font-family
 .sbtn.blue{background:#3f6f8f;border-color:#3f6f8f}
 .sbtn.green{background:var(--green);border-color:var(--green)}
 .sbtn:disabled{opacity:.35;cursor:default}
+.serr{font:700 10px Roboto,Arial,sans-serif;color:#c0392b;background:#f6e3e0;border-radius:4px;padding:1px 6px;margin-left:4px;white-space:nowrap}
 .sbtn:hover:not(:disabled){filter:brightness(1.08)}
 .left{margin-top:10px;border:1px dashed #d5dae1;border-radius:8px;padding:5px 9px}
 .left .lt{font-family:var(--fn);font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--soft)}
@@ -211,7 +212,7 @@ try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
 window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
 <style>html.embed.calshut .wrap{max-width:none}</style>
 </head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.5</span><span class="date" id="today"></span></div>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.6</span><span class="date" id="today"></span></div>
 <p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green button at the bottom of a section to file everything in it. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
@@ -238,7 +239,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 <div><b>v0.20</b> Playable Staging Area, label, owner, star and link &middot; <a href="https://claude.ai/artifact/Vd3QU7DiTe7CnWwzrM23mj">open</a></div>
 <div><b>Build plan v0.17</b> The 375-minute plan this was built from &middot; <a href="https://claude.ai/artifact/9ocMs1oQ9wtnqNLxuifdHT">open</a></div>
 </div></div></div></div>
-<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.5 &middot; Nov 25, 2026</span></footer>
+<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.6 &middot; Nov 25, 2026</span></footer>
 </div><div id="tst"></div>
 <script src="pills-config.js"></script>
 <script src="task-moves.js"></script>
@@ -452,7 +453,7 @@ function mapRow(r){
 }
 function goLive(gmail){
  if(window.PYMoves&&!PYMoves.places().length){PYMoves.loadPlaces().then(function(){ST.forEach(function(i){if(i.placeAuto||!i.place){i.place=placeGuess(i);i.placeAuto=true}});render()}).catch(function(){})}
- var u=SUPA+'/rest/v1/todos?select=*&staged=eq.true&archived=eq.false&order=created_at.desc&limit=200';
+ var u=SUPA+'/rest/v1/todos?select=*&staged=eq.true&archived=eq.false&stage_reviewing=eq.false&order=created_at.desc&limit=200';
  fetch(u,{headers:HDR()}).then(function(r){return r.ok?r.json():Promise.reject(r.status)})
  .then(function(rows){
    if(!rows||!rows.length){if(window.PYMoves&&PYMoves.signedIn()){ST=[];LIVE=true;render();toast('Nothing waiting. All sorted.');return}toast('Not signed in. Sign in on Todays Tasks and come back.');DM=0;save('data',0);ST=JSON.parse(JSON.stringify(SAMPLE));LIVE=null;render();return}
@@ -619,7 +620,7 @@ function isub(t){var lo=IM.lp===t.id,po=IM.pp===t.id,pl=window.PYMoves?PYMoves.p
  +'<button class="dst '+t.dest+(t.help&&t.tagmk?' mkt':'')+'" data-iw="'+t.id+'" title="Tap to switch">'+(t.dest==='today'?"Today's Todos":'Task Library')+'</button>'
  +(t.dest==='lib'&&pl.length?'<span class="lpw"><button class="plc'+(t.place?'':' none')+'" data-ip="'+t.id+'" title="Where it goes in the Task Library">'+(t.place?'› '+esc(PYMoves.placeText(t.place)):'pick a place')+' ▾</button>'
    +(po?'<div class="lpop ppop">'+pl.map(function(p){return '<button class="lchip pch d'+p.depth+(t.place&&t.place.id===p.id?' on':'')+'" data-ips="'+p.id+'" data-id="'+t.id+'">'+esc(p.name)+'</button>'}).join('')+'</div>':'')+'</span>':'')
- +'<button class="pop'+(t.popO?' on':'')+'" data-ipop="'+t.id+'" title="Popcorn: your original words">🍿</button></div>'
+ +'<button class="pop'+(t.popO?' on':'')+'" data-ipop="'+t.id+'" title="Popcorn: your original words">🍿</button>'+(t.sErr?'<span class="serr" title="This one has not saved. It will try again on your next tap.">not saved</span>':'')+'</div>'
  +(t.popO?'<div class="pp"><div class="ppl">🍿 Popcorn · as you pasted it</div><div class="ppt">“'+esc(t.raw)+'”</div></div>':'')}
 function irow(t){return '<div class="irow'+(t.lit?' lit':'')+'" data-t="'+t.id+'"><button class="star'+(t.star?' on':'')+'" data-is="'+t.id+'" title="Star it: a starred Today item lands in Todays Must Dos">'+(t.star?'★':'☆')+'</button><div><div class="ied" contenteditable="true" spellcheck="false" data-ied="'+t.id+'">'+imarked(t)+'</div>'+isub(t)+'</div>'
  +'<div class="iacts">'+(t.help?'<button class="iok" data-iok="'+t.id+'">✓ Looks good</button>':'')+'<button class="ix" data-idel="'+t.id+'" title="Delete this task">×</button></div></div>'}
@@ -658,9 +659,6 @@ function icut(){var t=ifind(IM.sel.id),o=IM.sel.o,piece=iclean(t.text.slice(o[0]
 /* ---------- saving: everything goes to the database ---------- */
 function rowFor(t){var r={task:t.text.trim(),section:t.label,owner:t.own==='Claude'?'claude':null,stage_guess:t.dest,staging_note:RAWP+t.raw,stage_conf:t.help?'help':null};if(t.est)r.est_minutes=t.est;if(t.star)r.starred=true;return r}
 function needSignIn(){if(window.PYMoves&&PYMoves.signedIn())return false;toast('Sign in on Todays Tasks first, then come back and send.');return true}
-function sendStaging(list){
- if(!list.length)return Promise.resolve([]);
- return PYMoves.insertStaged(list.map(rowFor)).then(function(rows){return rows})}
 /* one at a time, in order: each Today item takes the next slot above the Today line */
 function fileHome(t,row){var M=PYMoves,x={};if(t.star&&t.dest==='today'){x.star_color='yellow';x.starred=true}
  if(t.dest==='today')return M.toToday(row.id,t.label,x).then(function(){t.where='today';t.whereTxt="Today's Todos"});
@@ -676,7 +674,7 @@ function sendAll(){
  var p=Promise.resolve();
  /* one row at a time, in the order he sees them, so each Today item takes the next slot */
  all.forEach(function(t){
-  p=p.then(function(){return PYMoves.insertStaged([rowFor(t)])}).then(function(rows){var row=rows&&rows[0];
+  p=p.then(function(){return imRow(t)}).then(function(row){
    if(!row||!row.id){t.err='Not saved';S.err.push(t);return}
    if(t.help){return}
    return fileHome(t,row).then(function(){(t.where==='today'?S.today:S.lib).push(t)},function(e){t.err='Stayed in the Staging Area: '+(e&&e.message?e.message:'');S.stay.push(t)})
@@ -684,13 +682,6 @@ function sendAll(){
  });
  p.then(function(){IM.sent=S;IM.step=4;IM.busy=false;irender()});
 }
-function stageHelp(){
- if(IM.busy||needSignIn())return;
- var list=IM.tasks.filter(function(t){return t.help&&t.text.trim()});if(!list.length)return;
- IM.busy=true;irender();
- sendStaging(list).then(function(){IM.stagedRows=(IM.stagedRows||[]).concat(list);IM.staged=(IM.staged||0)+list.length;
-  IM.tasks=IM.tasks.filter(function(t){return list.indexOf(t)<0});IM.busy=false;toast(list.length+(list.length===1?' task':' tasks')+' sent to the Staging Area to sort later.');irender()},
-  function(e){IM.busy=false;toast('Did not save. '+(e&&e.message&&e.message.length<140?e.message:''));irender()})}
 /* "File All Tasks" under Needs your help: files every row in that group by its own tag (v2.4) */
 function fileHelpAll(){
  if(IM.busy||needSignIn())return;
@@ -702,7 +693,7 @@ function fileHelpAll(){
  var cT=0,cL=0,cS=0,cE=0,p=Promise.resolve();
  /* one row at a time, in the order he sees them, so each Today item takes the next slot */
  go.forEach(function(t){
-  p=p.then(function(){t.help=false;return PYMoves.insertStaged([rowFor(t)])}).then(function(rows){var row=rows&&rows[0];
+  p=p.then(function(){t.help=false;return imRow(t)}).then(function(row){
    if(!row||!row.id){cE++;return}
    return fileHome(t,row).then(function(){t.filed=true;if(t.where==='today')cT++;else cL++},
     function(){t.filed=true;cS++})
@@ -720,14 +711,50 @@ function fileHelpAll(){
 function closeImport(reload){IM={step:0,tasks:[],left:[],paste:'',sent:null,lp:null,pp:null,sel:null,busy:false};irender();
  if(reload){DM=1;save('data',1);goLive(false)}}
 
+/* ---------- the import list saves itself as he tags (his call, Nov 25, 2026) ----------
+   Each task becomes a real saved task the moment Claude splits the paste. It carries
+   stage_reviewing=true, so the main Staging Area list, the Todays Tasks waiting count
+   and Scotts Call all leave it alone until he sends or cancels. A reload, a crash or a
+   closed laptop can no longer take his tagging with them. */
+function imLive(){return !!(window.PYMoves&&PYMoves.signedIn())}
+function imBody(t){var b=rowFor(t);b.stage_reviewing=true;b.est_minutes=t.est||null;b.starred=!!t.star;return b}
+function imSeed(list){
+ list=(list||[]).filter(function(t){return t&&!t.rid&&t.text&&t.text.trim()});
+ if(!imLive()||!list.length)return Promise.resolve();
+ return PYMoves.insertStaged(list.map(imBody)).then(function(rows){
+  (rows||[]).forEach(function(row,k){if(list[k]&&row&&row.id){list[k].rid=row.id;list[k].sErr=false}});
+  irender()},function(){list.forEach(function(t){t.sErr=true});irender()})}
+function imSave(t){
+ if(!imLive()||!t)return Promise.resolve();
+ if(!t.rid)return imSeed([t]);
+ return PYMoves.patch(t.rid,imBody(t)).then(function(){if(t.sErr){t.sErr=false;irender()}},
+  function(){t.sErr=true;irender()})}
+var IMTM={};
+function imSaveSoon(t){if(!t)return;if(IMTM[t.id])clearTimeout(IMTM[t.id]);
+ IMTM[t.id]=setTimeout(function(){delete IMTM[t.id];imSave(t)},800)}
+/* a task he deletes here is archived, never destroyed, so it can still be dug out */
+function imGone(t){if(!imLive()||!t||!t.rid)return;var id=t.rid;t.rid=null;
+ PYMoves.patch(id,{archived:true,stage_reviewing:false}).catch(function(){})}
+/* leaving the review hands everything still on screen over to the Staging Area */
+function imRelease(){
+ if(!imLive())return Promise.resolve();
+ var l=IM.tasks.filter(function(t){return t.rid});if(!l.length)return Promise.resolve();
+ return Promise.all(l.map(function(t){var b=imBody(t);b.stage_reviewing=false;
+  return PYMoves.patch(t.rid,b).catch(function(){})}))}
+/* filing no longer inserts: the row already exists, so it is cleared of the review
+   flag and moved home. The insert is kept only for a row whose first save failed. */
+function imRow(t){var b=imBody(t);b.stage_reviewing=false;
+ if(t.rid)return PYMoves.patch(t.rid,b).then(function(r){return (r&&r.id)?r:{id:t.rid}});
+ return PYMoves.insertStaged([b]).then(function(rows){var r=rows&&rows[0];if(r&&r.id)t.rid=r.id;return r})}
+
 /* ---------- events ---------- */
 var IMP=$('#imp');
-IMP.addEventListener('input',function(e){var ed=e.target.closest('[data-ied]');if(ed){var t=ifind(ed.dataset.ied);if(t)t.text=ed.textContent;return}
- var m=e.target.dataset.ie;if(m){var v=e.target.value.replace(/[^0-9]/g,'').slice(0,3);if(v!==e.target.value)e.target.value=v;var t2=ifind(m);if(t2){t2.est=v?+v:null;t2.u.est=1}}});
+IMP.addEventListener('input',function(e){var ed=e.target.closest('[data-ied]');if(ed){var t=ifind(ed.dataset.ied);if(t){t.text=ed.textContent;imSaveSoon(t)}return}
+ var m=e.target.dataset.ie;if(m){var v=e.target.value.replace(/[^0-9]/g,'').slice(0,3);if(v!==e.target.value)e.target.value=v;var t2=ifind(m);if(t2){t2.est=v?+v:null;t2.u.est=1;imSaveSoon(t2)}}});
 IMP.addEventListener('keydown',function(e){var ed=e.target.closest('[data-ied]');if(!ed)return;var t=ifind(ed.dataset.ied),o=ioffs(ed);if(!t||!o)return;
- if(e.key==='Enter'){e.preventDefault();var before=iclean(t.text.slice(0,o[0])),after=iclean(t.text.slice(o[1]));t.text=before;var nt=iblank(t);nt.text=cap(after);nt.raw=t.raw;nt.mk=t.mk.slice();recheck(t);recheck(nt);IM.tasks.splice(iidx(t.id)+1,0,nt);irender(nt.id,0)}
- else if(e.key==='Backspace'&&o[0]===0&&o[1]===0){var ord=iorder(),k=ord.indexOf(t);if(k>0){e.preventDefault();var p=ord[k-1],at=p.text.length+1;p.text=iclean(p.text+' '+t.text);p.raw+='\n'+t.raw;p.mk=p.mk.concat(t.mk);recheck(p);IM.tasks.splice(iidx(t.id),1);irender(p.id,at)}}});
-IMP.addEventListener('focusout',function(e){var ed=e.target.closest&&e.target.closest('[data-ied]');if(ed){var t=ifind(ed.dataset.ied);if(t){t.text=iclean(t.text);recheck(t)}}});
+ if(e.key==='Enter'){e.preventDefault();var before=iclean(t.text.slice(0,o[0])),after=iclean(t.text.slice(o[1]));t.text=before;var nt=iblank(t);nt.text=cap(after);nt.raw=t.raw;nt.mk=t.mk.slice();recheck(t);recheck(nt);IM.tasks.splice(iidx(t.id)+1,0,nt);irender(nt.id,0);imSave(t);imSeed([nt])}
+ else if(e.key==='Backspace'&&o[0]===0&&o[1]===0){var ord=iorder(),k=ord.indexOf(t);if(k>0){e.preventDefault();var p=ord[k-1],at=p.text.length+1;p.text=iclean(p.text+' '+t.text);p.raw+='\n'+t.raw;p.mk=p.mk.concat(t.mk);recheck(p);IM.tasks.splice(iidx(t.id),1);irender(p.id,at);imGone(t);imSave(p)}}});
+IMP.addEventListener('focusout',function(e){var ed=e.target.closest&&e.target.closest('[data-ied]');if(ed){var t=ifind(ed.dataset.ied);if(t){t.text=iclean(t.text);recheck(t);imSaveSoon(t)}}});
 document.addEventListener('selectionchange',function(){var fb=$('#ifb');if(!fb)return;var s=getSelection();
  if(!s.rangeCount||s.isCollapsed){if(!fb.matches(':hover')&&!(document.activeElement&&document.activeElement.id==='imv')){fb.classList.remove('show');IM.sel=null}return}
  var an=s.anchorNode&&(s.anchorNode.nodeType===1?s.anchorNode:s.anchorNode.parentElement);var ed=an&&an.closest&&an.closest('[data-ied]');if(!ed||!IMP.contains(ed))return;
@@ -736,19 +763,20 @@ document.addEventListener('selectionchange',function(){var fb=$('#ifb');if(!fb)r
  $('#imv').innerHTML='<option value="">Move to ▾</option>'+iorder().filter(function(t){return t.id!==ed.dataset.ied}).map(function(t){return '<option value="'+t.id+'">'+esc(t.text.slice(0,40))+(t.text.length>40?'…':'')+'</option>'}).join('');
  fb.style.left=Math.max(4,Math.min(rr.left-br.left,br.width-300))+'px';fb.style.top=(rr.top-br.top-38)+'px';fb.classList.add('show')});
 IMP.addEventListener('change',function(e){if(e.target.id!=='imv'||!IM.sel||!e.target.value)return;var c=icut(),d=ifind(e.target.value);d.text=iclean(d.text+' '+c.piece);recheck(d);
- if(!c.t.text)IM.tasks.splice(iidx(c.t.id),1);else recheck(c.t);IM.sel=null;irender()});
+ if(!c.t.text){IM.tasks.splice(iidx(c.t.id),1);imGone(c.t)}else{recheck(c.t);imSave(c.t)}IM.sel=null;irender();imSave(d)});
 IMP.addEventListener('mousedown',function(e){if(e.target.closest('.fbar'))e.preventDefault()});
 IMP.addEventListener('click',function(e){e.stopPropagation();
  var row=e.target.closest('.irow');if(row&&!row.classList.contains('done')&&(!window.matchMedia||matchMedia('(hover:none)').matches)){var rt=ifind(row.dataset.t);if(rt&&!rt.lit){IM.tasks.forEach(function(x){x.lit=false});rt.lit=true;row.classList.add('lit');IMP.querySelectorAll('.irow.lit').forEach(function(r){if(r!==row)r.classList.remove('lit')})}}
  var b=e.target.closest('button');if(!b){if(IM.lp||IM.pp){IM.lp=IM.pp=null;irender()}return}
  var d=b.dataset,t;
- if(d.if&&IM.sel){var c=icut();if(d.if==='new'){var nt=iblank(c.t);nt.text=cap(c.piece);recheck(nt);IM.tasks.splice(iidx(c.t.id)+1,0,nt)}else IM.left.push(c.piece);
-  if(!c.t.text)IM.tasks.splice(iidx(c.t.id),1);else recheck(c.t);IM.sel=null;irender();return}
+ if(d.if&&IM.sel){var c=icut(),nt=null;if(d.if==='new'){nt=iblank(c.t);nt.text=cap(c.piece);recheck(nt);IM.tasks.splice(iidx(c.t.id)+1,0,nt)}else IM.left.push(c.piece);
+  if(!c.t.text){IM.tasks.splice(iidx(c.t.id),1);imGone(c.t)}else{recheck(c.t);imSave(c.t)}IM.sel=null;irender();if(nt)imSeed([nt]);return}
  if(d.ia==='open'){IM.step=1;if(window.PYMoves&&!PYMoves.places().length)PYMoves.loadPlaces().catch(function(){})}
- else if(d.ia==='close'){if(IM.step===3&&IM.tasks.length&&!confirm('Cancel this import? Nothing from it has been saved yet.'))return;closeImport(false);return}
+ else if(d.ia==='close'){if(IM.step===3&&IM.tasks.length&&!confirm('Stop reviewing? Everything here is already saved and waits for you in the Staging Area.'))return;
+  if(IM.step===3){IM.busy=true;irender();imRelease().then(function(){closeImport(true)});return}closeImport(false);return}
  else if(d.ia==='go'){var ta=$('#ita');IM.paste=ta?ta.value:IM.paste;if(!IM.paste.trim()){toast('Paste something first.');return}
   IM.step=2;irender();var P=(window.PYMoves&&PYMoves.signedIn()&&!PYMoves.places().length)?PYMoves.loadPlaces().catch(function(){}):Promise.resolve();
-  var t0=Date.now();P.then(function(){setTimeout(function(){IM.tasks=review(IM.paste);IM.left=[];IM.step=3;irender()},Math.max(0,450-(Date.now()-t0)))});return}
+  var t0=Date.now();P.then(function(){setTimeout(function(){IM.tasks=review(IM.paste);IM.left=[];IM.step=3;irender();imSeed(IM.tasks)},Math.max(0,450-(Date.now()-t0)))});return}
  else if(d.ia==='newt'){var n2=iblank(null);IM.tasks.push(n2);irender(n2.id,0);return}
  else if(d.ia==='send'){sendAll();return}
  else if(d.ia==='filehelp'){fileHelpAll();return}
@@ -762,9 +790,10 @@ IMP.addEventListener('click',function(e){e.stopPropagation();
  else if(d.ipop){t=ifind(d.ipop);t.popO=!t.popO}
  else if(d.is){t=ifind(d.is);t.star=!t.star}
  else if(d.iok){t=ifind(d.iok);t.help=false;t.tagmk=false}
- else if(d.idel){var k=iidx(d.idel);if(IM.tasks[k].text.trim())IM.left.push(IM.tasks[k].text);IM.tasks.splice(k,1)}
- else if(d.irs!==undefined){var tx=IM.left.splice(+d.irs,1)[0];var n3=iblank(null);n3.text=tx;n3.raw=tx;recheck(n3);IM.tasks.push(n3)}
+ else if(d.idel){var k=iidx(d.idel),dt=IM.tasks[k];if(dt.text.trim())IM.left.push(dt.text);IM.tasks.splice(k,1);imGone(dt)}
+ else if(d.irs!==undefined){var tx=IM.left.splice(+d.irs,1)[0];var n3=iblank(null);n3.text=tx;n3.raw=tx;recheck(n3);IM.tasks.push(n3);imSeed([n3])}
  else return;
+ if(t&&(d.io||d.iw||d.ils||d.ips||d.is||d.iok))imSave(t);
  irender()});
 irender();
 
