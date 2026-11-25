@@ -1,10 +1,12 @@
-/* What I made this week, habits dashboard banner. v1.2 (Nov 24, 2026).
+/* What I made this week, habits dashboard banner. v1.3 (Nov 24, 2026).
    Scott's weekly highlight reel. The window shade suggests what he made that week, he taps the
    ones worth showing off (or types his own and tags it with a label), presses "Take screenshots
    and build banner", and the closed strip becomes a contact sheet of real screenshots of those
    pages. Once built, only a tiny grey Edit at the bottom right opens it again.
    Picks live in made_items, labels in made_labels, pictures in made_shots. A picked page with no
    picture yet asks for one (a made_shots row with no image) and the overnight job takes it.
+   v1.3, Scott: the small "picture ready" note beside each suggestion is tiny and grey again (an
+   earlier edit dropped its styling by mistake).
    v1.2, Scott: opening the shade fetches every picture it already has, so "picture ready" and the
    live preview above are right before the button is pressed, not only after.
    v1.1, Scott: suggestion titles wrap instead of truncating, the repeated colour key at the bottom
@@ -52,7 +54,7 @@ var CSS=".wrap{font-family:Roboto,Arial,sans-serif;color:#1f2a44;position:relati
 +".opt[aria-pressed=true]{border-color:#3f6f8f;box-shadow:inset 0 0 0 1px #3f6f8f}"
 +".box{width:15px;height:15px;border-radius:4px;border:1.5px solid #c4ccd6;flex:none;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;line-height:1}"
 +".opt[aria-pressed=true] .box{background:#3f6f8f;border-color:#3f6f8f}"
-+".opt .t{flex:1;min-width:0;line-height:1.3}"+".opt .t em{display:block;font-style:normal;font-size:9.5px;color:#b3bcc7;letter-spacing:.2px;margin-top:2px}"+".box{margin-top:1px}"
++".opt .t{flex:1;min-width:0;line-height:1.3}"+".cam{font-size:9.5px;color:#b3bcc7;letter-spacing:.2px;white-space:nowrap;padding-top:2px}"+".opt .t em{display:block;font-style:normal;font-size:9.5px;color:#b3bcc7;letter-spacing:.2px;margin-top:2px}"+".box{margin-top:1px}"
 
 +".dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}"
 +".own{margin-top:10px;border:1px solid #e3e7ee;border-radius:8px;padding:9px 10px;background:#fbfcfd}"
