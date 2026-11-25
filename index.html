@@ -1605,6 +1605,12 @@
   #masterview .mcar:hover{color:#2f5a74;background:#eaf0f7}
   #masterview .mcar.none{cursor:default;visibility:hidden}
   #masterview .mbcount{flex:none;color:#b0b4bb;font-size:11px;font-weight:600}
+  /* v6.166: the box's own drag handle, and what a box looks like while it is moving */
+  #masterview .mblkhd{display:flex;align-items:baseline;gap:6px}
+  #masterview .mbgrip{flex:none;color:#c2c8d0;font-size:11px;cursor:grab;user-select:none;letter-spacing:-2px;touch-action:none}
+  #masterview .mbgrip:hover{color:#3f6f8f}
+  #masterview .mblk.sdragging{opacity:.4}
+  #masterview .mblk.sdropmark{box-shadow:0 0 0 2px #3f6f8f inset;border-radius:8px}
   #masterview .mrow .mnum{display:flex;align-items:center;gap:2px}
   #masterview .mwf:focus{white-space:normal;overflow:visible;text-overflow:clip}
 #masterview .madd2{display:block;font:inherit;font-size:12.5px;color:#8a93a1;background:none;border:0;
@@ -1791,7 +1797,7 @@
 
 <div id="app">
   <div class="pynav"><a href="mission.html" class="pn-logo"><img src="project-you-logo.png" alt="Project YOU"></a><span class="pn-group first"><span class="pn-label">To Do List</span><span class="pn-links"><a href="index.html" class="pn-link on">Todays<br>Tasks</a><a href="all-todos.html" class="pn-link">All<br>ToDos</a><a href="index.html#wheel" class="pn-link">Time Bandit<br>Wheel</a></span></span><span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link">Cue Cards</a><a href="habit-worksheets.html" class="pn-link">Habit<br>Worksheets</a></span></span><span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-log.html" class="pn-link">Habits<br>Tracker</a><a href="qs-wheel.html" class="pn-link">Clarity<br>Compass</a><a href="life-snapshot.html" class="pn-link">Life<br>Snapshot</a></span></span><span class="pn-group"><span class="pn-label">Editors</span><span class="pn-links"><a href="daily-template.html" class="pn-link">Daily<br>Habits</a><a href="style-guide.html" class="pn-link">Style<br>Guide</a></span></span><span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><a href="dfd.html" class="pn-link">Data Flow<br>Diagram</a><a href="blueprint.html" class="pn-link">Knowledge<br>Graph</a><a href="mission.html" class="pn-link">Mission<br>Control</a></span></span><span class="pn-group"><span class="pn-label">Parking Lot</span><span class="pn-links"><a href="future-travel.html" class="pn-link">Future<br>Travel</a><a href="connections.html" class="pn-link">Social</a><a href="movies.html" class="pn-link">Movies</a><a href="cheat-sheet.html" class="pn-link">Cheat<br>Sheet</a><a href="ai-tools.html" class="pn-link">AI<br>Tools</a></span></span><span class="pn-ver">v6.58</span><span style="display:flex;align-items:center;gap:10px;margin-left:8px;font-size:11.5px;color:#5b6270"><span class="synced">● live</span><a id="mastertoggle" class="vtoggle" style="cursor:pointer" title="Switch between the old board and the Master list">★ Master</a><a id="viewtoggle" class="vtoggle" style="cursor:pointer">🕐 Wheel</a><a id="s2btoggle" class="vtoggle" style="cursor:pointer" title="Show/hide the Send to All ToDos control on each task">⤳ Send-to: off</a><a id="undo" style="display:none;cursor:pointer">↶ undo</a><a id="signout" style="cursor:pointer">sign out</a></span><div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div><span id="whoami" style="display:none"></span><span id="who" style="display:none"></span></div>
-  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.165</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
+  <div class="wrap" style="max-width:1680px;margin:0 auto;padding:10px 16px 0"><div class="secbar"><h1>Todays Tasks</h1><span class="ver">v6.166</span><span class="date"></span><a class="waiting" id="waitchip" href="inbox.html" title="Captures from Drafts, waiting for you to approve them"></a></div></div>
   <div class="maincols">
     <aside class="calcol" id="calcol">
       <div class="cxwk" id="cxwk"></div>
@@ -9617,7 +9623,7 @@ async function mLoadLine(){
     const bt = await sb.from('board_meta').select('val').eq('key','block_titles').maybeSingle();
     if (bt.data && bt.data.val && typeof bt.data.val === 'object') M_BTITLES = bt.data.val;
     const bl = await sb.from('board_meta').select('val').eq('key','block_rows').maybeSingle();
-    if (bl.data && Array.isArray(bl.data.val) && bl.data.val.length){ M_BLOCKS = bl.data.val; mSyncBlockSecs(); }
+    if (bl.data && Array.isArray(bl.data.val) && bl.data.val.length){ M_BLOCKS = bl.data.val; mRenumberBlocks(); mSyncBlockSecs(); }
   }catch(e){}
 }
 async function mSaveLine(){
@@ -9877,6 +9883,73 @@ function mTaskLine(node, t, rowEl){
    editing the page. The list now lives with his data, so the button below and a
    chat can both add one. Each box keeps a hidden filing name of its own, so
    renaming a title never moves its tasks. */
+/* v6.166, Scott Nov 25: "move sections around by dragging and dropping, same way you
+   built the task library ability to move sections". Same feel as the Task Library's
+   section grip: hold the handle, a small label follows the pointer, the box you are
+   over lights up, and letting go drops it there. On a phone it waits for a hold so an
+   ordinary scroll does not pick a box up. Boxes run left to right, three to a row, so
+   moving one shuffles the rest along and the rows renumber themselves. */
+function mRenumberBlocks(){ M_BLOCKS.forEach((b, i) => { b[2] = Math.floor(i / 3) + 1; }); }
+async function mMoveBlock(fromSec, toSec, after){
+  const fi = M_BLOCKS.findIndex(b => b[0] === fromSec);
+  if (fi < 0 || fromSec === toSec) return;
+  const item = M_BLOCKS.splice(fi, 1)[0];
+  let ti = M_BLOCKS.findIndex(b => b[0] === toSec);
+  if (ti < 0) ti = M_BLOCKS.length - 1;
+  M_BLOCKS.splice(after ? ti + 1 : ti, 0, item);
+  mRenumberBlocks(); mSyncBlockSecs();
+  if (await mSaveBlocks()) toast('Moved ' + (M_BTITLES[fromSec] || 'that box') + '.');
+  render();
+}
+function mBlockDrag(grip, sec){
+  grip.addEventListener('pointerdown', function(e){
+    if (e.button && e.button !== 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const touch = e.pointerType !== 'mouse';
+    const mine = grip.closest('.mblk');
+    const sx = e.clientX, sy = e.clientY;
+    let started = false, holdT = null, ghost = null, markEl = null, drop = null;
+    const place = ev => { if (ghost){ ghost.style.left = (ev.clientX + 14) + 'px'; ghost.style.top = (ev.clientY + 10) + 'px'; } };
+    function begin(){
+      started = true; if (mine) mine.classList.add('sdragging'); document.body.style.userSelect = 'none';
+      ghost = document.createElement('div');
+      ghost.textContent = M_BTITLES[sec] || 'box';
+      ghost.style.cssText = 'position:fixed;z-index:9999;pointer-events:none;background:#fff;border:1px solid #dfe3ea;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.2);padding:5px 10px;font-size:12px;font-weight:700;color:#2b3137';
+      document.body.appendChild(ghost); place(e);
+    }
+    if (touch) holdT = setTimeout(begin, M_HOLD_MS); else begin();
+    const clearMark = () => { if (markEl){ markEl.classList.remove('sdropmark'); markEl = null; } };
+    function move(ev){
+      if (!started){
+        if (Math.abs(ev.clientX - sx) > M_HOLD_SLOP || Math.abs(ev.clientY - sy) > M_HOLD_SLOP){ clearTimeout(holdT); cleanup(false); }
+        return;
+      }
+      ev.preventDefault(); place(ev);
+      const over = document.elementFromPoint(ev.clientX, ev.clientY);
+      clearMark(); drop = null;
+      const blk = (over && over.closest) ? over.closest('.mblk') : null;
+      if (blk && blk !== mine && blk.dataset.sec){
+        const r = blk.getBoundingClientRect();
+        markEl = blk; blk.classList.add('sdropmark');
+        drop = { sec: blk.dataset.sec, after: (ev.clientX > r.left + r.width / 2) };
+      }
+    }
+    const up = () => { clearTimeout(holdT); cleanup(true); };
+    const cancel = () => { clearTimeout(holdT); cleanup(false); };
+    function cleanup(ok){
+      document.removeEventListener('pointermove', move, { passive:false });
+      document.removeEventListener('pointerup', up);
+      document.removeEventListener('pointercancel', cancel);
+      document.body.style.userSelect = ''; if (mine) mine.classList.remove('sdragging');
+      clearMark(); if (ghost && ghost.parentNode) ghost.parentNode.removeChild(ghost);
+      const d = drop, was = started; started = false; drop = null;
+      if (ok && was && d) mMoveBlock(sec, d.sec, d.after);
+    }
+    document.addEventListener('pointermove', move, { passive:false });
+    document.addEventListener('pointerup', up);
+    document.addEventListener('pointercancel', cancel);
+  });
+}
 function mSyncBlockSecs(){ M_BLOCK_SECS = M_BLOCKS.map(b => b[0]).concat(['Coming Appointments']); }
 async function mSaveBlocks(){
   try{ await sb.from('board_meta').upsert({ key:'block_rows', val: M_BLOCKS }, { onConflict:'key' }); return true; }
@@ -9888,10 +9961,9 @@ function mNextBoxNum(){
   return Math.max(n, M_BLOCKS.length) + 1;
 }
 async function mAddBlockRow(){
-  const rowN = M_BLOCKS.reduce((m, b) => Math.max(m, b[2] || 1), 0) + 1;
   const n = mNextBoxNum();
-  for (let i = 0; i < 3; i++) M_BLOCKS.push(['Today Box ' + (n + i), 'New box', rowN]);
-  mSyncBlockSecs();
+  for (let i = 0; i < 3; i++) M_BLOCKS.push(['Today Box ' + (n + i), 'New box', 1]);
+  mRenumberBlocks(); mSyncBlockSecs();
   if (await mSaveBlocks()) toast('Added a row of three. Tap a title to name it.');
   render();
 }
@@ -11039,6 +11111,9 @@ function _renderMasterInner(){
     if (!bRows[rowN]){ bRows[rowN] = el('div','mblkrow'); host.appendChild(bRows[rowN]); }
     const c = el('div','mcard'); const b = el('div','mblk'); b.dataset.mzone = 'box'; b.dataset.sec = sec;
     mBlkDropZone(b);
+    const hdw = el('div','mblkhd');
+    const sgrip = el('span','mbgrip','\u22EE\u22EE'); sgrip.title = 'Drag to move this box somewhere else';
+    mBlockDrag(sgrip, sec); hdw.appendChild(sgrip);
     const hd = el('h4', null, M_BTITLES[sec] || label);
     hd.contentEditable = 'true'; hd.spellcheck = false; hd.title = 'Tap to rename this box';
     hd.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); hd.blur(); } else if (e.key === 'Escape'){ hd.textContent = M_BTITLES[sec] || label; hd.blur(); } };
@@ -11050,7 +11125,7 @@ function _renderMasterInner(){
       try{ await sb.from('board_meta').upsert({ key:'block_titles', val: M_BTITLES }, { onConflict:'key' }); toast('Renamed to ' + v); }
       catch(e){ toast('That name did not save.'); }
     };
-    b.appendChild(hd);
+    hdw.appendChild(hd); b.appendChild(hdw);
     const rows = todos.filter(t => t.section === sec && !t.done && !t.skipped && !t.archived && !t.staged)
       .sort((a,b2)=> (a.position||0) - (b2.position||0));
     const bHid = mFoldHidden(rows);
