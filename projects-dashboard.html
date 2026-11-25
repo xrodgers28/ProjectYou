@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.1</title>
+<title>Projects Dashboard v2.2</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -206,6 +206,20 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .brief dd[contenteditable]{cursor:text;outline:0;min-height:1.2em}
 .brief dd[contenteditable]:empty::before{content:attr(data-ph);color:#c3cbd5}
 .btn.go{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700}
+
+/* v2.2: sources shade (Scott, Nov 25) */
+.srcs{margin:18px 0 6px;border:1px solid #e3e7ee;border-radius:10px;background:#fbfcfe}
+.srcs>button{all:unset;box-sizing:border-box;width:100%;display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;font-size:12px;color:#6b7686}
+.srcs>button b{font-weight:600;color:#46505e}
+.srcs .ch{margin-left:auto;transition:transform .15s}
+.srcs.open .ch{transform:rotate(180deg)}
+.srcs .sb{display:none;padding:2px 14px 10px;font-size:12px;color:#5b6472}
+.srcs.open .sb{display:block}
+.srcs ul{margin:4px 0 6px;padding:0;list-style:none;display:grid;gap:3px}
+.srcs li{display:flex;gap:8px;align-items:baseline}
+.srcs li a{color:var(--accent);text-decoration:none;font-weight:600}
+.srcs li a:hover{text-decoration:underline}
+.srcs .no{color:#9aa1ab;font-size:11.5px}
 </style><style id="tlnav-css">
 /* v2.8, Nov 22 2026 (Scott): the same panel tabs as Today and the Staging Area, Today first. */
 .tlnav{display:flex;align-items:stretch;background:#f7f9fc;border:1px solid #e3e7ee;border-radius:10px 10px 0 0;flex-wrap:wrap;margin:0 0 14px}
@@ -233,7 +247,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.1</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.2</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button></div>
@@ -241,6 +255,16 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
  <div class="hd"><b class="sn" id="pname">Project YOU</b><span class="cnt" id="pcnt"></span></div>
  <p class="nt">The top three above the green line are active. Open a row's Brief, check it, and tap Approve and run to hand it to Claude at the next pickup. One fun row unlocks each time you finish an active one. <span id="crossn"></span></p>
  <div class="pcols" id="pcols"><div class="pcol" id="col1"></div><div class="psplit"></div><div class="pcol" id="col2"></div></div>
+<div class="srcs" id="srcs"><button type="button" id="srcb" aria-expanded="false"><b>Sources</b><span id="srcsum">6 sources feed this list</span><span class="ch">&#9662;</span></button><div class="sb">
+<ul>
+<li><a href="inbox.html">Staging Area</a><span>New captures waiting to be sorted</span></li>
+<li><a href="index.html">To-do list and Task Library</a><span>Every task, linked to the project it belongs to</span></li>
+<li><b>Project YOU chats</b><span>Each chat is linked to its row</span></li>
+<li><b>TreadWell chats</b><span>Same, for the TreadWell tab</span></li>
+<li><b>All other project chats</b><span>Ideas filed from any chat land in New ideas</span></li>
+<li><b>Workflowy on your phone</b><span>Syncs into the to-do list; sync check is still open</span></li>
+</ul>
+<div class="no">Scheduled jobs are not a source. Claude's status and chat links come from the linked tasks.</div></div></div>
 </div></div>
 </div>
 <div class="toast" id="toast"></div>
@@ -324,7 +348,7 @@ function render(){
   if(B.ranked||/new$/.test(B.z)){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="Add to '+esc(B.name.replace(', ranked','').replace(', not yet ranked',''))+'" maxlength="160" data-add="'+B.z+'"><button class="btn" data-addb="'+B.z+'">Add</button>';w.appendChild(ar)}
   (B.col===1?c1:c2).appendChild(w);
  });
- $('#pcnt').textContent=tot;$('#pname').textContent=P.name;
+ $('#pcnt').textContent=tot;$('#srcsum').textContent='6 sources feed this list \u00b7 '+(D.items.py.length+D.items.tw.length+D.items.new.length+D.items.twnew.length)+' rows \u00b7 '+TASKS.length+' linked tasks \u00b7 '+CHATS.length+' linked chats';$('#pname').textContent=P.name;
  var ws=(function(){var n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));n.setHours(2,0,0,0);n.setDate(n.getDate()-((n.getDay()+6)%7));return n.getTime()})();
  var cw=D.crossings.filter(function(c){return new Date(c.at).getTime()>=ws}).length;
  $('#crossn').textContent=cw?'Moved into active this week: '+cw+'.':'';
@@ -343,6 +367,7 @@ async function insertTask(row,z,owner,answer,taskText){
  var q=await sb.from('todos').insert({section:'Projects',subsection:PROJ[projOf(z)].sub,task:taskText||row.t,bucket:'library',status:'todo',done:false,owner:owner,dash_row_id:row.id,claude_answer:answer,est_minutes:SIZE[row.sz]||null}).select().single();
  if(q.error){showToast('That did not save. '+q.error.message);return null}
  TASKS.push(q.data);return q.data}
+document.addEventListener('click',function(e){var s=e.target.closest('#srcb');if(s){var b=document.getElementById('srcs');b.classList.toggle('open');s.setAttribute('aria-expanded',b.classList.contains('open'))}});
 document.addEventListener('click',async function(e){var t=e.target.closest('button,[data-jump],.ptab')||e.target;
  if(t.classList&&t.classList.contains('ptab')){TAB=t.dataset.tab;try{localStorage.setItem(TKEY,TAB)}catch(x){}render();return}
  if(t.dataset.brief){OPEN[t.dataset.brief]=!OPEN[t.dataset.brief];var b=document.querySelector('.brief[data-bf="'+t.dataset.brief+'"]');if(b)b.classList.toggle('show',!!OPEN[t.dataset.brief]);return}
