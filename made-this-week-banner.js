@@ -1,10 +1,12 @@
-/* What I made this week, habits dashboard banner. v1.0 (Nov 24, 2026).
+/* What I made this week, habits dashboard banner. v1.1 (Nov 24, 2026).
    Scott's weekly highlight reel. The window shade suggests what he made that week, he taps the
    ones worth showing off (or types his own and tags it with a label), presses "Take screenshots
    and build banner", and the closed strip becomes a contact sheet of real screenshots of those
    pages. Once built, only a tiny grey Edit at the bottom right opens it again.
    Picks live in made_items, labels in made_labels, pictures in made_shots. A picked page with no
    picture yet asks for one (a made_shots row with no image) and the overnight job takes it.
+   v1.1, Scott: suggestion titles wrap instead of truncating, the repeated colour key at the bottom
+   is gone (the label chips are the key), and the tiny grey button reads Close while the shade is open.
    Shadow root, so no page styles leak in or out. The week runs Monday to Sunday and the day ends
    at 2am Eastern (PY.today when present). */
 (function(){
@@ -39,17 +41,17 @@ var CSS=".wrap{font-family:Roboto,Arial,sans-serif;color:#1f2a44;position:relati
 +".pip{position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 2px rgba(255,255,255,.92)}"
 +".empty{flex:1;height:98px;border:1px dashed #d4dbe4;border-radius:7px;display:flex;align-items:center;justify-content:center;gap:12px;color:#9aa6b4;font-size:12.5px}"
 +".edit{position:absolute;right:0;bottom:-2px;font:inherit;font-size:11px;color:#a9afb8;background:none;border:0;padding:2px 3px;cursor:pointer}"
-+".edit:hover{color:#5b6472}"
++".edit:hover{color:#5b6472}"+".edit.up{top:4px;bottom:auto}"
 +".shade{border-top:1px solid #e3e7ee;padding:12px 0 4px}"
 +".lead{margin:0 0 9px;font-size:12px;color:#5b6472}"
-+".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:7px}"
-+".opt{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font:inherit;font-size:12.5px;color:#1f2a44;background:#fff;border:1px solid #e3e7ee;border-radius:8px;padding:7px 9px;cursor:pointer}"
++".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(252px,1fr));gap:7px}"
++".opt{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;font:inherit;font-size:12.5px;color:#1f2a44;background:#fff;border:1px solid #e3e7ee;border-radius:8px;padding:7px 9px;cursor:pointer}"
 +".opt:hover{border-color:#c6d0dc}"
 +".opt[aria-pressed=true]{border-color:#3f6f8f;box-shadow:inset 0 0 0 1px #3f6f8f}"
 +".box{width:15px;height:15px;border-radius:4px;border:1.5px solid #c4ccd6;flex:none;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fff;line-height:1}"
 +".opt[aria-pressed=true] .box{background:#3f6f8f;border-color:#3f6f8f}"
-+".opt .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"
-+".cam{font-size:9.5px;color:#b3bcc7;letter-spacing:.2px;white-space:nowrap}"
++".opt .t{flex:1;min-width:0;line-height:1.3}"+".opt .t em{display:block;font-style:normal;font-size:9.5px;color:#b3bcc7;letter-spacing:.2px;margin-top:2px}"+".box{margin-top:1px}"
+
 +".dot{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}"
 +".own{margin-top:10px;border:1px solid #e3e7ee;border-radius:8px;padding:9px 10px;background:#fbfcfd}"
 +".own h4{margin:0 0 7px;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:#9aa6b4;font-weight:700}"
@@ -104,12 +106,12 @@ function mount(host){
    +'<button class="chip" type="button" data-a="newlab">+ New label</button></div>';
   if(newlab)h+='<div class="r" style="margin-top:8px"><input id="nl" type="text" placeholder="Family Planning" aria-label="New label name"><button class="b" type="button" data-a="savelab">Save label</button></div>';
   h+='</div><p class="err">'+esc(err)+'</p>';
-  h+='<div class="foot"><div class="legend">'+labels.map(function(l){return '<span><i class="dot" style="background:'+l.color+'"></i>'+esc(l.name)+'</span>'}).join('')+'</div><span class="st">'+esc(stat)+'</span>'
+  h+='<div class="foot"><span class="st">'+esc(stat)+'</span>'
    +'<button class="go" type="button" data-a="build"'+(busy?' disabled':'')+'>'+(busy?'Taking screenshots...':'Take screenshots and build banner')+'</button></div></div>';
   return h}
 
  function render(){
-  root.innerHTML='<style>'+CSS+'</style><div class="wrap">'+stripHTML()+(open?shadeHTML():'')+(picks().length&&!open?'<button class="edit" type="button" data-a="open">Edit</button>':'')+'</div>';
+  root.innerHTML='<style>'+CSS+'</style><div class="wrap">'+stripHTML()+(open?shadeHTML():'')+((picks().length||open)?'<button class="edit'+(open?' up':'')+'" type="button" data-a="open">'+(open?'Close':'Edit')+'</button>':'')+'</div>';
   if(open){var o=$('#own');if(o&&draft)o.setSelectionRange(draft.length,draft.length)}}
 
  root.addEventListener('input',function(e){if(e.target&&e.target.id==='own')draft=e.target.value});
