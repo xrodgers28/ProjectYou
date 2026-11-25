@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morning Report, Nov 25, 2026</title>
+<style>
+  :root{
+    --bg:#f4f2ee; --panel:#ffffff; --ink:#23262b; --soft:#5b616b; --faint:#8a909a;
+    --line:#e2ddd4; --chip:#eceae4; --shade:#f8f6f2;
+    --do:#3f6f8f; --tell:#c07f10; --did:#2f8f5b; --read:#6f7b8a; --kill:#a8724a;
+    --green:#2f8f5b; --amber:#c07f10; --red:#b4493b; --grey:#8a909a;
+    --pin:#fbf8f1; --pinline:#e8dfca;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#17191d; --panel:#1f2329; --ink:#e9eaed; --soft:#aeb4bd; --faint:#7b818b;
+      --line:#2f343b; --chip:#272c33; --shade:#1b1f24;
+      --do:#5f93b4; --tell:#d79a33; --did:#4faf7b; --read:#8d99a8; --kill:#c48c63;
+      --green:#4faf7b; --amber:#d79a33; --red:#d1685a; --grey:#8d99a8;
+      --pin:#20242b; --pinline:#39414c;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#17191d; --panel:#1f2329; --ink:#e9eaed; --soft:#aeb4bd; --faint:#7b818b;
+    --line:#2f343b; --chip:#272c33; --shade:#1b1f24;
+    --do:#5f93b4; --tell:#d79a33; --did:#4faf7b; --read:#8d99a8; --kill:#c48c63;
+    --green:#4faf7b; --amber:#d79a33; --red:#d1685a; --grey:#8d99a8;
+    --pin:#20242b; --pinline:#39414c;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:Arial, Helvetica, sans-serif; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px; margin:0 auto; padding:20px 16px 64px;}
+  header.top{padding:6px 2px 10px;}
+  .daydate{color:var(--soft); font-size:13px; letter-spacing:.02em;}
+  h1{font-size:24px; margin:4px 0 2px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .vchip{font-size:11px; font-weight:bold; color:var(--soft); background:var(--chip);
+    border:1px solid var(--line); border-radius:999px; padding:2px 9px;}
+  .lede{color:var(--soft); font-size:14px; margin:2px 0 0;}
+
+  /* pinned transport */
+  .pin{position:sticky; top:0; z-index:20; background:var(--pin);
+    border:1px solid var(--pinline); border-radius:12px; padding:12px; margin:14px 0 10px;
+    box-shadow:0 2px 10px rgba(0,0,0,.05);}
+  .pin h2{font-size:13px; margin:0 0 6px; color:var(--ink);}
+  .pin p.hint{font-size:12px; color:var(--soft); margin:0 0 8px;}
+  #answers{width:100%; min-height:84px; resize:vertical; font-family:Arial, Helvetica, sans-serif;
+    font-size:13px; color:var(--ink); background:var(--panel); border:1px solid var(--line);
+    border-radius:8px; padding:9px; line-height:1.45;}
+  .pinrow{display:flex; gap:8px; align-items:center; margin-top:8px; flex-wrap:wrap;}
+  .copybtn{font-size:13px; font-weight:bold; color:#fff; background:var(--do); border:1px solid var(--do);
+    border-radius:8px; padding:8px 14px; cursor:pointer;}
+  .copybtn:active{transform:translateY(1px);}
+  .pinnote{font-size:12px; color:var(--faint);}
+
+  /* key */
+  .key{background:var(--shade); border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; margin:0 0 16px; font-size:12.5px; color:var(--soft);}
+  .key b{color:var(--ink);}
+  .key ul{margin:6px 0 0; padding-left:0; list-style:none;}
+  .key li{margin:4px 0; display:flex; gap:8px; align-items:flex-start;}
+  .kdot{flex:0 0 auto; width:10px; height:10px; border-radius:3px; margin-top:4px;}
+
+  /* rows */
+  .row{background:var(--panel); border:1px solid var(--line); border-left:5px solid var(--line);
+    border-radius:12px; padding:14px 16px; margin:0 0 12px;}
+  .row.tapped{border-left-width:5px;}
+  .rhead{display:flex; gap:10px; align-items:flex-start;}
+  .light{flex:0 0 auto; width:12px; height:12px; border-radius:50%; margin-top:5px;}
+  .light.green{background:var(--green);}
+  .light.amber{background:var(--amber);}
+  .light.red{background:var(--red);}
+  .light.grey{background:var(--grey);}
+  .rtitle{font-size:16px; font-weight:bold; margin:0;}
+  .rbody{color:var(--soft); font-size:14px; margin:8px 0 0;}
+  .rnext{font-size:13px; margin:10px 0 0; color:var(--ink);}
+  .rnext b{color:var(--ink);}
+  .btns{display:flex; gap:7px; flex-wrap:wrap; margin-top:12px;}
+  .btns button{font-size:12.5px; font-weight:bold; color:#fff; border:none; border-radius:8px;
+    padding:8px 12px; cursor:pointer; opacity:.92;}
+  .btns button:hover{opacity:1;}
+  .btns button:active{transform:translateY(1px);}
+  .b-do{background:var(--do);} .b-tell{background:var(--tell);}
+  .b-did{background:var(--did);} .b-read{background:var(--read);} .b-kill{background:var(--kill);}
+  .state{font-size:12px; color:var(--faint); margin-top:8px; min-height:14px;}
+  .state.open{color:var(--do);}
+  .cmt{width:100%; margin-top:10px; font-family:Arial, Helvetica, sans-serif; font-size:13px;
+    color:var(--ink); background:var(--shade); border:1px solid var(--line); border-radius:8px;
+    padding:8px; resize:vertical; min-height:36px;}
+  .sec{font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint);
+    margin:18px 2px 8px; font-weight:bold;}
+
+  .habit{background:var(--shade); border:1px dashed var(--line); border-radius:12px;
+    padding:12px 14px; margin:4px 0 18px; font-size:13px; color:var(--soft);}
+  .habit b{color:var(--ink);}
+
+  .proof{font-size:11.5px; color:var(--faint); margin:22px 2px 0; padding-top:12px;
+    border-top:1px solid var(--line); line-height:1.5;}
+  @media (max-width:640px){ h1{font-size:21px;} .btns button{flex:1 1 auto;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="daydate">Wednesday, Nov 25, 2026 &middot; 5:00am ET</div>
+    <h1>Morning Report <span class="vchip">v1.0</span></h1>
+    <p class="lede">A light travel day before the holiday. Ten things below, most just to read. Tap your answer on each, then copy the box at the top back into the chat.</p>
+  </header>
+
+  <section class="pin" aria-label="Your answers to copy back">
+    <h2>Your answers (copy this back to me)</h2>
+    <p class="hint">This box fills in as you tap. It is how your answers reach me, so copy all of it into the chat when you are done.</p>
+    <textarea id="answers" readonly aria-live="polite">Nothing tapped yet.</textarea>
+    <div class="pinrow">
+      <button class="copybtn" id="copy">Copy my answers</button>
+      <span class="pinnote">If copy does not work in the panel, select the text and copy it by hand.</span>
+    </div>
+  </section>
+
+  <div class="key">
+    <b>What the five buttons mean</b>
+    <ul>
+      <li><span class="kdot" style="background:var(--do)"></span><span><b>Do this</b>: go and do it. This is an instruction, not an answer, so the item stays open until the work is done.</span></li>
+      <li><span class="kdot" style="background:var(--tell)"></span><span><b>Tell me more</b>: you lean yes but want the cost or reasoning first. Your question goes in the box and the item stays open.</span></li>
+      <li><span class="kdot" style="background:var(--did)"></span><span><b>I did it</b>: you handled it yourself. Item settled.</span></li>
+      <li><span class="kdot" style="background:var(--read)"></span><span><b>I read this</b>: just noting you saw it. Nothing owed. Item settled.</span></li>
+      <li><span class="kdot" style="background:var(--kill)"></span><span><b>Kill this task</b>: drop it, and it will not come back as a question.</span></li>
+    </ul>
+  </div>
+
+  <div class="sec">Today</div>
+  <div id="rows-today"></div>
+
+  <div class="sec">Your inbox</div>
+  <div id="rows-email"></div>
+
+  <div class="sec">Overnight</div>
+  <div id="rows-night"></div>
+
+  <div class="habit">
+    <b>One small habit.</b> Atomic Habits calls it the two-minute rule: shrink a stalled chore until starting takes two minutes. Your capture inbox has 63 old notes. You do not have to clear all of them, just tap "Do this" on that row and the starting is handled for you.
+  </div>
+
+  <div class="sec">Keep or toss, and where things stand</div>
+  <div id="rows-rest"></div>
+
+  <div class="proof" id="proof"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  // ---- data: every finding is a row ----
+  var ROWS = [
+    { g:"rows-today", light:"green",
+      title:"Travel day: you head to the Vineyard tonight",
+      body:"Your calendar stays quiet until late afternoon. You leave for squash at 4:30pm ET, and the Steamship Authority ferry from Woods Hole to Vineyard Haven boards at 6:15pm ET, so aim to be at the terminal by about 5:45pm. Thanksgiving is tomorrow, so today is mostly getting there.",
+      next:"Nothing here needs a reply. Safe travels." },
+
+    { g:"rows-today", light:"amber",
+      title:"Your 3pm nudge to call Dr. Shajan is set again",
+      body:"You have a daily reminder at 3:00pm ET to ask Dr. Shajan's office for a slot earlier than Dec 29, 2026. It repeats every day until you lock in a sooner date, then it removes itself. On a holiday-week travel day the office may close early, so a morning call could land better.",
+      next:"Call the office, then tap “I did it,” or “Kill this task” to stop the daily nudge." },
+
+    { g:"rows-email", light:"amber",
+      title:"Åsa is still adding Max's finance contacts and waiting on that shared doc",
+      body:"Åsa sent more NYC finance names over the last two days, the newest last night at 9:04pm ET (Julie Lindbo, who she had coffee with). Back on Nov 23 she asked whether you had set up the shared Google doc where she and your dad can keep adding names for Max. Right now the names are scattered across her emails. I can set up one clean shared doc and drop in every name she has sent so far.",
+      next:"Tap “Do this” and I will set up the shared contacts doc, or “I did it” if you already made one." },
+
+    { g:"rows-email", light:"grey",
+      title:"Two family notes from Todd came in",
+      body:"Todd sent the group an upbeat report on Barb and his notes from the Nov 24, 2026 Garden View meeting, both to you, Pat and Francois. They read as updates for the family rather than anything that needs your reply.",
+      next:"Nothing owed, unless you want to chime in." },
+
+    { g:"rows-night", light:"red",
+      title:"Your overnight to-do batch did not clock in again last night",
+      body:"The jobs that run on their own all worked fine: your system maps were checked at 3:20am ET, the TreadWell Antigua sync at 3:18am, the AI ideas restock at 4:18am, and your Antigua trip pull at 4:43am, plus your to-do pickup at 8:17pm ET. But the main overnight work queue left no record of running at all, the same as recent nights. Either it never started or it ran silently, and I cannot tell which from here.",
+      next:"Tap “Do this” to have me dig into why the overnight queue stopped leaving a record, or “I read this” to leave it for now." },
+
+    { g:"rows-night", light:"amber",
+      title:"The overnight map check found your five system maps badly out of date",
+      body:"Your “Automated Tracking” map still says your health and activity feeds went quiet back on Sep 4 and never returned, which is about 82 days stale, and both have written plenty since. The maps also miss two things that are now live: the new “What I made this week” banner on your dashboard, and the Workflowy sync, which is genuinely running now after many nights of being reported dead. The maps' hand-typed numbers are all low, so they undersell what you actually have. I checked those numbers against your live system and the live ones are right.",
+      next:"Tap “Do this” to bring the five maps current, or “Kill this task” if the maps can wait." },
+
+    { g:"rows-rest", light:"amber",
+      title:"Two fresh AI agent ideas are waiting for your keep-or-toss",
+      body:"Your AI ideas card restocked this morning with two for Nov 28, 2026: a calendar that plans your tasks for you, and a daily receipt collector that fills a spreadsheet. They sit on your AI Workout card, along with about a dozen earlier ones you have not yet sorted. None of it is urgent, it is just a pile that grows until you give it your taste.",
+      next:"Tap “I read this,” and sort them on the dashboard when you have a minute." },
+
+    { g:"rows-rest", light:"amber",
+      title:"63 old notes are still sitting in your capture inbox",
+      body:"Most are quick notes you dictated, with the newest from early September, plus one older editor note from August. They have been waiting to be sorted into the right home for a while. Clearing them would take me one pass.",
+      next:"Tap “Do this” and I will route them to the right places, or “I read this” to leave them." },
+
+    { g:"rows-rest", light:"grey",
+      title:"Where your projects stand this morning",
+      body:"Project YOU holds the bulk of the open work, with 14 items specifically waiting on your input. TreadWell has one open item: listening to Mike Cann's feedback recording from the Aug 7 call, still unopened. Your other spaces (CrushingIt, Clever Phrases, AI Intelligence and the 2026 Calendar) live in your Mac folder, which is not connected at this early hour, so I could not read their current state.",
+      next:"Nothing to do. Tap “I read this.”" },
+
+    { g:"rows-rest", light:"grey",
+      title:"Your Claude weekly usage",
+      body:"I cannot read your usage meter from inside this run, so I will not guess a number. You can see where you stand on your weekly limit in your Claude settings. If it would help, I can look into a way to surface it on your dashboard.",
+      next:"Tap “I read this.”" }
+  ];
+
+  var BTNS = [
+    {k:"Do this",       cls:"b-do",   open:true },
+    {k:"Tell me more",  cls:"b-tell", open:true },
+    {k:"I did it",      cls:"b-did",  open:false},
+    {k:"I read this",   cls:"b-read", open:false},
+    {k:"Kill this task",cls:"b-kill", open:false}
+  ];
+  var BORDER = {
+    "Do this":"var(--do)","Tell me more":"var(--tell)","I did it":"var(--did)",
+    "I read this":"var(--read)","Kill this task":"var(--kill)"
+  };
+
+  var state = {}; // in memory only, nothing is stored
+
+  function esc(s){ return String(s).replace(/[&<>]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;"}[c];}); }
+
+  function rebuild(){
+    var lines = [];
+    ROWS.forEach(function(r,i){
+      var s = state[i];
+      if(!s || !s.btn) return;
+      var line = "• " + r.title + " — [" + s.btn + "]";
+      if(s.cmt && s.cmt.trim()) line += "  note: " + s.cmt.trim();
+      lines.push(line);
+    });
+    var ta = document.getElementById("answers");
+    ta.value = lines.length ? lines.join("\n") : "Nothing tapped yet.";
+  }
+
+  function render(){
+    ROWS.forEach(function(r,i){
+      var host = document.getElementById(r.g);
+      var row = document.createElement("div");
+      row.className = "row";
+      row.id = "row-"+i;
+
+      var head = '<div class="rhead"><span class="light '+r.light+'"></span>'+
+                 '<p class="rtitle">'+esc(r.title)+'</p></div>'+
+                 '<p class="rbody">'+esc(r.body)+'</p>'+
+                 '<p class="rnext"><b>What you do next:</b> '+esc(r.next)+'</p>';
+
+      var btns = '<div class="btns">';
+      BTNS.forEach(function(b){
+        btns += '<button class="'+b.cls+'" data-row="'+i+'" data-btn="'+esc(b.k)+'" data-open="'+b.open+'">'+esc(b.k)+'</button>';
+      });
+      btns += '</div>';
+
+      var st = '<div class="state" id="state-'+i+'"></div>';
+      var cmt = '<textarea class="cmt" id="cmt-'+i+'" placeholder="Add a note here (optional)"></textarea>';
+
+      row.innerHTML = head + btns + st + cmt;
+      host.appendChild(row);
+
+      row.querySelector("#cmt-"+i).addEventListener("input", function(e){
+        if(!state[i]) state[i] = {};
+        state[i].cmt = e.target.value;
+        rebuild();
+      });
+    });
+
+    document.querySelectorAll(".btns button").forEach(function(btn){
+      btn.addEventListener("click", function(){
+        var i = +btn.getAttribute("data-row");
+        var label = btn.getAttribute("data-btn");
+        var open = btn.getAttribute("data-open") === "true";
+        if(!state[i]) state[i] = {};
+        state[i].btn = label;
+        var row = document.getElementById("row-"+i);
+        row.classList.add("tapped");
+        row.style.borderLeftColor = BORDER[label];
+        var st = document.getElementById("state-"+i);
+        if(open){
+          st.className = "state open";
+          st.textContent = (label === "Do this")
+            ? "Marked for me to do. This stays open until it is done."
+            : "I will come back with the detail. This stays open.";
+        } else {
+          st.className = "state";
+          var word = label === "I did it" ? "Done by you." :
+                     label === "I read this" ? "Noted." : "Dropped.";
+          st.textContent = word + " Settled.";
+        }
+        rebuild();
+      });
+    });
+  }
+
+  function copy(){
+    var ta = document.getElementById("answers");
+    ta.removeAttribute("readonly");
+    ta.select(); ta.setSelectionRange(0, 99999);
+    var ok = false;
+    try { ok = document.execCommand("copy"); } catch(e){ ok = false; }
+    if(navigator.clipboard){
+      navigator.clipboard.writeText(ta.value).then(function(){},function(){});
+    }
+    ta.setAttribute("readonly","");
+    var b = document.getElementById("copy");
+    var old = b.textContent;
+    b.textContent = ok ? "Copied" : "Select the text above";
+    setTimeout(function(){ b.textContent = old; }, 1600);
+  }
+
+  document.getElementById("copy").addEventListener("click", copy);
+
+  document.getElementById("proof").textContent =
+    "Technical note (ignore unless curious): page morning-report-2026-11-25.html, built 5:00am ET Nov 25, 2026. " +
+    "Overnight check: run_log shows no row for the Nov 24 to 25 queue run; scheduled jobs for the map check, TripIt pull, AI tiles and TreadWell sync all reported success. " +
+    "Map-check figures verified live: health readings 18,265 and Swarm check-ins 9,036 matched the stored counts exactly. No desktop folder connection available this run.";
+
+  render();
+  rebuild();
+})();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
