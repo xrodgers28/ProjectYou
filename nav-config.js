@@ -16,7 +16,9 @@ window.NAV_CONFIG = {
     /* Oct 9 2026, Scott, nav simplification: Staging Area (scotts-call.html) and Claude's List
        (claudes-list.html) came off the bar. Both pages still work. Moving the links switched nothing off
        (three idle background jobs were paused separately). They now sit on Mission Control, Launch tab, Tools & pages, next to All ToDos. */
-    { "label": "Calendar", "href": "calendar.html" }
+    { "label": "Calendar", "href": "calendar.html" },
+    /* Nov 25 2026, Scott: Projects is its own item in the bar, right after Todays Tasks and Calendar. The board moved here from the Cue Cards page. */
+    { "label": "Projects", "href": "projects.html" }
   ],
   /* Calendar (Aug 29 2026, Scott). ONE slot in the top bar, in line with the
      sub-nav principle: the bar holds sections, and the two ways of looking at
