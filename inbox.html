@@ -211,7 +211,7 @@ try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
 window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
 <style>html.embed.calshut .wrap{max-width:none}</style>
 </head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.3</span><span class="date" id="today"></span></div>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.4</span><span class="date" id="today"></span></div>
 <p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green button at the bottom of a section to file everything in it. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
@@ -238,7 +238,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 <div><b>v0.20</b> Playable Staging Area, label, owner, star and link &middot; <a href="https://claude.ai/artifact/Vd3QU7DiTe7CnWwzrM23mj">open</a></div>
 <div><b>Build plan v0.17</b> The 375-minute plan this was built from &middot; <a href="https://claude.ai/artifact/9ocMs1oQ9wtnqNLxuifdHT">open</a></div>
 </div></div></div></div>
-<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.3 &middot; Nov 24, 2026</span></footer>
+<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.4 &middot; Nov 25, 2026</span></footer>
 </div><div id="tst"></div>
 <script src="pills-config.js"></script>
 <script src="task-moves.js"></script>
@@ -641,10 +641,10 @@ function irender(focusId,caret){var el=$('#imp'),h='';if(!el)return;
  else {var n=IM.tasks.filter(function(t){return t.help}),r=IM.tasks.filter(function(t){return !t.help});
   h='<div class="prevhead">Claude reviewed your paste<span class="sp"></span><button class="btn" data-ia="newt">+ New task</button></div>'
   +'<div class="hint"><b>Highlight</b> words to move or delete them · <b>Enter</b> splits a task · <b>Backspace</b> at the start joins it to the one above</div>'
-  +'<div class="sec">Needs your help</div>'+(n.length?n.map(irow).join('')+'<div class="sendrow"><button class="sbtn blue" data-ia="stageall"'+(IM.busy?' disabled':'')+'>Send to Staging Area</button></div>':'<div class="empty">All sorted.</div>')
-  +'<div class="sec g">Ready to File</div>'+(r.map(irow).join('')||'<div class="empty">Nothing ready yet.</div>')
+  +'<div class="sec">Needs your help</div>'+(n.length?n.map(irow).join('')+'<div class="sendrow"><button class="sbtn green" data-ia="filehelp"'+(IM.busy?' disabled':'')+'>File All Tasks</button></div>':'<div class="empty">All sorted.</div>')
+  +'<div class="sec g">Ready to File</div>'+(r.length?r.map(irow).join('')+'<div class="sendrow"><button class="sbtn green" data-ia="send"'+(IM.busy?' disabled':'')+'>File All Tasks</button></div>':'<div class="empty">Nothing ready yet.</div>')
   +(IM.left.length?'<div class="left"><div class="lt">Left out</div>'+IM.left.map(function(l,k){return '<div class="li"><span>'+esc(l)+'</span><button class="lnk" data-irs="'+k+'">restore</button></div>'}).join('')+'</div>':'')
-  +'<div class="addbar"><button class="sbtn green" data-ia="send"'+(IM.busy?' disabled':'')+'>Send to Task Library</button><span class="note">'+isplit()+'</span><button class="lnk" data-ia="close" style="margin-left:auto">Cancel import</button></div>'
+  +'<div class="addbar"><span class="note">'+isplit()+'</span><button class="lnk" data-ia="close" style="margin-left:auto">Cancel import</button></div>'
   +'<div class="fbar" id="ifb"><select id="imv"><option value="">Move to ▾</option></select><i></i><button data-if="new">＋ New task</button><i></i><button data-if="del">Delete</button></div>'}
  el.innerHTML=h;
  if(IM.step===1){var ta=$('#ita');if(ta){ta.focus();ta.addEventListener('input',function(){IM.paste=ta.value})}}
@@ -691,6 +691,32 @@ function stageHelp(){
  sendStaging(list).then(function(){IM.stagedRows=(IM.stagedRows||[]).concat(list);IM.staged=(IM.staged||0)+list.length;
   IM.tasks=IM.tasks.filter(function(t){return list.indexOf(t)<0});IM.busy=false;toast(list.length+(list.length===1?' task':' tasks')+' sent to the Staging Area to sort later.');irender()},
   function(e){IM.busy=false;toast('Did not save. '+(e&&e.message&&e.message.length<140?e.message:''));irender()})}
+/* "File All Tasks" under Needs your help: files every row in that group by its own tag (v2.4) */
+function fileHelpAll(){
+ if(IM.busy||needSignIn())return;
+ var list=IM.tasks.filter(function(t){return t.help&&t.text.trim()});if(!list.length)return;
+ /* a Task Library row with no place picked cannot be filed, so it stays put rather than getting lost */
+ var go=list.filter(function(t){return !(t.dest==='lib'&&!t.place)}),noPlace=list.length-go.length;
+ if(!go.length){toast('Pick a place in the Task Library first.');return}
+ IM.busy=true;irender();
+ var cT=0,cL=0,cS=0,cE=0,p=Promise.resolve();
+ /* one row at a time, in the order he sees them, so each Today item takes the next slot */
+ go.forEach(function(t){
+  p=p.then(function(){t.help=false;return PYMoves.insertStaged([rowFor(t)])}).then(function(rows){var row=rows&&rows[0];
+   if(!row||!row.id){cE++;return}
+   return fileHome(t,row).then(function(){t.filed=true;if(t.where==='today')cT++;else cL++},
+    function(){t.filed=true;cS++})
+  },function(){cE++});
+ });
+ p.then(function(){
+  IM.tasks=IM.tasks.filter(function(t){return !t.filed});
+  IM.busy=false;
+  var m=cT+" to Today's Todos \u00b7 "+cL+' to the Task Library';
+  if(cS)m+=' \u00b7 '+cS+' waiting in the Staging Area';
+  if(noPlace)m+=' \u00b7 '+noPlace+' still need a place';
+  if(cE)m+=' \u00b7 '+cE+' did not save';
+  toast(m);irender()});
+}
 function closeImport(reload){IM={step:0,tasks:[],left:[],paste:'',sent:null,lp:null,pp:null,sel:null,busy:false};irender();
  if(reload){DM=1;save('data',1);goLive(false)}}
 
@@ -725,7 +751,7 @@ IMP.addEventListener('click',function(e){e.stopPropagation();
   var t0=Date.now();P.then(function(){setTimeout(function(){IM.tasks=review(IM.paste);IM.left=[];IM.step=3;irender()},Math.max(0,450-(Date.now()-t0)))});return}
  else if(d.ia==='newt'){var n2=iblank(null);IM.tasks.push(n2);irender(n2.id,0);return}
  else if(d.ia==='send'){sendAll();return}
- else if(d.ia==='stageall'){stageHelp();return}
+ else if(d.ia==='filehelp'){fileHelpAll();return}
  else if(d.ia==='done'){closeImport(true);return}
  else if(d.io){t=ifind(d.io);t.own=t.own==='Claude'?'Mine':'Claude';t.u.own=1;if(!t.u.est)t.est=guessEst(t.text,t.own)}
  else if(d.iw){t=ifind(d.iw);t.dest=t.dest==='today'?'lib':'today';t.tagmk=false;if(t.dest==='lib')placeCheck(t)}
