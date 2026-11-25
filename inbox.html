@@ -103,6 +103,7 @@ button{font:inherit}
 .plc.none{color:var(--hot);text-decoration:underline;text-decoration-color:#e8a29b;text-decoration-thickness:2px;text-underline-offset:3px}
 .ppop{width:300px;max-height:320px;overflow:auto;flex-direction:column;flex-wrap:nowrap;align-items:flex-start;gap:2px}
 .pch{border:0;padding:1px 6px;white-space:nowrap}.pch.d0{font-weight:700;margin-top:4px}.pch.d1{margin-left:12px}.pch.d2{margin-left:24px}.pch.d3{margin-left:36px}
+.xdel{border:0;background:none;color:#a3abb6;cursor:pointer;font-size:17px;line-height:1;padding:0 3px;border-radius:4px}.xdel:hover{color:#c0392b;background:#f6e3e0}
 .car{width:20px;height:17px;border:0;border-radius:5px;background:#d4d8de;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
 .car:hover{background:#bcc2ca}
 .subrow{display:flex;align-items:center;gap:6px}
@@ -210,7 +211,7 @@ try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
 window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
 <style>html.embed.calshut .wrap{max-width:none}</style>
 </head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.2</span><span class="date" id="today"></span></div>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.3</span><span class="date" id="today"></span></div>
 <p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green button at the bottom of a section to file everything in it. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
@@ -237,7 +238,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 <div><b>v0.20</b> Playable Staging Area, label, owner, star and link &middot; <a href="https://claude.ai/artifact/Vd3QU7DiTe7CnWwzrM23mj">open</a></div>
 <div><b>Build plan v0.17</b> The 375-minute plan this was built from &middot; <a href="https://claude.ai/artifact/9ocMs1oQ9wtnqNLxuifdHT">open</a></div>
 </div></div></div></div>
-<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.2 &middot; Nov 24, 2026</span></footer>
+<footer><span>Master To Do list &middot; Staging Area</span><span id="fv">v2.3 &middot; Nov 24, 2026</span></footer>
 </div><div id="tst"></div>
 <script src="pills-config.js"></script>
 <script src="task-moves.js"></script>
@@ -318,7 +319,7 @@ function timeB(i){return istask(i)?'<input class="tm" value="'+(i.est||'')+'" in
 function popB(i){var o=!!POP[i.id];return '<button class="pop'+(o?' on':'')+'" data-a="pop" data-id="'+i.id+'" title="Popcorn: show my original words">🍿</button>'}
 function popP(i){return '<div class="shade'+(POP[i.id]?' open':'')+'" data-shade="'+i.id+'"><div><div class="pp"><div class="ppl">🍿 Popcorn · as it came in</div><div class="ppt">'+(i.raw==null?esc(NORAW):'“'+esc(i.raw)+'”')+'</div></div></div></div>'}
 function carB(i){return istask(i)?'<button class="car" data-a="park" data-id="'+i.id+'" title="Park it: goes to the Parking lot at the bottom of the Task Library"><svg viewBox="0 0 20 20" width="15" height="15"><path d="M4.2 8.2L5.3 5.4A1.5 1.5 0 016.7 4.5h6.6a1.5 1.5 0 011.4.9l1.1 2.8" fill="none" stroke="#fff" stroke-width="1.3" stroke-linejoin="round"/><rect x="2.5" y="8" width="15" height="6" rx="1.6" fill="#fff"/><circle cx="6" cy="14.5" r="1.4" fill="#fff"/><circle cx="14" cy="14.5" r="1.4" fill="#fff"/></svg></button>':''}
-function goB(i){return ''} /* v2.1: no per-row file button; each section has one bulk button at its bottom */
+function goB(i){return '<button class="xdel" data-a="del" data-id="'+i.id+'" title="Delete this task" aria-label="Delete this task">\u00d7</button>'} /* v2.3: small x on every row. v2.1: no per-row file button; each section has one bulk button at its bottom */
 function subH(i){if(i.kind==='garbled')return '<div class="sub">You said “'+esc(i.text)+'” · best guess shown · <select class="tm" style="width:15em;max-width:60%;height:auto" data-pick="'+i.id+'" aria-label="Other guesses">'+i.alts.map(function(a,k){return '<option value="'+k+'"'+(k===i.pick?' selected':'')+'>'+esc(a)+'</option>'}).join('')+'</select></div>';return '<div class="sub">'+esc(i.why||'')+'</div>'}
 function subRow(i){return '<div class="subrow">'+popB(i)+subH(i)+'</div>'}
 
@@ -397,6 +398,7 @@ document.addEventListener('click',function(e){
  if(a==='park'){i.status='parked';if(LIVE)writeLive(i,'park');toast('Parked. It waits in the Task Library.',function(){i.status=null;render()});render();return}
  if(a==='unpark'){i.status=null;if(LIVE)writeLive(i,'unfile');render();return}
  if(a==='file'){fileIt(i);render();return}
+ if(a==='del'){i.status='removed';if(LIVE)patchRow(i.id,{archived:true}).catch(function(){i.status=null;render()});toast('Deleted.',function(){i.status=null;if(LIVE)patchRow(i.id,{archived:false});render()});render();return}
  if(a==='got'){i.status='filed';toast('Got it.');render();return}
  if(a==='undo'){i.status=null;if(LIVE)writeLive(i,'unfile');render();return}
  if(a==='allsec'){var fn=b.dataset.sec==='need'?needs:(b.dataset.sec==='ready'?ready:nots),all=pend().filter(fn),r=all.filter(function(x){return !(LIVE&&x.kind!=='notask'&&x.dest==='lib'&&!x.place)}),sk=all.filter(function(x){return r.indexOf(x)<0});
