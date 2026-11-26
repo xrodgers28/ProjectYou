@@ -260,6 +260,14 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .its .meta .xdel{flex:none}
 .its .r.act>.meta,.its .r.act .meta{margin-right:-7px}
 @media(max-width:1250px){.its .meta{flex-wrap:wrap;justify-content:flex-end}.its .meta .cc,.its .meta .tc,.its .meta .mvp,.its .meta .zc,.its .meta .mv{width:auto}}
+/* v2.16 p9: tag picker = the calendar's small icon pill, with its tooltip */
+.wlpop{gap:2px;padding:3px;border:1px solid var(--wl);border-radius:20px;box-shadow:0 4px 14px rgba(31,42,68,.16)}
+.wlpop button.wb{width:24px;height:24px;border-radius:50%;padding:0;align-items:center;justify-content:center;line-height:0;color:var(--wo)}
+.wlpop button.wb svg{width:14px;height:14px}
+.wlpop button.wb.on{background:color-mix(in srgb,var(--wc) 12%,#fff);box-shadow:inset 0 0 0 1.5px var(--wc);color:var(--wc)}
+.wlpop button.wb:hover{color:var(--wc)}
+#cxtip{position:fixed;z-index:140;display:none;background:#fff;color:#5b6472;border:1px solid #e3e7ee;border-radius:6px;font:700 10.5px Roboto,Arial,sans-serif;padding:3px 8px;box-shadow:0 2px 8px rgba(31,42,68,.12);white-space:nowrap;pointer-events:none}
+#cxtip::after{content:'';position:absolute;left:var(--ax,50%);bottom:-5px;width:8px;height:8px;background:#fff;border-right:1px solid #e3e7ee;border-bottom:1px solid #e3e7ee;transform:translateX(-50%) rotate(45deg)}
 .sp.stp{min-width:62px;justify-content:center}
 .sp.stp .l1,.sp.stp .l2{text-align:center}
 .its>.lhd{display:flex;justify-content:space-between;align-items:center;padding:0 8px 0 26px;margin:0 0 1px;min-height:13px;font:500 8.5px Roboto,Arial,sans-serif;letter-spacing:.09em;text-transform:uppercase;color:#a3abb7;border-bottom:1px solid #eceff3;list-style:none}
@@ -305,7 +313,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.16 preview 8</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.16 preview 9</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -401,7 +409,7 @@ function catGuess(it,z){var L=getCats(projOf(z)),tw=wwords((it.t||'')+' '+(it.w|
 function catHTML(it,z){if(it.cat)return '<button type="button" class="catp" data-cat="'+it.id+'" title="Category. Tap to change">'+esc(it.cat)+'</button>';var g=catGuess(it,z);return g?'<button type="button" class="catp sug" data-catsug="'+it.id+'" data-g="'+esc(g)+'" title="Claude\'s guess. Tap to save it as the category.">'+esc(g)+'?</button><button type="button" class="catp sug" data-cat="'+it.id+'" title="Pick another category">\u25be</button>':'<button type="button" class="catp sug" data-cat="'+it.id+'" title="Pick a category">+ category</button>'}
 function catOpen(btn,id){var p=document.getElementById('mrpop');if(!p){p=document.createElement('div');p.id='mrpop';p.className='mrpop';document.body.appendChild(p)}if(p.classList.contains('show')&&p.dataset.id===id+'cat'){p.classList.remove('show');return}var f=find(id);if(!f)return;p.dataset.id=id+'cat';p.innerHTML='';getCats(projOf(f.z)).concat(f.it.cat?['(none)']:[]).forEach(function(n){var b=document.createElement('button');b.type='button';b.dataset.catset=n;b.dataset.catid=id;b.textContent=n;if(n===f.it.cat)b.className='on';p.appendChild(b)});var ni=document.createElement('input');ni.placeholder='+ New category, then Enter';ni.className='catnew';ni.maxLength=40;ni.addEventListener('keydown',function(ev){if(ev.key==='Enter'&&ni.value.trim()){var pj=projOf(f.z),v=ni.value.trim();D.cats=D.cats||{};D.cats[pj]=D.cats[pj]||[];if(getCats(pj).indexOf(v)<0)D.cats[pj].push(v);f.it.cat=v;p.classList.remove('show');save();render()}});p.appendChild(ni);p.classList.add('show');var r=btn.getBoundingClientRect(),w=p.offsetWidth;p.style.left=Math.max(8,Math.min(window.innerWidth-w-8,r.right-w))+'px';p.style.top=(r.bottom+6)+'px'}
 function wlHTML(it,z){if(!window.PY_WL)return '';var c=WLC[projOf(z)];
- var btn='<button type="button" class="wlb'+(it.wl?' has':'')+'" style="--wc:'+c[0]+'" data-wl="'+it.id+'" title="'+(it.wl?wlName(it.wl):'Pick a tag')+'" aria-label="Work label">'+(it.wl?wlSvg(it.wl):'+')+'</button>';
+ var btn='<button type="button" class="wlb'+(it.wl?' has':'')+'" style="--wc:'+c[0]+'" data-wl="'+it.id+'" data-wltip="'+(it.wl?wlName(it.wl):'Add a work label')+'" aria-label="Work label">'+(it.wl?wlSvg(it.wl):'+')+'</button>';
  if(it.wl)return btn+'<span class="wln" style="color:'+c[0]+'">'+esc(wlName(it.wl))+'</span>';
  var g=guess(it);return btn+(g?'<button type="button" class="wls" style="--wc:'+c[0]+'" data-wlsug="'+it.id+'" data-g="'+g+'" title="Claude\'s guess. Tap to save it as the tag.">'+wlSvg(g)+esc(wlName(g))+'?</button>':'')}
 function zname(z){if(/fun$/.test(z))return 'Fun';if(/no$/.test(z)&&!/^sub_/.test(z))return 'Not doing';var sl=D.subs[projOf(z)]||[],x=sl.filter(function(q){return q.z===z})[0];return x?x.name:'Elsewhere'}
@@ -426,7 +434,7 @@ function moveRow(id,to){var f=find(id);if(!f)return;var _b=PROJ[projOf(f.z)].box
  save();render();showToast('"'+it.t+'" moved to '+(ix>-1?nm[ix]:((D.subs[projOf(to)]||[]).filter(function(x){return x.z===to})[0]||{name:'that box'}).name)+'.','Undo',function(){D=JSON.parse(snap);save();render()})}
 function wlPop(){var p=document.getElementById('wlpop');if(!p){p=document.createElement('div');p.id='wlpop';p.className='wlpop';document.body.appendChild(p)}return p}
 function wlOpen(btn,id){var p=wlPop();if(p.classList.contains('show')&&p.dataset.id===id){p.classList.remove('show');return}var f=find(id);if(!f||!window.PY_WL)return;var c=WLC[projOf(f.z)];p.style.cssText='--wc:'+c[0]+';--wo:'+c[1]+';--wl:'+c[2]+';';p.dataset.id=id;p.innerHTML='';
- window.PY_WL.order.forEach(function(k){var b=document.createElement('button');b.type='button';b.title=wlName(k);b.dataset.wlpick=k;if(f.it.wl===k)b.className='on';b.innerHTML=wlSvg(k);p.appendChild(b)});
+ window.PY_WL.order.forEach(function(k){var b=document.createElement('button');b.type='button';b.dataset.wltip=wlName(k);b.dataset.wlpick=k;b.className='wb'+(f.it.wl===k?' on':'');b.innerHTML=wlSvg(k);p.appendChild(b)});
  p.classList.add('show');var r=btn.getBoundingClientRect(),w=p.offsetWidth;p.style.left=Math.max(8,Math.min(window.innerWidth-w-8,r.right-w))+'px';p.style.top=(r.bottom+6)+'px'}
 var BYOPEN=false;
 function renderBy(){var c1=$('#col1'),c2=$('#col2');c2.style.display='none';var sp=document.querySelector('.psplit');if(sp)sp.style.display='none';c1.innerHTML='';$('#pname').textContent='By work type';var all=[];
@@ -489,6 +497,8 @@ document.addEventListener('click',function(e){var pp=document.getElementById('wl
  var mp=document.getElementById('mrpop'),mr=e.target.closest('[data-mrto]');if(mr){mp.classList.remove('show');moveRow(mr.dataset.mrid,mr.dataset.mrto);return}var mo=e.target.closest('[data-more]');if(mo){if(pp)pp.classList.remove('show');moreOpen(mo,mo.dataset.more);return}if(mp&&mp.classList.contains('show')&&!e.target.closest('#mrpop')&&!e.target.closest('[data-cat]'))mp.classList.remove('show');
  var fl=e.target.closest('[data-flip]');if(fl){if(pp)pp.classList.remove('show');flipRow(fl.dataset.flip);return}var mb=e.target.closest('[data-mvto]');if(mb){if(pp)pp.classList.remove('show');if(!mb.classList.contains('on'))moveRow(mb.dataset.mvid,mb.dataset.mvto);else{var bx=PROJ[TAB].boxes;if(mb.dataset.mvto===bx[0].z)demoteRow(mb.dataset.mvid)}return}
  if(pp&&pp.classList.contains('show')&&!e.target.closest('#wlpop'))pp.classList.remove('show')});
+document.addEventListener('mouseover',function(e){var el=e.target.closest&&e.target.closest('[data-wltip]');var t=document.getElementById('cxtip');if(!el){if(t)t.style.display='none';return}if(!t){t=document.createElement('div');t.id='cxtip';document.body.appendChild(t)}t.textContent=el.dataset.wltip;t.style.display='block';var r=el.getBoundingClientRect(),w=t.offsetWidth,l=Math.max(4,Math.min(r.left+r.width/2-w/2,window.innerWidth-w-4));t.style.left=l+'px';t.style.top=(r.top-t.offsetHeight-8)+'px';t.style.setProperty('--ax',(r.left+r.width/2-l)+'px')});
+document.addEventListener('click',function(){var t=document.getElementById('cxtip');if(t)t.style.display='none'},true);
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){var pp=document.getElementById('wlpop');if(pp)pp.classList.remove('show')}});
 document.addEventListener('click',async function(e){var t=e.target.closest('button,[data-jump],.ptab')||e.target;
  if(t.classList&&t.classList.contains('ptab')){TAB=t.dataset.tab;try{localStorage.setItem(TKEY,TAB)}catch(x){}render();return}
