@@ -122,7 +122,10 @@ window.NAV_CONFIG = {
     { "label": "Editors", "href": "editors.html", "children": [
       { "label": "Habit Worksheets", "href": "habit-worksheets.html" },
       { "label": "Stack Builder", "href": "stack-builder.html" },
-      { "label": "Daily Habits", "href": "daily-template.html" }
+      { "label": "Daily Habits", "href": "daily-template.html" },
+      /* Nov 26 2026, Scott: the TreadWell Recon platform list moved out of the card
+         and into the database, so it needs a page he can edit it on. */
+      { "label": "Recon Platforms", "href": "recon-editor.html" }
     ] }
   ],
   "Operating System": [
