@@ -24,8 +24,7 @@ window.NAV_CONFIG = {
     { "label": "Calendar", "href": "calendar.html" },
     /* Nov 25 2026, Scott: Projects is its own item in the bar, right after Todays Tasks and Calendar. The board moved here from the Cue Cards page. */
     /* Nov 25 2026, Scott: the Projects drop-down is his full project list, in his order. */
-    { "label": "Live Projects", "href": "projects.html", "children": [
-      { "label": "All Projects", "href": "projects.html" },
+    { "label": "All Projects", "href": "projects.html", "children": [
       { "label": "TreadWell", "href": "treadwell.html" },
       { "label": "TreadWell Templates", "href": "https://claude.ai/artifact/EhPkzn9RfYKRnNE4fzaCFx" },
       { "label": "TreadWell: Antigua Back Room", "href": "https://claude.ai/artifact/L9MU3CbtSgBkFRPmCRgqrS" },
