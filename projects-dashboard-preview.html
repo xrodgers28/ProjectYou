@@ -336,7 +336,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.16 preview 21</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.16 preview 22</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -471,7 +471,7 @@ function wlHTML(it,z){if(!window.PY_WL)return '';var c=WLC[projOf(z)];
  var g=guess(it);return btn+(g?'<button type="button" class="wls" style="--wc:'+c[0]+'" data-wlsug="'+it.id+'" data-g="'+g+'" title="Claude\'s guess. Tap to save it as the tag.">'+wlSvg(g)+esc(wlName(g))+'?</button>':'')}
 function zname(z){if(/fun$/.test(z))return 'Fun';if(/no$/.test(z)&&!/^sub_/.test(z))return 'Not doing';var sl=D.subs[projOf(z)]||[],x=sl.filter(function(q){return q.z===z})[0];return x?x.name:'Elsewhere'}
 function pillsHTML(it,z){var rz=PROJ[projOf(z)].boxes[0].z,h='<span class="mvp">',nm,nx,c,hc,on,to;
- if(z===rz){if(it.off){nm='NextUp';nx='Active';c='#8a93a1';hc='#1e8e5a';on='';to='to-act'}else{nm='Active';nx='NextUp';c='#1e8e5a';hc='#8a93a1';on=' on';to='to-nx'}}
+ if(z===rz&&it.sec){nm='NextUp';nx='the NextUp list';c='#8a93a1';hc='#8a93a1';on='';to='to-nx'}else if(z===rz){if(it.off){nm='NextUp';nx='Active';c='#8a93a1';hc='#1e8e5a';on='';to='to-act'}else{nm='Active';nx='NextUp';c='#1e8e5a';hc='#8a93a1';on=' on';to='to-nx'}}
  else{nm=zname(z);nx='NextUp';c=/fun$/.test(z)?'#e0975a':'#8a93a1';hc='#8a93a1';on=' on';to='to-nx'}
  h+='<button type="button" class="sp stp '+to+on+'" style="--c:'+c+';--hc:'+hc+'" data-flip="'+it.id+'" aria-label="'+esc(nm)+'. Tap to move to '+nx+'"><i></i><span class="l1">'+esc(nm)+'</span><span class="l2">'+nx+'</span></button>';
  return h+'</span>'}
@@ -479,7 +479,7 @@ function moreOpen(btn,id){var p=document.getElementById('mrpop');if(!p){p=docume
  if(p.classList.contains('show')&&p.dataset.id===id){p.classList.remove('show');return}var f=find(id);if(!f)return;var pj=projOf(f.z),bx=PROJ[pj].boxes,opts=[[bx[1].z,'Fun shelf'],[bx[2].z,'Not doing']].concat((D.subs[pj]||[]).map(function(x){return [x.z,x.name]}));p.dataset.id=id;p.innerHTML='';
  opts.forEach(function(o){var b=document.createElement('button');b.type='button';b.dataset.mrto=o[0];b.dataset.mrid=id;b.textContent=o[1];if(o[0]===f.z)b.className='on';p.appendChild(b)});
  p.classList.add('show');var r=btn.getBoundingClientRect(),w=p.offsetWidth;p.style.left=Math.max(8,Math.min(window.innerWidth-w-8,r.right-w))+'px';p.style.top=(r.bottom+6)+'px'}
-function flipRow(id){var f=find(id);if(!f)return;var rz=PROJ[projOf(f.z)].boxes[0].z;if(f.z===rz){if(f.it.off)moveRow(id,rz);else demoteRow(id)}else toNext(id)}
+function flipRow(id){var f=find(id);if(!f)return;if(f.it.sec){delete f.it.sec;f.it.off=true;D.items[f.z]=D.items[f.z].filter(function(x){return x!==f.it});var ix=0;D.items[f.z].forEach(function(x,i){if(!x.off||!x.sec&&x.off)ix=i+1});D.items[f.z].splice(ix,0,f.it);save();render();showToast('"'+f.it.t+'" is back in NextUp.');return}var rz=PROJ[projOf(f.z)].boxes[0].z;if(f.z===rz){if(f.it.off)moveRow(id,rz);else demoteRow(id)}else toNext(id)}
 function toNext(id){var f=find(id);if(!f)return;var snap=JSON.stringify(D),it=f.it,rz=PROJ[projOf(f.z)].boxes[0].z;D.items[f.z].splice(f.i,1);it.off=true;D.items[rz].push(it);save();render();showToast('"'+it.t+'" sent back to NextUp.','Undo',function(){D=JSON.parse(snap);save();render()})}
 function runBtn(it){var b=it.brief||{},pk=window.PYMoves?PYMoves.nextPickup():'the next pickup';
  if(openClaude(it.id).length)return '<button type="button" disabled title="With Claude now" style="opacity:.6;cursor:default">With Claude</button>';
