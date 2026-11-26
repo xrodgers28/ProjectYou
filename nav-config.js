@@ -12,7 +12,12 @@ window.NAV_CONFIG = {
      line at the bottom of the new pages. Calendar moved into this group so the
      grey CALENDAR label could go. */
   "To Do List": [
-    { "label": "Todays<br>Tasks", "href": "index.html" },
+    /* Nov 25 2026, Scott: Todays Tasks gets a drop-down to Staging Area, Task Library and Project Dashboard. */
+    { "label": "Todays<br>Tasks", "href": "index.html", "children": [
+      { "label": "Staging Area", "href": "inbox.html" },
+      { "label": "Task Library", "href": "task-library.html" },
+      { "label": "Project Dashboard", "href": "projects-dashboard.html" }
+    ] },
     /* Oct 9 2026, Scott, nav simplification: Staging Area (scotts-call.html) and Claude's List
        (claudes-list.html) came off the bar. Both pages still work. Moving the links switched nothing off
        (three idle background jobs were paused separately). They now sit on Mission Control, Launch tab, Tools & pages, next to All ToDos. */
