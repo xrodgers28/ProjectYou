@@ -990,3 +990,14 @@ window.__pnNavCss=function(){
     timer=setTimeout(function(){var m=d.querySelector('.pn-menu'); if(m)m.classList.remove('open');},220);
   });
 }catch(e){if(window.console)console.log('split hover skipped',e);}})();
+
+/* NO ARROW ON A SELECTED NAV TAB (Nov 25 2026, Scott, global rule: a top-nav tab that is selected (blue) never shows the
+   little arrow beside it, because the arrow sat outside the blue and made the rounded rectangle look cut off.)
+   The selected tab becomes a full rounded blue pill. Its menu still opens when the mouse rests on it. */
+(function(){try{
+  if(document.getElementById('pn-no-arrow-css'))return;
+  var s=document.createElement('style');s.id='pn-no-arrow-css';
+  s.textContent='.pn-split:has(.pn-splitlink.on) .pn-caret{display:none!important}'+
+    '.pn-split .pn-splitlink.on{border-radius:7px!important;padding-right:6px!important}';
+  document.head.appendChild(s);
+}catch(e){}})();
