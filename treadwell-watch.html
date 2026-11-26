@@ -107,7 +107,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.10</span>
+    <span class="pn-ver">v1.11</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -134,7 +134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="cue-visits.js"></script>
 <script>
-/* TreadWell Recon, v1.10, Nov 26 2026. v1.10: a partner lead goes to its own Partner Leads box on the Projects Dashboard, away from the idea bullets, which stay in Cue Card Insights. Scott chose this. v1.9: renamed from TreadWell Watch to TreadWell Recon, everywhere: this page, Cue Cards, the shared visit script, Mission Control and the habit records. The address stays treadwell-watch.html, the same way Atomic Habits kept james-clear.html. v1.8: the card is 640px wide instead of 560px. v1.7: Partner candidate goes to the Projects Dashboard too, not the capture inbox. v1.6: Idea worth logging removed, the Keep star covers it. v1.5: the Keep star and its neighbours sit in the card's top right, not pinned to the window. v1.4: Send lands on the Projects Dashboard, TreadWell, Cue Card Insights, not in the Task Library. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
+/* TreadWell Recon, v1.11, Nov 26 2026. v1.11: "Not yet, show me again" puts one platform back in rotation yourself. Nothing is ever removed from the deck memory now, lines are retired and can be put back, and the card reads a pre-filtered live list so a retired line cannot reach it. v1.10: a partner lead goes to its own Partner Leads box on the Projects Dashboard, away from the idea bullets, which stay in Cue Card Insights. Scott chose this. v1.9: renamed from TreadWell Watch to TreadWell Recon, everywhere: this page, Cue Cards, the shared visit script, Mission Control and the habit records. The address stays treadwell-watch.html, the same way Atomic Habits kept james-clear.html. v1.8: the card is 640px wide instead of 560px. v1.7: Partner candidate goes to the Projects Dashboard too, not the capture inbox. v1.6: Idea worth logging removed, the Keep star covers it. v1.5: the Keep star and its neighbours sit in the card's top right, not pinned to the window. v1.4: Send lands on the Projects Dashboard, TreadWell, Cue Card Insights, not in the Task Library. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
    One travel-with-purpose platform a day, for perspective on TreadWell.
    Built on the Wait, Really?! page: same nav, sign-in, card clock,
    deck_progress and todos wiring, no schema change.
@@ -310,7 +310,7 @@ function toast(t){ var el=$('#toast'); el.textContent=t; el.classList.add('on');
 
 async function loadDeck(){
   SERVED={};
-  var r=await sb.from('deck_progress').select('tile_key,served_on').eq('deck',DECK);
+  var r=await sb.from('deck_progress_live').select('tile_key,served_on').eq('deck',DECK);
   (r.data||[]).forEach(function(x){ SERVED[x.tile_key]=x.served_on; });
   var s=await sb.from('deck_state').select('deck,status,finished_on').eq('deck',DECK).limit(1);
   DECKSTATE=(s.data&&s.data[0])||null;
@@ -343,7 +343,9 @@ function pick(){
 async function serve(i){
   var day=todayKey(), c=CARDS[i];
   if(SERVED[c.id]===day) return;
-  var r=await sb.from('deck_progress').insert({deck:DECK,tile_key:c.id,served_on:day});
+  var r=await sb.from('deck_progress').upsert(
+        {deck:DECK,tile_key:c.id,served_on:day,retired_at:null,retired_by:null},
+        {onConflict:'deck,tile_key'});
   if(!r.error) SERVED[c.id]=day;
 }
 
@@ -369,13 +371,14 @@ function render(){
     '<a class="vlink" href="'+c.url+'" target="_blank" rel="noopener">Open '+c.name+' &rarr;</a>'+
     '<div class="caps">'+
       '<button class="cap" id="capP" onclick="capture(\'partner\')">Partner candidate</button>'+
+      '<button class="cap" id="capAgain" onclick="showAgain()">Not yet, show me again</button>'+
     '</div>'+
     '<div class="copywrap"><div class="lb">What gets filed or sent (copy it if you want it elsewhere)</div>'+
       '<textarea id="capText" readonly>'+((c.advice&&c.advice[0]?c.advice[0]:c.name)+'  (TreadWell Recon, '+c.name+')')+'</textarea></div>'+
     '<div class="fin"><span class="minlb">Minutes</span><input class="minin" id="mins" inputmode="numeric" placeholder="10">'+
       '<button class="next" id="btnNext" onclick="finish()">Done</button></div>'+
     '<div class="mintotal hidden" id="minTotal"></div>';
-  $('#stamp').textContent='TreadWell Recon v1.10 · fifteen platforms, researched Nov 25, 2026';
+  $('#stamp').textContent='TreadWell Recon v1.11 · fifteen platforms, researched Nov 25, 2026';
   renderDots();
   if(ticked){ var n=$('#btnNext'); if(n){ n.disabled=true; n.textContent='Ticked today'; } }
 }
@@ -503,11 +506,29 @@ function endTile(){
     '<div class="blk"><p>Every platform in the deck has had its turn. Put it back in rotation to start again from the top, or leave it on the Read shelf and it will wait for you.</p></div>'+
     '<div class="idea blk"><div class="lb">Worth doing next</div><p>If any of them turned into a real partner lead or a change to TreadWell, that flag is sitting in your inbox waiting to be routed.</p></div>'+
     '<button class="rback" onclick="rotateBack()">Put it back in rotation</button>';
-  $('#stamp').textContent='TreadWell Recon v1.10';
+  $('#stamp').textContent='TreadWell Recon v1.11';
   renderDots();
 }
+/* v1.11: one platform back in rotation, for the days you did not get to it.
+   The line is RETIRED, never removed, so the record of having been dealt it
+   is still there and can be put back. A retired line reads as never dealt,
+   so the deck reaches this platform again. Scott's rule, Nov 26 2026. */
+async function showAgain(){
+  var c=CARDS[CUR];
+  if(!sb||!signedIn){ toast('Sign in first and it will remember.'); return; }
+  var r=await sb.from('deck_progress')
+    .update({retired_at:new Date().toISOString(), retired_by:'not yet read'})
+    .eq('deck',DECK).eq('tile_key',c.id).is('retired_at',null);
+  if(r&&r.error){ toast('Could not do it: '+r.error.message); return; }
+  var b=document.getElementById('capAgain');
+  if(b){ b.classList.add('done'); b.textContent='Coming back round'; b.disabled=true; }
+  toast(c.name+' comes back round. Nothing was lost.');
+}
 async function rotateBack(){
-  var r=await sb.rpc('deck_reset',{p_deck:DECK});
+  /* The whole deck back in rotation: every line retired, not one removed. */
+  var r=await sb.from('deck_progress')
+    .update({retired_at:new Date().toISOString(), retired_by:'whole deck back in rotation'})
+    .eq('deck',DECK).is('retired_at',null);
   if(r&&r.error){ toast('Could not reset it: '+r.error.message); return; }
   toast('Back in rotation. One platform a day again.');
   await boot2();
