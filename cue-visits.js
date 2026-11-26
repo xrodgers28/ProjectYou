@@ -1,4 +1,4 @@
-/* cue-visits.js v1.2, Nov 25 2026 (added Repeat After Me, Wait Really?! and TreadWell Watch; Takeaways renamed to Mindset Training to match the habit row; Social Fitness dare renamed to Social Fitness. Old names kept as aliases.)
+/* cue-visits.js v1.3, Nov 26 2026 (TreadWell Watch renamed TreadWell Recon, old name kept as an alias so earlier visits still match). v1.2, Nov 25 2026 (added Repeat After Me, Wait Really?! and TreadWell Watch; Takeaways renamed to Mindset Training to match the habit row; Social Fitness dare renamed to Social Fitness. Old names kept as aliases.)
    v1.1, Oct 9 2026 (Scott's answers 4, 5 and 6 to the Cue Card Timer Review)
    One shared helper for every Cue Card page, the Cue Cards board, Today's Tasks and the Habit Tracker.
 
@@ -19,12 +19,13 @@
     compass:'Compass YIR', openmode:'Open Mode', env:'Environmental Health', feed:'The Feed',
     rec:'Recreational Health', social:'Social Fitness', creativity:'Creativity Challenge',
     bucket:'Bucket List', wall:'SparkBoard', tnt:"It's a wrap", masterclass:'MasterClass',
-    repeat:'Repeat After Me', 'wait-really':'Wait, Really?!', treadwell:'TreadWell Watch'
+    repeat:'Repeat After Me', 'wait-really':'Wait, Really?!', treadwell:'TreadWell Recon'
   };
   /* other names the same card has gone by in the database */
   var ALIAS = { 'the wall':'SparkBoard', 'inspiration wall':'SparkBoard', 'the sparkboard':'SparkBoard',
                 'ai insights':'AI Workout', 'compass':'Compass YIR',
-                'takeaways':'Mindset Training', 'social fitness dare':'Social Fitness' };
+                'takeaways':'Mindset Training', 'social fitness dare':'Social Fitness',
+                'treadwell watch':'TreadWell Recon' };
   var CARD_OF = {};
   Object.keys(HABIT).forEach(function(k){ CARD_OF[norm(HABIT[k])] = k; });
   Object.keys(ALIAS).forEach(function(a){ CARD_OF[a] = CARD_OF[norm(ALIAS[a])]; });
