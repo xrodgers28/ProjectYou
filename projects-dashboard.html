@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.10</title>
+<title>Projects Dashboard v2.11</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -114,7 +114,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .its .r:hover .mv{opacity:1}
 @media(hover:none){.its .mv{opacity:.55}}
 .its .mv button{border:1px solid #dfe4ea;background:#fff;border-radius:5px;font:700 10px Roboto,Arial,sans-serif;color:#5b6472;padding:0 6px;line-height:15px;cursor:pointer;white-space:nowrap}
-.its .mv button:hover{border-color:#3f6f8f;color:#3f6f8f}
+.its .mv button.runb{border-color:#4f9a6a;color:#1e7a4d}.its .mv button:hover{border-color:#3f6f8f;color:#3f6f8f}
 .cb{flex:none;width:15px;height:15px;border:1px solid #aab0b8;border-radius:4px;margin-top:1px;cursor:pointer;background:#fff;position:relative;padding:0}
 .cb.done{background:var(--good);border-color:var(--good)}
 .cb.done::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
@@ -266,13 +266,13 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.10</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.11</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button></div>
 <div class="railwrap"><div class="sec" id="pane">
  <div class="hd"><b class="sn" id="pname">Project YOU</b><span class="cnt" id="pcnt"></span></div>
- <p class="nt">Every row in the ranked list is active. Tap a pill on any row to send it straight to that section (tap Active again to drop it into New ideas), or the dashed + to add a work label. Open a row's Brief, check it, and tap Approve and run to hand it to Claude at the next pickup. One fun row unlocks each time you finish an active one. <span id="crossn"></span></p>
+ <p class="nt">Every row in the ranked list is active. Tap a pill on any row to send it straight to that section (tap Active again to drop it into New ideas), or the dashed + to add a work label. Tap Run on a row to hand it to Claude with its saved brief at the next pickup (open Brief first to edit it). Moved rows land at the bottom. One fun row unlocks each time you finish an active one. <span id="crossn"></span></p>
  <div class="pcols" id="pcols"><div class="pcol" id="col1"></div><div class="psplit"></div><div class="pcol" id="col2"></div></div>
 <div class="srcs" id="srcs"><button type="button" id="srcb" aria-expanded="false"><b>Sources</b><span id="srcsum">6 sources feed this list</span><span class="ch">&#9662;</span></button><div class="sb">
 <ul>
@@ -357,8 +357,12 @@ function wlSvg(k){var W=window.PY_WL;return W&&W.icons[k]?'<svg viewBox="0 0 24 
 function wlName(k){var W=window.PY_WL;return W&&W.names[k]||''}
 function wlHTML(it,z){if(!window.PY_WL)return '';var c=WLC[projOf(z)];return '<button type="button" class="wlb'+(it.wl?' has':'')+'" style="--wc:'+c[0]+'" data-wl="'+it.id+'" title="'+(it.wl?wlName(it.wl):'Add a work label')+'" aria-label="Work label">'+(it.wl?wlSvg(it.wl):'+')+'</button>'}
 function pillsHTML(it,z){var bx=PROJ[projOf(z)].boxes,h='<span class="mvp">';SECS.forEach(function(sc,k){var on=bx[k].z===z;h+='<button type="button" class="sp'+(on?' on':'')+'" style="--c:'+sc[1]+'" data-mvto="'+bx[k].z+'" data-mvid="'+it.id+'"><i></i>'+sc[0]+'</button>'});return h+'</span>'}
+function runBtn(it){var b=it.brief||{},pk=window.PYMoves?PYMoves.nextPickup():'the next pickup';
+ if(openClaude(it.id).length)return '<button type="button" disabled title="With Claude now" style="opacity:.6;cursor:default">With Claude</button>';
+ if(b.what)return '<button type="button" class="runb" data-run="'+it.id+'" title="Hand this row to Claude with its saved brief. Next pickup about '+pk+'">'+(b.approved?'Run again':'Run')+'</button>';
+ return '<button type="button" class="runb" data-askbrief="'+it.id+'" title="No brief yet. Claude drafts one at the next pickup ('+pk+')">Run</button>'}
 function moveRow(id,to){var f=find(id);if(!f||f.z===to)return;var snap=JSON.stringify(D),it=f.it,bx=PROJ[projOf(f.z)].boxes,nm=['Active','New ideas','Fun shelf','Not doing'],ix=bx.map(function(b){return b.z}).indexOf(to);
- D.items[f.z].splice(f.i,1);D.items[to].unshift(it);if(to===bx[0].z)D.crossings.push({id:it.id,t:it.t,at:new Date().toISOString()});
+ D.items[f.z].splice(f.i,1);if(to===bx[0].z)D.items[to].push(it);else D.items[to].unshift(it);if(to===bx[0].z)D.crossings.push({id:it.id,t:it.t,at:new Date().toISOString()});
  save();render();showToast('"'+it.t+'" moved to '+(ix>-1?nm[ix]:'that box')+'.','Undo',function(){D=JSON.parse(snap);save();render()})}
 function wlPop(){var p=document.getElementById('wlpop');if(!p){p=document.createElement('div');p.id='wlpop';p.className='wlpop';document.body.appendChild(p)}return p}
 function wlOpen(btn,id){var p=wlPop();if(p.classList.contains('show')&&p.dataset.id===id){p.classList.remove('show');return}var f=find(id);if(!f||!window.PY_WL)return;var c=WLC[projOf(f.z)];p.style.cssText='--wc:'+c[0]+';--wo:'+c[1]+';--wl:'+c[2]+';';p.dataset.id=id;p.innerHTML='';
@@ -376,7 +380,7 @@ function render(){
   a.forEach(function(it,i){
    var act=!!B.ranked,st=rowStatus(it.id);var r=document.createElement('li');r.className='r'+(act?' act':'');r.dataset.id=it.id;
    var chips=(it.tag==='new'?'<span class="chip nw">new idea</span>':'')+(/fun$/.test(B.z)?'<span class="chip lk">'+(D.funUnlocked?'fun':'locked')+'</span>':'')+(it.sz?'<span class="chip">'+esc(it.sz)+'</span>':'');
-   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta">'+wlHTML(it,B.z)+pillsHTML(it,B.z)+chips+(act?'<span class="mv" style="opacity:1"><button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'<button type="button" class="xdel" data-delrow="'+it.id+'" title="Delete this row" aria-label="Delete">\u00d7</button></span>';
+   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta">'+wlHTML(it,B.z)+pillsHTML(it,B.z)+chips+(act?'<span class="mv" style="opacity:1">'+runBtn(it)+'<button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'<button type="button" class="xdel" data-delrow="'+it.id+'" title="Delete this row" aria-label="Delete">\u00d7</button></span>';
    ul.appendChild(r);
    if(act){var b=document.createElement('li');b.className='brief'+(OPEN[it.id]?' show':'');b.dataset.bf=it.id;b.innerHTML=briefHTML(it);ul.appendChild(b)}
   });
