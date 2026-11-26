@@ -241,8 +241,14 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .wln{font-size:10.5px;font-weight:700;white-space:nowrap}
 .wls{display:inline-flex;align-items:center;gap:4px;font:inherit;font-size:10px;color:var(--wc);background:transparent;border:1.5px dashed var(--wc);border-radius:7px;padding:1px 7px 1px 4px;cursor:pointer;white-space:nowrap;opacity:.85}
 .wls svg{width:14px;height:14px;fill:currentColor}
-.sp.stp{position:relative}
-.sp.stp:hover::after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 5px);background:#1f2a44;color:#fff;font-size:10.5px;white-space:nowrap;padding:3px 8px;border-radius:6px;z-index:60}
+.sp.stp,.sp.stm{font-family:Roboto,Arial,sans-serif;font-weight:400;border-radius:6px}
+.sp.stp .l2{display:none}
+.sp.stp:hover .l1{display:none}
+.sp.stp:hover .l2{display:inline}
+.sp.stp:hover i{background:var(--hc)}
+.sp.stp.to-act:hover{background:#e8f5ee;border-color:#bfe0cd;color:#1e7a4d;box-shadow:none}
+.sp.stp.to-nx:hover{background:#eef0f3;border-color:#d9dee5;color:#5b6472;box-shadow:none}
+.mdl{font:inherit;font-size:12px;border:1px solid #d5dae0;border-radius:7px;padding:3px 8px;background:#fff;color:#1f2a44}
 .byr{display:flex;align-items:center;gap:8px;padding:6px 4px;border-top:1px solid #eef0f4;flex-wrap:wrap}.byr .pd{width:8px;height:8px;border-radius:50%;flex:none}.byt{flex:1;min-width:160px}.gi svg{width:18px;height:18px;fill:currentColor}
 .wlb svg{width:18px;height:18px;fill:currentColor}
 .wlpop{position:fixed;z-index:90;display:none;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--wl);border-radius:22px;padding:6px 14px;box-shadow:0 6px 18px rgba(31,42,68,.16)}
@@ -278,7 +284,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.16 preview</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.16 preview 2</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -346,9 +352,10 @@ function openClaude(id){return tasksFor(id).filter(function(t){return !t.done&&t
 function rowStatus(id){var best=null;openClaude(id).forEach(function(t){if(!best||RANK[t.claude_status]>RANK[best])best=t.claude_status});return best}
 function dot(st){var s=ST[st];return s?'<span class="sdw"><span class="sd '+s[0]+'"></span><span class="sw">'+s[1]+'</span></span>':''}
 function briefText(b){return 'Brief approved by Scott on '+etDate()+' (Projects Dashboard). What: '+(b.what||'')+' Why it matters: '+(b.why||'')+' Done looks like: '+(b.done||'')+' Do not touch: '+(b.dont||'')+' Run on: '+(b.model||'Sonnet')+'.'}
+var MODELS=[['Sonnet','Sonnet, everyday work'],['Haiku','Haiku, quick lookups and logging'],['Opus','Opus, big builds and research'],['Fable','Fable, only really complex']];
 var BF=[['what','What'],['why','Why it matters'],['done','Done looks like'],['dont','Do not touch'],['model','Run on']];
 function briefHTML(it){var b=it.brief||{},busy=openClaude(it.id).length,h='<dl>';
- BF.forEach(function(f){h+='<dt>'+f[1]+'</dt><dd contenteditable="plaintext-only" spellcheck="false" data-bk="'+f[0]+'" data-row="'+it.id+'" data-ph="'+(f[0]==='model'?'Sonnet':'Tap to write')+'">'+esc(b[f[0]]||'')+'</dd>'});
+ BF.forEach(function(f){if(f[0]==='model'){var cur=b.model||'Sonnet';h+='<dt>'+f[1]+'</dt><dd><select class="mdl" data-bk="model" data-row="'+it.id+'">'+MODELS.map(function(m){return '<option value="'+m[0]+'"'+(m[0]===cur?' selected':'')+'>'+m[1]+'</option>'}).join('')+'</select></dd>';return}h+='<dt>'+f[1]+'</dt><dd contenteditable="plaintext-only" spellcheck="false" data-bk="'+f[0]+'" data-row="'+it.id+'" data-ph="'+(f[0]==='model'?'Sonnet':'Tap to write')+'">'+esc(b[f[0]]||'')+'</dd>'});
  h+='</dl><div class="bft">';
  if(busy)h+='<span>With Claude now. Its status shows on the row.</span>';
  else if(b.what)h+=(b.approved?'<span>Approved '+esc(b.approved)+'.</span>':'')+'<button class="btn go" data-run="'+it.id+'">Approve and run</button><span>Next pickup about '+(window.PYMoves?PYMoves.nextPickup():'the next pickup')+'.</span>';
@@ -376,11 +383,11 @@ function wlHTML(it,z){if(!window.PY_WL)return '';var c=WLC[projOf(z)];
  if(it.wl)return btn+'<span class="wln" style="color:'+c[0]+'">'+esc(wlName(it.wl))+'</span>';
  var g=guess(it);return btn+(g?'<button type="button" class="wls" style="--wc:'+c[0]+'" data-wlsug="'+it.id+'" data-g="'+g+'" title="Claude\'s guess. Tap to save it as the tag.">'+wlSvg(g)+esc(wlName(g))+'?</button>':'')}
 function zname(z){if(/fun$/.test(z))return 'Fun';if(/no$/.test(z)&&!/^sub_/.test(z))return 'Not doing';var sl=D.subs[projOf(z)]||[],x=sl.filter(function(q){return q.z===z})[0];return x?x.name:'Elsewhere'}
-function pillsHTML(it,z){var rz=PROJ[projOf(z)].boxes[0].z,h='<span class="mvp">',nm,c,tip,on;
- if(z===rz){if(it.off){nm='NextUp';c='#8a93a1';tip='Tap: move to Active';on=''}else{nm='Active';c='#1e8e5a';tip='Tap: move to NextUp';on=' on'}}
- else{nm=zname(z);c=/fun$/.test(z)?'#e0975a':'#8a93a1';tip='Tap: send back to NextUp';on=' on'}
- h+='<button type="button" class="sp stp'+on+'" style="--c:'+c+'" data-flip="'+it.id+'" data-tip="'+tip+'" data-ttip="'+tip+'" title="'+tip+'"><i></i>'+esc(nm)+'</button>';
- h+='<button type="button" class="sp" style="--c:#7a8aa0" data-more="'+it.id+'" title="Send to Fun, Not doing or a sub-category"><i></i>More</button>';
+function pillsHTML(it,z){var rz=PROJ[projOf(z)].boxes[0].z,h='<span class="mvp">',nm,nx,c,hc,on,to;
+ if(z===rz){if(it.off){nm='NextUp';nx='Active';c='#8a93a1';hc='#1e8e5a';on='';to='to-act'}else{nm='Active';nx='NextUp';c='#1e8e5a';hc='#8a93a1';on=' on';to='to-nx'}}
+ else{nm=zname(z);nx='NextUp';c=/fun$/.test(z)?'#e0975a':'#8a93a1';hc='#8a93a1';on=' on';to='to-nx'}
+ h+='<button type="button" class="sp stp '+to+on+'" style="--c:'+c+';--hc:'+hc+'" data-flip="'+it.id+'" aria-label="'+esc(nm)+'. Tap to move to '+nx+'"><i></i><span class="l1">'+esc(nm)+'</span><span class="l2">'+nx+'</span></button>';
+ h+='<button type="button" class="sp stm" style="--c:#7a8aa0" data-more="'+it.id+'" title="Send to Fun, Not doing or a sub-category"><i></i>More</button>';
  return h+'</span>'}
 function moreOpen(btn,id){var p=document.getElementById('mrpop');if(!p){p=document.createElement('div');p.id='mrpop';p.className='mrpop';document.body.appendChild(p)}
  if(p.classList.contains('show')&&p.dataset.id===id){p.classList.remove('show');return}var f=find(id);if(!f)return;var pj=projOf(f.z),bx=PROJ[pj].boxes,opts=[[bx[1].z,'Fun shelf'],[bx[2].z,'Not doing']].concat((D.subs[pj]||[]).map(function(x){return [x.z,x.name]}));p.dataset.id=id;p.innerHTML='';
@@ -499,6 +506,7 @@ function add(z,inp){var v=(inp.value||'').trim();if(!v)return;var nr={id:uid(),t
 document.addEventListener('keydown',function(e){var t=e.target;
  if(t.dataset&&t.dataset.add&&e.key==='Enter'){e.preventDefault();add(t.dataset.add,t)}
  if(t.isContentEditable&&e.key==='Enter'){e.preventDefault();t.blur()}});
+document.addEventListener('change',function(e){var t=e.target;if(!(t.classList&&t.classList.contains('mdl')))return;var g=find(t.dataset.row);if(!g)return;g.it.brief=g.it.brief||{};g.it.brief.model=t.value;delete g.it.brief.approved;save();var bx=document.querySelector('.brief[data-bf="'+g.it.id+'"]');if(bx)bx.innerHTML=briefHTML(g.it)});
 document.addEventListener('focusout',function(e){var t=e.target;if(!t.isContentEditable)return;
  if(t.dataset.subname){var v0=t.textContent.trim();if(!v0){render();return}renameSub(t.dataset.subname,v0);return}
  if(t.dataset.bk){var g=find(t.dataset.row);if(!g)return;var v=t.textContent.trim();g.it.brief=g.it.brief||{};if((g.it.brief[t.dataset.bk]||'')!==v){g.it.brief[t.dataset.bk]=v;delete g.it.brief.approved;save();var bx=document.querySelector('.brief[data-bf="'+g.it.id+'"]');if(bx){bx.innerHTML=briefHTML(g.it)}}return}
