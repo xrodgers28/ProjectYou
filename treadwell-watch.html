@@ -107,7 +107,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.9</span>
+    <span class="pn-ver">v1.10</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -134,7 +134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="cue-visits.js"></script>
 <script>
-/* TreadWell Recon, v1.9, Nov 26 2026. v1.9: renamed from TreadWell Watch to TreadWell Recon, everywhere: this page, Cue Cards, the shared visit script, Mission Control and the habit records. The address stays treadwell-watch.html, the same way Atomic Habits kept james-clear.html. v1.8: the card is 640px wide instead of 560px. v1.7: Partner candidate goes to the Projects Dashboard too, not the capture inbox. v1.6: Idea worth logging removed, the Keep star covers it. v1.5: the Keep star and its neighbours sit in the card's top right, not pinned to the window. v1.4: Send lands on the Projects Dashboard, TreadWell, Cue Card Insights, not in the Task Library. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
+/* TreadWell Recon, v1.10, Nov 26 2026. v1.10: a partner lead goes to its own Partner Leads box on the Projects Dashboard, away from the idea bullets, which stay in Cue Card Insights. Scott chose this. v1.9: renamed from TreadWell Watch to TreadWell Recon, everywhere: this page, Cue Cards, the shared visit script, Mission Control and the habit records. The address stays treadwell-watch.html, the same way Atomic Habits kept james-clear.html. v1.8: the card is 640px wide instead of 560px. v1.7: Partner candidate goes to the Projects Dashboard too, not the capture inbox. v1.6: Idea worth logging removed, the Keep star covers it. v1.5: the Keep star and its neighbours sit in the card's top right, not pinned to the window. v1.4: Send lands on the Projects Dashboard, TreadWell, Cue Card Insights, not in the Task Library. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
    One travel-with-purpose platform a day, for perspective on TreadWell.
    Built on the Wait, Really?! page: same nav, sign-in, card clock,
    deck_progress and todos wiring, no schema change.
@@ -375,7 +375,7 @@ function render(){
     '<div class="fin"><span class="minlb">Minutes</span><input class="minin" id="mins" inputmode="numeric" placeholder="10">'+
       '<button class="next" id="btnNext" onclick="finish()">Done</button></div>'+
     '<div class="mintotal hidden" id="minTotal"></div>';
-  $('#stamp').textContent='TreadWell Recon v1.9 · fifteen platforms, researched Nov 25, 2026';
+  $('#stamp').textContent='TreadWell Recon v1.10 · fifteen platforms, researched Nov 25, 2026';
   renderDots();
   if(ticked){ var n=$('#btnNext'); if(n){ n.disabled=true; n.textContent='Ticked today'; } }
 }
@@ -410,21 +410,23 @@ function adviceHtml(c){
    before writing, only ever adds to that one box, and stamps the save time so
    the dashboard's own newest-wins rule keeps the row. It no longer writes a
    task into the Task Library, which is where these were landing before. */
-var BOARD_KEY='projects_dashboard', INSIGHT_BOX='Cue Card Insights';
+var BOARD_KEY='projects_dashboard', INSIGHT_BOX='Cue Card Insights', PARTNER_BOX='Partner Leads';
 function dashUid(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
-/* One writer for everything this card sends. Both the advice bullets and the
-   Partner candidate button land as rows on the Projects Dashboard, under
-   TreadWell, in the Cue Card Insights box. */
-async function addToBoard(title, subline, why, size){
+/* One writer for everything this card sends. Rows land on the Projects
+   Dashboard under TreadWell: advice bullets in Cue Card Insights, partner
+   leads in their own Partner Leads box (Scott's call, Nov 26 2026). The box
+   is found by name and created if missing, so a renamed or rebuilt zone id
+   cannot break either button. */
+async function addToBoard(title, subline, why, size, boxName){
   var g=await sb.from('board_meta').select('val').eq('key',BOARD_KEY).single();
   if(g.error||!g.data||!g.data.val) return {error:(g.error&&g.error.message)||'no board found'};
   var B=g.data.val;
   B.items=B.items||{}; B.subs=B.subs||{}; B.subs.tw=B.subs.tw||[];
-  var box=null;
+  var want=boxName||INSIGHT_BOX, box=null;
   for(var k=0;k<B.subs.tw.length;k++){
-    if(String(B.subs.tw[k].name||'').toLowerCase()===INSIGHT_BOX.toLowerCase()){ box=B.subs.tw[k]; break; }
+    if(String(B.subs.tw[k].name||'').toLowerCase()===want.toLowerCase()){ box=B.subs.tw[k]; break; }
   }
-  if(!box){ box={z:'sub_tw_'+dashUid().slice(1), name:INSIGHT_BOX, dbid:null}; B.subs.tw.push(box); }
+  if(!box){ box={z:'sub_tw_'+dashUid().slice(1), name:want, dbid:null}; B.subs.tw.push(box); }
   if(!Array.isArray(B.items[box.z])) B.items[box.z]=[];
   B.items[box.z].push({
     id:dashUid(), t:title, w:subline, sz:size||'Tiny', tag:'',
@@ -461,12 +463,12 @@ async function capture(kind){
   if(capped[kind+CUR]){ toast('Already filed that one.'); return; }
   var r=await addToBoard('Look at '+c.name+' as a possible partner',
                          c.tag+'. From the TreadWell Recon cue card.',
-                         'Flagged as a partner candidate on the TreadWell Recon cue card.','Small');
+                         'Flagged as a partner candidate on the TreadWell Recon cue card.','Small',PARTNER_BOX);
   if(r.error){ toast('Did not file it: '+r.error); return; }
   capped[kind+CUR]=true;
   var btn=document.getElementById('capP');
   if(btn){ btn.classList.add('done'); btn.textContent='Partner candidate sent'; }
-  toast('Sent to the Projects Dashboard, TreadWell, '+INSIGHT_BOX+'.');
+  toast('Sent to the Projects Dashboard, TreadWell, '+PARTNER_BOX+'.');
 }
 
 async function finish(){
@@ -501,7 +503,7 @@ function endTile(){
     '<div class="blk"><p>Every platform in the deck has had its turn. Put it back in rotation to start again from the top, or leave it on the Read shelf and it will wait for you.</p></div>'+
     '<div class="idea blk"><div class="lb">Worth doing next</div><p>If any of them turned into a real partner lead or a change to TreadWell, that flag is sitting in your inbox waiting to be routed.</p></div>'+
     '<button class="rback" onclick="rotateBack()">Put it back in rotation</button>';
-  $('#stamp').textContent='TreadWell Recon v1.9';
+  $('#stamp').textContent='TreadWell Recon v1.10';
   renderDots();
 }
 async function rotateBack(){
