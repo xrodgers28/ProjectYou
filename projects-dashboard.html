@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.3</title>
+<title>Projects Dashboard v2.4</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -202,6 +202,9 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .lt .ltt{color:#46505e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:62ch;min-width:0}
 .lt a{font-size:11.5px;color:var(--accent);text-decoration:none}
 .lt a:hover{text-decoration:underline}
+.xdel{flex:none;border:0;background:none;color:#b0b5bc;font-size:15px;line-height:1;padding:2px 4px;cursor:pointer}
+.xdel:hover{color:#c0492f}
+.lt .xdel{margin-left:auto}
 .lt.mute{color:#9aa1ab;font-size:11.5px}
 .brief dd[contenteditable]{cursor:text;outline:0;min-height:1.2em}
 .brief dd[contenteditable]:empty::before{content:attr(data-ph);color:#c3cbd5}
@@ -247,7 +250,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.3</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.4</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button></div>
@@ -327,7 +330,7 @@ function briefHTML(it){var b=it.brief||{},busy=openClaude(it.id).length,h='<dl>'
 function linksHTML(it){var ts=tasksFor(it.id),cs=chatsFor(it.id),h='',open=ts.filter(function(t){return !t.done}),dn=ts.length-open.length;
  if(!ts.length&&!cs.length)return '';
  h+='<div class="lk">';
- open.forEach(function(t){h+='<div class="lt" data-tid="'+t.id+'">'+(t.owner==='claude'&&ST[t.claude_status]?'<button type="button" class="stb" data-panel="'+t.id+'">'+dot(t.claude_status)+'</button>':'<span class="sdw"><span class="sd m"></span><span class="sw">Yours</span></span>')+'<span class="ltt" title="'+esc(t.task)+'">'+esc(t.task)+'</span>'+(t.claude_result?'<a href="'+esc(t.claude_result)+'" target="_blank" rel="noopener">What Claude made</a>':'')+(t.claude_session?'<a href="'+esc(t.claude_session)+'" target="_blank" rel="noopener">Claude run</a>':'')+'</div>'});
+ open.forEach(function(t){h+='<div class="lt" data-tid="'+t.id+'">'+(t.owner==='claude'&&ST[t.claude_status]?'<button type="button" class="stb" data-panel="'+t.id+'">'+dot(t.claude_status)+'</button>':'<span class="sdw"><span class="sd m"></span><span class="sw">Yours</span></span>')+'<span class="ltt" title="'+esc(t.task)+'">'+esc(t.task)+'</span>'+(t.claude_result?'<a href="'+esc(t.claude_result)+'" target="_blank" rel="noopener">What Claude made</a>':'')+(t.claude_session?'<a href="'+esc(t.claude_session)+'" target="_blank" rel="noopener">Claude run</a>':'')+'<button type="button" class="xdel" data-deltask="'+t.id+'" title="Delete this task" aria-label="Delete">\u00d7</button></div>'});
  if(dn)h+='<div class="lt mute">'+dn+' task'+(dn>1?'s':'')+' done</div>';
  if(cs.length)h+='<div class="lt">'+'<span class="sw">Chats</span>'+cs.slice(0,4).map(function(c){return '<a href="'+esc(c.session_url)+'" target="_blank" rel="noopener" title="'+esc(c.topic)+'">'+esc((c.topic||'Chat').slice(0,48))+'</a>'}).join('')+(cs.length>4?'<span class="sw">+'+(cs.length-4)+' more</span>':'')+'</div>';
  return h+'</div>'}
@@ -344,7 +347,7 @@ function render(){
    if(B.ranked&&i===3){var c=document.createElement('li');c.className='cut';c.textContent='active above this line';ul.appendChild(c)}
    var act=B.ranked&&i<3,st=rowStatus(it.id);var r=document.createElement('li');r.className='r'+(act?' act':'');r.dataset.id=it.id;
    var chips=dot(st)+(act&&!st?'<span class="chip act">Active</span>':'')+(it.tag==='new'?'<span class="chip nw">new idea</span>':'')+(/fun$/.test(B.z)?'<span class="chip lk">'+(D.funUnlocked?'fun':'locked')+'</span>':'')+(it.sz?'<span class="chip">'+esc(it.sz)+'</span>':'');
-   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta">'+chips+(act?'<span class="mv" style="opacity:1"><button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'</span>';
+   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta">'+chips+(act?'<span class="mv" style="opacity:1"><button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'<button type="button" class="xdel" data-delrow="'+it.id+'" title="Delete this row" aria-label="Delete">\u00d7</button></span>';
    ul.appendChild(r);
    if(act){var b=document.createElement('li');b.className='brief'+(OPEN[it.id]?' show':'');b.dataset.bf=it.id;b.innerHTML=briefHTML(it);ul.appendChild(b)}
   });
@@ -373,7 +376,8 @@ async function insertTask(row,z,owner,answer,taskText){
  if(q.error){showToast('That did not save. '+q.error.message);return null}
  TASKS.push(q.data);return q.data}
 document.addEventListener('click',function(e){var s=e.target.closest('#srcb');if(s){var b=document.getElementById('srcs');b.classList.toggle('open');s.setAttribute('aria-expanded',b.classList.contains('open'))}});
-document.addEventListener('click',function(e){var b=e.target.closest('[data-newsub]');if(b){var box=document.createElement('div');box.className='addrow';box.innerHTML='<input placeholder="Name the new sub-category" maxlength="60"><button class="btn" type="button">Add</button>';var i=box.querySelector('input');function go(){var v=i.value.trim();if(v)newSub(v)}i.addEventListener('keydown',function(x){if(x.key==='Enter')go();if(x.key==='Escape')render()});box.querySelector('button').addEventListener('click',go);b.replaceWith(box);i.focus();return}
+document.addEventListener('click',function(e){var x=e.target.closest('[data-delrow]');if(x){delRow(x.dataset.delrow);return}x=e.target.closest('[data-deltask]');if(x){delTask(x.dataset.deltask);return}
+ var b=e.target.closest('[data-newsub]');if(b){var box=document.createElement('div');box.className='addrow';box.innerHTML='<input placeholder="Name the new sub-category" maxlength="60"><button class="btn" type="button">Add</button>';var i=box.querySelector('input');function go(){var v=i.value.trim();if(v)newSub(v)}i.addEventListener('keydown',function(x){if(x.key==='Enter')go();if(x.key==='Escape')render()});box.querySelector('button').addEventListener('click',go);b.replaceWith(box);i.focus();return}
  var d=e.target.closest('[data-subdel]');if(d)removeSub(d.dataset.subdel)});
 document.addEventListener('click',async function(e){var t=e.target.closest('button,[data-jump],.ptab')||e.target;
  if(t.classList&&t.classList.contains('ptab')){TAB=t.dataset.tab;try{localStorage.setItem(TKEY,TAB)}catch(x){}render();return}
@@ -399,6 +403,16 @@ function renameSub(z,v){var k=projOf(z),s=D.subs[k].filter(function(x){return x.
 function removeSub(z){var k=projOf(z),i=D.subs[k].map(function(x){return x.z}).indexOf(z);if(i<0)return;var snap=JSON.stringify(D),dest=k==='tw'?'twnew':'new',n=D.items[z].length;
  D.items[dest]=D.items[dest].concat(D.items[z]);delete D.items[z];D.subs[k].splice(i,1);save();render();
  showToast('Removed. '+(n?n+' row'+(n>1?'s':'')+' moved to New ideas. ':'')+'The Task Library keeps its copy.','Undo',function(){D=JSON.parse(snap);save();render()})}
+async function delTask(id){var tk=TASKS.filter(function(x){return x.id===id})[0];if(!tk)return;var snap=Object.assign({},tk);
+ TASKS=TASKS.filter(function(x){return x.id!==id});render();
+ if(sb){try{var r=await sb.from('todos').delete().eq('id',id);if(r&&r.error)throw r.error}catch(e){TASKS.push(snap);render();showToast('That did not delete. Try again.');return}}
+ showToast('Deleted "'+(snap.task||'').slice(0,40)+'".','Undo',async function(){TASKS.push(snap);render();if(sb){try{var q=await sb.from('todos').insert(snap);if(q&&q.error)throw q.error}catch(e){TASKS=TASKS.filter(function(x){return x.id!==snap.id});render();showToast('Could not bring that one back.')}}})}
+async function delRow(id){var f=find(id);if(!f)return;var ts=tasksFor(id),n=ts.length;
+ if(n&&!confirm('"'+f.it.t+'" has '+n+' linked task'+(n>1?'s':'')+'. Delete the row and '+(n>1?'all '+n+' tasks':'its task')+'?'))return;
+ var snapD=JSON.stringify(D),snapT=ts.map(function(x){return Object.assign({},x)});
+ D.items[f.z].splice(f.i,1);TASKS=TASKS.filter(function(x){return x.dash_row_id!==id});save();render();
+ if(n&&sb){try{var r=await sb.from('todos').delete().eq('dash_row_id',id);if(r&&r.error)throw r.error}catch(e){D=JSON.parse(snapD);TASKS=TASKS.concat(snapT);save();render();showToast('That did not delete. Try again.');return}}
+ showToast('Deleted "'+f.it.t.slice(0,40)+'"'+(n?' and '+n+' task'+(n>1?'s':''):'')+'.','Undo',async function(){D=JSON.parse(snapD);save();TASKS=TASKS.concat(snapT);render();if(n&&sb){try{var q=await sb.from('todos').insert(snapT);if(q&&q.error)throw q.error}catch(e){showToast('The row is back, but its tasks could not be restored.')}}})}
 function add(z,inp){var v=(inp.value||'').trim();if(!v)return;D.items[z].push({id:uid(),t:v,w:'',sz:'',tag:''});inp.value='';save();render();var n=document.querySelector('input[data-add="'+z+'"]');if(n)n.focus()}
 document.addEventListener('keydown',function(e){var t=e.target;
  if(t.dataset&&t.dataset.add&&e.key==='Enter'){e.preventDefault();add(t.dataset.add,t)}
