@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.14</title>
+<title>Projects Dashboard v2.15</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -157,7 +157,11 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .its .r{padding-left:8px}
 .its .n{font:700 11px Roboto,Arial,sans-serif;color:var(--faint);width:15px;flex:none;margin-top:2px;text-align:right}
 .its .r.act .t{font-weight:600;color:var(--ink)}
-.subl.actbox{background:#eef7f1;border:1px solid #bfe0cd}
+.its .r.act,.its .brief.actb{background:#eef7f1;border-left:1px solid #bfe0cd;border-right:1px solid #bfe0cd;border-radius:0;margin-top:0;margin-bottom:0;padding-right:6px}
+.its .r.act.first{border-top:1px solid #bfe0cd;border-radius:8px 8px 0 0}
+.its .brief.actb{margin-left:0;padding-left:30px}
+.its li.cut{background:#eef7f1;border:1px solid #bfe0cd;border-top:0;border-radius:0 0 8px 8px;margin:0 0 6px;padding:5px 8px}
+.its li.cut.empty{border-top:1px solid #bfe0cd;border-radius:8px}
 .its .ds{font-size:11.5px;line-height:1.35;color:#7b828c;margin-top:1px}
 .its .meta{display:flex;gap:4px;flex:none;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:44%}
 .its .meta .chip{margin-right:0}
@@ -268,7 +272,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.14</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.15</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button></div>
@@ -358,7 +362,7 @@ var WLC={py:['#7a3a52','#a5788a','#d9b4c4'],tw:['#7a9a4f','#a9bd8a','#bccfa0']};
 function wlSvg(k){var W=window.PY_WL;return W&&W.icons[k]?'<svg viewBox="0 0 24 24" aria-hidden="true">'+W.icons[k]+'</svg>':'+'}
 function wlName(k){var W=window.PY_WL;return W&&W.names[k]||''}
 function wlHTML(it,z){if(!window.PY_WL)return '';var c=WLC[projOf(z)];return '<button type="button" class="wlb'+(it.wl?' has':'')+'" style="--wc:'+c[0]+'" data-wl="'+it.id+'" title="'+(it.wl?wlName(it.wl):'Add a work label')+'" aria-label="Work label">'+(it.wl?wlSvg(it.wl):'+')+'</button>'}
-function pillsHTML(it,z){var bx=PROJ[projOf(z)].boxes,h='<span class="mvp">';SECS.forEach(function(sc,k){var on=bx[k].z===z;h+='<button type="button" class="sp'+(on?' on':'')+'" style="--c:'+sc[1]+'" data-mvto="'+bx[k].z+'" data-mvid="'+it.id+'"><i></i>'+sc[0]+'</button>'});
+function pillsHTML(it,z){var bx=PROJ[projOf(z)].boxes,h='<span class="mvp">';SECS.forEach(function(sc,k){var on=bx[k].z===z&&!(k===0&&it.off);h+='<button type="button" class="sp'+(on?' on':'')+'" style="--c:'+sc[1]+'" data-mvto="'+bx[k].z+'" data-mvid="'+it.id+'"><i></i>'+sc[0]+'</button>'});
  var pj=projOf(z),sl=(D.subs&&D.subs[pj])||[];if(sl.length){var cur=sl.filter(function(x){return x.z===z})[0];h+='<button type="button" class="sp'+(cur?' on':'')+'" style="--c:#7a8aa0" data-more="'+it.id+'" title="Send to one of your sub-categories"><i></i>'+(cur?esc(cur.name):'More')+'</button>'}
  return h+'</span>'}
 function moreOpen(btn,id){var p=document.getElementById('mrpop');if(!p){p=document.createElement('div');p.id='mrpop';p.className='mrpop';document.body.appendChild(p)}
@@ -369,8 +373,9 @@ function runBtn(it){var b=it.brief||{},pk=window.PYMoves?PYMoves.nextPickup():'t
  if(openClaude(it.id).length)return '<button type="button" disabled title="With Claude now" style="opacity:.6;cursor:default">With Claude</button>';
  if(b.what)return '<button type="button" class="runb" data-run="'+it.id+'" title="Hand this row to Claude with its saved brief. Next pickup about '+pk+'">'+(b.approved?'Run again':'Run')+'</button>';
  return '<button type="button" class="runb" data-askbrief="'+it.id+'" title="No brief yet. Claude drafts one at the next pickup ('+pk+')">Run</button>'}
-function moveRow(id,to){var f=find(id);if(!f||f.z===to)return;var snap=JSON.stringify(D),it=f.it,bx=PROJ[projOf(f.z)].boxes,nm=['Active','New ideas','Fun shelf','Not doing'],ix=bx.map(function(b){return b.z}).indexOf(to);
- D.items[f.z].splice(f.i,1);if(to===bx[0].z)D.items[to].push(it);else D.items[to].unshift(it);if(to===bx[0].z)D.crossings.push({id:it.id,t:it.t,at:new Date().toISOString()});
+function demoteRow(id){var f=find(id);if(!f)return;var snap=JSON.stringify(D),it=f.it,z=f.z;D.items[z].splice(f.i,1);it.off=true;var k=D.items[z].filter(function(x){return !x.off}).length;D.items[z].splice(k,0,it);save();render();showToast('"'+it.t+'" moved below the line. It is no longer active.','Undo',function(){D=JSON.parse(snap);save();render()})}
+function moveRow(id,to){var f=find(id);if(!f)return;var _b=PROJ[projOf(f.z)].boxes;if(f.z===to&&!(f.it.off&&to===_b[0].z))return;var snap=JSON.stringify(D),it=f.it,bx=PROJ[projOf(f.z)].boxes,nm=['Active','New ideas','Fun shelf','Not doing'],ix=bx.map(function(b){return b.z}).indexOf(to);
+ D.items[f.z].splice(f.i,1);delete it.off;if(to===bx[0].z){var k2=D.items[to].filter(function(x){return !x.off}).length;D.items[to].splice(k2,0,it)}else D.items[to].unshift(it);if(to===bx[0].z)D.crossings.push({id:it.id,t:it.t,at:new Date().toISOString()});
  save();render();showToast('"'+it.t+'" moved to '+(ix>-1?nm[ix]:((D.subs[projOf(to)]||[]).filter(function(x){return x.z===to})[0]||{name:'that box'}).name)+'.','Undo',function(){D=JSON.parse(snap);save();render()})}
 function wlPop(){var p=document.getElementById('wlpop');if(!p){p=document.createElement('div');p.id='wlpop';p.className='wlpop';document.body.appendChild(p)}return p}
 function wlOpen(btn,id){var p=wlPop();if(p.classList.contains('show')&&p.dataset.id===id){p.classList.remove('show');return}var f=find(id);if(!f||!window.PY_WL)return;var c=WLC[projOf(f.z)];p.style.cssText='--wc:'+c[0]+';--wo:'+c[1]+';--wl:'+c[2]+';';p.dataset.id=id;p.innerHTML='';
@@ -380,19 +385,20 @@ function render(){
  document.querySelectorAll('.ptab').forEach(function(b){b.classList.toggle('on',b.dataset.tab===TAB)});
  var P=PROJ[TAB],c1=$('#col1'),c2=$('#col2');c1.innerHTML='';c2.innerHTML='';var tot=0;
  boxes().forEach(function(B){
-  var a=D.items[B.z],n=a.length;tot+=n;
-  var w=document.createElement('div');w.className='subl'+(B.ranked?' actbox':'');w.id='box-'+B.z;
-  var extra=B.ranked?n+' active':(/fun$/.test(B.z)&&D.funUnlocked?n+' · '+D.funUnlocked+' unlocked':String(n));
+  var a=D.items[B.z];if(B.ranked)a=a.filter(function(x){return !x.off}).concat(a.filter(function(x){return x.off}));var n=a.length,nAct=B.ranked?a.filter(function(x){return !x.off}).length:n,cutDone=false;tot+=n;
+  var w=document.createElement('div');w.className='subl';w.id='box-'+B.z;
+  var extra=B.ranked?nAct+' active':(/fun$/.test(B.z)&&D.funUnlocked?n+' · '+D.funUnlocked+' unlocked':String(n));
   w.innerHTML='<div class="shd">'+(B.sub?'<b contenteditable="plaintext-only" spellcheck="false" data-subname="'+B.z+'" title="Tap to rename">'+esc(B.name)+'</b>':'<b>'+esc(B.name)+'</b>')+'<span class="sm">'+extra+'</span>'+(B.sub?'<button type="button" class="lnk" style="margin-left:auto" data-subdel="'+B.z+'" title="Remove this sub-category. Its rows move to New ideas.">Remove</button>':'')+'</div><p class="shn">'+esc(B.note)+'</p>';
   var ul=document.createElement('ul');ul.className='its';ul.dataset.z=B.z;
   a.forEach(function(it,i){
-   var act=!!B.ranked,st=rowStatus(it.id);var r=document.createElement('li');r.className='r'+(act?' act':'');r.dataset.id=it.id;
+   if(B.ranked&&it.off&&!cutDone){cutDone=true;var c0=document.createElement('li');c0.className='cut'+(nAct?'':' empty');c0.textContent='active above this line';ul.appendChild(c0)}
+   var act=!!B.ranked&&!it.off,st=rowStatus(it.id);var r=document.createElement('li');r.className='r'+(act?' act':'')+(act&&i===0?' first':'');r.dataset.id=it.id;
    var chips=(it.tag==='new'?'<span class="chip nw">new idea</span>':'')+(/fun$/.test(B.z)?'<span class="chip lk">'+(D.funUnlocked?'fun':'locked')+'</span>':'')+(it.sz?'<span class="chip">'+esc(it.sz)+'</span>':'');
-   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta">'+wlHTML(it,B.z)+pillsHTML(it,B.z)+chips+(act?'<span class="mv" style="opacity:1">'+runBtn(it)+'<button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'<button type="button" class="xdel" data-delrow="'+it.id+'" title="Delete this row" aria-label="Delete">\u00d7</button></span>';
+   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+(act?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta">'+wlHTML(it,B.z)+pillsHTML(it,B.z)+chips+(act?'<span class="mv" style="opacity:1">'+runBtn(it)+'<button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'<button type="button" class="xdel" data-delrow="'+it.id+'" title="Delete this row" aria-label="Delete">\u00d7</button></span>';
    ul.appendChild(r);
-   if(act){var b=document.createElement('li');b.className='brief'+(OPEN[it.id]?' show':'');b.dataset.bf=it.id;b.innerHTML=briefHTML(it);ul.appendChild(b)}
+   if(act){var b=document.createElement('li');b.className='brief actb'+(OPEN[it.id]?' show':'');b.dataset.bf=it.id;b.innerHTML=briefHTML(it);ul.appendChild(b)}
   });
-  if(B.ranked&&a.length){var cl=document.createElement('li');cl.className='cut';cl.textContent='active above this line';ul.appendChild(cl)}
+  if(B.ranked&&!cutDone){var cl=document.createElement('li');cl.className='cut'+(nAct?'':' empty');cl.textContent='active above this line';ul.appendChild(cl)}
   w.appendChild(ul);
   if(B.ranked||B.sub||/new$/.test(B.z)){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="Add to '+esc(B.name.replace(', ranked','').replace(', not yet ranked',''))+'" maxlength="160" data-add="'+B.z+'"><button class="btn" data-addb="'+B.z+'">Add</button>';w.appendChild(ar)}
   (B.col===1?c1:c2).appendChild(w);
@@ -406,9 +412,10 @@ function render(){
  stamp();
 }
 function readDom(){
- var rz=PROJ[TAB].boxes[0].z,before=D.items[rz].map(function(x){return x.id});
- boxes().forEach(function(B){var ns=[];document.querySelectorAll('.its[data-z="'+B.z+'"] .r').forEach(function(d){var f=find(d.dataset.id);if(f)ns.push(f.it)});D.items[B.z]=ns});
- D.items[rz].forEach(function(x){if(before.indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}});
+ var rz=PROJ[TAB].boxes[0].z,before=D.items[rz].filter(function(x){return !x.off}).map(function(x){return x.id}),all={};
+ allZ().forEach(function(z){(D.items[z]||[]).forEach(function(x){all[x.id]=x})});
+ boxes().forEach(function(B){var ns=[],passed=false;document.querySelectorAll('.its[data-z="'+B.z+'"]>li').forEach(function(d){if(d.classList.contains('cut')){passed=true;return}if(!d.classList.contains('r'))return;var it=all[d.dataset.id];if(!it)return;if(B.z===rz&&passed)it.off=true;else delete it.off;ns.push(it)});D.items[B.z]=ns});
+ D.items[rz].forEach(function(x){if(!x.off&&before.indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}});
  if(D.crossings.length>200)D.crossings=D.crossings.slice(-200);
  save();render();
 }
@@ -425,7 +432,7 @@ document.addEventListener('click',function(e){var pp=document.getElementById('wl
  if(pk&&pp){var f=find(pp.dataset.id);if(f){f.it.wl=f.it.wl===pk.dataset.wlpick?'':pk.dataset.wlpick;if(!f.it.wl)delete f.it.wl;save();render()}pp.classList.remove('show');return}
  var wb=e.target.closest('[data-wl]');if(wb){wlOpen(wb,wb.dataset.wl);return}
  var mp=document.getElementById('mrpop'),mr=e.target.closest('[data-mrto]');if(mr){mp.classList.remove('show');moveRow(mr.dataset.mrid,mr.dataset.mrto);return}var mo=e.target.closest('[data-more]');if(mo){if(pp)pp.classList.remove('show');moreOpen(mo,mo.dataset.more);return}if(mp&&mp.classList.contains('show')&&!e.target.closest('#mrpop'))mp.classList.remove('show');
- var mb=e.target.closest('[data-mvto]');if(mb){if(pp)pp.classList.remove('show');if(!mb.classList.contains('on'))moveRow(mb.dataset.mvid,mb.dataset.mvto);else{var bx=PROJ[TAB].boxes;if(mb.dataset.mvto===bx[0].z)moveRow(mb.dataset.mvid,bx[1].z)}return}
+ var mb=e.target.closest('[data-mvto]');if(mb){if(pp)pp.classList.remove('show');if(!mb.classList.contains('on'))moveRow(mb.dataset.mvid,mb.dataset.mvto);else{var bx=PROJ[TAB].boxes;if(mb.dataset.mvto===bx[0].z)demoteRow(mb.dataset.mvid)}return}
  if(pp&&pp.classList.contains('show')&&!e.target.closest('#wlpop'))pp.classList.remove('show')});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){var pp=document.getElementById('wlpop');if(pp)pp.classList.remove('show')}});
 document.addEventListener('click',async function(e){var t=e.target.closest('button,[data-jump],.ptab')||e.target;
@@ -438,7 +445,7 @@ document.addEventListener('click',async function(e){var t=e.target.closest('butt
  if(t.dataset.askbrief){var g=find(t.dataset.askbrief);if(!g)return;t.disabled=true;
   var ok=await insertTask(g.it,g.z,'claude','Draft a brief for the Projects Dashboard row "'+g.it.t+'" (row id '+g.it.id+'). Write what, why, done, dont and model in plain words, and save it with: select dash_set_brief(\''+g.it.id+'\', jsonb). Scott approves it on the dashboard. Then set this task to Review.','Write a brief: '+g.it.t);
   if(ok){render();showToast('Claude will draft the brief at the next pickup.')}else t.disabled=false;return}
- if(t.dataset.done){var h=find(t.dataset.done);if(!h)return;var B=PROJ[projOf(h.z)].boxes[0];var was=h.z===B.z;var snap=JSON.stringify(D);
+ if(t.dataset.done){var h=find(t.dataset.done);if(!h)return;var B=PROJ[projOf(h.z)].boxes[0];var was=h.z===B.z&&!h.it.off;var snap=JSON.stringify(D);
   D.items[h.z].splice(h.i,1);D.done.push({id:h.it.id,t:h.it.t,z:h.z,at:new Date().toISOString(),active:!!was});if(was)D.funUnlocked++;save();render();
   showToast(was?'Done. The next one moved up, and one fun row is unlocked.':'Done.','Undo',function(){D=JSON.parse(snap);save();render()});return}
  if(t.dataset.addb){add(t.dataset.addb,document.querySelector('input[data-add="'+t.dataset.addb+'"]'));return}
