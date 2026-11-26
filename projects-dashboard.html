@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.6</title>
+<title>Projects Dashboard v2.7</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -223,6 +223,22 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .srcs li a{color:var(--accent);text-decoration:none;font-weight:600}
 .srcs li a:hover{text-decoration:underline}
 .srcs .no{color:#9aa1ab;font-size:11.5px}
+/* v2.7 (Scott, Nov 26): one-tap section pills, work labels, no limit on Active */
+.its .meta{max-width:64%}
+.sp{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12.5px;line-height:1.25;font-weight:400;color:#2b3340;background:#fff;border:1px solid #dfe3ea;border-radius:8px;padding:2px 9px 2px 8px;cursor:pointer;white-space:nowrap}
+.sp i{display:block;width:7px;height:7px;border-radius:50%;background:var(--c);flex:none}
+.sp.on{border-color:#4f9a6a;box-shadow:0 0 0 .5px #4f9a6a;cursor:default}
+.sp:not(.on):hover{border-color:#b9c1cc}
+.mvp{display:inline-flex;gap:3px;flex:none;flex-wrap:wrap;justify-content:flex-end}
+.wlb{width:22px;height:22px;border-radius:7px;border:1.5px dashed var(--wc);color:var(--wc);background:transparent;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex:none;font-size:14px;line-height:1;opacity:.7}
+.wlb.has{border:0;opacity:1}
+.wlb:hover{opacity:1}
+.wlb svg{width:18px;height:18px;fill:currentColor}
+.wlpop{position:fixed;z-index:90;display:none;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--wl);border-radius:22px;padding:6px 14px;box-shadow:0 6px 18px rgba(31,42,68,.16)}
+.wlpop.show{display:flex}
+.wlpop button{border:0;background:transparent;padding:4px;cursor:pointer;color:var(--wo);display:flex;border-radius:8px}
+.wlpop button.on,.wlpop button:hover{color:var(--wc)}
+.wlpop svg{width:24px;height:24px;fill:currentColor}
 </style><style id="tlnav-css">
 /* v2.8, Nov 22 2026 (Scott): the same panel tabs as Today and the Staging Area, Today first. */
 .tlnav{display:flex;align-items:stretch;background:#f7f9fc;border:1px solid #e3e7ee;border-radius:10px 10px 0 0;flex-wrap:wrap;margin:0 0 14px}
@@ -250,7 +266,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.6</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.7</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button></div>
@@ -272,6 +288,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </div>
 <div class="toast" id="toast"></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
+<script src="work-label-icons.js"></script>
 <script>
 (function(){
 var SUPA='https://arnjntspmrhigodlssbn.supabase.co',ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM',KEY='projects_dashboard',LKEY='py_projects_dashboard_v1',TKEY='py_dash_tab';
@@ -334,20 +351,32 @@ function linksHTML(it){var ts=tasksFor(it.id),cs=chatsFor(it.id),h='',open=ts.fi
  if(dn)h+='<div class="lt mute">'+dn+' task'+(dn>1?'s':'')+' done</div>';
  if(cs.length)h+='<div class="lt">'+'<span class="sw">Chats</span>'+cs.slice(0,4).map(function(c){return '<a href="'+esc(c.session_url)+'" target="_blank" rel="noopener" title="'+esc(c.topic)+'">'+esc((c.topic||'Chat').slice(0,48))+'</a>'}).join('')+(cs.length>4?'<span class="sw">+'+(cs.length-4)+' more</span>':'')+'</div>';
  return h+'</div>'}
+var SECS=[['Active','#1e8e5a'],['Ideas','#c6a63f'],['Fun','#e0975a'],['Not doing','#8a93a1']];
+var WLC={py:['#7a3a52','#a5788a','#d9b4c4'],tw:['#7a9a4f','#a9bd8a','#bccfa0']};
+function wlSvg(k){var W=window.PY_WL;return W&&W.icons[k]?'<svg viewBox="0 0 24 24" aria-hidden="true">'+W.icons[k]+'</svg>':'+'}
+function wlName(k){var W=window.PY_WL;return W&&W.names[k]||''}
+function wlHTML(it,z){if(!window.PY_WL)return '';var c=WLC[projOf(z)];return '<button type="button" class="wlb'+(it.wl?' has':'')+'" style="--wc:'+c[0]+'" data-wl="'+it.id+'" title="'+(it.wl?wlName(it.wl):'Add a work label')+'" aria-label="Work label">'+(it.wl?wlSvg(it.wl):'+')+'</button>'}
+function pillsHTML(it,z){var bx=PROJ[projOf(z)].boxes,h='<span class="mvp">';SECS.forEach(function(sc,k){var on=bx[k].z===z;h+='<button type="button" class="sp'+(on?' on':'')+'" style="--c:'+sc[1]+'" data-mvto="'+bx[k].z+'" data-mvid="'+it.id+'"><i></i>'+sc[0]+'</button>'});return h+'</span>'}
+function moveRow(id,to){var f=find(id);if(!f||f.z===to)return;var snap=JSON.stringify(D),it=f.it,bx=PROJ[projOf(f.z)].boxes,nm=['Active','New ideas','Fun shelf','Not doing'],ix=bx.map(function(b){return b.z}).indexOf(to);
+ D.items[f.z].splice(f.i,1);D.items[to].unshift(it);if(to===bx[0].z)D.crossings.push({id:it.id,t:it.t,at:new Date().toISOString()});
+ save();render();showToast('"'+it.t+'" moved to '+(ix>-1?nm[ix]:'that box')+'.','Undo',function(){D=JSON.parse(snap);save();render()})}
+function wlPop(){var p=document.getElementById('wlpop');if(!p){p=document.createElement('div');p.id='wlpop';p.className='wlpop';document.body.appendChild(p)}return p}
+function wlOpen(btn,id){var p=wlPop();if(p.classList.contains('show')&&p.dataset.id===id){p.classList.remove('show');return}var f=find(id);if(!f||!window.PY_WL)return;var c=WLC[projOf(f.z)];p.style.cssText='--wc:'+c[0]+';--wo:'+c[1]+';--wl:'+c[2]+';';p.dataset.id=id;p.innerHTML='';
+ window.PY_WL.order.forEach(function(k){var b=document.createElement('button');b.type='button';b.title=wlName(k);b.dataset.wlpick=k;if(f.it.wl===k)b.className='on';b.innerHTML=wlSvg(k);p.appendChild(b)});
+ p.classList.add('show');var r=btn.getBoundingClientRect(),w=p.offsetWidth;p.style.left=Math.max(8,Math.min(window.innerWidth-w-8,r.right-w))+'px';p.style.top=(r.bottom+6)+'px'}
 function render(){
  document.querySelectorAll('.ptab').forEach(function(b){b.classList.toggle('on',b.dataset.tab===TAB)});
  var P=PROJ[TAB],c1=$('#col1'),c2=$('#col2');c1.innerHTML='';c2.innerHTML='';var tot=0;
  boxes().forEach(function(B){
   var a=D.items[B.z],n=a.length;tot+=n;
   var w=document.createElement('div');w.className='subl';w.id='box-'+B.z;
-  var extra=B.ranked?Math.min(3,n)+' active, '+Math.max(0,n-3)+' waiting':(/fun$/.test(B.z)&&D.funUnlocked?n+' · '+D.funUnlocked+' unlocked':String(n));
+  var extra=B.ranked?n+' active':(/fun$/.test(B.z)&&D.funUnlocked?n+' · '+D.funUnlocked+' unlocked':String(n));
   w.innerHTML='<div class="shd">'+(B.sub?'<b contenteditable="plaintext-only" spellcheck="false" data-subname="'+B.z+'" title="Tap to rename">'+esc(B.name)+'</b>':'<b>'+esc(B.name)+'</b>')+'<span class="sm">'+extra+'</span>'+(B.sub?'<button type="button" class="lnk" style="margin-left:auto" data-subdel="'+B.z+'" title="Remove this sub-category. Its rows move to New ideas.">Remove</button>':'')+'</div><p class="shn">'+esc(B.note)+'</p>';
   var ul=document.createElement('ul');ul.className='its';ul.dataset.z=B.z;
   a.forEach(function(it,i){
-   if(B.ranked&&i===3){var c=document.createElement('li');c.className='cut';c.textContent='active above this line';ul.appendChild(c)}
-   var act=B.ranked&&i<3,st=rowStatus(it.id);var r=document.createElement('li');r.className='r'+(act?' act':'');r.dataset.id=it.id;
-   var chips=dot(st)+(act&&!st?'<span class="chip act">Active</span>':'')+(it.tag==='new'?'<span class="chip nw">new idea</span>':'')+(/fun$/.test(B.z)?'<span class="chip lk">'+(D.funUnlocked?'fun':'locked')+'</span>':'')+(it.sz?'<span class="chip">'+esc(it.sz)+'</span>':'');
-   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta">'+chips+(act?'<span class="mv" style="opacity:1"><button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'<button type="button" class="xdel" data-delrow="'+it.id+'" title="Delete this row" aria-label="Delete">\u00d7</button></span>';
+   var act=!!B.ranked,st=rowStatus(it.id);var r=document.createElement('li');r.className='r'+(act?' act':'');r.dataset.id=it.id;
+   var chips=dot(st)+(it.tag==='new'?'<span class="chip nw">new idea</span>':'')+(/fun$/.test(B.z)?'<span class="chip lk">'+(D.funUnlocked?'fun':'locked')+'</span>':'')+(it.sz?'<span class="chip">'+esc(it.sz)+'</span>':'');
+   r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+(B.ranked?'<span class="n">'+(i+1)+'</span>':'')+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta">'+wlHTML(it,B.z)+pillsHTML(it,B.z)+chips+(act?'<span class="mv" style="opacity:1"><button type="button" data-brief="'+it.id+'">Brief</button></span>':'')+'<button type="button" class="xdel" data-delrow="'+it.id+'" title="Delete this row" aria-label="Delete">\u00d7</button></span>';
    ul.appendChild(r);
    if(act){var b=document.createElement('li');b.className='brief'+(OPEN[it.id]?' show':'');b.dataset.bf=it.id;b.innerHTML=briefHTML(it);ul.appendChild(b)}
   });
@@ -364,9 +393,9 @@ function render(){
  stamp();
 }
 function readDom(){
- var rz=PROJ[TAB].boxes[0].z,before=D.items[rz].slice(0,3).map(function(x){return x.id});
+ var rz=PROJ[TAB].boxes[0].z,before=D.items[rz].map(function(x){return x.id});
  boxes().forEach(function(B){var ns=[];document.querySelectorAll('.its[data-z="'+B.z+'"] .r').forEach(function(d){var f=find(d.dataset.id);if(f)ns.push(f.it)});D.items[B.z]=ns});
- D.items[rz].slice(0,3).forEach(function(x){if(before.indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}});
+ D.items[rz].forEach(function(x){if(before.indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}});
  if(D.crossings.length>200)D.crossings=D.crossings.slice(-200);
  save();render();
 }
@@ -379,6 +408,12 @@ document.addEventListener('click',function(e){var s=e.target.closest('#srcb');if
 document.addEventListener('click',function(e){var x=e.target.closest('[data-delrow]');if(x){delRow(x.dataset.delrow);return}x=e.target.closest('[data-deltask]');if(x){delTask(x.dataset.deltask);return}
  var b=e.target.closest('[data-newsub]');if(b){var box=document.createElement('div');box.className='addrow';box.innerHTML='<input placeholder="Name the new sub-category" maxlength="60"><button class="btn" type="button">Add</button>';var i=box.querySelector('input');function go(){var v=i.value.trim();if(v)newSub(v)}i.addEventListener('keydown',function(x){if(x.key==='Enter')go();if(x.key==='Escape')render()});box.querySelector('button').addEventListener('click',go);b.replaceWith(box);i.focus();return}
  var d=e.target.closest('[data-subdel]');if(d)removeSub(d.dataset.subdel)});
+document.addEventListener('click',function(e){var pp=document.getElementById('wlpop');var pk=e.target.closest('[data-wlpick]');
+ if(pk&&pp){var f=find(pp.dataset.id);if(f){f.it.wl=f.it.wl===pk.dataset.wlpick?'':pk.dataset.wlpick;if(!f.it.wl)delete f.it.wl;save();render()}pp.classList.remove('show');return}
+ var wb=e.target.closest('[data-wl]');if(wb){wlOpen(wb,wb.dataset.wl);return}
+ var mb=e.target.closest('[data-mvto]');if(mb){if(pp)pp.classList.remove('show');if(!mb.classList.contains('on'))moveRow(mb.dataset.mvid,mb.dataset.mvto);return}
+ if(pp&&pp.classList.contains('show')&&!e.target.closest('#wlpop'))pp.classList.remove('show')});
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){var pp=document.getElementById('wlpop');if(pp)pp.classList.remove('show')}});
 document.addEventListener('click',async function(e){var t=e.target.closest('button,[data-jump],.ptab')||e.target;
  if(t.classList&&t.classList.contains('ptab')){TAB=t.dataset.tab;try{localStorage.setItem(TKEY,TAB)}catch(x){}render();return}
  if(t.dataset.brief){OPEN[t.dataset.brief]=!OPEN[t.dataset.brief];var b=document.querySelector('.brief[data-bf="'+t.dataset.brief+'"]');if(b)b.classList.toggle('show',!!OPEN[t.dataset.brief]);return}
@@ -389,7 +424,7 @@ document.addEventListener('click',async function(e){var t=e.target.closest('butt
  if(t.dataset.askbrief){var g=find(t.dataset.askbrief);if(!g)return;t.disabled=true;
   var ok=await insertTask(g.it,g.z,'claude','Draft a brief for the Projects Dashboard row "'+g.it.t+'" (row id '+g.it.id+'). Write what, why, done, dont and model in plain words, and save it with: select dash_set_brief(\''+g.it.id+'\', jsonb). Scott approves it on the dashboard. Then set this task to Review.','Write a brief: '+g.it.t);
   if(ok){render();showToast('Claude will draft the brief at the next pickup.')}else t.disabled=false;return}
- if(t.dataset.done){var h=find(t.dataset.done);if(!h)return;var B=PROJ[projOf(h.z)].boxes[0];var was=h.z===B.z&&h.i<3;var snap=JSON.stringify(D);
+ if(t.dataset.done){var h=find(t.dataset.done);if(!h)return;var B=PROJ[projOf(h.z)].boxes[0];var was=h.z===B.z;var snap=JSON.stringify(D);
   D.items[h.z].splice(h.i,1);D.done.push({id:h.it.id,t:h.it.t,z:h.z,at:new Date().toISOString(),active:!!was});if(was)D.funUnlocked++;save();render();
   showToast(was?'Done. The next one moved up, and one fun row is unlocked.':'Done.','Undo',function(){D=JSON.parse(snap);save();render()});return}
  if(t.dataset.addb){add(t.dataset.addb,document.querySelector('input[data-add="'+t.dataset.addb+'"]'));return}
