@@ -107,7 +107,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.11</span>
+    <span class="pn-ver">v1.12</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -134,7 +134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="cue-visits.js"></script>
 <script>
-/* TreadWell Recon, v1.11, Nov 26 2026. v1.11: "Not yet, show me again" puts one platform back in rotation yourself. Nothing is ever removed from the deck memory now, lines are retired and can be put back, and the card reads a pre-filtered live list so a retired line cannot reach it. v1.10: a partner lead goes to its own Partner Leads box on the Projects Dashboard, away from the idea bullets, which stay in Cue Card Insights. Scott chose this. v1.9: renamed from TreadWell Watch to TreadWell Recon, everywhere: this page, Cue Cards, the shared visit script, Mission Control and the habit records. The address stays treadwell-watch.html, the same way Atomic Habits kept james-clear.html. v1.8: the card is 640px wide instead of 560px. v1.7: Partner candidate goes to the Projects Dashboard too, not the capture inbox. v1.6: Idea worth logging removed, the Keep star covers it. v1.5: the Keep star and its neighbours sit in the card's top right, not pinned to the window. v1.4: Send lands on the Projects Dashboard, TreadWell, Cue Card Insights, not in the Task Library. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
+/* TreadWell Recon, v1.12, Nov 26 2026. v1.12: the fifteen platforms now live in the database (recon_platforms), the copy in this page is an emergency fallback only and must never be hand-edited. Arriving with a platform name after a # opens it to read without recording anything. Every row sent to the Projects Dashboard carries two links back, to the platform on this card and to the platform itself. v1.11: "Not yet, show me again" puts one platform back in rotation yourself. Nothing is ever removed from the deck memory now, lines are retired and can be put back, and the card reads a pre-filtered live list so a retired line cannot reach it. v1.10: a partner lead goes to its own Partner Leads box on the Projects Dashboard, away from the idea bullets, which stay in Cue Card Insights. Scott chose this. v1.9: renamed from TreadWell Watch to TreadWell Recon, everywhere: this page, Cue Cards, the shared visit script, Mission Control and the habit records. The address stays treadwell-watch.html, the same way Atomic Habits kept james-clear.html. v1.8: the card is 640px wide instead of 560px. v1.7: Partner candidate goes to the Projects Dashboard too, not the capture inbox. v1.6: Idea worth logging removed, the Keep star covers it. v1.5: the Keep star and its neighbours sit in the card's top right, not pinned to the window. v1.4: Send lands on the Projects Dashboard, TreadWell, Cue Card Insights, not in the Task Library. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
    One travel-with-purpose platform a day, for perspective on TreadWell.
    Built on the Wait, Really?! page: same nav, sign-in, card clock,
    deck_progress and todos wiring, no schema change.
@@ -191,7 +191,12 @@ var __cueTickId=setInterval(__cueHandTick,250);
 /* The fifteen platforms. Researched Nov 25, 2026, every fact from a real
    source, nothing from a pattern match. "idea" is the point of the card:
    what this could mean for TreadWell, never generic praise. */
-const CARDS=[
+/* EMERGENCY COPY ONLY, frozen Nov 26 2026. The real platform list lives in
+   the database (recon_platforms). This copy exists so the card still gives
+   Scott his ten minutes when the database cannot be reached. DO NOT HAND EDIT
+   IT and do not add platforms here: add them to the database. Scott's call,
+   Nov 26 2026, "keep it, labelled and never hand-edited". */
+const FALLBACK=[
  {id:'visit-org',name:'Visit.org',tag:'Corporate CSR marketplace',
   what:"A for-profit platform founded in 2015 that connects corporations with vetted nonprofit partners for structured social impact experiences: skills-based volunteering, wellness workshops, educational sessions. Used by companies like Nike, Cisco and Amazon for employee engagement, not sold to individual travelers. The product is really the vetting plus the logistics. A company picks an experience from a library, Visit.org handles the nonprofit relationship, the briefing and the reporting afterwards, and the employer gets something it can put in a corporate responsibility report. The nonprofit is paid for its time rather than asked to host visitors for free, which is the part most volunteer travel gets wrong.",
   model:"Sells access to a library of thousands of nonprofit-led experiences to enterprise HR and CSR teams. Certified B Corp.",
@@ -298,8 +303,10 @@ const CARDS=[
           "Write the one-line answer to why not just use a directory, and put it on the site."],
   url:'https://www.goabroad.com/'}
 ];
+var CARDS=FALLBACK, DATA_SOURCE='copy';
 
-var SERVED={}, CUR=-1, signedIn=false, ticked=false, habitRow=null, DECKSTATE=null, capped={};
+
+var SERVED={}, CUR=-1, LOOKING_BACK=false, signedIn=false, ticked=false, habitRow=null, DECKSTATE=null, capped={};
 function $(s){return document.querySelector(s);}
 function todayKey(){ try{ if(window.PY&&PY.today) return PY.today(); }catch(e){}
   var d=new Date(Date.now()-2*3600*1000);
@@ -308,6 +315,34 @@ function niceDate(){ return new Intl.DateTimeFormat('en-US',{timeZone:'America/N
 var toastId=null;
 function toast(t){ var el=$('#toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toastId); toastId=setTimeout(function(){el.classList.remove('on');},2600); }
 
+/* v1.12: the platform list comes from the database. The copy above is only
+   a safety net. If the database has no platforms yet, the card loads its copy
+   in once, so the move needs no hand typing and cannot half happen. */
+async function loadPlatforms(){
+  try{
+    var r=await sb.from('recon_platforms_live').select('*');
+    if(r.error) throw r.error;
+    var rows=r.data||[];
+    if(!rows.length){
+      var seed=FALLBACK.map(function(c,i){
+        return {id:c.id,name:c.name,tag:c.tag,what:c.what,model:c.model,url:c.url,
+                advice:c.advice||[],caution:!!c.caution,position:i+1,
+                added_by:'loaded from the card copy, Nov 26 2026'};
+      });
+      var w=await sb.from('recon_platforms').upsert(seed,{onConflict:'id'});
+      if(w.error) throw w.error;
+      var again=await sb.from('recon_platforms_live').select('*');
+      rows=(again.data||[]);
+    }
+    if(rows.length){
+      rows.sort(function(a,b){ return (a.position-b.position)||String(a.id).localeCompare(String(b.id)); });
+      CARDS=rows; DATA_SOURCE='database'; return;
+    }
+    CARDS=FALLBACK; DATA_SOURCE='copy';
+  }catch(e){
+    CARDS=FALLBACK; DATA_SOURCE='copy';
+  }
+}
 async function loadDeck(){
   SERVED={};
   var r=await sb.from('deck_progress_live').select('tile_key,served_on').eq('deck',DECK);
@@ -361,7 +396,9 @@ function renderDots(){
 function render(){
   if(CUR<0){ endTile(); return; }
   var c=CARDS[CUR], seen=Object.keys(SERVED).length;
-  $('#lockline').textContent='Platform '+(seen)+' of '+CARDS.length+' seen. '+niceDate()+'.';
+  $('#lockline').textContent = LOOKING_BACK
+    ? 'Looking back at '+c.name+'. Nothing is being recorded. Open the card with no link for today\'s platform.'
+    : ('Platform '+(seen)+' of '+CARDS.length+' seen. '+niceDate()+'.'+(DATA_SOURCE==='copy'?' Showing the stored copy, the database could not be reached.':''));
   $('#card').innerHTML=
     '<span class="tag'+(c.caution?' caution':'')+'">'+c.tag+'</span>'+
     '<h2>'+c.name+'</h2>'+
@@ -375,10 +412,11 @@ function render(){
     '</div>'+
     '<div class="copywrap"><div class="lb">What gets filed or sent (copy it if you want it elsewhere)</div>'+
       '<textarea id="capText" readonly>'+((c.advice&&c.advice[0]?c.advice[0]:c.name)+'  (TreadWell Recon, '+c.name+')')+'</textarea></div>'+
-    '<div class="fin"><span class="minlb">Minutes</span><input class="minin" id="mins" inputmode="numeric" placeholder="10">'+
-      '<button class="next" id="btnNext" onclick="finish()">Done</button></div>'+
+    (LOOKING_BACK ? '<a class="vlink" href="treadwell-watch.html">Go to today\'s platform &rarr;</a>'
+      : '<div class="fin"><span class="minlb">Minutes</span><input class="minin" id="mins" inputmode="numeric" placeholder="10">'+
+        '<button class="next" id="btnNext" onclick="finish()">Done</button></div>')+
     '<div class="mintotal hidden" id="minTotal"></div>';
-  $('#stamp').textContent='TreadWell Recon v1.11 · fifteen platforms, researched Nov 25, 2026';
+  $('#stamp').textContent='TreadWell Recon v1.12 · the platform list now lives in the database, researched Nov 25, 2026';
   renderDots();
   if(ticked){ var n=$('#btnNext'); if(n){ n.disabled=true; n.textContent='Ticked today'; } }
 }
@@ -413,6 +451,14 @@ function adviceHtml(c){
    before writing, only ever adds to that one box, and stamps the save time so
    the dashboard's own newest-wins rule keeps the row. It no longer writes a
    task into the Task Library, which is where these were landing before. */
+/* v1.12: every row this card sends carries two links back, Scott's choice:
+   one to that exact platform on this card, one straight out to the platform.
+   The first names the platform, never its position, so it keeps working as
+   the deck grows. */
+function srcLinks(c){
+  return [{t:'TreadWell Recon, '+c.name, u:'treadwell-watch.html#'+c.id},
+          {t:c.name, u:c.url}];
+}
 var BOARD_KEY='projects_dashboard', INSIGHT_BOX='Cue Card Insights', PARTNER_BOX='Partner Leads';
 function dashUid(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 /* One writer for everything this card sends. Rows land on the Projects
@@ -420,7 +466,7 @@ function dashUid(){ return 'i'+Date.now().toString(36)+Math.random().toString(36
    leads in their own Partner Leads box (Scott's call, Nov 26 2026). The box
    is found by name and created if missing, so a renamed or rebuilt zone id
    cannot break either button. */
-async function addToBoard(title, subline, why, size, boxName){
+async function addToBoard(title, subline, why, size, boxName, links){
   var g=await sb.from('board_meta').select('val').eq('key',BOARD_KEY).single();
   if(g.error||!g.data||!g.data.val) return {error:(g.error&&g.error.message)||'no board found'};
   var B=g.data.val;
@@ -433,6 +479,7 @@ async function addToBoard(title, subline, why, size, boxName){
   if(!Array.isArray(B.items[box.z])) B.items[box.z]=[];
   B.items[box.z].push({
     id:dashUid(), t:title, w:subline, sz:size||'Tiny', tag:'',
+    links:links||[],
     brief:{what:title, why:why, done:'', dont:'', model:''}
   });
   B.saved=new Date().toISOString();
@@ -446,7 +493,7 @@ async function sendAdvice(i){
   if(!sb||!signedIn){ toast('Sign in to send it. The text is in the box to copy.'); return; }
   if(sentTask[key]){ toast('Already sent that one.'); return; }
   var r=await addToBoard(text, 'From the TreadWell Recon cue card, '+c.name+'.',
-                         'Spotted on the TreadWell Recon cue card, '+c.name+'.');
+                         'Spotted on the TreadWell Recon cue card, '+c.name+'.', 'Tiny', INSIGHT_BOX, srcLinks(c));
   if(r.error){ toast('Did not send it: '+r.error); return; }
   sentTask[key]=true; render();
   toast('Sent to the Projects Dashboard, TreadWell, '+INSIGHT_BOX+'.');
@@ -466,7 +513,7 @@ async function capture(kind){
   if(capped[kind+CUR]){ toast('Already filed that one.'); return; }
   var r=await addToBoard('Look at '+c.name+' as a possible partner',
                          c.tag+'. From the TreadWell Recon cue card.',
-                         'Flagged as a partner candidate on the TreadWell Recon cue card.','Small',PARTNER_BOX);
+                         'Flagged as a partner candidate on the TreadWell Recon cue card.','Small',PARTNER_BOX,srcLinks(c));
   if(r.error){ toast('Did not file it: '+r.error); return; }
   capped[kind+CUR]=true;
   var btn=document.getElementById('capP');
@@ -506,7 +553,7 @@ function endTile(){
     '<div class="blk"><p>Every platform in the deck has had its turn. Put it back in rotation to start again from the top, or leave it on the Read shelf and it will wait for you.</p></div>'+
     '<div class="idea blk"><div class="lb">Worth doing next</div><p>If any of them turned into a real partner lead or a change to TreadWell, that flag is sitting in your inbox waiting to be routed.</p></div>'+
     '<button class="rback" onclick="rotateBack()">Put it back in rotation</button>';
-  $('#stamp').textContent='TreadWell Recon v1.11';
+  $('#stamp').textContent='TreadWell Recon v1.12';
   renderDots();
 }
 /* v1.11: one platform back in rotation, for the days you did not get to it.
@@ -542,10 +589,25 @@ async function signIn(){
   signedIn=true;await boot2();
 }
 async function boot2(){
+  await loadPlatforms();
   await loadDeck(); await loadHabit();
+  var want=lookBack();
+  if(want>=0){ CUR=want; LOOKING_BACK=true; render(); return; }
+  LOOKING_BACK=false;
   CUR=pick();
   if(CUR>=0){ await serve(CUR); }
   render();
+}
+/* v1.12: arriving from a link, such as an insight on the Projects Dashboard,
+   opens that one platform to read. It records NOTHING: it is not served, it
+   does not count as today's card and it offers no Done, so reading an old
+   insight can never use up a day of the deck. The link names the platform,
+   never its place in the deck, so it survives the deck growing. */
+function lookBack(){
+  var h=(location.hash||'').replace(/^#/,'').trim().toLowerCase();
+  if(!h) return -1;
+  for(var i=0;i<CARDS.length;i++){ if(String(CARDS[i].id).toLowerCase()===h) return i; }
+  return -1;
 }
 async function boot(){
   if(!sb){ $('#gate').classList.remove('hidden'); $('#gateErr').textContent='Could not reach the database.'; return; }

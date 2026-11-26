@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.15</title>
+<title>Projects Dashboard v2.16</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -272,7 +272,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.15</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.16</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button></div>
@@ -351,8 +351,15 @@ function briefHTML(it){var b=it.brief||{},busy=openClaude(it.id).length,h='<dl>'
  else h+='<button class="btn" data-askbrief="'+it.id+'">Ask Claude for a brief</button><span>Or write one above.</span>';
  return h+'</div>'}
 function linksHTML(it){var ts=tasksFor(it.id),cs=chatsFor(it.id),h='',open=ts.filter(function(t){return !t.done}),dn=ts.length-open.length;
- if(!ts.length&&!cs.length)return '';
+ /* A row can carry its own links back to where it came from, for example an
+    insight sent from a cue card linking back to the platform it came from.
+    They sit here rather than inside the row text, because the text is edited
+    in place and a link inside it would fight with tapping to edit. */
+ var own=Array.isArray(it.links)?it.links.filter(function(l){return l&&l.u}):[];
+ if(!ts.length&&!cs.length&&!own.length)return '';
  h+='<div class="lk">';
+ if(own.length)h+='<div class="lt"><span class="sw">From</span>'+own.map(function(l){
+   return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" title="'+esc(l.t||l.u)+'">'+esc((l.t||l.u).slice(0,46))+'</a>'}).join('')+'</div>';
  open.forEach(function(t){h+='<div class="lt" data-tid="'+t.id+'">'+(t.owner==='claude'&&ST[t.claude_status]?'<button type="button" class="stb" data-panel="'+t.id+'">'+dot(t.claude_status)+'</button>':'<span class="sdw"><span class="sd m"></span><span class="sw">Yours</span></span>')+'<span class="ltt" title="'+esc(t.task)+'">'+esc(t.task)+'</span>'+(t.claude_result?'<a href="'+esc(t.claude_result)+'" target="_blank" rel="noopener">What Claude made</a>':'')+(t.claude_session?'<a href="'+esc(t.claude_session)+'" target="_blank" rel="noopener">Claude run</a>':'')+'<button type="button" class="xdel" data-deltask="'+t.id+'" title="Delete this task" aria-label="Delete">\u00d7</button></div>'});
  if(dn)h+='<div class="lt mute">'+dn+' task'+(dn>1?'s':'')+' done</div>';
  if(cs.length)h+='<div class="lt">'+'<span class="sw">Chats</span>'+cs.slice(0,4).map(function(c){return '<a href="'+esc(c.session_url)+'" target="_blank" rel="noopener" title="'+esc(c.topic)+'">'+esc((c.topic||'Chat').slice(0,48))+'</a>'}).join('')+(cs.length>4?'<span class="sw">+'+(cs.length-4)+' more</span>':'')+'</div>';
