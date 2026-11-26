@@ -119,8 +119,8 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .cb.done{background:var(--good);border-color:var(--good)}
 .cb.done::after{content:"";position:absolute;left:4px;top:1px;width:4px;height:8px;border:solid #fff;border-width:0 2px 2px 0;transform:rotate(45deg)}
 .grow{flex:1;min-width:0}
-.addrow{display:flex;gap:6px;margin-top:4px}
-.addrow input{font:inherit;font-size:12px;border:1px solid #cfd3d9;border-radius:7px;padding:4px 8px;flex:1;min-width:80px;background:#fff;color:var(--ink)}
+.addrow{display:flex;gap:6px;margin-top:4px;padding:2px 8px 4px}
+.addrow input{font:inherit;font-size:12px;border:0;border-top:1px solid #e3e7ee;border-radius:0;padding:6px 2px;flex:1;min-width:80px;background:transparent;color:var(--ink);outline:0}.addrow input:focus,.cadd input:focus{background:rgba(255,255,255,.7)}.addrow input::placeholder,.cadd input::placeholder{color:#8a93a1}
 .btn{font:inherit;font-size:12px;border:1px solid #cfd3d9;background:#fff;color:var(--ink);border-radius:8px;padding:4px 11px;cursor:pointer}
 .btn:hover{background:#f4f5f7}
 .dragging{opacity:.4}
@@ -336,7 +336,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.16 preview 19</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.16 preview 20</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -449,6 +449,8 @@ function secMove(ev){var to=ev.to,from=ev.from,el=ev.dragged,rel=ev.related;
  if(to.classList.contains('cl')&&from!==to&&el.classList.contains('act'))return false;
  if(from.classList.contains('cl')&&!to.classList.contains('cl')){var cut=to.querySelector('li.cut');if(cut){if(rel===cut){if(!ev.willInsertAfter)return false}else if(cut.compareDocumentPosition(rel)&2)return false}}
  return true}
+function catAdd(t){var v=t.value.trim();if(!v)return;var nm=t.dataset.catadd,rz=PROJ[TAB].boxes[0].z;t.value='';D.items[rz].push({id:uid(),t:v,w:'',sz:'',tag:'',off:true,cat:nm==='Unfiled'?undefined:nm,sec:nm});save();render();var n=[].filter.call(document.querySelectorAll('.catadd'),function(q){return q.dataset.catadd===nm})[0];if(n)n.focus()}
+document.addEventListener('focusout',function(e){var t=e.target;if(!t||!t.classList)return;if(t.classList.contains('catadd')&&t.value.trim()){catAdd(t)}else if(t.dataset&&t.dataset.add&&t.value.trim()){add(t.dataset.add,t)}});
 function fileSec(id){var f=find(id);if(!f)return;var it=f.it,n=it.cat&&catList(TAB).indexOf(it.cat)>=0?it.cat:'Unfiled';if(n==='Unfiled')delete it.cat;it.off=true;it.sec=n;save();render();showToast('"'+it.t+'" filed in '+n+'.')}
 function readAll(){var rz=PROJ[TAB].boxes[0].z,before=D.items[rz].filter(function(x){return !x.off}).map(function(x){return x.id}),all={};D.items[rz].forEach(function(x){all[x.id]=x});
  var act=[],nx=[],cat=[],passed=false;
@@ -458,7 +460,7 @@ function readAll(){var rz=PROJ[TAB].boxes[0].z,before=D.items[rz].filter(functio
  D.items[rz]=act.concat(nx,cat,rest);
  D.items[rz].forEach(function(x){if(!x.off&&before.indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}});
  save();render()}
-document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;var t=e.target;if(t.classList&&t.classList.contains('catadd')){var v=t.value.trim();if(!v)return;var rz=PROJ[TAB].boxes[0].z;D.items[rz].push({id:uid(),t:v,w:'',sz:'',tag:'',off:true,cat:t.dataset.catadd==='Unfiled'?undefined:t.dataset.catadd,sec:t.dataset.catadd});save();render();var n=document.querySelector('.catadd[data-catadd="'+t.dataset.catadd.replace(/"/g,'\\"')+'"]');if(n)n.focus();return}
+document.addEventListener('keydown',function(e){if(e.key!=='Enter')return;var t=e.target;if(t.classList&&t.classList.contains('catadd')){catAdd(t);return}
  if(t.classList&&t.classList.contains('catnewsec')){var nv=t.value.trim();if(!nv)return;D.cats=D.cats||{};D.cats[TAB]=D.cats[TAB]||[];if(getCats(TAB).indexOf(nv)<0)D.cats[TAB].push(nv);save();render()}});
 function catGuess(it,z){var L=getCats(projOf(z)),tw=wwords((it.t||'')+' '+(it.w||'')),best='',bs=0;L.forEach(function(n){var nw=wwords(n),sc=0;nw.forEach(function(w){if(tw.indexOf(w)>=0)sc++});if(sc>bs){bs=sc;best=n}});if(!best){var ex={};allZ().forEach(function(q){(D.items[q]||[]).forEach(function(x){if(x.cat&&x.id!==it.id&&projOf(q)===projOf(z)){wwords((x.t||'')+' '+(x.w||'')).forEach(function(w){if(tw.indexOf(w)>=0)ex[x.cat]=(ex[x.cat]||0)+1})}})});Object.keys(ex).forEach(function(k){if(ex[k]>bs){bs=ex[k];best=k}})}return best}
 function catHTML(it,z){if(it.cat)return '<button type="button" class="catp" data-cat="'+it.id+'" title="Category. Tap to change">'+esc(it.cat)+'</button>';var g=catGuess(it,z);return g?'<button type="button" class="catp sug" data-catsug="'+it.id+'" data-g="'+esc(g)+'" title="Claude\'s guess. Tap to save it as the category.">'+esc(g)+'?</button><button type="button" class="catp sug" data-cat="'+it.id+'" title="Pick another category">\u25be</button>':'<button type="button" class="catp sug" data-cat="'+it.id+'" title="Pick a category">+ category</button>'}
@@ -518,7 +520,7 @@ function render(){
   });
   if(B.ranked&&!cutDone){var cl=document.createElement('li');cl.className='cut'+(nAct?'':' empty');cl.textContent='Active above, NextUp below';ul.appendChild(cl)}
   w.appendChild(ul);
-  if(B.ranked||B.sub||/new$/.test(B.z)){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="Add to '+esc(B.name.replace(', ranked','').replace(', not yet ranked',''))+'" maxlength="160" data-add="'+B.z+'"><button class="btn" data-addb="'+B.z+'">Add</button>';w.appendChild(ar)}
+  if(B.ranked||B.sub||/new$/.test(B.z)){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="+ add" maxlength="160" data-add="'+B.z+'">';w.appendChild(ar)}
   (B.col===1?c1:c2).appendChild(w);
  });
  renderCats();(function(){var e2=!c2.children.length;c2.style.display=e2?'none':'';var sp=document.querySelector('.psplit');if(sp)sp.style.display=e2?'none':'';$('#pcols').style.gridTemplateColumns=e2?'1fr':''})();$('#pcnt').textContent=tot;$('#srcsum').textContent='6 sources feed this list \u00b7 '+(D.items.py.length+D.items.tw.length+D.items.new.length+D.items.twnew.length)+' rows \u00b7 '+TASKS.length+' linked tasks \u00b7 '+CHATS.length+' linked chats';$('#pname').textContent=P.name;
