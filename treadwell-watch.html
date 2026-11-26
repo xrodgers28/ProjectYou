@@ -97,7 +97,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.3</span>
+    <span class="pn-ver">v1.4</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -124,7 +124,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="cue-visits.js"></script>
 <script>
-/* TreadWell Watch, v1.3, Nov 25 2026. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
+/* TreadWell Watch, v1.4, Nov 25 2026. v1.4: Send lands on the Projects Dashboard, TreadWell, Cue Card Insights, not in the Task Library. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
    One travel-with-purpose platform a day, for perspective on TreadWell.
    Built on the Wait, Really?! page: same nav, sign-in, card clock,
    deck_progress and todos wiring, no schema change.
@@ -388,22 +388,43 @@ function adviceHtml(c){
     var done=!!sentTask[c.id+'|'+i];
     h+='<li><span class="at">'+a+'</span>'+
        '<button class="send'+(done?' done':'')+'" data-adv="'+i+'"'+(done?' disabled':'')+'>'+
-       (done?'Sent \u2713':'Send to Projects')+'</button></li>';
+       (done?'Sent \u2713':'Send to Dashboard')+'</button></li>';
   });
   return h+'</ul>';
 }
+/* v1.4: a tapped bullet becomes a ROW on the Projects Dashboard, under
+   TreadWell, in the Cue Card Insights box. That board is one stored blob the
+   dashboard page itself reads and writes, so this re-reads it immediately
+   before writing, only ever adds to that one box, and stamps the save time so
+   the dashboard's own newest-wins rule keeps the row. It no longer writes a
+   task into the Task Library, which is where these were landing before. */
+var BOARD_KEY='projects_dashboard', INSIGHT_BOX='Cue Card Insights';
+function dashUid(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
 async function sendAdvice(i){
   var c=CARDS[CUR], key=c.id+'|'+i, text=c.advice[i];
-  var ta=$('#capText'); if(ta) ta.value=text+'  (TreadWell Watch, from '+c.name+')';
+  var ta=$('#capText'); if(ta) ta.value=text+'  (TreadWell Watch, '+c.name+')';
   if(!sb||!signedIn){ toast('Sign in to send it. The text is in the box to copy.'); return; }
   if(sentTask[key]){ toast('Already sent that one.'); return; }
-  var r=await sb.from('todos').insert({
-    section:'Projects', subsection:'Cue Card Insights', task:text,
-    bucket:'library', status:'todo', done:false, est_minutes:15
+  var g=await sb.from('board_meta').select('val').eq('key',BOARD_KEY).single();
+  if(g.error||!g.data||!g.data.val){ toast('Could not open the Projects Dashboard: '+((g.error&&g.error.message)||'no board found')); return; }
+  var B=g.data.val;
+  B.items=B.items||{}; B.subs=B.subs||{}; B.subs.tw=B.subs.tw||[];
+  var box=null;
+  for(var k=0;k<B.subs.tw.length;k++){
+    if(String(B.subs.tw[k].name||'').toLowerCase()===INSIGHT_BOX.toLowerCase()){ box=B.subs.tw[k]; break; }
+  }
+  if(!box){ box={z:'sub_tw_'+dashUid().slice(1), name:INSIGHT_BOX, dbid:null}; B.subs.tw.push(box); }
+  if(!Array.isArray(B.items[box.z])) B.items[box.z]=[];
+  B.items[box.z].push({
+    id:dashUid(), t:text, w:'From the TreadWell Watch cue card, '+c.name+'.',
+    sz:'Tiny', tag:'',
+    brief:{what:text, why:'Spotted on the TreadWell Watch cue card, '+c.name+'.', done:'', dont:'', model:''}
   });
-  if(r.error){ toast('Did not send it: '+r.error.message); return; }
+  B.saved=new Date().toISOString();
+  var p=await sb.from('board_meta').upsert({key:BOARD_KEY, val:B, updated_at:new Date().toISOString()},{onConflict:'key'});
+  if(p.error){ toast('Did not send it: '+p.error.message); return; }
   sentTask[key]=true; render();
-  toast('Sent to Task Library: Projects, TreadWell, Cue Card Insights.');
+  toast('Sent to the Projects Dashboard, TreadWell, '+INSIGHT_BOX+'.');
 }
 document.addEventListener('click',function(e){
   var b=e.target.closest&&e.target.closest('button.send');
@@ -455,7 +476,7 @@ function endTile(){
     '<div class="blk"><p>Every platform in the deck has had its turn. Put it back in rotation to start again from the top, or leave it on the Read shelf and it will wait for you.</p></div>'+
     '<div class="idea blk"><div class="lb">Worth doing next</div><p>If any of them turned into a real partner lead or a change to TreadWell, that flag is sitting in your inbox waiting to be routed.</p></div>'+
     '<button class="rback" onclick="rotateBack()">Put it back in rotation</button>';
-  $('#stamp').textContent='TreadWell Watch v1.3';
+  $('#stamp').textContent='TreadWell Watch v1.4';
   renderDots();
 }
 async function rotateBack(){
