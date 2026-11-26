@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.2</title>
+<title>Projects Dashboard v2.3</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -247,7 +247,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.2</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.3</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button></div>
@@ -283,7 +283,11 @@ var PROJ={
   {z:'twnew',name:'New ideas, not yet ranked',col:2,note:'Drag any you want into the ranked list.'},
   {z:'twfun',name:'Fun shelf',col:2,note:'Polish and play. One unlocks each time you finish an active row.'},
   {z:'twno',name:'Not doing',col:2,note:'Drag here to drop something. Nothing is deleted, it is just off the list.'}]}};
-var Z=['py','new','fun','no','tw','twnew','twfun','twno'];
+var ZB=['py','new','fun','no','tw','twnew','twfun','twno'];
+function subZ(){var o=[];['py','tw'].forEach(function(k){((D&&D.subs&&D.subs[k])||[]).forEach(function(x){o.push(x.z)})});return o}
+function allZ(){return ZB.concat(subZ())}
+function boxes(){return PROJ[TAB].boxes.concat(((D.subs&&D.subs[TAB])||[]).map(function(x){return {z:x.z,name:x.name,col:2,sub:1,note:'Your own sub-category. Drag rows in or out.'}}))}
+var TLPARENT={py:4,tw:3};
 var ST={queued:['q','Queued'],working:['w','Working'],needs:['n','Needs you'],review:['r','Ready to review']};
 var RANK={needs:4,review:3,working:2,queued:1};
 var SIZE={Tiny:15,Small:30,Medium:60,Major:120,Ongoing:60};
@@ -292,8 +296,8 @@ var TAB='py';try{var tt=localStorage.getItem(TKEY);if(PROJ[tt])TAB=tt}catch(e){}
 function $(s){return document.querySelector(s)}
 function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
 function uid(){return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
-function projOf(z){return ['tw','twnew','twfun','twno'].indexOf(z)>-1?'tw':'py'}
-function fix(d){if(!d||!d.items)return null;Z.forEach(function(z){if(!Array.isArray(d.items[z]))d.items[z]=[]});d.done=d.done||[];d.crossings=d.crossings||[];d.funUnlocked=d.funUnlocked||0;return d}
+function projOf(z){return (['tw','twnew','twfun','twno'].indexOf(z)>-1||/^sub_tw_/.test(z))?'tw':'py'}
+function fix(d){if(!d||!d.items)return null;d.subs=d.subs||{};d.subs.py=d.subs.py||[];d.subs.tw=d.subs.tw||[];ZB.concat(d.subs.py.map(function(x){return x.z}),d.subs.tw.map(function(x){return x.z})).forEach(function(z){if(!Array.isArray(d.items[z]))d.items[z]=[]});d.done=d.done||[];d.crossings=d.crossings||[];d.funUnlocked=d.funUnlocked||0;return d}
 function etDate(){return new Date().toLocaleDateString('en-US',{timeZone:'America/New_York',month:'short',day:'numeric',year:'numeric'})}
 function showToast(msg,btn,fn){var t=$('#toast');t.textContent=msg;if(btn){var b=document.createElement('button');b.textContent=btn;b.onclick=function(){t.classList.remove('show');fn()};t.appendChild(b)}t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(function(){t.classList.remove('show')},btn?7000:3600)}
 function banner(h){var b=$('#bn');b.innerHTML=h||'';b.classList.toggle('show',!!h)}
@@ -305,7 +309,7 @@ function push(){if(saving){again=true;return}saving=true;again=false;
  fetch(SUPA+'/rest/v1/board_meta?on_conflict=key',{method:'POST',headers:hdrs({Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify({key:KEY,val:D,updated_at:new Date().toISOString()})})
  .then(function(r){saving=false;if(!r.ok)throw new Error(r.status);if(again)push();else{dirty=false;banner('');stamp()}})
  .catch(function(){saving=false;banner('<b>Not saved to your system yet</b>Your changes are safe on this screen and will save when the connection is back.');setTimeout(function(){if(dirty)push()},8000)})}
-function find(id){for(var k=0;k<Z.length;k++){var a=D.items[Z[k]];for(var i=0;i<a.length;i++)if(a[i].id===id)return {z:Z[k],i:i,it:a[i]}}return null}
+function find(id){var Z=allZ();for(var k=0;k<Z.length;k++){var a=D.items[Z[k]]||[];for(var i=0;i<a.length;i++)if(a[i].id===id)return {z:Z[k],i:i,it:a[i]}}return null}
 function tasksFor(id){return TASKS.filter(function(t){return t.dash_row_id===id})}
 function chatsFor(id){return CHATS.filter(function(c){return c.dash_row_id===id&&c.session_url})}
 function openClaude(id){return tasksFor(id).filter(function(t){return !t.done&&t.owner==='claude'&&ST[t.claude_status]})}
@@ -330,11 +334,11 @@ function linksHTML(it){var ts=tasksFor(it.id),cs=chatsFor(it.id),h='',open=ts.fi
 function render(){
  document.querySelectorAll('.ptab').forEach(function(b){b.classList.toggle('on',b.dataset.tab===TAB)});
  var P=PROJ[TAB],c1=$('#col1'),c2=$('#col2');c1.innerHTML='';c2.innerHTML='';var tot=0;
- P.boxes.forEach(function(B){
+ boxes().forEach(function(B){
   var a=D.items[B.z],n=a.length;tot+=n;
   var w=document.createElement('div');w.className='subl';w.id='box-'+B.z;
   var extra=B.ranked?Math.min(3,n)+' active, '+Math.max(0,n-3)+' waiting':(/fun$/.test(B.z)&&D.funUnlocked?n+' · '+D.funUnlocked+' unlocked':String(n));
-  w.innerHTML='<div class="shd"><b>'+esc(B.name)+'</b><span class="sm">'+extra+'</span></div><p class="shn">'+esc(B.note)+'</p>';
+  w.innerHTML='<div class="shd">'+(B.sub?'<b contenteditable="plaintext-only" spellcheck="false" data-subname="'+B.z+'" title="Tap to rename">'+esc(B.name)+'</b>':'<b>'+esc(B.name)+'</b>')+'<span class="sm">'+extra+'</span>'+(B.sub?'<button type="button" class="lnk" style="margin-left:auto" data-subdel="'+B.z+'" title="Remove this sub-category. Its rows move to New ideas.">Remove</button>':'')+'</div><p class="shn">'+esc(B.note)+'</p>';
   var ul=document.createElement('ul');ul.className='its';ul.dataset.z=B.z;
   a.forEach(function(it,i){
    if(B.ranked&&i===3){var c=document.createElement('li');c.className='cut';c.textContent='active above this line';ul.appendChild(c)}
@@ -345,9 +349,10 @@ function render(){
    if(act){var b=document.createElement('li');b.className='brief'+(OPEN[it.id]?' show':'');b.dataset.bf=it.id;b.innerHTML=briefHTML(it);ul.appendChild(b)}
   });
   w.appendChild(ul);
-  if(B.ranked||/new$/.test(B.z)){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="Add to '+esc(B.name.replace(', ranked','').replace(', not yet ranked',''))+'" maxlength="160" data-add="'+B.z+'"><button class="btn" data-addb="'+B.z+'">Add</button>';w.appendChild(ar)}
+  if(B.ranked||B.sub||/new$/.test(B.z)){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="Add to '+esc(B.name.replace(', ranked','').replace(', not yet ranked',''))+'" maxlength="160" data-add="'+B.z+'"><button class="btn" data-addb="'+B.z+'">Add</button>';w.appendChild(ar)}
   (B.col===1?c1:c2).appendChild(w);
  });
+ var nb=document.createElement('div');nb.id='newsub';nb.innerHTML='<button type="button" class="lnk" data-newsub="1">+ New sub-category</button>';c2.appendChild(nb);
  $('#pcnt').textContent=tot;$('#srcsum').textContent='6 sources feed this list \u00b7 '+(D.items.py.length+D.items.tw.length+D.items.new.length+D.items.twnew.length)+' rows \u00b7 '+TASKS.length+' linked tasks \u00b7 '+CHATS.length+' linked chats';$('#pname').textContent=P.name;
  var ws=(function(){var n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));n.setHours(2,0,0,0);n.setDate(n.getDate()-((n.getDay()+6)%7));return n.getTime()})();
  var cw=D.crossings.filter(function(c){return new Date(c.at).getTime()>=ws}).length;
@@ -357,7 +362,7 @@ function render(){
 }
 function readDom(){
  var rz=PROJ[TAB].boxes[0].z,before=D.items[rz].slice(0,3).map(function(x){return x.id});
- PROJ[TAB].boxes.forEach(function(B){var ns=[];document.querySelectorAll('.its[data-z="'+B.z+'"] .r').forEach(function(d){var f=find(d.dataset.id);if(f)ns.push(f.it)});D.items[B.z]=ns});
+ boxes().forEach(function(B){var ns=[];document.querySelectorAll('.its[data-z="'+B.z+'"] .r').forEach(function(d){var f=find(d.dataset.id);if(f)ns.push(f.it)});D.items[B.z]=ns});
  D.items[rz].slice(0,3).forEach(function(x){if(before.indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}});
  if(D.crossings.length>200)D.crossings=D.crossings.slice(-200);
  save();render();
@@ -368,6 +373,8 @@ async function insertTask(row,z,owner,answer,taskText){
  if(q.error){showToast('That did not save. '+q.error.message);return null}
  TASKS.push(q.data);return q.data}
 document.addEventListener('click',function(e){var s=e.target.closest('#srcb');if(s){var b=document.getElementById('srcs');b.classList.toggle('open');s.setAttribute('aria-expanded',b.classList.contains('open'))}});
+document.addEventListener('click',function(e){var b=e.target.closest('[data-newsub]');if(b){var box=document.createElement('div');box.className='addrow';box.innerHTML='<input placeholder="Name the new sub-category" maxlength="60"><button class="btn" type="button">Add</button>';var i=box.querySelector('input');function go(){var v=i.value.trim();if(v)newSub(v)}i.addEventListener('keydown',function(x){if(x.key==='Enter')go();if(x.key==='Escape')render()});box.querySelector('button').addEventListener('click',go);b.replaceWith(box);i.focus();return}
+ var d=e.target.closest('[data-subdel]');if(d)removeSub(d.dataset.subdel)});
 document.addEventListener('click',async function(e){var t=e.target.closest('button,[data-jump],.ptab')||e.target;
  if(t.classList&&t.classList.contains('ptab')){TAB=t.dataset.tab;try{localStorage.setItem(TKEY,TAB)}catch(x){}render();return}
  if(t.dataset.brief){OPEN[t.dataset.brief]=!OPEN[t.dataset.brief];var b=document.querySelector('.brief[data-bf="'+t.dataset.brief+'"]');if(b)b.classList.toggle('show',!!OPEN[t.dataset.brief]);return}
@@ -383,11 +390,21 @@ document.addEventListener('click',async function(e){var t=e.target.closest('butt
   showToast(was?'Done. The next one moved up, and one fun row is unlocked.':'Done.','Undo',function(){D=JSON.parse(snap);save();render()});return}
  if(t.dataset.addb){add(t.dataset.addb,document.querySelector('input[data-add="'+t.dataset.addb+'"]'));return}
 });
+function newSub(name){name=(name||'').trim();if(!name)return;var k=TAB,z='sub_'+k+'_'+uid()+'x',s={z:z,name:name,dbid:null};
+ D.subs[k].push(s);D.items[z]=[];save();render();
+ if(sb){sb.from('task_library').insert({parent_id:TLPARENT[k],level:'subcategory',name:name,position:Date.now()/1e12}).select().single().then(function(r){if(r&&r.data){s.dbid=r.data.id;save()}else showToast('Added here. It could not be added to the Task Library yet.')},function(){showToast('Added here. It could not be added to the Task Library yet.')})}
+ else showToast('Added here. Sign in on Todays Tasks so it also appears in the Task Library.')}
+function renameSub(z,v){var k=projOf(z),s=D.subs[k].filter(function(x){return x.z===z})[0];if(!s||!v||v===s.name)return;var old=s.name;s.name=v;save();
+ if(sb&&s.dbid){sb.from('task_library').update({name:v}).eq('id',s.dbid).then(function(){return sb.from('todos').update({subsection:v}).eq('section','Projects').eq('subsection',old).eq('bucket','library')}).then(function(){},function(){})}}
+function removeSub(z){var k=projOf(z),i=D.subs[k].map(function(x){return x.z}).indexOf(z);if(i<0)return;var snap=JSON.stringify(D),dest=k==='tw'?'twnew':'new',n=D.items[z].length;
+ D.items[dest]=D.items[dest].concat(D.items[z]);delete D.items[z];D.subs[k].splice(i,1);save();render();
+ showToast('Removed. '+(n?n+' row'+(n>1?'s':'')+' moved to New ideas. ':'')+'The Task Library keeps its copy.','Undo',function(){D=JSON.parse(snap);save();render()})}
 function add(z,inp){var v=(inp.value||'').trim();if(!v)return;D.items[z].push({id:uid(),t:v,w:'',sz:'',tag:''});inp.value='';save();render();var n=document.querySelector('input[data-add="'+z+'"]');if(n)n.focus()}
 document.addEventListener('keydown',function(e){var t=e.target;
  if(t.dataset&&t.dataset.add&&e.key==='Enter'){e.preventDefault();add(t.dataset.add,t)}
  if(t.isContentEditable&&e.key==='Enter'){e.preventDefault();t.blur()}});
 document.addEventListener('focusout',function(e){var t=e.target;if(!t.isContentEditable)return;
+ if(t.dataset.subname){var v0=t.textContent.trim();if(!v0){render();return}renameSub(t.dataset.subname,v0);return}
  if(t.dataset.bk){var g=find(t.dataset.row);if(!g)return;var v=t.textContent.trim();g.it.brief=g.it.brief||{};if((g.it.brief[t.dataset.bk]||'')!==v){g.it.brief[t.dataset.bk]=v;delete g.it.brief.approved;save();var bx=document.querySelector('.brief[data-bf="'+g.it.id+'"]');if(bx){bx.innerHTML=briefHTML(g.it)}}return}
  if(!t.dataset.f)return;var r=t.closest('.r');if(!r)return;var f=find(r.dataset.id);if(!f)return;var v2=t.textContent.trim();
  if(t.dataset.f==='t'&&!v2){t.textContent=f.it.t;return}
