@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Recon Platforms &middot; ProjectYou</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{--ink:#20242b;--muted:#6b7280;--line:#e7e9ee;--bg:#fbfbfa;--card:#fff;--accent:#3f6f8f;--hub:#2f5a74;--chip:#eef2f8;
+    --green:#1e8e5a;--red:#c0453b;--amber:#c68a2e;--acc:#1f6f54}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--ink);line-height:1.25;padding:16px 14px 60px}
+  .stage{max-width:760px;margin:0 auto}
+  h1{font-size:21px;color:var(--hub);font-weight:800}
+  h1 .ver{display:inline-block;margin-left:8px;font-size:11px;font-weight:800;color:#9aa6b4;border:1px solid #e3e7ee;border-radius:999px;padding:2px 8px;vertical-align:middle}
+  .meta{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .sub{color:var(--muted);font-size:12.5px;margin-top:8px;line-height:1.45}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:14px 0 10px}
+  .btn{font-weight:800;font-size:12.5px;border:1.5px solid var(--line);background:#fff;color:var(--accent);border-radius:9px;padding:8px 12px;cursor:pointer;font-family:inherit}
+  .btn:hover{border-color:var(--accent)}
+  .btn.go{background:var(--acc);border-color:var(--acc);color:#fff}
+  .btn.warn{color:var(--amber)}
+  .count{font-size:12px;color:var(--muted);margin-left:auto}
+  .p{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:9px;overflow:hidden}
+  .p.ret{opacity:.6;background:#faf9f7}
+  .hd{display:flex;gap:9px;align-items:center;padding:10px 12px;cursor:pointer}
+  .hd .pos{font-size:11px;font-weight:800;color:var(--muted);background:var(--chip);border-radius:999px;padding:2px 8px;flex:none}
+  .hd .nm{font-size:14.5px;font-weight:800}
+  .hd .tg{font-size:12px;color:var(--muted)}
+  .hd .st{margin-left:auto;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;padding:3px 8px;border-radius:999px;flex:none}
+  .st.ok{background:#eef7f1;color:var(--green)}
+  .st.no{background:#fdf6e9;color:var(--amber)}
+  .st.rr{background:#f1f2f4;color:var(--muted)}
+  .bd{display:none;padding:2px 12px 12px;border-top:1px solid var(--line)}
+  .p.open .bd{display:block}
+  label{display:block;font-size:10px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--muted);margin:10px 0 3px}
+  input,textarea{width:100%;font-family:inherit;font-size:13px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fcfdff;color:var(--ink);resize:vertical}
+  textarea{min-height:58px;line-height:1.4}
+  textarea.big{min-height:112px}
+  .two{display:flex;gap:9px;flex-wrap:wrap}
+  .two>div{flex:1;min-width:140px}
+  .row{display:flex;gap:7px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .note{font-size:11.5px;color:var(--muted)}
+  .gate{max-width:360px;margin:60px auto;background:#fff;border:1px solid var(--line);border-radius:16px;padding:22px}
+  .gate input{margin-bottom:9px}
+  .gate .btn{width:100%}
+  .hidden{display:none}
+  #toast{position:fixed;left:50%;transform:translateX(-50%);bottom:18px;background:#20242b;color:#fff;font-size:12.5px;font-weight:700;padding:9px 14px;border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50;max-width:92%}
+  #toast.on{opacity:1}
+  .warnbox{background:#fdf6e9;border:1px solid #f0e0bf;border-radius:10px;padding:10px 12px;font-size:12.5px;color:#5c4a24;margin-bottom:12px;line-height:1.45}
+</style>
+</head>
+<body>
+
+<div class="gate hidden" id="gate">
+  <h1 style="font-size:17px">Recon Platforms</h1>
+  <p class="sub" style="margin-bottom:12px">Sign in to edit the platform list.</p>
+  <input id="em" type="email" placeholder="email" autocomplete="username">
+  <input id="pw" type="password" placeholder="password" autocomplete="current-password">
+  <button class="btn go" onclick="signIn()">Sign in</button>
+  <p class="note" id="gateErr" style="margin-top:9px;color:#c0453b"></p>
+</div>
+
+<div class="stage hidden" id="stage">
+  <h1>Recon Platforms<span class="ver">v1.0</span></h1>
+  <div class="meta">The platform list behind the TreadWell Recon cue card</div>
+  <div class="sub">Everything the card shows you comes from here. Edit a platform and the card uses your wording the next time it deals it. Nothing is ever deleted: retiring a platform takes it out of the deck and keeps it, and you can put it back.</div>
+
+  <div class="warnbox" id="warn"></div>
+
+  <div class="bar">
+    <button class="btn go" onclick="addNew()">Add a platform</button>
+    <button class="btn" onclick="toggleRetired()" id="btnRet">Show retired</button>
+    <a class="btn" href="treadwell-watch.html" style="text-decoration:none">Open the card</a>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div id="list"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFybmpudHNwbXJoaWdvZGxzc2JuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMTQ0NTgsImV4cCI6MjEwMTg5MDQ1OH0.UN4JMuoKaAWQfhiCstuoOJQ1sVU2hU5pK0tLBY60dfM';
+var sb=null; try{ sb=window.supabase.createClient('https://arnjntspmrhigodlssbn.supabase.co',KEY); }catch(e){}
+var ROWS=[], OPEN={}, SHOWRET=false;
+function $(s){return document.querySelector(s);}
+var tId=null;
+function toast(t){var e=$('#toast');e.textContent=t;e.classList.add('on');clearTimeout(tId);tId=setTimeout(function(){e.classList.remove('on')},2600);}
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
+function slug(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,40);}
+
+async function load(){
+  var r=await sb.from('recon_platforms').select('*').order('position',{ascending:true});
+  if(r.error){ toast('Could not read the list: '+r.error.message); return; }
+  ROWS=r.data||[];
+  render();
+}
+
+function render(){
+  var live=ROWS.filter(function(x){return !x.retired_at;});
+  var ret=ROWS.filter(function(x){return !!x.retired_at;});
+  var show=SHOWRET?ROWS:live;
+  $('#count').textContent=live.length+' in the deck'+(ret.length?', '+ret.length+' retired':'');
+  $('#btnRet').textContent=SHOWRET?'Hide retired':'Show retired'+(ret.length?' ('+ret.length+')':'');
+  var noSrc=live.filter(function(x){return !x.source;}).length;
+  var w=$('#warn');
+  if(noSrc){ w.classList.remove('hidden');
+    w.innerHTML='<b>'+noSrc+' of '+live.length+' platforms have no source recorded.</b> The card states facts about each one, so where each fact was checked belongs on the row. Fill in "Where this was checked" as you go, or leave it and an overnight job will work through them.'; }
+  else { w.classList.add('hidden'); }
+
+  var h='';
+  show.forEach(function(x){
+    var rr=!!x.retired_at;
+    h+='<div class="p'+(rr?' ret':'')+(OPEN[x.id]?' open':'')+'" data-id="'+esc(x.id)+'">'
+      +'<div class="hd" data-tog="'+esc(x.id)+'">'
+      +'<span class="pos">'+esc(x.position)+'</span>'
+      +'<span><span class="nm">'+esc(x.name)+'</span><br><span class="tg">'+esc(x.tag)+'</span></span>'
+      +'<span class="st '+(rr?'rr':(x.source?'ok':'no'))+'">'+(rr?'Retired':(x.source?'Sourced':'No source'))+'</span>'
+      +'</div><div class="bd">'
+      +'<div class="two"><div><label>Name</label><input data-f="name" value="'+esc(x.name)+'"></div>'
+      +'<div><label>Tag line</label><input data-f="tag" value="'+esc(x.tag)+'"></div></div>'
+      +'<label>What it does</label><textarea class="big" data-f="what">'+esc(x.what)+'</textarea>'
+      +'<label>How it makes money</label><textarea data-f="model">'+esc(x.model)+'</textarea>'
+      +'<label>Do this for TreadWell, one per line</label><textarea class="big" data-f="advice">'+esc((x.advice||[]).join('\n'))+'</textarea>'
+      +'<div class="two"><div><label>Web address</label><input data-f="url" value="'+esc(x.url)+'"></div>'
+      +'<div><label>Deck position</label><input data-f="position" inputmode="decimal" value="'+esc(x.position)+'"></div></div>'
+      +'<label>Where this was checked</label><textarea data-f="source" placeholder="Name the page or report each figure came from. Leave empty if it is not yet verified.">'+esc(x.source||'')+'</textarea>'
+      +'<div class="two"><div><label>Date checked</label><input data-f="verified_on" type="date" value="'+esc(x.verified_on||'')+'"></div>'
+      +'<div><label>Flag as one to treat with caution</label><select data-f="caution" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13px">'
+      +'<option value="false"'+(x.caution?'':' selected')+'>No</option><option value="true"'+(x.caution?' selected':'')+'>Yes</option></select></div></div>'
+      +'<div class="row"><button class="btn go" data-save="'+esc(x.id)+'">Save</button>'
+      +(rr?'<button class="btn" data-restore="'+esc(x.id)+'">Put it back in the deck</button>'
+          :'<button class="btn warn" data-retire="'+esc(x.id)+'">Retire it</button>')
+      +'<span class="note">'+(rr?'Retired '+esc(String(x.retired_at).slice(0,10))+(x.retired_by?', '+esc(x.retired_by):''):'Added '+esc(x.added_on||'')) +'</span></div>'
+      +'</div></div>';
+  });
+  $('#list').innerHTML=h||'<p class="sub">Nothing here yet. The card loads its own copy in the first time you open it, or add one by hand.</p>';
+}
+
+function fieldsOf(id){
+  var el=document.querySelector('.p[data-id="'+id+'"] .bd'); if(!el) return null;
+  var o={};
+  el.querySelectorAll('[data-f]').forEach(function(n){ o[n.getAttribute('data-f')]=n.value; });
+  return o;
+}
+
+async function save(id){
+  var f=fieldsOf(id); if(!f) return;
+  var pos=parseFloat(f.position); if(isNaN(pos)) pos=0;
+  var patch={ name:f.name.trim(), tag:f.tag.trim(), what:f.what.trim(), model:f.model.trim(),
+    url:f.url.trim(), position:pos,
+    advice:f.advice.split('\n').map(function(a){return a.trim();}).filter(Boolean),
+    source:f.source.trim()||null, verified_on:f.verified_on||null,
+    caution:f.caution==='true', updated_at:new Date().toISOString() };
+  if(!patch.name||!patch.tag||!patch.what||!patch.model||!patch.url){ toast('Name, tag, what it does, how it makes money and the address all need something in them.'); return; }
+  var r=await sb.from('recon_platforms').update(patch).eq('id',id);
+  if(r.error){ toast('Did not save: '+r.error.message); return; }
+  toast(patch.name+' saved. The card uses it next time it deals it.');
+  await load();
+}
+
+async function retire(id){
+  var r=await sb.from('recon_platforms').update({retired_at:new Date().toISOString(),retired_by:'retired by Scott from the editor',updated_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){ toast('Did not retire it: '+r.error.message); return; }
+  toast('Retired, and kept. It is out of the deck and you can put it back.');
+  await load();
+}
+async function restore(id){
+  var r=await sb.from('recon_platforms').update({retired_at:null,retired_by:null,updated_at:new Date().toISOString()}).eq('id',id);
+  if(r.error){ toast('Did not put it back: '+r.error.message); return; }
+  toast('Back in the deck.');
+  await load();
+}
+
+async function addNew(){
+  var name=prompt('What is the platform called?'); if(!name) return;
+  var id=slug(name); if(!id){ toast('That name does not make a usable key.'); return; }
+  if(ROWS.some(function(x){return x.id===id;})){ toast('There is already one with that name.'); return; }
+  var maxPos=ROWS.reduce(function(m,x){return Math.max(m,parseFloat(x.position)||0);},0);
+  var r=await sb.from('recon_platforms').insert({
+    id:id, name:name.trim(), tag:'Not yet written', what:'Not yet written.', model:'Not yet written.',
+    url:'https://', advice:[], position:maxPos+1, added_by:'added by Scott from the editor'});
+  if(r.error){ toast('Could not add it: '+r.error.message); return; }
+  OPEN[id]=true;
+  toast(name+' added. Fill it in, then Save.');
+  await load();
+}
+
+function toggleRetired(){ SHOWRET=!SHOWRET; render(); }
+
+document.body.addEventListener('click',function(e){
+  var t=e.target.closest('[data-tog]');
+  if(t){ var id=t.getAttribute('data-tog'); OPEN[id]=!OPEN[id]; render(); return; }
+  var s=e.target.closest('[data-save]'); if(s){ save(s.getAttribute('data-save')); return; }
+  var rt=e.target.closest('[data-retire]'); if(rt){ retire(rt.getAttribute('data-retire')); return; }
+  var rs=e.target.closest('[data-restore]'); if(rs){ restore(rs.getAttribute('data-restore')); return; }
+});
+
+async function signIn(){
+  var r=await sb.auth.signInWithPassword({email:$('#em').value.trim(),password:$('#pw').value});
+  if(r.error){ $('#gateErr').textContent=r.error.message; return; }
+  $('#gate').classList.add('hidden'); $('#stage').classList.remove('hidden'); await load();
+}
+async function boot(){
+  if(!sb){ $('#gate').classList.remove('hidden'); $('#gateErr').textContent='Could not reach the database.'; return; }
+  var s=await sb.auth.getSession();
+  if(s.data.session){ $('#gate').classList.add('hidden'); $('#stage').classList.remove('hidden'); await load(); }
+  else { $('#gate').classList.remove('hidden'); }
+}
+boot();
+</script>
+<script src="nav-config.js"></script><script src="navpatch.js"></script></body>
+</html>
