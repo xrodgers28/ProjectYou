@@ -277,6 +277,7 @@ div#wlpop.wlpop{gap:2px;padding:3px;border:1px solid var(--wl);border-radius:20p
 .cbox{background:#fff;border:1px solid #e3e7ee;border-radius:10px;overflow:hidden}
 .cbh{display:flex;align-items:center;gap:6px;background:var(--ch);color:var(--ct);padding:5px 9px;font:700 12px Roboto,Arial,sans-serif}
 .cbh .cbg{cursor:grab;opacity:.5;font-size:11px;letter-spacing:-2px}.cbh .cbn{margin-left:auto;font-weight:500;opacity:.7}
+.cbt[contenteditable]{cursor:text;border-radius:4px;padding:0 3px;outline:0}.cbt[contenteditable]:hover{background:rgba(255,255,255,.7)}.cbt[contenteditable]:focus{background:#fff;box-shadow:0 0 0 1.5px var(--ct,#9a3a5a)}
 .cbox .cl{padding:3px 6px;min-height:14px}
 .cbox .cl .r{padding:2px 0 2px 2px;align-items:center}
 .cbox .cl .r .grow{flex:1;min-width:0}.cbox .cl .r .t{font-size:12.5px;line-height:1.3}
@@ -331,7 +332,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.16 preview 14</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.16 preview 15</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -423,14 +424,23 @@ function guess(it){if(!window.PY_WL)return '';var ex=[];allZ().forEach(function(
  window.PY_WL.order.forEach(function(k){var sc=0;w.forEach(function(x){if((' '+(SEEDW[k]||'')+' ').indexOf(' '+x+' ')>=0)sc+=1;ex.forEach(function(e){if(e.wl===k&&wwords(e.t+' '+(e.w||'')).indexOf(x)>=0)sc+=1.5})});if(sc>bs){bs=sc;best=k}});return best}
 
 var CATS={py:['Habits Dashboard',"Today's Tasks",'Life Logging','Habit Remote','Cue Cards','Weekly Review','Style Guide'],tw:['Activities: Boston','New Location Onboarding','Vacay Trip Planner','Activities: Antigua','Cue Card Insights']};
-function getCats(pj){var o=(CATS[pj]||[]).slice();((D.cats&&D.cats[pj])||[]).forEach(function(n){if(o.indexOf(n)<0)o.push(n)});if(o.indexOf('Parking lot')<0)o.push('Parking lot');return o}
+function getCats(pj){var gone=((D.catGone&&D.catGone[pj])||[]),o=(CATS[pj]||[]).filter(function(n){return gone.indexOf(n)<0});((D.cats&&D.cats[pj])||[]).forEach(function(n){if(o.indexOf(n)<0)o.push(n)});if(o.indexOf('Parking lot')<0)o.push('Parking lot');return o}
 
 function catList(pj){var all=getCats(pj),ord=((D.catOrder&&D.catOrder[pj])||[]).filter(function(n){return all.indexOf(n)>=0});all.forEach(function(n){if(ord.indexOf(n)<0)ord.push(n)});return ord}
 function catRowH(it,z){return '<li class="r cr" data-id="'+it.id+'"><span class="dg" data-tip="Drag to another section to change its category">⋮⋮</span><button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div></div><span class="meta"><span class="tc">'+wlHTML(it,z)+'</span>'+pillsHTML(it,z)+'<button type="button" class="xdel" data-delrow="'+it.id+'" title="Delete this row" aria-label="Delete">×</button></span></li>'}
 function renderCats(){var cs=document.getElementById('catsec');if(!cs)return;cs.style.display='';var rz=PROJ[TAB].boxes[0].z,rows=D.items[rz].filter(function(x){return x.off&&x.cat}),c=WLC[TAB];
  var h='<div class="cshd"><b>Sections</b><span>NextUp rows with a category sort into the matching section. Drag a row between sections to change its category; drag a section by its handle to move it.</span></div><div id="catgrid" class="catgrid" style="--ch:'+(TAB==='py'?'#f3e3ea':'#e9f0dc')+';--ct:'+c[0]+'">';
- catList(TAB).forEach(function(n){var rs=rows.filter(function(x){return x.cat===n});h+='<div class="cbox" data-cat="'+esc(n)+'"><div class="cbh"><span class="cbg" title="Drag to move this section">⋮⋮</span><b>'+esc(n)+'</b><span class="cbn">'+rs.length+'</span></div><ul class="its cl" data-cat="'+esc(n)+'">'+rs.map(function(x){return catRowH(x,rz)}).join('')+'</ul><div class="cadd"><input class="catadd" data-catadd="'+esc(n)+'" placeholder="+ add" maxlength="160"></div></div>'});
+ catList(TAB).forEach(function(n){var rs=rows.filter(function(x){return x.cat===n});h+='<div class="cbox" data-cat="'+esc(n)+'"><div class="cbh"><span class="cbg" title="Drag to move this section">⋮⋮</span><b class="cbt"'+(n==='Parking lot'?'':' contenteditable="plaintext-only" spellcheck="false" data-oldname="'+esc(n)+'" title="Click to rename this section"')+'>'+esc(n)+'</b><span class="cbn">'+rs.length+'</span></div><ul class="its cl" data-cat="'+esc(n)+'">'+rs.map(function(x){return catRowH(x,rz)}).join('')+'</ul><div class="cadd"><input class="catadd" data-catadd="'+esc(n)+'" placeholder="+ add" maxlength="160"></div></div>'});
  h+='<div class="cbox cnew"><div class="cadd"><input class="catnewsec" placeholder="+ New section, then Enter" maxlength="40"></div></div></div>';cs.innerHTML=h}
+function renameCat(old,nv){nv=(nv||'').replace(/\s+/g,' ').trim().slice(0,40);if(!nv||nv===old)return false;
+ if(getCats(TAB).some(function(n){return n.toLowerCase()===nv.toLowerCase()&&n!==old})){showToast('A section named "'+nv+'" already exists.');return false}
+ D.cats=D.cats||{};D.cats[TAB]=D.cats[TAB]||[];var i=D.cats[TAB].indexOf(old);if(i>=0)D.cats[TAB][i]=nv;else D.cats[TAB].push(nv);
+ if((CATS[TAB]||[]).indexOf(old)>=0){D.catGone=D.catGone||{};D.catGone[TAB]=D.catGone[TAB]||[];if(D.catGone[TAB].indexOf(old)<0)D.catGone[TAB].push(old)}
+ D.catOrder=D.catOrder||{py:[],tw:[]};D.catOrder[TAB]=(D.catOrder[TAB]||[]).map(function(n){return n===old?nv:n});
+ Object.keys(D.items).forEach(function(z){(D.items[z]||[]).forEach(function(x){if(x&&x.cat===old)x.cat=nv})});
+ save();render();showToast('Renamed to "'+nv+'".');return true}
+document.addEventListener('focusout',function(e){var t=e.target;if(t&&t.classList&&t.classList.contains('cbt')&&t.dataset.oldname){if(!renameCat(t.dataset.oldname,t.textContent))t.textContent=t.dataset.oldname}});
+document.addEventListener('keydown',function(e){var t=e.target;if(t&&t.classList&&t.classList.contains('cbt')){if(e.key==='Enter'){e.preventDefault();t.blur()}else if(e.key==='Escape'){t.textContent=t.dataset.oldname;t.blur()}}});
 function readAll(){var rz=PROJ[TAB].boxes[0].z,before=D.items[rz].filter(function(x){return !x.off}).map(function(x){return x.id}),all={};D.items[rz].forEach(function(x){all[x.id]=x});
  var act=[],nx=[],cat=[],passed=false;
  document.querySelectorAll('.its[data-z="'+rz+'"]>li').forEach(function(d){if(d.classList.contains('cut')){passed=true;return}if(!d.classList.contains('r'))return;var it=all[d.dataset.id];if(!it)return;if(passed){it.off=true;delete it.cat;nx.push(it)}else{delete it.off;act.push(it)}});
