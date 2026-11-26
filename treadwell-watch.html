@@ -70,7 +70,7 @@
   button.send.done{background:var(--acc);color:#fff;cursor:default}
   .vlink{display:inline-block;margin-top:14px;font-size:13px;font-weight:800;color:var(--accent);text-decoration:none}
   .caps{display:flex;gap:9px;margin-top:16px;flex-wrap:wrap}
-  .cap{flex:1;min-width:150px;border:1px solid var(--acc);background:#fff;color:var(--acc);border-radius:10px;padding:10px 8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
+  .cap{flex:1;min-width:150px;max-width:100%;border:1px solid var(--acc);background:#fff;color:var(--acc);border-radius:10px;padding:10px 8px;font-size:13px;font-weight:800;cursor:pointer;font-family:inherit}
   .cap:active{background:#e7f1ec}
   .cap.done{background:var(--acc);color:#fff;border-color:var(--acc)}
   .copywrap{margin-top:13px}
@@ -107,7 +107,7 @@
     <span class="pn-group"><span class="pn-label">Habit Modules</span><span class="pn-links"><a href="habit-modules.html" class="pn-link on">Cue Cards</a></span></span>
     <span class="pn-group"><span class="pn-label">Quantified Self</span><span class="pn-links"><a href="qs-dashboard.html" class="pn-link">QS Dashboard</a></span></span>
     <span class="pn-group"><span class="pn-label">Operating System</span><span class="pn-links"><a href="build.html" class="pn-link">Components</a><a href="automated-tracking.html" class="pn-link">Automated<br>Tracking</a><span class="pn-drop"><span class="pn-link pn-dropbtn" tabindex="0">Maps &#9662;</span><span class="pn-menu"><a href="maps.html" class="pn-link">Overview</a><a href="dfd.html" class="pn-link">Data Flow Diagram</a><a href="blueprint.html" class="pn-link">Knowledge Graph</a><a href="knowledge-graph.html" class="pn-link">Interactive Knowledge Graph</a><a href="architecture-map.html" class="pn-link">Architecture Map</a></span></span><a href="mission.html" class="pn-link">Mission<br>Control</a><a href="library.html" class="pn-link">Docs<br>Library</a></span></span>
-    <span class="pn-ver">v1.5</span>
+    <span class="pn-ver">v1.6</span>
     <div class="pn-user"><div class="pn-ava"><img src="scott-avatar.jpg" alt="Scott"></div><div class="pn-uinfo"><div class="pn-uname">Scott</div><div class="pn-usub">Signed in</div></div><span class="pn-dot"></span></div>
   </div>
 
@@ -134,7 +134,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="cue-visits.js"></script>
 <script>
-/* TreadWell Watch, v1.5, Nov 25 2026. v1.5: the Keep star and its neighbours sit in the card's top right, not pinned to the window. v1.4: Send lands on the Projects Dashboard, TreadWell, Cue Card Insights, not in the Task Library. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
+/* TreadWell Watch, v1.6, Nov 25 2026. v1.6: Idea worth logging removed, the Keep star covers it. v1.5: the Keep star and its neighbours sit in the card's top right, not pinned to the window. v1.4: Send lands on the Projects Dashboard, TreadWell, Cue Card Insights, not in the Task Library. v1.3: tap text starts with the content, no label in front. v1.2: Send to Projects files into Projects, TreadWell, Cue Card Insights.
    One travel-with-purpose platform a day, for perspective on TreadWell.
    Built on the Wait, Really?! page: same nav, sign-in, card clock,
    deck_progress and todos wiring, no schema change.
@@ -369,10 +369,9 @@ function render(){
     '<a class="vlink" href="'+c.url+'" target="_blank" rel="noopener">Open '+c.name+' &rarr;</a>'+
     '<div class="caps">'+
       '<button class="cap" id="capP" onclick="capture(\'partner\')">Partner candidate</button>'+
-      '<button class="cap" id="capI" onclick="capture(\'idea\')">Idea worth logging</button>'+
     '</div>'+
     '<div class="copywrap"><div class="lb">What gets filed or sent (copy it if you want it elsewhere)</div>'+
-      '<textarea id="capText" readonly>'+capLine('idea',c)+'</textarea></div>'+
+      '<textarea id="capText" readonly>'+((c.advice&&c.advice[0]?c.advice[0]:c.name)+'  (TreadWell Watch, '+c.name+')')+'</textarea></div>'+
     '<div class="fin"><span class="minlb">Minutes</span><input class="minin" id="mins" inputmode="numeric" placeholder="10">'+
       '<button class="next" id="btnNext" onclick="finish()">Done</button></div>'+
     '<div class="mintotal hidden" id="minTotal"></div>';
@@ -383,9 +382,12 @@ function render(){
 
 /* v1.3: the text starts with the content, never with a system label. The
    source goes in brackets at the end, the same shape the Send buttons use. */
+/* v1.6: "Idea worth logging" is gone. Keeping a card is what the Keep star
+   already does, and an action now has its own Send button per bullet, so that
+   third button was doing neither job. Partner candidate stays, because
+   flagging the organisation is a different thing from keeping the card. */
 function capLine(kind,c){
-  if(kind==='partner') return c.name+', '+c.tag+', worth approaching as a partner.  (TreadWell Watch)';
-  return (c.advice&&c.advice[0]?c.advice[0]:c.name)+'  (TreadWell Watch, '+c.name+')';
+  return c.name+', '+c.tag+', worth approaching as a partner.  (TreadWell Watch)';
 }
 
 /* The advice bullets. Each one is written as a task, and Send files it into
@@ -449,9 +451,9 @@ async function capture(kind){
   var r=await sb.from('inbox').insert({ text:line, source:'treadwell-watch' });
   if(r.error){ toast('Did not file it: '+r.error.message); return; }
   capped[kind+CUR]=true;
-  var btn=document.getElementById(kind==='partner'?'capP':'capI');
-  if(btn){ btn.classList.add('done'); btn.textContent=(kind==='partner'?'Partner candidate filed':'Idea filed'); }
-  toast('Filed to the inbox.');
+  var btn=document.getElementById('capP');
+  if(btn){ btn.classList.add('done'); btn.textContent='Partner candidate filed'; }
+  toast('Filed to the capture inbox.');
 }
 
 async function finish(){
@@ -486,7 +488,7 @@ function endTile(){
     '<div class="blk"><p>Every platform in the deck has had its turn. Put it back in rotation to start again from the top, or leave it on the Read shelf and it will wait for you.</p></div>'+
     '<div class="idea blk"><div class="lb">Worth doing next</div><p>If any of them turned into a real partner lead or a change to TreadWell, that flag is sitting in your inbox waiting to be routed.</p></div>'+
     '<button class="rback" onclick="rotateBack()">Put it back in rotation</button>';
-  $('#stamp').textContent='TreadWell Watch v1.5';
+  $('#stamp').textContent='TreadWell Watch v1.6';
   renderDots();
 }
 async function rotateBack(){
