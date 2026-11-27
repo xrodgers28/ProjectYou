@@ -1,4 +1,5 @@
-/* mindset-tile.js v1.1 (Oct 21, 2026): adds '> ' lead-quote lines (larger, bold) and [text](https://...) links. Old cards unchanged.
+/* mindset-tile.js v1.3 (Nov 26, 2026): a text line that starts with '~ ' is drawn as a small light-grey footnote under the picture, at the bottom of the tile. Everything else unchanged.
+   v1.1 (Oct 21, 2026): adds '> ' lead-quote lines (larger, bold) and [text](https://...) links. Old cards unchanged.
    v1.0 (Oct 20, 2026)
    ONE definition of how a Mindset Training tile is drawn from saved words and
    pictures. The Mindset Training deck and the Card Maker both load this file,
@@ -17,6 +18,8 @@ var CSS='.mtile{container-type:inline-size;position:relative;width:100%;aspect-r
 '.mtpic{flex:none;margin:calc(var(--u)*11) var(--pm) 0;display:flex;justify-content:center}'+
 '.mtpic img{display:block;width:100%;max-height:calc(var(--u)*var(--ph,300));object-fit:contain;border-radius:calc(var(--u)*13)}'+
 '.mtpic:last-child{margin-bottom:calc(var(--u)*30)}'+
+'.mtfoot{flex:none;margin-top:auto;padding:calc(var(--u)*6) var(--pm) calc(var(--u)*16);font-size:calc(var(--u)*10.4);line-height:1.35;color:#b4b8c0;text-align:left}.mtfoot a{color:inherit;text-decoration:underline;text-underline-offset:calc(var(--u)*2)}'+
+
 '.mttxt{flex:1;min-height:0;padding:calc(var(--u)*13) calc(var(--u)*30) calc(var(--u)*14)}'+
 '.mttxt p{margin:0 0 calc(var(--u)*7)}.mttxt ul{margin:0 0 calc(var(--u)*7);padding-left:calc(var(--u)*15)}.mttxt li{margin:0 0 calc(var(--u)*2)}'+
 '.mttxt b{font-weight:700;color:#33373f}.mttxt.mtbig{font-size:calc(var(--u)*16.2)}'+
@@ -37,16 +40,18 @@ function head(card){
 function tile(card,i){
   injectCss();
   var t=(card.tiles||[])[i]; if(!t) return '';
+  var foot=[];t=Object.assign({},t,{text:String(t.text||'').split('\n').filter(function(l){var m=/^\s*~\s+(.*)$/.exec(l);if(m){foot.push(m[1]);return false;}return true;}).join('\n')});
   var size=card.picture_size||card.pictureSize||86;
   /* words-first tiles share the space with their picture, so the picture is capped to what is left */
   var ph=300;
   if(t.order==='words'){var big=i===0,cpl=big?33:42,lh=big?21.1:17.7,lines=0,blocks=0;
     String(t.text||'').split('\n').forEach(function(l){if(l.trim()){blocks++;var isq=/^\s*>\s/.test(l);lines+=isq?Math.max(1,Math.ceil(l.replace(/^\s*>\s+/,'').length/24))*1.28:Math.max(1,Math.ceil(l.replace(/^\s*-\s+/,'').length/cpl));}});
-    ph=Math.max(150,Math.min(300,531-(big?84:34)-(27+lines*lh+blocks*5)-11-30));}
+    ph=Math.max(150,Math.min(300,531-(big?84:34)-(27+lines*lh+blocks*5)-11-30-(foot.length?40:0)));}
   var pic=t.picture?'<div class="mtpic" style="--ph:'+ph.toFixed(0)+';--pm:calc(var(--u)*'+(344*(1-size/100)/2).toFixed(1)+')"><img src="'+esc((window.MT_PICS&&window.MT_PICS[t.picture])||t.picture)+'" alt=""></div>':'';
   var top=i===0?head(card):'<div class="mtcap">'+esc(t.caption)+'</div>';
   var txt='<div class="mttxt'+(i===0?' mtbig':'')+'">'+md(t.text)+'</div>';
   var body=(t.order==='words')?txt+pic:pic+txt;
+  if(foot.length)body+='<div class="mtfoot" style="--pm:calc(var(--u)*30)">'+inl(foot.join(' '))+'</div>';
   return '<div class="mtile"><div class="mtin">'+top+body+'</div></div>';
 }
 window.MT={CATS:CATS,tile:tile,md:md,catLabel:function(k){return (CATS[k]||{}).label||'';}};
