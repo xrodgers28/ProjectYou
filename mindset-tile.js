@@ -1,4 +1,4 @@
-/* mindset-tile.js v1.6 (Nov 26, 2026): text and picture centred between header and footnote on footnote tiles. v1.5 (Nov 26, 2026): more room above the text on footnote tiles. v1.4 (Nov 26, 2026): tiles with a footnote get extra room above the text. v1.3 (Nov 26, 2026): a text line that starts with '~ ' is drawn as a small light-grey footnote under the picture, at the bottom of the tile. Everything else unchanged.
+/* mindset-tile.js v1.7 (Nov 26, 2026): footnote tiles show a 30% larger picture, cropped at the sides. v1.6 (Nov 26, 2026): text and picture centred between header and footnote on footnote tiles. v1.5 (Nov 26, 2026): more room above the text on footnote tiles. v1.4 (Nov 26, 2026): tiles with a footnote get extra room above the text. v1.3 (Nov 26, 2026): a text line that starts with '~ ' is drawn as a small light-grey footnote under the picture, at the bottom of the tile. Everything else unchanged.
    v1.1 (Oct 21, 2026): adds '> ' lead-quote lines (larger, bold) and [text](https://...) links. Old cards unchanged.
    v1.0 (Oct 20, 2026)
    ONE definition of how a Mindset Training tile is drawn from saved words and
@@ -47,7 +47,8 @@ function tile(card,i){
   if(t.order==='words'){var big=i===0,cpl=big?33:42,lh=big?21.1:17.7,lines=0,blocks=0;
     String(t.text||'').split('\n').forEach(function(l){if(l.trim()){blocks++;var isq=/^\s*>\s/.test(l);lines+=isq?Math.max(1,Math.ceil(l.replace(/^\s*>\s+/,'').length/24))*1.28:Math.max(1,Math.ceil(l.replace(/^\s*-\s+/,'').length/cpl));}});
     ph=Math.max(150,Math.min(300,531-(big?84:34)-(27+lines*lh+blocks*5)-11-30-(foot.length?80:0)));}
-  var pic=t.picture?'<div class="mtpic" style="--ph:'+ph.toFixed(0)+';--pm:calc(var(--u)*'+(344*(1-size/100)/2).toFixed(1)+')"><img src="'+esc((window.MT_PICS&&window.MT_PICS[t.picture])||t.picture)+'" alt=""></div>':'';
+  if(foot.length&&t.picture)ph=195;
+  var pic=t.picture?'<div class="mtpic" style="--ph:'+ph.toFixed(0)+';--pm:calc(var(--u)*'+(344*(1-size/100)/2).toFixed(1)+')"><img src="'+esc((window.MT_PICS&&window.MT_PICS[t.picture])||t.picture)+'" alt=""'+(foot.length?' style="height:calc(var(--u)*195);object-fit:cover"':'')+'></div>':'';
   var top=i===0?head(card):'<div class="mtcap">'+esc(t.caption)+'</div>';
   var txt='<div class="mttxt'+(i===0?' mtbig':'')+'"'+(foot.length?' style="flex:none;padding-top:0;padding-bottom:calc(var(--u)*22)"':'')+'>'+md(t.text)+'</div>';
   var body=(t.order==='words')?txt+pic:pic+txt;
