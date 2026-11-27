@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.34</title>
+<title>Projects Dashboard v2.35</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -351,7 +351,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.34</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.35</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -394,14 +394,14 @@ var TLPARENT={py:4,tw:3};
 var ST={queued:['q','Queued'],working:['w','Working'],needs:['n','Needs you'],review:['r','Ready to review']};
 var RANK={needs:4,review:3,working:2,queued:1};
 var SIZE={Tiny:15,Small:30,Medium:60,Major:120,Ongoing:60};
-/* v2.34 (Nov 27): every category or tag you set here teaches the shared word list (same one as the Staging Area); dragging a synced row between sections also moves it in the Task Library */
+/* v2.35 (Nov 27): every category or tag you set here teaches the shared word list (same one as the Staging Area); dragging a synced row between sections also moves it in the Task Library */
 var TSTOP=('a an and or but the to of in on at for with from by as is are was be it its this that these those my me i you your we our they them so then also just very really can could should would will want wanna need needs make get have has do does did not no any all some each into about like what which who how why when where there here one two three four five six seven eight nine ten number').split(' ');
 function twords(t){var s={},o=[];String(t||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).forEach(function(w){if(w.length>3&&TSTOP.indexOf(w)<0&&!s[w]){s[w]=1;o.push(w)}});return o}
 async function teach(text,field,value){try{if(!sb||!SIGNED||!value)return;text=String(text||'');var pm=text.match(/^\s*([A-Za-z ]{2,24}):/),ws=twords(pm?pm[1]:'');
  twords(text).sort(function(a,b){return b.length-a.length}).slice(0,2).forEach(function(w){if(ws.indexOf(w)<0)ws.push(w)});if(!ws.length)return;
  var q=await sb.from('staging_rules').select('*').in('word',ws),by={};((q&&q.data)||[]).forEach(function(r){by[r.word]=r});
- var rows=ws.map(function(w){var r=by[w]||{word:w,hits:0,seeded:false};r[field]=value;return {word:w,place_text:r.place_text||null,tag:r.tag||null,label:r.label||null,hits:(r.hits||0)+1,seeded:!!r.seeded,updated_at:new Date().toISOString()}});
- await sb.from('staging_rules').upsert(rows,{onConflict:'word'})}catch(e){}}
+ var LS=[];var rows=ws.map(function(w){var r=by[w]||{word:w,hits:0,seeded:false};var ov=r[field]||null;r[field]=value;if(ov!==value)LS.push({word:w,field:field,old_value:ov,new_value:value,source:'Projects Dashboard'});return {word:w,place_text:r.place_text||null,tag:r.tag||null,label:r.label||null,hits:(r.hits||0)+1,seeded:!!r.seeded,updated_at:new Date().toISOString()}});
+ await sb.from('staging_rules').upsert(rows,{onConflict:'word'});if(LS.length)await sb.from('staging_lessons').insert(LS)}catch(e){}}
 function catLib(it,z){if(!it||!it.libId||!sb||!SIGNED)return;var sub=it.cat||(projOf(z)==='tw'?'TreadWell':'Project YOU');it.libSub=sub;sb.from('todos').update({section:'Projects',subsection:sub,updated_at:new Date().toISOString()}).eq('id',it.libId).then(function(){},function(){})}
 function teachCat(it,z,cat){if(cat&&cat!=='Unfiled')teach(it.t,'place_text',(projOf(z)==='tw'?'TreadWell':'Project YOU')+' \u203a '+cat)}
 var D=null,TASKS=[],CHATS=[],sb=null,SIGNED=false,dirty=false,saving=false,again=false,OPEN={};
@@ -675,7 +675,7 @@ async function loadBoard(){try{var r=await fetch(SUPA+'/rest/v1/board_meta?key=e
  if(rows&&rows[0]&&fix(rows[0].val)){var remote=rows[0].val;if(!dirty&&(!D.saved||!remote.saved||remote.saved>=D.saved)){D=remote;try{localStorage.setItem(LKEY,JSON.stringify(D))}catch(e){}}else if(dirty)push()}else save()}
  catch(e){banner('<b>Cannot reach your system right now</b>Working on this device only. Changes will save when the connection is back.')}}
 async function syncCats(){if(!sb||!SIGNED||!D)return;for(var pj of ['py','tw']){var l=((D.cats&&D.cats[pj])||[]);for(var n of l){if(n&&n!=='Parking lot'&&n!=='Unfiled'&&!TLID[pj][n])await tlCreate(pj,n)}}}
-/* v2.34 (Scott Nov 27): the Task Library feeds the Sections here. A task filed or changed in the Library shows up at the TOP of its section,
+/* v2.35 (Scott Nov 27): the Task Library feeds the Sections here. A task filed or changed in the Library shows up at the TOP of its section,
    once (a task already linked to a row here is not shown twice). It checks on a live push from the database, every 30 seconds, and when you return to the page. */
 var LIBT=[],LIBOK=false;
 async function loadLib(){LIBOK=false;if(!sb||!SIGNED)return;

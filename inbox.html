@@ -234,7 +234,7 @@ try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
 window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
 <style>html.embed.calshut .wrap{max-width:none}</style>
 </head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.11</span><span class="date" id="today"></span></div>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.12</span><span class="date" id="today"></span></div>
 <p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green button at the bottom of a section to file everything in it. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
@@ -355,7 +355,7 @@ var RULES={};
 var SEEDW={debug:'fix broken wrong error crash drops missing debug bug stuck sync fails failing',new:'add build create new feature calculator button',design:'layout spacing tidy nicer polish color colour look animation style redesign randomize order',insights:'insight insights stats why drove learn pattern trend story report themes infographic'};
 function dwords(t){var s={},o=[];String(t||'').toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).forEach(function(w){if(w.length>3&&STOP.indexOf(w)<0&&!s[w]){s[w]=1;o.push(w)}});return o}
 function ruleGuess(i,field){var t=(i.kind==='garbled'&&i.alts)?i.alts[i.pick]:(i.text||''),pm=t.match(/^\s*([A-Za-z ]{2,24}):/),pre=pm?dwords(pm[1]):[],sc={},best='',bs=0;
- dwords(t).forEach(function(w){var r=RULES[w];if(r&&r[field]){sc[r[field]]=(sc[r[field]]||0)+(r.hits||1)*(pre.indexOf(w)>=0?5:1)}});
+ dwords(t).forEach(function(w){var r=RULES[w];if(r&&r[field]&&!r.muted){sc[r[field]]=(sc[r[field]]||0)+(r.hits||1)*(pre.indexOf(w)>=0?5:1)}});
  Object.keys(sc).forEach(function(k){if(sc[k]>bs){bs=sc[k];best=k}});return best}
 function tagGuess(i){var g=ruleGuess(i,'tag');if(g)return g;var w=dwords(txtOf(i)),best='',bs=0;
  window.PY_WL.order.forEach(function(k){var sc=0;w.forEach(function(x){if((' '+SEEDW[k]+' ').indexOf(' '+x+' ')>=0)sc++});if(sc>bs){bs=sc;best=k}});return best}
@@ -363,11 +363,13 @@ function loadRules(){return fetch(SUPA+'/rest/v1/staging_rules?select=*',{header
  ST.forEach(function(i){if(i.placeAuto)i.place=placeGuess(i)});render()}).catch(function(){})}
 function learn(i,field){if(!LIVE||!i)return;var t=txtOf(i),pm=t.match(/^\s*([A-Za-z ]{2,24}):/),ws=dwords(pm?pm[1]:'');
  dwords(t).sort(function(a,b){return b.length-a.length}).slice(0,2).forEach(function(w){if(ws.indexOf(w)<0)ws.push(w)});
- var rows=ws.map(function(w){var r=RULES[w]||{word:w,hits:0,seeded:false};
+ var LS=[];var rows=ws.map(function(w){var r=RULES[w]||{word:w,hits:0,seeded:false};var col=field==='place'?'place_text':field,ov=r[col]||null;
   if(field==='place'&&i.place)r.place_text=PYMoves.placeText(i.place);if(field==='tag')r.tag=i.tag||null;if(field==='label')r.label=i.label||null;
+  var nv=r[col]||null;if(ov!==nv)LS.push({word:w,field:col,old_value:ov,new_value:nv,source:'Staging Area'});
   r.hits=(r.hits||0)+1;RULES[w]=r;return {word:w,place_text:r.place_text||null,tag:r.tag||null,label:r.label||null,hits:r.hits,seeded:!!r.seeded,updated_at:new Date().toISOString()}});
  if(!rows.length)return;
- fetch(SUPA+'/rest/v1/staging_rules?on_conflict=word',{method:'POST',headers:HDR({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(rows)}).catch(function(){})}
+ fetch(SUPA+'/rest/v1/staging_rules?on_conflict=word',{method:'POST',headers:HDR({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(rows)}).catch(function(){});
+ if(LS.length)fetch(SUPA+'/rest/v1/staging_lessons',{method:'POST',headers:HDR({'Content-Type':'application/json',Prefer:'return=minimal'}),body:JSON.stringify(LS)}).catch(function(){})}
 /* v2.9 (Scott Nov 27): a note that starts with "Tracking:" loses that word once it is sorted, the category already says it */
 function stripTrk(i){var m=/^\s*tracking\s*:\s*/i;if(i.kind==='garbled'||!m.test(i.text||''))return false;var s=i.text.replace(m,'');if(!s)return false;i.text=s.charAt(0).toUpperCase()+s.slice(1);return true}
 function savePlace(i){if(LIVE&&window.PYMoves&&i.place){var b={stage_cat:PYMoves.placeText(i.place)};if(stripTrk(i))b.task=i.text;PYMoves.patch(i.id,b).catch(bad)}}

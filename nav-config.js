@@ -125,7 +125,9 @@ window.NAV_CONFIG = {
       { "label": "Daily Habits", "href": "daily-template.html" },
       /* Nov 26 2026, Scott: the TreadWell Recon platform list moved out of the card
          and into the database, so it needs a page he can edit it on. */
-      { "label": "Recon Platforms", "href": "recon-editor.html" }
+      { "label": "Recon Platforms", "href": "recon-editor.html" },
+      /* Nov 27 2026, Scott: the Brain page (what Claude has learned about sorting and tagging tasks) lives under Editors. */
+      { "label": "Brain", "href": "brain.html" }
     ] }
   ],
   "Operating System": [
