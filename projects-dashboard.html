@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.36</title>
+<title>Projects Dashboard v2.37</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -354,7 +354,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.36</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.37</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -655,9 +655,9 @@ async function delTask(id){var tk=TASKS.filter(function(x){return x.id===id})[0]
 async function delRow(id){var f=find(id);if(!f)return;var ts=tasksFor(id),n=ts.length;
  if(n&&!confirm('"'+f.it.t+'" has '+n+' linked task'+(n>1?'s':'')+'. Delete the row and '+(n>1?'all '+n+' tasks':'its task')+'?'))return;
  var snapD=JSON.stringify(D),snapT=ts.map(function(x){return Object.assign({},x)});
- D.items[f.z].splice(f.i,1);TASKS=TASKS.filter(function(x){return x.dash_row_id!==id});save();render();
+ var libId=f.it.libId;D.items[f.z].splice(f.i,1);TASKS=TASKS.filter(function(x){return x.dash_row_id!==id});save();render();if(libId&&sb){try{var lr=await sb.from('todos').update({archived:true,updated_at:new Date().toISOString()}).eq('id',libId);if(lr&&lr.error)throw lr.error}catch(e){D=JSON.parse(snapD);TASKS=TASKS.concat(snapT);save();render();showToast('That did not delete from the Task Library, so it is back. Try again.');return}}
  if(n&&sb){try{var r=await sb.from('todos').delete().eq('dash_row_id',id);if(r&&r.error)throw r.error}catch(e){D=JSON.parse(snapD);TASKS=TASKS.concat(snapT);save();render();showToast('That did not delete. Try again.');return}}
- showToast('Deleted "'+f.it.t.slice(0,40)+'"'+(n?' and '+n+' task'+(n>1?'s':''):'')+'.','Undo',async function(){D=JSON.parse(snapD);save();TASKS=TASKS.concat(snapT);render();if(n&&sb){try{var q=await sb.from('todos').insert(snapT);if(q&&q.error)throw q.error}catch(e){showToast('The row is back, but its tasks could not be restored.')}}})}
+ showToast('Deleted "'+f.it.t.slice(0,40)+'"'+(n?' and '+n+' task'+(n>1?'s':''):'')+'.','Undo',async function(){D=JSON.parse(snapD);save();TASKS=TASKS.concat(snapT);render();if(libId&&sb){try{await sb.from('todos').update({archived:false,updated_at:new Date().toISOString()}).eq('id',libId)}catch(e){}}if(n&&sb){try{var q=await sb.from('todos').insert(snapT);if(q&&q.error)throw q.error}catch(e){showToast('The row is back, but its tasks could not be restored.')}}})}
 function add(z,inp){var v=(inp.value||'').trim();if(!v)return;var nr={id:uid(),t:v,w:'',sz:'',tag:''};if(z==='py'||z==='tw'||isCl(z))nr.off=true;D.items[z].push(nr);inp.value='';save();render();var n=document.querySelector('input[data-add="'+z+'"]');if(n)n.focus()}
 document.addEventListener('keydown',function(e){var t=e.target;
  if(t.dataset&&t.dataset.add&&e.key==='Enter'){e.preventDefault();add(t.dataset.add,t)}
