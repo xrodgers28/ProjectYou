@@ -234,7 +234,7 @@ try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
 window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
 <style>html.embed.calshut .wrap{max-width:none}</style>
 </head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.8</span><span class="date" id="today"></span></div>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.9</span><span class="date" id="today"></span></div>
 <p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green button at the bottom of a section to file everything in it. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
@@ -368,7 +368,9 @@ function learn(i,field){if(!LIVE||!i)return;var t=txtOf(i),pm=t.match(/^\s*([A-Z
   r.hits=(r.hits||0)+1;RULES[w]=r;return {word:w,place_text:r.place_text||null,tag:r.tag||null,hits:r.hits,seeded:!!r.seeded,updated_at:new Date().toISOString()}});
  if(!rows.length)return;
  fetch(SUPA+'/rest/v1/staging_rules?on_conflict=word',{method:'POST',headers:HDR({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(rows)}).catch(function(){})}
-function savePlace(i){if(LIVE&&window.PYMoves&&i.place)PYMoves.patch(i.id,{stage_cat:PYMoves.placeText(i.place)}).catch(bad)}
+/* v2.9 (Scott Nov 27): a note that starts with "Tracking:" loses that word once it is sorted, the category already says it */
+function stripTrk(i){var m=/^\s*tracking\s*:\s*/i;if(i.kind==='garbled'||!m.test(i.text||''))return false;var s=i.text.replace(m,'');if(!s)return false;i.text=s.charAt(0).toUpperCase()+s.slice(1);return true}
+function savePlace(i){if(LIVE&&window.PYMoves&&i.place){var b={stage_cat:PYMoves.placeText(i.place)};if(stripTrk(i))b.task=i.text;PYMoves.patch(i.id,b).catch(bad)}}
 function saveTag(i){if(LIVE&&window.PYMoves)PYMoves.patch(i.id,{work_tag:i.tag||null}).catch(bad)}
 function applySaved(i){if(i.catText){var p=placeByText(i.catText);if(p){i.place=p;i.placeAuto=false}}}
 function dotN(i){return '<i class="dot" style="background:'+(COL[i.label]||'#9aa2ad')+'"></i>'}
