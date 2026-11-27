@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.37</title>
+<title>Projects Dashboard v2.38</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -354,7 +354,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.37</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.38</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -405,7 +405,7 @@ async function teach(text,field,value){try{if(!sb||!SIGNED||!value)return;text=S
  var q=await sb.from('staging_rules').select('*').in('word',ws),by={};((q&&q.data)||[]).forEach(function(r){by[r.word]=r});
  var LS=[];var rows=ws.map(function(w){var r=by[w]||{word:w,hits:0,seeded:false};var ov=r[field]||null;r[field]=value;if(ov!==value)LS.push({word:w,field:field,old_value:ov,new_value:value,source:'Projects Dashboard'});return {word:w,place_text:r.place_text||null,tag:r.tag||null,label:r.label||null,hits:(r.hits||0)+1,seeded:!!r.seeded,updated_at:new Date().toISOString()}});
  await sb.from('staging_rules').upsert(rows,{onConflict:'word'});if(LS.length)await sb.from('staging_lessons').insert(LS)}catch(e){}}
-function catLib(it,z){if(!it||!it.libId||!sb||!SIGNED)return;var sub=it.cat||(projOf(z)==='tw'?'TreadWell':'Project YOU');it.libSub=sub;sb.from('todos').update({section:'Projects',subsection:sub,updated_at:new Date().toISOString()}).eq('id',it.libId).then(function(){},function(){})}
+function catLib(it,z){if(!it||!sb||!SIGNED)return;var sub=it.cat||(projOf(z)==='tw'?'TreadWell':'Project YOU');if(it.libId)it.libSub=sub;var q=sb.from('todos').update({section:'Projects',subsection:sub,updated_at:new Date().toISOString()});q=it.libId?q.eq('id',it.libId):q.eq('dash_row_id',it.id).eq('bucket','library');q.then(function(r){if(r&&r.error)showToast('Moved here, but the Task Library did not save it. Try the move again.')},function(){showToast('Moved here, but the Task Library did not save it. Try the move again.')})}
 function teachCat(it,z,cat){if(cat&&cat!=='Unfiled')teach(it.t,'place_text',(projOf(z)==='tw'?'TreadWell':'Project YOU')+' \u203a '+cat)}
 var D=null,TASKS=[],CHATS=[],sb=null,SIGNED=false,dirty=false,saving=false,again=false,OPEN={};
 var TAB='py';try{var tt=localStorage.getItem(TKEY);if(PROJ[tt]||tt==='by')TAB=tt}catch(e){}
@@ -503,10 +503,10 @@ function secMove(ev){var to=ev.to,from=ev.from,el=ev.dragged,rel=ev.related;
  return true}
 function catAdd(t){var v=t.value.trim();if(!v)return;var nm=t.dataset.catadd,rz=PROJ[TAB].boxes[0].z;t.value='';D.items[rz].push({id:uid(),t:v,w:'',sz:'',tag:'',off:true,cat:nm==='Unfiled'?undefined:nm,sec:nm});save();render();var n=[].filter.call(document.querySelectorAll('.catadd'),function(q){return q.dataset.catadd===nm})[0];if(n)n.focus()}
 document.addEventListener('focusout',function(e){var t=e.target;if(!t||!t.classList)return;if(t.classList.contains('catadd')&&t.value.trim()){catAdd(t)}else if(t.dataset&&t.dataset.add&&t.value.trim()){add(t.dataset.add,t)}});
-function fileSec(id){var f=find(id);if(!f)return;var it=f.it,n=it.cat&&catList(TAB).indexOf(it.cat)>=0?it.cat:'Unfiled';if(n==='Unfiled')delete it.cat;if(isCl(f.z)){D.items[f.z].splice(f.i,1);D.items[PROJ[projOf(f.z)].boxes[0].z].push(it)}it.off=true;it.sec=n;save();render();showToast('"'+it.t+'" filed in '+n+'.')}
+function fileSec(id){var f=find(id);if(!f)return;var it=f.it,n=it.cat&&catList(TAB).indexOf(it.cat)>=0?it.cat:'Unfiled';if(n==='Unfiled')delete it.cat;if(isCl(f.z)){D.items[f.z].splice(f.i,1);D.items[PROJ[projOf(f.z)].boxes[0].z].push(it)}it.off=true;it.sec=n;save();render();catLib(it,f.z);showToast('"'+it.t+'" filed in '+n+'.')}
 function readAll(){var rz=PROJ[TAB].boxes[0].z,cz=TAB==='tw'?'twcl':'cl',before=D.items[rz].filter(function(x){return !x.off}).map(function(x){return x.id}),all={};D.items[rz].forEach(function(x){all[x.id]=x});(D.items[cz]||[]).forEach(function(x){all[x.id]=x});
  var seen={},res={};[rz,cz].forEach(function(z){var act=[],nx=[],passed=false;document.querySelectorAll('.its[data-z="'+z+'"]>li').forEach(function(d){if(d.classList.contains('cut')){passed=true;return}if(!d.classList.contains('r'))return;var it=all[d.dataset.id];if(!it)return;if(passed){it.off=true;delete it.sec;nx.push(it)}else{delete it.off;delete it.sec;act.push(it)}seen[it.id]=1});res[z]={act:act,nx:nx}});
- var cat=[];document.querySelectorAll('#catgrid .cbox').forEach(function(b){var n=b.dataset.cat;b.querySelectorAll('.its>li.r').forEach(function(d){var it=all[d.dataset.id];if(!it)return;var psec=it.sec;it.off=true;it.sec=n;if(n==='Unfiled')delete it.cat;else it.cat=n;if(psec&&psec!==n){teachCat(it,rz,n);catLib(it,rz)}cat.push(it);seen[it.id]=1})});
+ var cat=[];document.querySelectorAll('#catgrid .cbox').forEach(function(b){var n=b.dataset.cat;b.querySelectorAll('.its>li.r').forEach(function(d){var it=all[d.dataset.id];if(!it)return;var psec=it.sec;it.off=true;it.sec=n;if(n==='Unfiled')delete it.cat;else it.cat=n;if(psec&&psec!==n)teachCat(it,rz,n);if((psec||'Unfiled')!==n)catLib(it,rz);cat.push(it);seen[it.id]=1})});
  var restR=D.items[rz].filter(function(x){return !seen[x.id]}),restC=(D.items[cz]||[]).filter(function(x){return !seen[x.id]});
  D.items[rz]=res[rz].act.concat(res[rz].nx,cat,restR);D.items[cz]=res[cz].act.concat(res[cz].nx,restC);
  D.items[rz].forEach(function(x){if(!x.off&&before.indexOf(x.id)<0){D.crossings.push({id:x.id,t:x.t,at:new Date().toISOString()});showToast('"'+x.t+'" is now active.')}});
