@@ -1,9 +1,9 @@
-/* habit-insights.js v1.0, Nov 6, 2026
+/* habit-insights.js v1.1, Nov 27, 2026 (v1.1: reads the filtered live habit history, so a retired entry cannot reach this card)
    Habit Dashboard (weekly-review.html): "What your habits say".
    Per habit: best and worst weekday (bars or text only, switch at the top) and three
    auto-written facts, each with an X (for now, this week, for good). Choices are saved
    in page_prefs so they follow Scott across phone and Mac.
-   Reads qs_log only. Draws one new card under "The week, habit by habit". Touches nothing else.
+   Reads the live habit history only. Draws one new card under "The week, habit by habit". Touches nothing else.
    Rules from Scott (Nov 6, 2026): a habit stays quiet until it has 6 weeks; ties name both days;
    week starts Monday; compare to the previous 30 days until a year of history exists. */
 (function(){
@@ -92,7 +92,7 @@
   function fetchDays(list){
     var by={}; list.forEach(function(n){ by[n]={}; });
     function page(from){
-      return db.from('qs_log').select('date,tracker').in('tracker',list).gte('date','2025-01-01').order('date').range(from,from+999).then(function(r){
+      return db.from('qs_log_live').select('date,tracker').in('tracker',list).gte('date','2025-01-01').order('date').range(from,from+999).then(function(r){
         var d=r.data||[]; d.forEach(function(x){ if(by[x.tracker]) by[x.tracker][x.date]=1; });
         if(d.length===1000) return page(from+1000);
       });

@@ -1,5 +1,5 @@
 /* ============================================================================
-   Time Bandit Scoreboard: automatic weekly fill, v1.3, Nov 22, 2026. Project YOU time now reads the calendar blocks directly (today included). v1.2, Oct 18, 2026. Train time is office days x 2 trips x 69 minutes; city bike and taxi lines added. v1.1, Oct 18, 2026. Friend box counts only Social entries of 60 minutes or more. The list page uses these same rules.
+   Time Bandit Scoreboard: automatic weekly fill, v1.4, Nov 27, 2026. v1.4: reads the filtered live habit history, so a retired entry cannot reach the scoreboard. v1.3, Nov 22, 2026. Project YOU time now reads the calendar blocks directly (today included). v1.2, Oct 18, 2026. Train time is office days x 2 trips x 69 minutes; city bike and taxi lines added. v1.1, Oct 18, 2026. Friend box counts only Social entries of 60 minutes or more. The list page uses these same rules.
    Builds the week's list if it does not exist yet, then fills in every line from what
    Project YOU has already logged (day blocks, habit log, day tallies, tagged calendar events).
    Used by the Habit Dashboard so nobody has to open the list page and press Calculate.
@@ -51,7 +51,7 @@ async function compute(sb,wk){
   var end=addDays(wk,6);
   var res=await Promise.all([
     sb.from('day_blocks').select('day,title,mins,done,pill,start_min').gte('day',wk).lte('day',end).limit(3000),
-    sb.from('qs_log').select('date,tracker,minutes').gte('date',wk).lte('date',end).limit(3000),
+    sb.from('qs_log_live').select('date,tracker,minutes').gte('date',wk).lte('date',end).limit(3000),
     sb.from('day_tally').select('day,py,treadwell,commute,eating').gte('day',wk).lte('day',end).limit(50),
     tagged(sb,wk,'meeting'),tagged(sb,wk,'asa')]);
   var allBlocks=((res[0]&&res[0].data)||[]).filter(function(b){return b.mins>0;});
