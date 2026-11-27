@@ -349,7 +349,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.29</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.30</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -620,8 +620,9 @@ document.addEventListener('click',async function(e){var t=e.target.closest('butt
   var ok=await insertTask(g.it,g.z,'claude','Draft a brief for the Projects Dashboard row "'+g.it.t+'" (row id '+g.it.id+'). Write what, why, done, dont and model in plain words, and save it with: select dash_set_brief(\''+g.it.id+'\', jsonb). Scott approves it on the dashboard. Then set this task to Review.','Write a brief: '+g.it.t);
   if(ok){render();showToast('Claude will draft the brief at the next pickup.')}else t.disabled=false;return}
  if(t.dataset.done){var h=find(t.dataset.done);if(!h)return;var B=PROJ[projOf(h.z)].boxes[0];var was=h.z===B.z&&!h.it.off;var snap=JSON.stringify(D);
+  if(h.it.libId&&sb&&SIGNED)sb.from('todos').update({done:true}).eq('id',h.it.libId).then(function(){},function(){});
   D.items[h.z].splice(h.i,1);D.done.push({id:h.it.id,t:h.it.t,z:h.z,at:new Date().toISOString(),active:!!was});if(was)D.funUnlocked++;save();render();
-  showToast(was?'Done. The next one moved up, and one fun row is unlocked.':'Done.','Undo',function(){D=JSON.parse(snap);save();render()});return}
+  showToast(was?'Done. The next one moved up, and one fun row is unlocked.':'Done.','Undo',function(){D=JSON.parse(snap);if(h.it.libId&&sb&&SIGNED)sb.from('todos').update({done:false}).eq('id',h.it.libId).then(function(){},function(){});save();render()});return}
  if(t.dataset.addb){add(t.dataset.addb,document.querySelector('input[data-add="'+t.dataset.addb+'"]'));return}
 });
 function newSub(name){name=(name||'').trim();if(!name)return;var k=TAB,z='sub_'+k+'_'+uid()+'x',s={z:z,name:name,dbid:null};
@@ -654,7 +655,7 @@ document.addEventListener('focusout',function(e){var t=e.target;if(!t.isContentE
  if(t.dataset.bk){var g=find(t.dataset.row);if(!g)return;var v=t.textContent.trim();g.it.brief=g.it.brief||{};if((g.it.brief[t.dataset.bk]||'')!==v){g.it.brief[t.dataset.bk]=v;delete g.it.brief.approved;save();var bx=document.querySelector('.brief[data-bf="'+g.it.id+'"]');if(bx){bx.innerHTML=briefHTML(g.it)}}return}
  if(!t.dataset.f)return;var r=t.closest('.r');if(!r)return;var f=find(r.dataset.id);if(!f)return;var v2=t.textContent.trim();
  if(t.dataset.f==='t'&&!v2){t.textContent=f.it.t;return}
- if(f.it[t.dataset.f]!==v2){f.it[t.dataset.f]=v2;save()}});
+ if(f.it[t.dataset.f]!==v2){f.it[t.dataset.f]=v2;save();if(t.dataset.f==='t'&&f.it.libId&&sb&&SIGNED)sb.from('todos').update({task:v2}).eq('id',f.it.libId).then(function(){},function(){})}});
 async function loadLinks(){if(!sb)return;
  try{var c=await sb.from('chat_register').select('id,topic,session_url,started_at,dash_row_id').not('dash_row_id','is',null).order('started_at',{ascending:false});if(c.data)CHATS=c.data}catch(e){}
  if(!SIGNED)return;
@@ -663,7 +664,29 @@ async function loadBoard(){try{var r=await fetch(SUPA+'/rest/v1/board_meta?key=e
  if(rows&&rows[0]&&fix(rows[0].val)){var remote=rows[0].val;if(!dirty&&(!D.saved||!remote.saved||remote.saved>=D.saved)){D=remote;try{localStorage.setItem(LKEY,JSON.stringify(D))}catch(e){}}else if(dirty)push()}else save()}
  catch(e){banner('<b>Cannot reach your system right now</b>Working on this device only. Changes will save when the connection is back.')}}
 async function syncCats(){if(!sb||!SIGNED||!D)return;for(var pj of ['py','tw']){var l=((D.cats&&D.cats[pj])||[]);for(var n of l){if(n&&n!=='Parking lot'&&n!=='Unfiled'&&!TLID[pj][n])await tlCreate(pj,n)}}}
-async function refresh(){await loadBoard();await loadLinks();await loadCats();await syncCats();render()}
+/* v2.30 (Scott Nov 27): the Task Library feeds the Sections here. A task filed or changed in the Library shows up at the TOP of its section,
+   once (a task already linked to a row here is not shown twice). It checks on a live push from the database, every 30 seconds, and when you return to the page. */
+var LIBT=[],LIBOK=false;
+async function loadLib(){LIBOK=false;if(!sb||!SIGNED)return;
+ try{var q=await sb.from('todos').select('id,task,done,section,subsection,dash_row_id,archived').eq('bucket','library').in('section',['Project YOU','TreadWell']).eq('staged',false).limit(1000);if(q.error)throw q.error;LIBT=q.data||[];LIBOK=true}catch(e){}}
+function mergeLib(){if(!LIBOK||!D)return false;var ch=false,seen={};
+ [['py','Project YOU'],['tw','TreadWell']].forEach(function(pr){var k=pr[0],rz=PROJ[k].boxes[0].z,cats=catList(k),rows=D.items[rz]=D.items[rz]||[];
+  LIBT.filter(function(t){return t.section===pr[1]}).forEach(function(t){seen[t.id]=1;
+   var ex=null;Object.keys(D.items).forEach(function(z){(D.items[z]||[]).forEach(function(x){if(x&&x.libId===t.id)ex=x})});
+   if(t.archived||t.done){if(ex){Object.keys(D.items).forEach(function(z){D.items[z]=D.items[z].filter(function(x){return x!==ex})});ch=true}return}
+   if(t.dash_row_id&&find(t.dash_row_id))return;
+   var sub=t.subsection&&cats.indexOf(t.subsection)>=0?t.subsection:'Unfiled';
+   if(!ex){var n={id:uid(),t:t.task||'',w:'',sz:'',tag:'',off:true,sec:sub,libId:t.id,libSub:t.subsection||''};if(sub!=='Unfiled')n.cat=sub;rows.unshift(n);ch=true;return}
+   if((t.task||'')!==ex.t){ex.t=t.task||'';ch=true}
+   if((t.subsection||'')!==(ex.libSub||'')){ex.libSub=t.subsection||'';ex.sec=sub;if(sub==='Unfiled')delete ex.cat;else ex.cat=sub;ch=true}});
+  /* a Library task that is gone from the Library (deleted) leaves its row too */
+  Object.keys(D.items).forEach(function(z){var a=D.items[z]||[],b=a.filter(function(x){return !(x&&x.libId&&!seen[x.libId])});if(b.length!==a.length){D.items[z]=b;ch=true}})});
+ if(ch)save();return ch}
+async function refresh(){await loadBoard();await loadLinks();await loadCats();await syncCats();await loadLib();mergeLib();render()}
+var LIBTIMER=null;function libSoon(){clearTimeout(LIBTIMER);LIBTIMER=setTimeout(function(){if(!dirty&&!(document.activeElement&&document.activeElement.isContentEditable))refresh()},600)}
+(function(){var tries=0;(function wait(){if(!sb){if(tries++<40)return setTimeout(wait,500);return}
+ try{sb.channel('lib-sync').on('postgres_changes',{event:'*',schema:'public',table:'todos'},function(){libSoon()}).on('postgres_changes',{event:'*',schema:'public',table:'task_library'},function(){libSoon()}).subscribe()}catch(e){}
+ setInterval(function(){if(document.visibilityState==='visible')libSoon()},30000)})()})();
 /* boot: this device's copy first so the screen is never blank, then your system */
 try{var raw=localStorage.getItem(LKEY);if(raw)D=fix(JSON.parse(raw))}catch(e){}
 if(!D)D={v:1,items:{},done:[],crossings:[],funUnlocked:0},fix(D);
