@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.17</title>
+<title>Projects Dashboard v2.18</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -337,7 +337,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.17</span><span class="svn" id="svn"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.18</span><span class="svn" id="svn"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -436,14 +436,14 @@ function guess(it){if(!window.PY_WL)return '';var ex=[];allZ().forEach(function(
  window.PY_WL.order.forEach(function(k){var sc=0;w.forEach(function(x){if((' '+(SEEDW[k]||'')+' ').indexOf(' '+x+' ')>=0)sc+=1;ex.forEach(function(e){if(e.wl===k&&wwords(e.t+' '+(e.w||'')).indexOf(x)>=0)sc+=1.5})});if(sc>bs){bs=sc;best=k}});return best}
 
 var CATS={py:['Habits Dashboard',"Today's Tasks",'Life Logging','Habit Remote','Cue Cards','Weekly Review','Style Guide'],tw:['Activities: Boston','New Location Onboarding','Vacay Trip Planner','Activities: Antigua','Cue Card Insights']};
-/* v2.17: the category list is the Task Library's own sub-sections, one shared list. Making or renaming a section here
+/* v2.18: the category list is the Task Library's own sub-sections, one shared list. Making or renaming a section here
    makes or renames the matching Library sub-section (and the Library tasks filed in it). Falls back to the built-in
    list if the Library cannot be reached. */
 var TLCAT={py:null,tw:null},TLID={py:{},tw:{}},TLPOS={py:1,tw:1};
 function baseCats(pj){return TLCAT[pj]||CATS[pj]||[]}
 async function loadCats(){if(!sb)return;try{var q=await sb.from('task_library').select('id,parent_id,name,position,archived').eq('archived',false).order('position');if(!q.data)return;
  ['py','tw'].forEach(function(pj){var ks=q.data.filter(function(r){return r.parent_id===TLPARENT[pj]});if(!ks.length)return;TLCAT[pj]=ks.map(function(r){return r.name});TLID[pj]={};ks.forEach(function(r){TLID[pj][r.name]=r.id;if(r.position>TLPOS[pj])TLPOS[pj]=r.position})})}catch(e){}}
-async function tlCreate(pj,name){if(!sb||!SIGNED||TLID[pj][name])return;
+async function tlCreate(pj,name){if(TLID[pj][name])return;if(!sb||!SIGNED){showToast('Saved here, but you are not signed in on this page, so the Task Library was not updated. Open Todays Tasks, sign in, come back.');return}
  try{var r=await sb.from('task_library').insert({parent_id:TLPARENT[pj],level:'subcategory',name:name,position:TLPOS[pj]+0.5});if(r.error)throw r.error;await loadCats();render()}
  catch(e){showToast('Made here, but not in the Task Library yet.')}}
 async function tlRename(pj,old,nv){var id=TLID[pj][old];if(!id||!sb||!SIGNED)return;
@@ -631,7 +631,8 @@ async function loadLinks(){if(!sb)return;
 async function loadBoard(){try{var r=await fetch(SUPA+'/rest/v1/board_meta?key=eq.'+KEY+'&select=val',{headers:hdrs()});if(!r.ok)throw 0;var rows=await r.json();
  if(rows&&rows[0]&&fix(rows[0].val)){var remote=rows[0].val;if(!dirty&&(!D.saved||!remote.saved||remote.saved>=D.saved)){D=remote;try{localStorage.setItem(LKEY,JSON.stringify(D))}catch(e){}}else if(dirty)push()}else save()}
  catch(e){banner('<b>Cannot reach your system right now</b>Working on this device only. Changes will save when the connection is back.')}}
-async function refresh(){await loadBoard();await loadLinks();await loadCats();render()}
+async function syncCats(){if(!sb||!SIGNED||!D)return;for(var pj of ['py','tw']){var l=((D.cats&&D.cats[pj])||[]);for(var n of l){if(n&&n!=='Parking lot'&&n!=='Unfiled'&&!TLID[pj][n])await tlCreate(pj,n)}}}
+async function refresh(){await loadBoard();await loadLinks();await loadCats();await syncCats();render()}
 /* boot: this device's copy first so the screen is never blank, then your system */
 try{var raw=localStorage.getItem(LKEY);if(raw)D=fix(JSON.parse(raw))}catch(e){}
 if(!D)D={v:1,items:{},done:[],crossings:[],funUnlocked:0},fix(D);
