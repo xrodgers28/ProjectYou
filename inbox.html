@@ -60,7 +60,7 @@ button{font:inherit}
 .secfn{font-family:var(--fn);font-size:11px;color:var(--muted)}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#9aa2ad;flex:none}
 .star{border:0;background:none;color:#c9ced5;cursor:pointer;font-size:13px;padding:0;line-height:1}.star.on{color:#d9a21b}
-.txt{font-size:13px;color:var(--ink);overflow-wrap:anywhere}
+.txt{font-size:13px;color:var(--ink);overflow-wrap:anywhere}.tex{outline:none;border-radius:5px;padding:1px 3px;margin:-1px -3px;cursor:text}.tex:hover{background:#f6f7fa}.tex:focus{background:#fffdf3;box-shadow:0 0 0 1px #e8dcc3}
 .sub{font-size:11px;color:var(--soft);margin-top:1px}.sub select{font-size:11px;color:var(--soft);font-family:var(--fn)}
 .garb .txt{font-style:italic}
 .dst{border:1px solid;border-radius:6px;padding:0 7px;font-family:var(--fn);font-size:11px;font-weight:400;cursor:pointer;line-height:17px;white-space:nowrap}
@@ -234,7 +234,7 @@ try{set(parent.document.body.classList.contains('cal-shut'))}catch(e){}
 window.addEventListener('message',function(e){if(e.origin!==location.origin)return;if(e.data&&'pyCalShut' in e.data)set(e.data.pyCalShut)});})();</script>
 <style>html.embed.calshut .wrap{max-width:none}</style>
 </head><body><div class="wrap">
-<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.10</span><span class="date" id="today"></span></div>
+<div class="secbar"><h1>Staging Area</h1><span class="ver" id="verchip">v2.11</span><span class="date" id="today"></span></div>
 <p class="sub0">Everything you capture lands here first. Read it, fix the label, then send it to Today's Todos, the Task Library, or its own list. Tap Import to paste a whole chunk and have it split into tasks. Tapping a tag only changes where it will go. Press the green button at the bottom of a section to file everything in it. Nothing files itself while the switch says Ask first.</p>
 <div class="drift" id="drift"></div>
 <div class="modes">
@@ -364,8 +364,8 @@ function loadRules(){return fetch(SUPA+'/rest/v1/staging_rules?select=*',{header
 function learn(i,field){if(!LIVE||!i)return;var t=txtOf(i),pm=t.match(/^\s*([A-Za-z ]{2,24}):/),ws=dwords(pm?pm[1]:'');
  dwords(t).sort(function(a,b){return b.length-a.length}).slice(0,2).forEach(function(w){if(ws.indexOf(w)<0)ws.push(w)});
  var rows=ws.map(function(w){var r=RULES[w]||{word:w,hits:0,seeded:false};
-  if(field==='place'&&i.place)r.place_text=PYMoves.placeText(i.place);if(field==='tag')r.tag=i.tag||null;
-  r.hits=(r.hits||0)+1;RULES[w]=r;return {word:w,place_text:r.place_text||null,tag:r.tag||null,hits:r.hits,seeded:!!r.seeded,updated_at:new Date().toISOString()}});
+  if(field==='place'&&i.place)r.place_text=PYMoves.placeText(i.place);if(field==='tag')r.tag=i.tag||null;if(field==='label')r.label=i.label||null;
+  r.hits=(r.hits||0)+1;RULES[w]=r;return {word:w,place_text:r.place_text||null,tag:r.tag||null,label:r.label||null,hits:r.hits,seeded:!!r.seeded,updated_at:new Date().toISOString()}});
  if(!rows.length)return;
  fetch(SUPA+'/rest/v1/staging_rules?on_conflict=word',{method:'POST',headers:HDR({'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'}),body:JSON.stringify(rows)}).catch(function(){})}
 /* v2.9 (Scott Nov 27): a note that starts with "Tracking:" loses that word once it is sorted, the category already says it */
@@ -389,8 +389,11 @@ function subRow(i){return '<div class="subrow">'+popB(i)+subH(i)+'</div>'}
 
 /* ONE ENGINE, TWO LOOKS (Scott's tick). Both rows read the same item and call the same
    pieces above; only where the pieces sit changes. Retiring one is deleting one line. */
-function D2(i,g){return '<div class="it d2'+g+'"><div class="c0">'+starB(i)+'</div><div class="d2m"><div class="txt">'+esc(txtOf(i))+' '+lnkB(i)+'</div>'+subH(i)+'<div class="d2c">'+popB(i)+tagB(i)+labS(i)+ownB(i)+timeB(i)+carB(i)+'</div>'+popP(i)+'</div><div class="d2g">'+goB(i)+'</div></div>'}
-function D3(i,g){return '<div class="it d3'+g+'"><div class="c0">'+starB(i)+'</div><div class="d3l"><div class="txt">'+esc(txtOf(i))+' '+lnkB(i)+'</div>'+subRow(i)+'</div><div class="d3c">'+tagB(i)+labS(i)+ownB(i)+timeB(i)+goB(i)+'</div><div class="d3p">'+carB(i)+'</div><div class="d3sh">'+popP(i)+'</div></div>'}
+/* v2.11 (Scott Nov 27): every task's words are editable right in the row. Saves when you tap away or press Enter. */
+function txtE(i){return '<div class="txt"><span class="tex" contenteditable="true" spellcheck="true" data-ed="'+i.id+'" title="Tap to edit the words. It saves when you tap away.">'+esc(txtOf(i))+'</span> '+lnkB(i)+'</div>'}
+function saveText(i,v){if(i.kind==='garbled'){i.alts[i.pick]=v}else{i.text=v}if(LIVE&&window.PYMoves)PYMoves.patch(i.id,{task:v}).catch(bad)}
+function D2(i,g){return '<div class="it d2'+g+'"><div class="c0">'+starB(i)+'</div><div class="d2m">'+txtE(i)+''+subH(i)+'<div class="d2c">'+popB(i)+tagB(i)+labS(i)+ownB(i)+timeB(i)+carB(i)+'</div>'+popP(i)+'</div><div class="d2g">'+goB(i)+'</div></div>'}
+function D3(i,g){return '<div class="it d3'+g+'"><div class="c0">'+starB(i)+'</div><div class="d3l">'+txtE(i)+''+subRow(i)+'</div><div class="d3c">'+tagB(i)+labS(i)+ownB(i)+timeB(i)+goB(i)+'</div><div class="d3p">'+carB(i)+'</div><div class="d3sh">'+popP(i)+'</div></div>'}
 function rowH(i){var g=i.kind==='garbled'?' garb':'';return layout()===1?D3(i,g):D2(i,g)}
 function sec(k,cls,n,extra){return '<div class="sec '+cls+'"><span class="hed" contenteditable="true" spellcheck="false" data-h="'+k+'" title="Tap to rename this title">'+esc(HD[k])+'</span><span class="cnt">'+n+'</span>'+(extra||'')+'</div>'}
 function recLines(){var r=recs();if(!r.length)return '<div class="empty">Nothing to read.</div>';return r.map(function(i){return '<div class="rec"><span><b>'+(i.kind==='fix'?'Claude did it:':'Claude answered:')+'</b> '+esc(i.text)+'. '+esc(i.note)+'</span><button class="btn sm" data-a="got" data-id="'+i.id+'">Got It</button></div>'}).join('')}
@@ -451,7 +454,7 @@ document.addEventListener('click',function(e){
  if(!b){if(LPOPEN!==null||PLOPEN!==null||TGOPEN!==null){LPOPEN=null;PLOPEN=null;TGOPEN=null;render()}return}
  var a=b.dataset.a,i=it(b.dataset.id);
  if(a==='lp'){LPOPEN=(LPOPEN===i.id?null:i.id);render();return}
- if(a==='lset'){i.label=b.dataset.l;LPOPEN=null;if(i.placeAuto)i.place=placeGuess(i);if(LIVE)writeLive(i,'label');render();return}
+ if(a==='lset'){i.label=b.dataset.l;LPOPEN=null;if(i.placeAuto)i.place=placeGuess(i);if(LIVE){writeLive(i,'label');learn(i,'label')}render();return}
  if(a==='plc'){PLOPEN=(PLOPEN===i.id?null:i.id);LPOPEN=null;render();return}
  if(a==='pset'){var pp=window.PYMoves&&PYMoves.places().filter(function(x){return String(x.id)===b.dataset.p})[0];if(pp){i.place=pp;i.placeAuto=false;savePlace(i);learn(i,'place')}PLOPEN=null;render();return}
  if(a==='plcok'){i.placeAuto=false;savePlace(i);learn(i,'place');render();return}
@@ -479,6 +482,10 @@ document.addEventListener('change',function(e){
  var t=e.target.dataset.est;if(t&&LIVE){var ii=it(t);if(ii)writeLive(ii,'est')}});
 document.addEventListener('input',function(e){
  var t=e.target.dataset.est;if(t){var v=e.target.value.replace(/[^0-9]/g,'').slice(0,3);if(v!==e.target.value)e.target.value=v;it(t).est=v?+v:null}});
+/* editable task words */
+document.addEventListener('blur',function(e){var id=e.target.dataset&&e.target.dataset.ed;if(!id)return;var i=it(id);if(!i)return;var v=(e.target.textContent||'').replace(/\s+/g,' ').trim();
+ if(!v){e.target.textContent=txtOf(i);return}if(v!==txtOf(i)){saveText(i,v);toast('Saved your edit.')}},true);
+document.addEventListener('keydown',function(e){if(e.target.dataset&&e.target.dataset.ed&&e.key==='Enter'){e.preventDefault();e.target.blur()}});
 /* editable section titles */
 document.addEventListener('blur',function(e){
  var h=e.target.dataset&&e.target.dataset.h;if(h){var v=(e.target.textContent||'').trim();HD[h]=v||DEFH[h];save('headers',HD);if(!v)render()}},true);
@@ -631,7 +638,7 @@ function tidy(s){s=String(s||'').replace(/\s+/g,' ').replace(/\s+([,.:;!?])/g,'$
  s=s.replace(/\bproject (to )?you\b/gi,'Project YOU').replace(/\bprojectyou\b/gi,'Project YOU');
  return cap(s)}
 function stripBullet(s){return s.replace(/^\s*(?:[-*•▪◦>]+|\(?\d{1,2}[.)]|\[[ x]\])\s+/,'')}
-function guessLabel(t,fallback){for(var k=0;k<KEYS.length;k++)if(KEYS[k][0].test(t))return KEYS[k][1];return fallback||'Personal'}
+function guessLabel(t,fallback){var lg=ruleGuess({text:t},'label');if(lg&&LABELS.indexOf(lg)>=0)return lg;for(var k=0;k<KEYS.length;k++)if(KEYS[k][0].test(t))return KEYS[k][1];return fallback||'Personal'}
 function guessOwn(t){return CLAUDE_RX.test(t)?'Claude':'Mine'}
 function guessEst(t,own){var n=t.length;if(own==='Claude')return n>180?60:45;return n>120?30:15}
 function cutOff(t){var s=t.trim();if(/[.!?)"”]$/.test(s)&&!/\b(is|are|the|and|to|of|number \w+ is)\.$/i.test(s))return null;
