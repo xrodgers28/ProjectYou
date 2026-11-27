@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><head>
 <script src="weak-connection.js"></script>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Projects Dashboard v2.21</title>
+<title>Projects Dashboard v2.22</title>
 <style>
 :root{--ink:#1f2a44;--muted:#5b6472;--faint:#9aa6b4;--line:#e3e7ee;--chip:#eef2f8;--bg:#f4f6f9;--accent:#3f6f8f;--good:#1e8e5a;--amber:#a9741a}
 *{box-sizing:border-box}
@@ -337,7 +337,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><a href="task-library.html">Task Library</a><span class="on">Projects Dashboard</span><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Projects Dashboard<span class="ver">v2.21</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
+<h1>Projects Dashboard<span class="ver">v2.22</span><span class="svn" id="svn"></span><button type="button" class="btn" id="rfb" style="margin-left:14px;font-size:12px;font-weight:400;vertical-align:middle">&#8635; Refresh</button><span id="rfs" style="margin-left:8px;font-size:11.5px;font-weight:400;color:var(--muted)"></span></h1>
 <p class="sub">Everything you have in motion, ranked. Each row is a project; its tasks live in the Task Library and show here with Claude's status and the chats behind them. Drag the handle to reorder. Tap any text to edit it.</p>
 <div class="banner" id="bn"></div>
 <div class="ptabs"><button type="button" class="ptab" data-tab="py">Project YOU</button><button type="button" class="ptab" data-tab="tw">TreadWell</button><button type="button" class="ptab" data-tab="by">By work type</button></div>
@@ -505,7 +505,7 @@ function flipRow(id){var f=find(id);if(!f)return;if(f.it.sec){delete f.it.sec;f.
 function toNext(id){var f=find(id);if(!f)return;var snap=JSON.stringify(D),it=f.it,rz=PROJ[projOf(f.z)].boxes[0].z;D.items[f.z].splice(f.i,1);it.off=true;D.items[rz].push(it);save();render();showToast('"'+it.t+'" sent back to NextUp.','Undo',function(){D=JSON.parse(snap);save();render()})}
 function runBtn(it){var b=it.brief||{},pk=window.PYMoves?PYMoves.nextPickup():'the next pickup';
  if(openClaude(it.id).length)return '<button type="button" disabled title="With Claude now" style="opacity:.6;cursor:default">With Claude</button>';
- if(b.what)return '<button type="button" class="runb" data-run="'+it.id+'" title="Hand this row to Claude with its saved brief. Next pickup about '+pk+'">'+(b.approved?'Run again':'Run')+'</button>';
+ if(b.what)return '<button type="button" class="runb" data-run="'+it.id+'" title="Hand this row to Claude with its saved brief. Next pickup about '+pk+'">'+(b.approved?'Run again':'Run')+'</button>'+'<button type="button" class="runb" data-start="'+it.id+'" title="Copies the brief and opens Project YOU, so Claude starts now">Start now</button>';
  return '<button type="button" class="runb" data-askbrief="'+it.id+'" title="No brief yet. Claude drafts one at the next pickup ('+pk+')">Run</button>'}
 function demoteRow(id){var f=find(id);if(!f)return;var snap=JSON.stringify(D),it=f.it,z=f.z;D.items[z].splice(f.i,1);it.off=true;var k=D.items[z].filter(function(x){return !x.off}).length;D.items[z].splice(k,0,it);save();render();showToast('"'+it.t+'" moved below the line. It is no longer active.','Undo',function(){D=JSON.parse(snap);save();render()})}
 function moveRow(id,to){var f=find(id);if(!f)return;var _b=PROJ[projOf(f.z)].boxes;if(f.z===to&&!(f.it.off&&to===_b[0].z))return;var snap=JSON.stringify(D),it=f.it,bx=PROJ[projOf(f.z)].boxes,nm=['Active','Fun shelf','Not doing'],ix=bx.map(function(b){return b.z}).indexOf(to);
@@ -587,6 +587,16 @@ document.addEventListener('click',async function(e){var t=e.target.closest('butt
  if(t.dataset.run){var f=find(t.dataset.run);if(!f)return;t.disabled=true;var b=f.it.brief||{};
   var done=await insertTask(f.it,f.z,'claude',briefText(b));if(!done){t.disabled=false;return}
   b.approved=etDate();f.it.brief=b;save();render();showToast('Queued for Claude. Next pickup about '+(window.PYMoves?PYMoves.nextPickup():'soon')+'.');return}
+ if(t.dataset.start){var sf=find(t.dataset.start);if(!sf)return;var sb2=sf.it.brief||{};
+  if(!SIGNED||!sb){showToast('Sign in on Todays Tasks first, then come back.');return}
+  /* v2.22: Start now. Opens Project YOU in a new tab and copies the brief to paste there. The task is filed as Working so the hourly pickup skips it. */
+  var win=window.open('https://claude.ai/project/01a0a46a-19b5-735a-a992-d97159c92f8d','_blank');t.disabled=true;
+  var srow=await insertTask(sf.it,sf.z,'claude',briefText(sb2));if(!srow){t.disabled=false;return}
+  try{await sb.from('todos').update({claude_status:'working',claude_note:'Started now from the Projects Dashboard',claude_updated:new Date().toISOString()}).eq('id',srow.id);srow.claude_status='working'}catch(e){}
+  var msg='Start now, from the Projects Dashboard. Work on this row: "'+sf.it.t+'". '+briefText(sb2)+' The to-do for it is already filed and marked Working (to-do id '+srow.id+'). Do the work under my usual rules, then set it to Review with a link to what you made.';
+  var copied=false;try{await navigator.clipboard.writeText(msg);copied=true}catch(e){}
+  sb2.approved=etDate();sf.it.brief=sb2;save();render();
+  showToast(copied?'Brief copied. Paste it into the chat in the tab that just opened.':'Opened Project YOU. Copy the brief from the row and paste it there.');return}
  if(t.dataset.askbrief){var g=find(t.dataset.askbrief);if(!g)return;t.disabled=true;
   var ok=await insertTask(g.it,g.z,'claude','Draft a brief for the Projects Dashboard row "'+g.it.t+'" (row id '+g.it.id+'). Write what, why, done, dont and model in plain words, and save it with: select dash_set_brief(\''+g.it.id+'\', jsonb). Scott approves it on the dashboard. Then set this task to Review.','Write a brief: '+g.it.t);
   if(ok){render();showToast('Claude will draft the brief at the next pickup.')}else t.disabled=false;return}

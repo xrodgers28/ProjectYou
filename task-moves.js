@@ -1,4 +1,4 @@
-/* task-moves.js v1.4, Nov 23 2026 (v1.4: every save retries on a weak connection). ONE PLACE THAT DECIDES WHERE A TASK LIVES.
+/* task-moves.js v1.5, Nov 26 2026 (v1.5: pickup times are hourly; v1.4: every save retries on a weak connection). ONE PLACE THAT DECIDES WHERE A TASK LIVES.
 
    Scott, Nov 22 2026: "making sure today todos, staging area and task library all move
    tasks back and forth as they should."
@@ -136,8 +136,8 @@ function toStaging(id,label,guess,extra){
    hourly pickup (7am to midnight Eastern, up to 3 tasks) works it and writes back here.
    One chip + one panel, used by Today and the Task Library alike. */
 var CL={queued:['Queued','q'],working:['Working','w'],needs:['Needs you','n'],review:['Review','r']};
-/* Pickups run 3 times a day (Scott, Nov 23): 6:58am, 11:58am, 5:58pm ET */
-var PICKS=[[6,58],[11,58],[17,58]];
+/* v1.5, Nov 26 2026: pickups now run every hour at :08 past, 6:08am to 10:08pm ET (was 3 a day) */
+var PICKS=[];for(var ph=6;ph<=22;ph++)PICKS.push([ph,8]);
 function nextPickup(){var et=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'})),now=et.getHours()*60+et.getMinutes();
  var p=PICKS.filter(function(x){return x[0]*60+x[1]>now})[0],tom=!p;if(!p)p=PICKS[0];
  var h=p[0],ap=h<12?'am':'pm',h12=h%12||12;return h12+':'+String(p[1]).padStart(2,'0')+ap+(tom?' tomorrow':'')}
