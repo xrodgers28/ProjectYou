@@ -163,6 +163,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .its .r.act.first{border-top:1px solid #bfe0cd;border-radius:8px 8px 0 0}
 .its .brief.actb{margin-left:0;padding-left:30px}
 .its li.cut{background:#eef7f1;border:1px solid #bfe0cd;border-top:0;border-radius:0 0 8px 8px;margin:0 0 6px;padding:5px 8px}
+.its li.actdrop{list-style:none;display:flex;align-items:center;justify-content:center;min-height:36px;background:#eef7f1;border:1px dashed #8fc6a8;border-radius:8px 8px 0 0;margin:0;font:12px Roboto,Arial,sans-serif;color:var(--good)}
 .its li.cut.empty{border-top:1px solid #bfe0cd;border-radius:8px}
 .its .ds{font-size:11px;line-height:1.35;color:#8c95a2;margin-top:1px}
 .its .meta{display:flex;gap:4px;flex:none;align-items:center;flex-wrap:wrap;justify-content:flex-end;max-width:44%}
@@ -559,14 +560,14 @@ function render(){
   var ul=document.createElement('ul');ul.className='its';ul.dataset.z=B.z;
   var lh=document.createElement('li');lh.className='lhd';lh.innerHTML='<span class="grow">Task</span><span class="meta"><span class="cc">Category</span><span class="tc">Tag</span><span class="zc hdc">Task<br>Size</span><span class="mv">Run</span><span class="mvp">State</span><span class="dnb hdsp">File</span><span class="xdel hdsp">&times;</span></span>';ul.appendChild(lh);
   a.forEach(function(it,i){
-   if(B.ranked&&it.off&&!cutDone){cutDone=true;var c0=document.createElement('li');c0.className='cut'+(nAct?'':' empty');c0.textContent='Active above, NextUp below';ul.appendChild(c0)}
+   if(B.ranked&&it.off&&!cutDone){cutDone=true;if(!nAct){var ph=document.createElement('li');ph.className='actdrop';ph.textContent='Drop a task here to make it Active';ul.appendChild(ph)}var c0=document.createElement('li');c0.className='cut';c0.textContent='Active above, NextUp below';ul.appendChild(c0)}
    var act=!!B.ranked&&!it.off,st=rowStatus(it.id);var r=document.createElement('li');r.className='r'+(act?' act':'')+(act&&i===0?' first':'')+(window.DSO&&window.DSO[it.id]?' dso':'');r.dataset.id=it.id;
    var chips=(/fun$/.test(B.z)?'<span class="chip lk">'+(D.funUnlocked?'fun':'locked')+'</span>':'')+(it.sz?'<span class="chip">'+esc(it.sz)+'</span>':'');
    r.innerHTML='<span class="dg" data-tip="Drag to reorder, or onto another box to move it there">⋮⋮</span>'+'<button type="button" class="cb" aria-label="Done" data-done="'+it.id+'"></button><div class="grow"><div class="t" contenteditable="plaintext-only" spellcheck="false" data-f="t">'+esc(it.t)+'</div><div class="ds" contenteditable="plaintext-only" spellcheck="false" data-f="w" data-ph="Add a description">'+esc(it.w)+'</div>'+linksHTML(it)+'</div><span class="meta"><span class="cc">'+catHTML(it,B.z)+'</span><span class="tc">'+wlHTML(it,B.z)+'</span>'+'<span class="zc">'+chips+'</span>'+(act?'<span class="mv" style="opacity:1">'+runBtn(it)+'<button type="button" data-brief="'+it.id+'">Brief</button></span>':'<span class="mv ph"></span>')+pillsHTML(it,B.z)+'<button type="button" class="dnb" data-tosec="'+it.id+'" title="File in a section below" aria-label="File in a section">\u2193</button><button type="button" class="xdel" data-delrow="'+it.id+'" title="Delete this row" aria-label="Delete">\u00d7</button></span>';
    ul.appendChild(r);
    if(act){var b=document.createElement('li');b.className='brief actb'+(OPEN[it.id]?' show':'');b.dataset.bf=it.id;b.innerHTML=briefHTML(it);ul.appendChild(b)}
   });
-  if(B.ranked&&!cutDone){var cl=document.createElement('li');cl.className='cut'+(nAct?'':' empty');cl.textContent='Active above, NextUp below';ul.appendChild(cl)}
+  if(B.ranked&&!cutDone){if(!nAct){var ph=document.createElement('li');ph.className='actdrop';ph.textContent='Drop a task here to make it Active';ul.appendChild(ph)}var cl=document.createElement('li');cl.className='cut';cl.textContent='Active above, NextUp below';ul.appendChild(cl)}
   if(isCl(B.z)){var cw=document.createElement('div');cw.className='clwin';cw.title='Drag the bottom corner to make this window taller or shorter';var hk='pd-clwin-h-'+B.z;try{var hv=parseInt(localStorage.getItem(hk),10);if(hv>=90)cw.style.height=hv+'px'}catch(e){}cw.appendChild(ul);w.appendChild(cw);if(window.ResizeObserver){var _t;new ResizeObserver(function(){clearTimeout(_t);_t=setTimeout(function(){try{if(cw.offsetHeight>=90)localStorage.setItem(hk,String(cw.offsetHeight))}catch(e){}},300)}).observe(cw)}}else w.appendChild(ul);
   if(B.ranked||B.sub||/new$/.test(B.z)){var ar=document.createElement('div');ar.className='addrow';ar.innerHTML='<input placeholder="+ add" maxlength="160" data-add="'+B.z+'">';w.appendChild(ar)}
   (B.col===1?c1:c2).appendChild(w);
@@ -575,7 +576,7 @@ function render(){
  var ws=(function(){var n=new Date(new Date().toLocaleString('en-US',{timeZone:'America/New_York'}));n.setHours(2,0,0,0);n.setDate(n.getDate()-((n.getDay()+6)%7));return n.getTime()})();
  var cw=D.crossings.filter(function(c){return new Date(c.at).getTime()>=ws}).length;
  $('#crossn').textContent=cw?'Moved into active this week: '+cw+'.':'';
- if(window.Sortable)document.querySelectorAll('.its').forEach(function(l){new Sortable(l,{group:'rank-'+TAB,draggable:'.r',handle:'.dg',animation:140,ghostClass:'ghost',onMove:secMove,onEnd:readAll})});var cg=document.getElementById('catgrid');if(cg)new Sortable(cg,{draggable:'.cbox:not(.unf)',handle:'.cbh',animation:160,ghostClass:'ghost',onEnd:function(){D.catOrder=D.catOrder||{py:[],tw:[]};D.catOrder[TAB]=[].map.call(cg.querySelectorAll('.cbox'),function(b){return b.dataset.cat});save()}});
+ if(window.Sortable)document.querySelectorAll('.its').forEach(function(l){new Sortable(l,{group:'rank-'+TAB,draggable:'.r,.actdrop',handle:'.dg',animation:140,ghostClass:'ghost',onMove:secMove,onEnd:readAll})});var cg=document.getElementById('catgrid');if(cg)new Sortable(cg,{draggable:'.cbox:not(.unf)',handle:'.cbh',animation:160,ghostClass:'ghost',onEnd:function(){D.catOrder=D.catOrder||{py:[],tw:[]};D.catOrder[TAB]=[].map.call(cg.querySelectorAll('.cbox'),function(b){return b.dataset.cat});save()}});
  stamp();
 }
 function readDom(){
