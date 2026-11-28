@@ -185,7 +185,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><span class="on">Task Library</span><a href="projects-dashboard.html">Projects Dashboard</a><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Task Library<span class="ver">v4.5</span><span class="strength" id="str" title="Color strength"></span></h1>
+<h1>Task Library<span class="ver">v4.6</span><span class="strength" id="str" title="Color strength"></span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -452,8 +452,11 @@ function taskRow(t){
         try{ var r=await sb.from('todos').update({owner:'claude'}).eq('id',t.id).select('owner,claude_status,claude_updated').single(); if(r.data) Object.assign(t,r.data); render(); showToast('Sent to Claude. Next pickup about '+PYMoves.nextPickup()+'.'); }
         catch(x){ showToast('That did not save'); } });
       mv.appendChild(bc); }
-    var bt=document.createElement('button'); bt.type='button'; bt.textContent='\u2192 Today'; tip(bt,"Send to Today's Todos, just above the Today ends here line");
-    bt.addEventListener('click',function(e){ e.stopPropagation(); sendOut(t,'today'); });
+    var bt=document.createElement('button'); bt.type='button'; bt.textContent=t.twin_id?'On Today \u2713':'Show on Today'; if(t.twin_id) bt.style.fontWeight='700'; tip(bt,t.twin_id?'This task also lives on Today. Tap to take it off Today (it stays here).':'Show this task on Today as well. It stays here too, and edits carry across.');
+    bt.addEventListener('click',async function(e){ e.stopPropagation(); if(LOCAL||!sb){ showToast('Sign in on Todays Tasks first'); return; }
+      try{ if(t.twin_id){ var r1=await sb.rpc('hide_from_today',{p_id:t.id}); if(r1.error) throw r1.error; t.twin_id=null; showToast('Off Today. Still here in the Library.'); }
+           else{ var r2=await sb.rpc('show_on_today',{p_id:t.id}); if(r2.error) throw r2.error; t.twin_id=r2.data; showToast('Now on Today too. Edits sync both ways.'); }
+           render(); }catch(x){ showToast('That did not save'); } });
     var bs=document.createElement('button'); bs.type='button'; bs.textContent='\u21A9 Staging'; tip(bs,'Send back to the Staging Area');
     bs.addEventListener('click',function(e){ e.stopPropagation(); sendOut(t,'stage'); });
     mv.appendChild(bt); mv.appendChild(bs); li.appendChild(mv);
@@ -464,6 +467,7 @@ function taskRow(t){
   return li;
 }
 async function deleteTask(t){
+  if(t.twin_id){ if(!window.confirm('This task is also on Today. Deleting removes it from both places. Delete it?')) return; if(!LOCAL&&sb){ try{ await sb.from('todos').update({archived:true}).eq('id',t.twin_id); }catch(e){} } }
   var snap=Object.assign({},t);
   TASKS=TASKS.filter(function(x){return x.id!==t.id;}); render();
   if(!LOCAL&&sb){ try{ var r=await sb.from('todos').delete().eq('id',t.id); if(r&&r.error) throw r.error; }catch(e){ TASKS.push(snap); render(); showToast('That did not delete. Try again.'); return; } }
@@ -1145,7 +1149,7 @@ function demoLine(){
     var names=NODES.filter(function(n){ return !n.parent_id; }).map(function(n){ return n.name; });
     /* v3.0: only tasks whose home is the Library (task-moves.js). Before this, any Today task
        whose label matched a list name (Amazon, Social) showed up here as well. */
-    var t=await sb.from('todos').select('id,section,subsection,task,done,position,origin_section,est_minutes,owner,claude_status,claude_question,claude_options,claude_answer,claude_result,claude_session,claude_note,claude_updated').in('section', names).eq('bucket','library').eq('staged',false).eq('archived',false).order('position');
+    var t=await sb.from('todos').select('id,twin_id,section,subsection,task,done,position,origin_section,est_minutes,owner,claude_status,claude_question,claude_options,claude_answer,claude_result,claude_session,claude_note,claude_updated').in('section', names).eq('bucket','library').eq('staged',false).eq('archived',false).order('position');
     if(t.data) TASKS=t.data;
     render();
     /* v4.5, Scott Nov 28: sections and tasks made on the Projects Dashboard (or any other page) show up here on their own.
@@ -1162,7 +1166,7 @@ function demoLine(){
         NODES=q2.data.map(function(r){ return {id:'db'+r.id,dbid:r.id,parent_id:r.parent_id?('db'+r.parent_id):null,level:r.level,name:r.name,color:r.color,icon:r.icon,status:r.status||null,position:r.position,col:r.col||null,pane_split:(typeof r.pane_split==='number'?r.pane_split:null)}; });
         saveLocal(); SEL = node(keep)? keep : ((kids(null)[0]||{}).id||null);
         var nm=NODES.filter(function(n){ return !n.parent_id; }).map(function(n){ return n.name; });
-        var t2=await sb.from('todos').select('id,section,subsection,task,done,position,origin_section,est_minutes,owner,claude_status,claude_question,claude_options,claude_answer,claude_result,claude_session,claude_note,claude_updated').in('section', nm).eq('bucket','library').eq('staged',false).eq('archived',false).order('position');
+        var t2=await sb.from('todos').select('id,twin_id,section,subsection,task,done,position,origin_section,est_minutes,owner,claude_status,claude_question,claude_options,claude_answer,claude_result,claude_session,claude_note,claude_updated').in('section', nm).eq('bucket','library').eq('staged',false).eq('archived',false).order('position');
         if(t2.data) TASKS=t2.data;
         render();
       }catch(e){ console.warn(e); } finally { BUSY=false; }
