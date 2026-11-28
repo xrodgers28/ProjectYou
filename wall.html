@@ -46,6 +46,7 @@
   .spact{display:flex;gap:6px;margin-top:2px}
   .spact button{flex:1;font:inherit;font-size:12.5px;font-weight:600;padding:5px 0;border-radius:8px;border:1px solid var(--line);background:transparent;color:inherit;cursor:pointer}
   .spact button[aria-pressed="true"]{background:var(--star);color:#fff;border-color:var(--star)}
+  /* v2.41 (Nov 27, 2026): the weekly SNL tile now appears on Thursdays, stays until you tap I watched it, then hides until next Thursday. It has a star, and Thursdays is a choice in the settings list. */
   /* v2.40 (Nov 27, 2026): every Morning sparks and Suggested source picture opens large on black like the other tiles (tap left or right to move, star upper left, Open the original lower right). Star, Hide and the repeated source name under each picture are gone. */
   .spcell.gone .spart,.spcell.gone .spcap,.spcell.gone .spwhy{opacity:.3}
   /* v2.28 (Nov 14, 2026): vote tile at the end of the Morning sparks row: keep or drop the source. */
@@ -797,7 +798,7 @@
   <div class="head">
     <div>
       <div class="kick">External inspiration only</div>
-      <h1>Sparkboard <span class="ver">v2.40</span></h1>
+      <h1>Sparkboard <span class="ver">v2.41</span></h1>
       <div class="sub" id="sub">Loading this morning</div>
       <div class="daystep" id="daystep" hidden>
         <button class="daybtn" type="button" id="dayback" aria-label="Back a day">&#8249;</button>
@@ -1267,10 +1268,11 @@ function fillTray(n){
   } else if(b==="talk"){
     g.items.forEach(function(it){
       var d=it.seconds?wlDur(it.seconds):"";
-      h+='<div class="w2talk"><div class="pv">'+zo(it,'<img src="'+esc(it.img)+'" alt="" decoding="async">')+
+      h+='<div class="w2talk"><div class="pv">'+starBtn(it)+zo(it,'<img src="'+esc(it.img)+'" alt="" decoding="async">')+
          (d?'<span class="dur">'+esc(d)+'</span>':'')+'</div>'+
          '<div><h3>'+esc(it.title)+'</h3>'+(it.blurb?'<p>'+esc(it.blurb)+'</p>':'')+
-         '<button class="w2btn pri" type="button" data-w2watch="'+it.item_id+'">Send to Watchlist</button></div></div>';
+         (it.cadence==="thursday"?'<button class="w2btn pri" type="button" data-w2watched="'+it.item_id+'">I watched it</button> ':'')+
+         '<button class="w2btn'+(it.cadence==="thursday"?'':' pri')+'" type="button" data-w2watch="'+it.item_id+'">Send to Watchlist</button></div></div>';
     });
   } else if(b==="read"){
     var rp=DECKS[g.key]||{}, rt=rp.total||0, rs=Math.min(rt,rp.seen||1);
@@ -1503,7 +1505,7 @@ function w2behOpts(isDeck){
   return Object.keys(W2B).filter(function(k){ return k==="story"||k==="flip"||(isDeck&&k==="deck"); })
     .map(function(k){ return [k,W2B[k].n,W2B[k].i]; });
 }
-var W2WHEN=[["daily","Every day"],["weekdays","Weekdays"],["weekly","Mondays"],["once","Until it runs out"]];
+var W2WHEN=[["daily","Every day"],["weekdays","Weekdays"],["weekly","Mondays"],["thursday","Thursdays, until watched"],["once","Until it runs out"]];
 var W2WORDS=[["none","Pictures only"],["caption","Name and credit"],["idea","The idea in a few lines"]];
 function w2open(mode,key){
   W2A={mode:mode,step:0,url:"",chk:null,busy:false};
@@ -1623,6 +1625,27 @@ function w2watch(id){
   .then(function(){ toast("On your Watchlist."); if(window.loadWatch) loadWatch(); })
   .catch(function(e){ toast("Could not add it: "+e.message); });
 }
+/* v2.41: the weekly SNL tile. "I watched it" puts the clip on the Watchlist if it is not there, then opens the same Learning-log popup as Mark Watched. When that is saved the tile leaves the board until next Thursday. */
+var W2WID={};
+function w2watched(id){
+  var it=ITEMS[byId(id)]; if(!it) return;
+  var body=JSON.stringify({url:it.link,title:it.title,thumb:it.img,source:it.source,kind:"talk",seconds:it.seconds||null,blurb:it.blurb||null});
+  api("watchlist?on_conflict=url",{method:"POST",prefer:"resolution=ignore-duplicates",body:body})
+  .then(function(){ return api("watchlist?select=id,url,title,channel,source,thumb,seconds,position&url=eq."+encodeURIComponent(it.link)+"&limit=1"); })
+  .then(function(rows){
+    var r=rows&&rows[0]; if(!r) throw new Error("not on the Watchlist");
+    W2WID[r.id]=id;
+    var have=false,k; for(k=0;k<WL_ROWS.length;k++){ if(WL_ROWS[k].id===r.id) have=true; }
+    if(!have) WL_ROWS.push(r);
+    wlWatched(r.id);
+  })
+  .catch(function(e){ toast("Could not mark it watched: "+e.message); });
+}
+function w2afterWatched(wlid){
+  var iid=W2WID[wlid]; if(!iid) return;
+  ITEMS=ITEMS.filter(function(i){ return i.item_id!==iid; });
+  delete W2WID[wlid]; paint(); toast("Watched. It comes back next Thursday.");
+}
 function w2deck(k,choice){
   api("rpc/wall_deck_choice",{method:"POST",body:JSON.stringify({p_key:k,p_choice:choice})})
   .then(function(){
@@ -1641,6 +1664,7 @@ document.addEventListener("click",function(e){
   var fl=t.closest(".w2flip");
   if(fl && !t.closest("a,button,[data-item],[data-open]")){ fl.classList.toggle("on"); return; }
   var dsw=t.closest("[data-w2swap]"); if(dsw){ e.preventDefault(); if(!dsw.disabled) doorSwap(dsw.getAttribute("data-w2swap")); return; }
+  var wd=t.closest("[data-w2watched]"); if(wd){ e.preventDefault(); w2watched(+wd.getAttribute("data-w2watched")); return; }
   var wa=t.closest("[data-w2watch]"); if(wa){ e.preventDefault(); w2watch(+wa.getAttribute("data-w2watch")); return; }
   var dk=t.closest("[data-w2deck]"); if(dk){ e.preventDefault(); w2deck(dk.getAttribute("data-k"),dk.getAttribute("data-w2deck")); return; }
   if(!document.getElementById("w2sh").hidden){
@@ -2519,7 +2543,7 @@ function wlMarkWatched(id){
   return api("watchlist?id=eq."+encodeURIComponent(id),
       {method:"PATCH",prefer:"return=minimal",
        body:JSON.stringify(day?{watched:true,watched_on:day}:{watched:true})})
-    .then(function(){ WL_ROWS=WL_ROWS.filter(function(r){ return r.id!==id; }); wlPaint(); })
+    .then(function(){ WL_ROWS=WL_ROWS.filter(function(r){ return r.id!==id; }); wlPaint(); if(window.w2afterWatched) w2afterWatched(id); })
     .catch(function(e){
       document.getElementById("err").innerHTML='<div class="err">Logged, but could not take it off the list: '+esc(e.message)+'</div>';
     });
