@@ -1,5 +1,5 @@
 /* Daily Routine of a Creative, habits dashboard banner v1.5 (Nov 28, 2026).
-   v1.5.1: Family is its own band, the Social pill finally counts (it read zero before),
+   v1.5.2: Family is its own band, the Social pill finally counts (it read zero before),
    plain to-do blocks count, and the week shown is the one he is in, last week on the toggle.
    Last full Monday to Sunday week from day_blocks, health_metrics (Apple Watch sleep times) and habit_history. Shadow root, so no page styles leak in. */
 (function(){
@@ -140,7 +140,6 @@ function build(mon,bl,hm,hh,ev,drops,hid){
  var TDY=today();
  for(var i=0;i<7;i++){var day=addD(mon,i),nx=addD(mon,i+1);if(day>TDY)break;var b=[],cue=[],meds=false,miss=[],own=new Array(1440).fill(null),hab={mind:1,move:1,social:1};
   function mark(s,m,t){for(var k=Math.max(0,s|0);k<Math.min(1440,(s+m)|0);k++)own[k]=t}
-  function fill(s,m,t){for(var k=Math.max(0,s|0);k<Math.min(1440,(s+m)|0);k++)if(!own[k])own[k]=t}
   bl.filter(function(r){return r.day===day}).forEach(function(r){var t=r.title||'',s=r.start_min,m=r.mins;if(!(m>0))return;
    if(r.cat==='hab'){if(!r.done)return;
     if(t.indexOf('🚶')===0||EXW.test(t)||/^walk/i.test(t)){m=CAP[day+'|'+s]&&m>CAP[day+'|'+s]?CAP[day+'|'+s]:m;b.push({s:s,m:m,t:'move',l:'Walk'});mark(s,m,'move')}
@@ -150,7 +149,14 @@ function build(mon,bl,hm,hh,ev,drops,hid){
     else if(!/lights out|train platform/i.test(t)){cue.push({s:s,m:m});mark(s,m,'mind')}}
    else if(r.cat==='py')mark(s,m,'proj');
    else if(r.cat==='own'){if(r.pill==='treadwell')mark(s,m,'proj');else if(r.pill==='amz')mark(s,m,'work');else if(FAMP[r.pill])mark(s,m,'fam');else if(r.pill==='social'||t.trim()==='Social'){b.push({s:s,m:m,t:'social',l:'Social'});mark(s,m,'social')}else mark(s,m,'other')}
-   else if(r.cat==='todo')fill(s,m,'other')});/* Nov 28 2026: a ticked to-do fills EMPTY minutes only. It never takes minutes off a block he set, because which one won used to depend on the order rows came back in, which is not a thing to leave to chance. */
+   });
+  /* Nov 28 2026, Scott: "what I ticked wins". A ticked to-do is what actually happened; a block he set
+     is only what he planned. So to-dos are laid down LAST, in their own pass, and paint over the plan.
+     Done in a second pass on purpose: applying them inline made the winner depend on the order rows
+     came back in. Habits (walks, meditate, social) are never painted over, they carry streaks. */
+  bl.filter(function(r){return r.day===day&&r.cat==='todo'&&r.mins>0&&r.done})
+    .sort(function(a,c){return a.start_min-c.start_min})
+    .forEach(function(r){for(var k=Math.max(0,r.start_min|0);k<Math.min(1440,(r.start_min+r.mins)|0);k++){if(!hab[own[k]])own[k]='other'}});
   var seen={};
   ev.filter(function(r){return r.date===day}).forEach(function(r){
    if(r.hidden||r.dismissed||!r.start_time||!r.end_time)return;if(drops.indexOf((r.title||'').trim())>=0)return;
