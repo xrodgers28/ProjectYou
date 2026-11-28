@@ -56,7 +56,7 @@ h1{font-size:22px;margin:4px 0 2px;font-weight:900;letter-spacing:-.01em}
 </head>
 <body>
 <div class="wrap">
-  <h1>Fill the Gaps<span class="ver">v1.0</span></h1>
+  <h1>Fill the Gaps<span class="ver">v1.1</span></h1>
   <p class="intro">Every stretch of your waking day with nothing against it, 60 minutes or longer. Tap what was actually happening. The more you tag, the better this guesses the next one for you, and the smaller your Unlogged band gets.</p>
 
   <div class="stat" id="stats"></div>
@@ -88,18 +88,19 @@ function toast(t){const e=document.getElementById('toast');e.textContent=t;e.cla
 /* ---- the training bit: guess a tag from what he already tagged in the same slot ---- */
 function suggest(g){
   if(g.tag) return null;
-  const mid=g.start_min+g.mins/2, wk=isWknd(g.day), score={};
+  const mid=g.start_min+g.mins/2, wk=isWknd(g.day), score={}, count={};
   GAPS.forEach(o=>{
     if(!o.tag) return;
     const om=o.start_min+o.mins/2, near=Math.abs(om-mid);
     if(near>120) return;
     let w=(120-near)/120;
     if(isWknd(o.day)===wk) w*=1.8;
-    score[o.tag]=(score[o.tag]||0)+w;
+    score[o.tag]=(score[o.tag]||0)+w; count[o.tag]=(count[o.tag]||0)+1;
   });
   let best=null,bv=0;
   for(const k in score){if(score[k]>bv){bv=score[k];best=k}}
-  return bv>=0.9?best:null;
+  /* two examples minimum: one tagged gap is a coincidence, not a pattern */
+  return (best&&count[best]>=2&&bv>=0.9)?best:null;
 }
 
 /* ---- screen first, save after (Nov 23 rule) ---- */
