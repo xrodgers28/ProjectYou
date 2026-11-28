@@ -46,7 +46,11 @@ window.NAV_CONFIG = {
        moved here to sit right after the Daily Habit Tracker. */
     { "label": "Habit Cue<br>Cards", "href": "habit-modules.html" },
     { "label": "Daily Habit<br>Tracker", "href": "daily-habit-tracker.html" },
-    { "label": "Habit<br>Dashboard", "href": "weekly-review.html" }
+    /* Nov 28 2026, Scott: Fill the Gaps drops from the Habit Dashboard, because it is what feeds the
+       Daily Routine of a Creative banner on that page. Tapping Habit Dashboard still opens the dashboard. */
+    { "label": "Habit<br>Dashboard", "href": "weekly-review.html", "children": [
+      { "label": "Fill the Gaps", "href": "gap-filler.html" }
+    ] }
     /* Oct 8 2026, Scott: Compass Time folded into Habit Worksheets (counts-toward-totals tick, minutes, Compass point = the sheet). The page stays only as a redirect. */
     /* Nov 12 2026, Scott: Environmental Health came off the main bar. It lives on the Habit Cue Cards board as a card, and on Mission Control. */
   ],
