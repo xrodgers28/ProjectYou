@@ -101,6 +101,7 @@ h1 .ver{font-size:11px;color:var(--faint);font-weight:400;margin-left:7px}
 .p2 .shd{margin:0}
 .p2 .shd b{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#7b828c}
 .kind{display:inline-block;margin-left:8px;font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:8px;font-weight:700}
+.p2.unf .kind{background:#eef0f3;color:#6b7280}
 .p2[data-k="doing"] .kind{background:#eef4f8;color:#2f5a75}
 .p2[data-k="wait"] .kind{background:#fbf3e4;color:#8a5e14}
 .p2[data-k="later"] .kind{background:#edf0f4;color:#4d5663}
@@ -184,7 +185,7 @@ window.addEventListener('message',function(e){if(e.origin!==location.origin)retu
 </head><body>
 <div class="wrap">
 <nav class="tlnav"><a href="index.html">Today</a><a href="inbox.html">Staging Area</a><span class="on">Task Library</span><a href="projects-dashboard.html">Projects Dashboard</a><span class="soon">Insights Dashboard <em>coming soon</em></span><span class="soon">How it works <em>coming soon</em></span></nav>
-<h1>Task Library<span class="ver">v4.4</span><span class="strength" id="str" title="Color strength"></span></h1>
+<h1>Task Library<span class="ver">v4.5</span><span class="strength" id="str" title="Color strength"></span></h1>
 <p class="sub">Every list you work from, and the parts inside them. Tap any name to rename it. Use the three dots for color and icon. Drag the handle to reorder.</p>
 <div class="demo" id="demo"></div>
 <div class="banner" id="bn"></div>
@@ -514,8 +515,24 @@ function sublFor(P, topColor){
   shd.appendChild(mkKeb(P));
   wrap.appendChild(shd);
   var cs=kids(P.id);
-  if(cs.length){
+  /* v4.5, Scott Nov 28: a project shows an Unfiled section first, the same as the Projects Dashboard.
+     It holds the project's own tasks (the ones not filed in a sub-category). Dropping or adding a task
+     here files it straight on the project, so it shows as Unfiled on the dashboard too. */
+  var isProj=(P.level==='project'), UNF=null;
+  if(isProj){
+    UNF=document.createElement('div'); UNF.className='p2 unf'; UNF.dataset.nid=P.id;
+    var us=document.createElement('div'); us.className='shd';
+    var ub=document.createElement('b'); ub.textContent='Unfiled'; us.appendChild(ub);
+    var ucn=tasksFor(P).filter(function(t){return !t.done;}).length;
+    if(ucn){ var ukd=document.createElement('span'); ukd.className='kind'; ukd.textContent=String(ucn); us.appendChild(ukd); }
+    UNF.appendChild(us);
+    var uul=document.createElement('ul'); uul.className='its';
+    tasksFor(P).forEach(function(t){ uul.appendChild(taskRow(t)); });
+    UNF.appendChild(uul); UNF.appendChild(addRow(P));
+  }
+  if(cs.length || isProj){
     var grid=document.createElement('div'); grid.className='p2grid';
+    if(UNF) grid.appendChild(UNF);
     cs.forEach(function(C){
       var p2=document.createElement('div'); p2.className='p2'; if(C.status) p2.dataset.k=C.status; p2.dataset.nid=C.id;
       var s2=document.createElement('div'); s2.className='shd';
@@ -531,13 +548,13 @@ function sublFor(P, topColor){
     });
     wrap.appendChild(grid);
   }
-  var own=tasksFor(P);
-  if(own.length || !cs.length){
+  var own=isProj?[]:tasksFor(P);
+  if(own.length || (!cs.length && !isProj)){
     var ul2=document.createElement('ul'); ul2.className='its';
     own.forEach(function(t){ ul2.appendChild(taskRow(t)); });
     wrap.appendChild(ul2);
   }
-  wrap.appendChild(addRow(P));
+  if(!isProj) wrap.appendChild(addRow(P));
   return wrap;
 }
 /* ---- v3.7, Scott Nov 25: two columns in the right panel ----------------------------------
@@ -1131,6 +1148,29 @@ function demoLine(){
     var t=await sb.from('todos').select('id,section,subsection,task,done,position,origin_section,est_minutes,owner,claude_status,claude_question,claude_options,claude_answer,claude_result,claude_session,claude_note,claude_updated').in('section', names).eq('bucket','library').eq('staged',false).eq('archived',false).order('position');
     if(t.data) TASKS=t.data;
     render();
+    /* v4.5, Scott Nov 28: sections and tasks made on the Projects Dashboard (or any other page) show up here on their own.
+       It re-reads when the database changes, every 30 seconds, and when you come back to the page, but never while you are typing or dragging. */
+    var RTMR=null, BUSY=false;
+    async function reread(){
+      if(BUSY) return; var a=document.activeElement;
+      if(a && (a.isContentEditable || a.tagName==='INPUT' || a.tagName==='TEXTAREA')) return;
+      if(document.body.classList.contains('dragging') || document.querySelector('.dragging, .ghost, .dropline')) return;
+      BUSY=true;
+      try{
+        var q2=await sb.from('task_library').select('*').order('position'); if(q2.error||!q2.data) return;
+        var keep=SEL; var oldSel=node(SEL);
+        NODES=q2.data.map(function(r){ return {id:'db'+r.id,dbid:r.id,parent_id:r.parent_id?('db'+r.parent_id):null,level:r.level,name:r.name,color:r.color,icon:r.icon,status:r.status||null,position:r.position,col:r.col||null,pane_split:(typeof r.pane_split==='number'?r.pane_split:null)}; });
+        saveLocal(); SEL = node(keep)? keep : ((kids(null)[0]||{}).id||null);
+        var nm=NODES.filter(function(n){ return !n.parent_id; }).map(function(n){ return n.name; });
+        var t2=await sb.from('todos').select('id,section,subsection,task,done,position,origin_section,est_minutes,owner,claude_status,claude_question,claude_options,claude_answer,claude_result,claude_session,claude_note,claude_updated').in('section', nm).eq('bucket','library').eq('staged',false).eq('archived',false).order('position');
+        if(t2.data) TASKS=t2.data;
+        render();
+      }catch(e){ console.warn(e); } finally { BUSY=false; }
+    }
+    function soon(){ clearTimeout(RTMR); RTMR=setTimeout(reread,700); }
+    try{ sb.channel('tl-sync').on('postgres_changes',{event:'*',schema:'public',table:'task_library'},soon).on('postgres_changes',{event:'*',schema:'public',table:'todos'},soon).subscribe(); }catch(e){}
+    setInterval(function(){ if(document.visibilityState==='visible') soon(); },30000);
+    document.addEventListener('visibilitychange',function(){ if(document.visibilityState==='visible') soon(); });
   }catch(e){ console.warn(e); render(); }
 })();
 </script><script src="task-moves.js"></script><script>try{ window.PYMoves && PYMoves.loadPlaces().catch(function(){}); }catch(e){}</script><script src="nav-config.js"></script><script src="navpatch.js"></script></body></html>
